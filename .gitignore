@@ -24,3 +24,5 @@ android/app/build/
 *.zip
 *.tar
 *.tgz
+.archive/
+backup.bundle
