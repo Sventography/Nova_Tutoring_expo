@@ -1,0 +1,25 @@
+{
+  "topic": "Evolution & Natural Selection",
+  "cards": [
+    { "q": "Evolution definition", "a": "Change in allele frequencies over time" },
+    { "q": "Natural selection", "a": "Differential survival/reproduction" },
+    { "q": "Fitness", "a": "Relative reproductive success" },
+    { "q": "Genetic drift", "a": "Random change, strong in small populations" },
+    { "q": "Founder effect", "a": "New population from few individuals" },
+    { "q": "Bottleneck", "a": "Sharp reduction in size/diversity" },
+    { "q": "Gene flow", "a": "Migration introduces alleles" },
+    { "q": "Mutation role", "a": "Source of new variation" },
+    { "q": "Directional selection", "a": "Favors one extreme" },
+    { "q": "Stabilizing selection", "a": "Favors intermediate phenotype" },
+    { "q": "Disruptive selection", "a": "Favors both extremes" },
+    { "q": "Speciation types", "a": "Allopatric vs sympatric" },
+    { "q": "Prezygotic barrier", "a": "Temporal/behavioral/mechanical" },
+    { "q": "Postzygotic barrier", "a": "Hybrid inviability/sterility" },
+    { "q": "Macroevolution", "a": "Large-scale patterns (origination/extinction)" },
+    { "q": "Phylogenetics", "a": "Evolutionary relationships (trees)" },
+    { "q": "Homology vs analogy", "a": "Shared ancestry vs convergent function" },
+    { "q": "Fossil record use", "a": "Chronology of life & transitions" },
+    { "q": "Hardy–Weinberg conditions", "a": "No selection, mutation, migration; large, random mating" },
+    { "q": "Adaptive radiation", "a": "Rapid diversification into niches" }
+  ]
+}

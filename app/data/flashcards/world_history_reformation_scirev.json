@@ -1,0 +1,25 @@
+{
+  "topic": "World History: Reformation & Scientific Revolution",
+  "cards": [
+    { "q": "Martin Luther 1517", "a": "95 Theses challenge indulgences" },
+    { "q": "Justification by faith", "a": "Core Lutheran doctrine" },
+    { "q": "Printing press role", "a": "Spread reform ideas rapidly" },
+    { "q": "John Calvin", "a": "Predestination; Geneva reforms" },
+    { "q": "Henry VIII", "a": "Act of Supremacy; Church of England" },
+    { "q": "Council of Trent", "a": "Catholic Counter-Reformation reforms" },
+    { "q": "Jesuits", "a": "Society of Jesus; education and missions" },
+    { "q": "Religious wars", "a": "French Wars of Religion; 30 Years' War" },
+    { "q": "Peace of Westphalia 1648", "a": "Ended 30 Years' War; state sovereignty" },
+    { "q": "Heliocentrism", "a": "Copernicus: Sun-centered system" },
+    { "q": "Kepler's laws", "a": "Elliptical orbits; equal areas; harmonic law" },
+    { "q": "Galileo contributions", "a": "Telescopic observations; inertia" },
+    { "q": "Newton synthesis", "a": "Principia; laws of motion & gravitation" },
+    { "q": "Scientific method", "a": "Observation, hypothesis, experiment, analysis" },
+    { "q": "Francis Bacon", "a": "Empiricism, induction" },
+    { "q": "Descartes", "a": "Rationalism, analytic geometry" },
+    { "q": "Harvey", "a": "Circulation of blood" },
+    { "q": "Boyle", "a": "Gas law; chemistry foundations" },
+    { "q": "Royal Society", "a": "Institutional support for science" },
+    { "q": "Impact", "a": "Shift to reason/experiment; challenges to authority" }
+  ]
+}

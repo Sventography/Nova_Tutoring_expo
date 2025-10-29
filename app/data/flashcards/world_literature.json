@@ -1,0 +1,25 @@
+{
+  "topic": "World Literature",
+  "cards": [
+    { "q": "Homeric epics from ancient Greece", "a": "The Iliad and The Odyssey" },
+    { "q": "Ancient Indian epic pair", "a": "Mahabharata and Ramayana" },
+    { "q": "Chinese classical novel about a pilgrimage", "a": "Journey to the West" },
+    { "q": "Classical Japanese work by Murasaki Shikibu", "a": "The Tale of Genji" },
+    { "q": "Medieval Persian poet of the Rubaiyat", "a": "Omar Khayyam" },
+    { "q": "Italian poet of The Divine Comedy", "a": "Dante Alighieri" },
+    { "q": "Spanish author of Don Quixote", "a": "Miguel de Cervantes" },
+    { "q": "French author of Les Miserables", "a": "Victor Hugo" },
+    { "q": "Russian author of War and Peace", "a": "Leo Tolstoy" },
+    { "q": "Russian author of Crime and Punishment", "a": "Fyodor Dostoevsky" },
+    { "q": "Latin American magical realism example", "a": "One Hundred Years of Solitude by Gabriel Garcia Marquez" },
+    { "q": "Nigerian novel on colonial impact", "a": "Things Fall Apart by Chinua Achebe" },
+    { "q": "Egyptian Nobel laureate novelist", "a": "Naguib Mahfouz" },
+    { "q": "Turkish Nobel laureate of Snow", "a": "Orhan Pamuk" },
+    { "q": "Chilean author of The House of the Spirits", "a": "Isabel Allende" },
+    { "q": "Term: frame narrative example", "a": "The Arabian Nights" },
+    { "q": "Allegory definition", "a": "Story with parallel symbolic meaning" },
+    { "q": "Fable definition", "a": "Brief tale with a moral, often with animals" },
+    { "q": "Epic hero traits (general)", "a": "Bravery, journey, trials, aid from gods or mentors" },
+    { "q": "Common world lit theme", "a": "Conflict between tradition and modernity" }
+  ]
+}

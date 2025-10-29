@@ -1,0 +1,82 @@
+[
+  {
+    "question": "Red–black tree property",
+    "answer": "Balanced BST with color rules ensuring O(log n)"
+  },
+  {
+    "question": "AVL tree balancing uses",
+    "answer": "Height difference ≤ 1 with rotations"
+  },
+  {
+    "question": "B-tree used for",
+    "answer": "Disk-based indexing with high branching factor"
+  },
+  {
+    "question": "Amortized O(1) structure",
+    "answer": "Dynamic array push or hash table insert (avg)"
+  },
+  {
+    "question": "Open addressing methods",
+    "answer": "Linear probing, quadratic, double hashing"
+  },
+  {
+    "question": "Bloom filter trait",
+    "answer": "Probabilistic set with false positives, no false negatives"
+  },
+  {
+    "question": "Union–Find supports",
+    "answer": "Union and find with path compression"
+  },
+  {
+    "question": "Fenwick tree supports",
+    "answer": "Prefix sums and updates in O(log n)"
+  },
+  {
+    "question": "Segment tree supports",
+    "answer": "Range queries and updates in O(log n)"
+  },
+  {
+    "question": "LRU cache uses",
+    "answer": "Hash map + doubly linked list"
+  },
+  {
+    "question": "Trie complexity for lookup",
+    "answer": "O(L) where L is key length"
+  },
+  {
+    "question": "Skip list expected complexity",
+    "answer": "O(log n) search/insert/delete"
+  },
+  {
+    "question": "Heap types",
+    "answer": "Binary, binomial, Fibonacci"
+  },
+  {
+    "question": "Fibonacci heap amortized decrease-key",
+    "answer": "O(1)"
+  },
+  {
+    "question": "Graph adjacency list good for",
+    "answer": "Sparse graphs"
+  },
+  {
+    "question": "Topological order applies to",
+    "answer": "DAGs"
+  },
+  {
+    "question": "Splay tree operation",
+    "answer": "Move accessed node to root via rotations"
+  },
+  {
+    "question": "Deque typical implementation",
+    "answer": "Circular buffer"
+  },
+  {
+    "question": "Persistent data structure",
+    "answer": "Keeps past versions accessible"
+  },
+  {
+    "question": "Immutable structure benefit",
+    "answer": "Thread-safety and referential transparency"
+  }
+]

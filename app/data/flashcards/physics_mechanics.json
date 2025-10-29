@@ -1,0 +1,25 @@
+{
+  "topic": "Physics: Mechanics",
+  "cards": [
+    { "q": "Newton's First Law", "a": "Inertia; object stays at rest or uniform motion" },
+    { "q": "Newton's Second Law", "a": "F = ma" },
+    { "q": "Newton's Third Law", "a": "Equal and opposite reactions" },
+    { "q": "Kinetic energy formula", "a": "1/2 m v^2" },
+    { "q": "Potential energy formula", "a": "m g h" },
+    { "q": "Work formula", "a": "W = F d cos(theta)" },
+    { "q": "Power formula", "a": "P = W/t" },
+    { "q": "Momentum formula", "a": "p = m v" },
+    { "q": "Impulse", "a": "J = F delta t = delta p" },
+    { "q": "Conservation of momentum", "a": "Total momentum constant in closed system" },
+    { "q": "Elastic collision", "a": "Kinetic energy conserved" },
+    { "q": "Inelastic collision", "a": "Kinetic energy not conserved" },
+    { "q": "Torque formula", "a": "tau = r x F" },
+    { "q": "Rotational KE", "a": "1/2 I omega^2" },
+    { "q": "Angular momentum", "a": "L = I omega" },
+    { "q": "Centripetal force", "a": "F = m v^2 / r" },
+    { "q": "Universal gravitation", "a": "F = G m1 m2 / r^2" },
+    { "q": "Free fall acceleration", "a": "g ≈ 9.8 m/s^2" },
+    { "q": "Work-energy theorem", "a": "Work equals change in kinetic energy" },
+    { "q": "Projectile motion key", "a": "Horizontal v constant; vertical accel = g" }
+  ]
+}

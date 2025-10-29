@@ -1,0 +1,25 @@
+{
+  "topic": "African History Survey",
+  "cards": [
+    { "q": "Ancient Nile kingdoms", "a": "Egypt, Kush, Axum" },
+    { "q": "Trans-Saharan trade", "a": "Gold, salt; camel caravans" },
+    { "q": "West African empires", "a": "Ghana, Mali, Songhai" },
+    { "q": "Mansa Musa", "a": "Mali ruler; famous pilgrimage" },
+    { "q": "Swahili coast trade", "a": "Indian Ocean commerce" },
+    { "q": "Great Zimbabwe", "a": "Stone city; trade center" },
+    { "q": "Atlantic slave trade", "a": "Forced migration to Americas" },
+    { "q": "Colonial partition", "a": "Berlin Conference 1884–85" },
+    { "q": "Ethiopia & Liberia", "a": "Mostly avoided colonization" },
+    { "q": "Pan-Africanism", "a": "Unity movement; Nkrumah" },
+    { "q": "Independence waves", "a": "1950s–60s decolonization" },
+    { "q": "Apartheid", "a": "Racial segregation in S. Africa" },
+    { "q": "Rwandan genocide", "a": "1994 mass violence" },
+    { "q": "Resource curse", "a": "Wealth fuels conflict/corruption" },
+    { "q": "AU", "a": "African Union cooperation" },
+    { "q": "Horn of Africa issues", "a": "Famine, conflict, piracy" },
+    { "q": "Sahel challenges", "a": "Desertification, insurgency" },
+    { "q": "Urbanization trend", "a": "Rapid city growth" },
+    { "q": "AfCFTA", "a": "Continental free trade area" },
+    { "q": "Contemporary culture", "a": "Afrobeats, Nollywood, literature" }
+  ]
+}

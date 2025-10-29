@@ -1,0 +1,82 @@
+[
+  {
+    "question": "Function inverse criterion",
+    "answer": "One-to-one (passes horizontal line test)"
+  },
+  {
+    "question": "Composite function notation",
+    "answer": "(f∘g)(x) = f(g(x))"
+  },
+  {
+    "question": "Log property log_a(xy)",
+    "answer": "log_a x + log_a y"
+  },
+  {
+    "question": "Exponential function asymptote",
+    "answer": "y = 0"
+  },
+  {
+    "question": "Quadratic vertex from standard form",
+    "answer": "x = −b/(2a)"
+  },
+  {
+    "question": "Discriminant meaning",
+    "answer": "Sign determines nature of roots"
+  },
+  {
+    "question": "Rational root theorem",
+    "answer": "Candidate roots p/q from factors of constant/leading"
+  },
+  {
+    "question": "Polynomial end behavior",
+    "answer": "Depends on degree and leading coefficient"
+  },
+  {
+    "question": "Ellipse standard equation",
+    "answer": "(x−h)^2/a^2 + (y−k)^2/b^2 = 1"
+  },
+  {
+    "question": "Hyperbola standard equation",
+    "answer": "(x−h)^2/a^2 − (y−k)^2/b^2 = 1"
+  },
+  {
+    "question": "Systems by matrices method",
+    "answer": "Augmented matrix and row reduction"
+  },
+  {
+    "question": "Cramer’s Rule uses",
+    "answer": "Determinants for linear systems"
+  },
+  {
+    "question": "Arithmetic series sum",
+    "answer": "n(a1+an)/2"
+  },
+  {
+    "question": "Geometric series sum (|r|<1)",
+    "answer": "a1/(1−r)"
+  },
+  {
+    "question": "Partial fraction use",
+    "answer": "Decompose rational expressions"
+  },
+  {
+    "question": "Piecewise function continuity",
+    "answer": "Equal left/right limits and value"
+  },
+  {
+    "question": "Absolute value equation |x−a|=b",
+    "answer": "x = a±b"
+  },
+  {
+    "question": "Inequality solution on number line",
+    "answer": "Interval notation"
+  },
+  {
+    "question": "Log change of base",
+    "answer": "log_b x = ln x / ln b"
+  },
+  {
+    "question": "Matrix inverse property",
+    "answer": "AA^{-1} = I"
+  }
+]

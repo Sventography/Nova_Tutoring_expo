@@ -1,0 +1,25 @@
+{
+  "topic": "Plant Biology (Botany)",
+  "cards": [
+    { "q": "Bryophytes trait", "a": "Non-vascular (mosses)" },
+    { "q": "Xylem vs phloem", "a": "Water/minerals up vs sugars both ways" },
+    { "q": "Gymnosperm vs angiosperm", "a": "Naked seeds vs flowers/fruits" },
+    { "q": "Monocot vs dicot", "a": "1 vs 2 cotyledons; parallel vs net veins" },
+    { "q": "Photosynthesis equation", "a": "6CO2+6H2O→C6H12O6+6O2" },
+    { "q": "Light reactions site", "a": "Thylakoid membranes" },
+    { "q": "Calvin cycle site", "a": "Stroma; fixes CO2" },
+    { "q": "Stomata function", "a": "Gas exchange; transpiration" },
+    { "q": "Auxin role", "a": "Cell elongation; tropisms" },
+    { "q": "Gibberellins", "a": "Stem elongation, seed germination" },
+    { "q": "Ethylene", "a": "Fruit ripening" },
+    { "q": "Meristems", "a": "Apical/lateral growth zones" },
+    { "q": "Mycorrhizae", "a": "Fungi-plant nutrient symbiosis" },
+    { "q": "C3 vs C4 vs CAM", "a": "Different CO2 fixation strategies" },
+    { "q": "Pollination vs fertilization", "a": "Pollen transfer vs gamete fusion" },
+    { "q": "Double fertilization", "a": "Zygote + endosperm formation" },
+    { "q": "Transpiration pull", "a": "Cohesion–tension in xylem" },
+    { "q": "Photoperiodism", "a": "Flowering by day length" },
+    { "q": "Secondary growth", "a": "Vascular cambium → wood" },
+    { "q": "Seed dormancy", "a": "Germination delay until favorable" }
+  ]
+}

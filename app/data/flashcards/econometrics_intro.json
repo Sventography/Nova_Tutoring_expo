@@ -1,0 +1,25 @@
+{
+  "topic": "Econometrics (Intro)",
+  "cards": [
+    { "q": "Linear regression model", "a": "y = β0 + β1x + u" },
+    { "q": "OLS assumptions (Gauss–Markov)", "a": "Linearity, random sampling, no perfect collinearity, E[u|X]=0, homoskedasticity" },
+    { "q": "BLUE meaning", "a": "Best Linear Unbiased Estimator" },
+    { "q": "R^2 interpretation", "a": "Share of variance explained" },
+    { "q": "Heteroskedasticity fix", "a": "Robust (HC) standard errors" },
+    { "q": "Endogeneity problem", "a": "X correlated with error u" },
+    { "q": "Instrumental variables", "a": "Z correlated with X, not u" },
+    { "q": "2SLS", "a": "Two-stage least squares estimator" },
+    { "q": "Omitted variable bias", "a": "Missing confounder distorts β" },
+    { "q": "Multicollinearity", "a": "High X correlation inflates SEs" },
+    { "q": "Functional form", "a": "Log-linear, quadratic terms" },
+    { "q": "Panel data", "a": "Fixed vs random effects" },
+    { "q": "Difference-in-differences", "a": "Treatment vs control over time" },
+    { "q": "Regression discontinuity", "a": "Cutoff-based causal estimate" },
+    { "q": "Propensity scores", "a": "Match by treatment probability" },
+    { "q": "Forecast evaluation", "a": "RMSE, MAE" },
+    { "q": "Serial correlation", "a": "Durbin–Watson; Newey–West SEs" },
+    { "q": "Logit/probit", "a": "Binary outcome models" },
+    { "q": "Standard error meaning", "a": "Sampling variability of estimate" },
+    { "q": "p-value caution", "a": "Significance ≠ practical importance" }
+  ]
+}

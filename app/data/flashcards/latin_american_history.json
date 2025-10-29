@@ -1,0 +1,25 @@
+{
+  "topic": "Latin American History Survey",
+  "cards": [
+    { "q": "Pre-Columbian empires", "a": "Aztec, Maya, Inca" },
+    { "q": "Conquistadors", "a": "Cortés (Aztec), Pizarro (Inca)" },
+    { "q": "Encomienda", "a": "Forced labor/grant system" },
+    { "q": "Mestizaje", "a": "Racial/cultural mixing" },
+    { "q": "Haitian Revolution", "a": "1791–1804; first Black republic" },
+    { "q": "Independence leaders", "a": "Simón Bolívar, José de San Martín" },
+    { "q": "Caudillos", "a": "Strongmen rulers 19th c." },
+    { "q": "Monroe Doctrine", "a": "U.S. warns Europe off Americas" },
+    { "q": "Mexican Revolution", "a": "1910–20; Zapata, Villa" },
+    { "q": "Good Neighbor Policy", "a": "U.S. non-intervention (1930s)" },
+    { "q": "Cuban Revolution", "a": "1959; Castro in power" },
+    { "q": "Dirty Wars", "a": "1970s–80s Southern Cone repression" },
+    { "q": "Debt crisis (1980s)", "a": "Default/IMF programs" },
+    { "q": "NAFTA/USMCA", "a": "Trade pacts N. America" },
+    { "q": "Pink Tide", "a": "Left-leaning govts ~2000s" },
+    { "q": "Amazon deforestation", "a": "Environmental challenge" },
+    { "q": "Favela/urbanization", "a": "Informal settlements growth" },
+    { "q": "Indigenous rights", "a": "Zapatistas; plurinational states" },
+    { "q": "Migration flows", "a": "To U.S. and within region" },
+    { "q": "Cultural exports", "a": "Literature, telenovelas, music" }
+  ]
+}

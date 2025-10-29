@@ -1,0 +1,25 @@
+{
+  "topic": "Law 101",
+  "cards": [
+    { "q": "Civil vs criminal law", "a": "Civil rights and duties; criminal offenses against state" },
+    { "q": "Common law system", "a": "Judge-made precedent important" },
+    { "q": "Statutory law", "a": "Enacted by legislatures" },
+    { "q": "Constitutional law", "a": "Interprets and applies constitution" },
+    { "q": "Tort definition", "a": "Civil wrong causing loss or harm" },
+    { "q": "Negligence elements", "a": "Duty, breach, causation, damages" },
+    { "q": "Contract elements", "a": "Offer, acceptance, consideration, capacity, legality" },
+    { "q": "Consideration meaning", "a": "Bargained-for exchange of value" },
+    { "q": "Jurisdiction", "a": "Court power to hear a case" },
+    { "q": "Venue", "a": "Geographic location of trial" },
+    { "q": "Burden of proof civil vs criminal", "a": "Preponderance vs beyond reasonable doubt" },
+    { "q": "Discovery in litigation", "a": "Pre-trial exchange of information" },
+    { "q": "Summary judgment", "a": "Decide without trial if no material fact dispute" },
+    { "q": "Stare decisis", "a": "Stand by precedent" },
+    { "q": "Administrative law", "a": "Agency rules and decisions" },
+    { "q": "Due process", "a": "Fair procedures before deprivation of rights" },
+    { "q": "Equal protection", "a": "Similarly situated treated alike under law" },
+    { "q": "Remedies", "a": "Damages, injunction, specific performance" },
+    { "q": "Alternative dispute resolution", "a": "Mediation, arbitration" },
+    { "q": "Attorney-client privilege", "a": "Confidential communications protected" }
+  ]
+}

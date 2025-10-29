@@ -1,0 +1,25 @@
+{
+  "topic": "Film Studies",
+  "cards": [
+    { "q": "Mise-en-scene elements", "a": "Setting, costume, lighting, acting, composition" },
+    { "q": "Cinematography basics", "a": "Camera movement, framing, lenses, exposure" },
+    { "q": "Shot types", "a": "CU, MS, LS, extreme close-up, establishing" },
+    { "q": "Angles", "a": "High angle, low angle, eye-level, Dutch tilt" },
+    { "q": "Editing continuity", "a": "Match on action, 180-degree rule, shot/reverse-shot" },
+    { "q": "Montage concept", "a": "Meaning created by juxtaposition" },
+    { "q": "Diegetic vs nondiegetic sound", "a": "In-world vs added score/voiceover" },
+    { "q": "Genre conventions", "a": "Recurring themes and styles per genre" },
+    { "q": "Auteur theory", "a": "Director as primary author" },
+    { "q": "Narrative structure 3-act", "a": "Setup, confrontation, resolution" },
+    { "q": "Documentary modes", "a": "Expository, observational, participatory, reflexive" },
+    { "q": "Blocking and staging", "a": "Actor movement and placement" },
+    { "q": "Aspect ratios", "a": "1.33:1, 1.85:1, 2.39:1 etc." },
+    { "q": "Color grading purpose", "a": "Mood, continuity, style" },
+    { "q": "Deep focus vs shallow depth", "a": "Large DOF vs blurred background" },
+    { "q": "POV shot use", "a": "Aligns audience with character view" },
+    { "q": "Cross-cutting", "a": "Alternate between scenes for tension/parallel action" },
+    { "q": "Nonlinear storytelling example", "a": "Flashbacks, fractured timeline" },
+    { "q": "Sound bridge", "a": "Audio leads or carries over a cut" },
+    { "q": "Motif in film", "a": "Recurring element with meaning" }
+  ]
+}

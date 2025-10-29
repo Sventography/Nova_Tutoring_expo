@@ -1,0 +1,82 @@
+[
+  {
+    "question": "NEPA requires",
+    "answer": "Environmental impact statements for major federal actions"
+  },
+  {
+    "question": "EPA created in",
+    "answer": "1970"
+  },
+  {
+    "question": "Clean Air Act targets",
+    "answer": "Criteria pollutants and hazardous air pollutants"
+  },
+  {
+    "question": "Clean Water Act focuses on",
+    "answer": "Point source discharges and water quality standards"
+  },
+  {
+    "question": "Endangered Species Act protects",
+    "answer": "Listed species and critical habitats"
+  },
+  {
+    "question": "RCRA regulates",
+    "answer": "Solid and hazardous waste management"
+  },
+  {
+    "question": "CERCLA (Superfund) funds",
+    "answer": "Cleanup of contaminated sites"
+  },
+  {
+    "question": "Montreal Protocol phased out",
+    "answer": "Ozone-depleting substances"
+  },
+  {
+    "question": "Kyoto Protocol focused on",
+    "answer": "Greenhouse gas reductions (Annex I)"
+  },
+  {
+    "question": "Paris Agreement goal",
+    "answer": "Limit warming to well below 2°C"
+  },
+  {
+    "question": "Cap-and-trade mechanism",
+    "answer": "Emission allowances traded under a cap"
+  },
+  {
+    "question": "Command-and-control policy",
+    "answer": "Standards and technology requirements"
+  },
+  {
+    "question": "Carbon tax approach",
+    "answer": "Price on CO2 emissions"
+  },
+  {
+    "question": "Environmental justice principle",
+    "answer": "Fair treatment regardless of race/income"
+  },
+  {
+    "question": "Precautionary principle",
+    "answer": "Act to prevent harm despite uncertainty"
+  },
+  {
+    "question": "EIA stands for",
+    "answer": "Environmental Impact Assessment"
+  },
+  {
+    "question": "Biodiversity offsetting",
+    "answer": "Compensate for impacts by conservation elsewhere"
+  },
+  {
+    "question": "Low-emission zone policy",
+    "answer": "Restrict high-polluting vehicles"
+  },
+  {
+    "question": "Renewable portfolio standard",
+    "answer": "Mandate % electricity from renewables"
+  },
+  {
+    "question": "Scope 1, 2, 3 emissions",
+    "answer": "Direct, purchased energy, value-chain"
+  }
+]

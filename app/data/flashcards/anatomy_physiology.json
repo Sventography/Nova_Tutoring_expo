@@ -1,0 +1,25 @@
+{
+  "topic": "Anatomy & Physiology",
+  "cards": [
+    { "q": "Levels of organization (small→large)", "a": "Chemical, cellular, tissue, organ, organ system, organism" },
+    { "q": "Four basic tissue types", "a": "Epithelial, connective, muscle, nervous" },
+    { "q": "Homeostasis control loop parts", "a": "Receptor, control center, effector" },
+    { "q": "Anatomical planes", "a": "Sagittal, frontal (coronal), transverse (axial)" },
+    { "q": "Skeletal system main functions", "a": "Support, protection, movement, mineral storage, blood formation" },
+    { "q": "Muscle types", "a": "Skeletal (voluntary), cardiac, smooth (involuntary)" },
+    { "q": "Sliding filament theory (key players)", "a": "Actin and myosin cross-bridge cycling using ATP" },
+    { "q": "Neuron parts", "a": "Dendrites, soma, axon, axon terminals" },
+    { "q": "Myelin function", "a": "Insulates axons to increase conduction speed" },
+    { "q": "Reflex arc components", "a": "Receptor, sensory neuron, integration, motor neuron, effector" },
+    { "q": "Heart valves (right then left)", "a": "Tricuspid, pulmonary; mitral (bicuspid), aortic" },
+    { "q": "Cardiac output formula", "a": "CO = HR × SV" },
+    { "q": "Gas exchange site in lungs", "a": "Alveoli" },
+    { "q": "Kidney functional unit", "a": "Nephron" },
+    { "q": "Endocrine vs exocrine glands", "a": "Endocrine secrete hormones into blood; exocrine via ducts" },
+    { "q": "Innate vs adaptive immunity", "a": "Innate: rapid, non-specific; Adaptive: specific, memory" },
+    { "q": "GI tract order (mouth→anus)", "a": "Mouth, esophagus, stomach, small intestine, large intestine, rectum, anus" },
+    { "q": "Liver key functions", "a": "Metabolism, detox, bile production, glycogen storage" },
+    { "q": "Hormone classes", "a": "Peptide/protein, steroid, amine" },
+    { "q": "Anatomical directional terms example", "a": "Anterior/posterior, superior/inferior, medial/lateral, proximal/distal" }
+  ]
+}

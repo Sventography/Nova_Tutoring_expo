@@ -1,0 +1,25 @@
+{
+  "topic": "Biology III (Genetics Advanced)",
+  "cards": [
+    { "q": "Epigenetics two main marks", "a": "DNA methylation and histone modification" },
+    { "q": "X-inactivation purpose", "a": "Dosage compensation in female mammals" },
+    { "q": "Genomic imprinting means", "a": "Expression depends on parent of origin" },
+    { "q": "Recombinant frequency ceiling", "a": "Max ~50% due to independent assortment" },
+    { "q": "Linkage disequilibrium describes", "a": "Nonrandom association of alleles at loci" },
+    { "q": "Hardy-Weinberg violation example", "a": "Selection, migration, mutation, drift, nonrandom mating" },
+    { "q": "Gene flow effect on variation", "a": "Increases within populations, decreases between" },
+    { "q": "Fitness definition", "a": "Relative reproductive success" },
+    { "q": "Heritability (h^2) meaning", "a": "Proportion of phenotypic variance due to genetics in a population" },
+    { "q": "GWAS goal", "a": "Associate SNPs with traits/diseases" },
+    { "q": "CRISPR repair pathways", "a": "NHEJ (indels) and HDR (precise edits)" },
+    { "q": "Transcriptomics tool", "a": "RNA-seq to measure gene expression" },
+    { "q": "Alternative splicing outcome", "a": "Multiple proteins from one gene" },
+    { "q": "Frameshift mutation cause", "a": "Insertion/deletion not multiple of 3" },
+    { "q": "Operon negative control example", "a": "Lac repressor binds operator without inducer" },
+    { "q": "Epistasis classic example", "a": "Labrador coat color gene interactions" },
+    { "q": "Mitochondrial inheritance pattern", "a": "Maternal transmission" },
+    { "q": "Copy number variation (CNV)", "a": "Segments duplicated or deleted in genome" },
+    { "q": "Gene therapy delivery vectors", "a": "AAV, lentivirus, nonviral methods" },
+    { "q": "Synthetic biology aim", "a": "Design and build new biological functions" }
+  ]
+}

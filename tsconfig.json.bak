@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "lib": [
+      "dom",
+      "esnext"
+    ],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "strict": false,
+    "baseUrl": ".",
+    "paths": {
+      "@components/*": [
+        "app/components/*"
+      ],
+      "@lib/*": [
+        "app/lib/*"
+      ],
+      "@_shims/*": [
+        "app/_shims/*"
+      ]
+    }
+  },
+  "include": [
+    "./**/*.ts",
+    "./**/*.tsx"
+  ],
+  "extends": "expo/tsconfig.base"
+}

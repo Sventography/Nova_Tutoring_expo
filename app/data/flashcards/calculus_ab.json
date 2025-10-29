@@ -1,0 +1,25 @@
+{
+  "topic": "Calculus AB: Derivatives & Integrals",
+  "cards": [
+    { "q": "Derivative definition", "a": "Instantaneous rate; limit of difference quotient" },
+    { "q": "Power rule", "a": "d/dx x^n = n x^{n-1}" },
+    { "q": "Product rule", "a": "(fg)' = f'g + fg'" },
+    { "q": "Quotient rule", "a": "(f/g)' = (f'g - fg')/g^2" },
+    { "q": "Chain rule", "a": "d/dx f(g(x)) = f'(g(x)) g'(x)" },
+    { "q": "Common derivatives", "a": "e^x, ln x, sin, cos, tan" },
+    { "q": "Critical point", "a": "f'(x)=0 or DNE" },
+    { "q": "First derivative test", "a": "Sign change → local min/max" },
+    { "q": "Concavity test", "a": "f''>0 up; f''<0 down" },
+    { "q": "Mean Value Theorem", "a": "f'(c) = (f(b)-f(a))/(b-a)" },
+    { "q": "Riemann sum idea", "a": "Approximate area under curve" },
+    { "q": "FTC Part I", "a": "Derivative of integral gives integrand" },
+    { "q": "FTC Part II", "a": "∫_a^b f = F(b)-F(a)" },
+    { "q": "u-substitution", "a": "Let u=g(x) to simplify" },
+    { "q": "Integration by parts", "a": "∫u dv = uv − ∫v du" },
+    { "q": "Area between curves", "a": "∫(top − bottom) dx" },
+    { "q": "Average value of f", "a": "(1/(b−a)) ∫_a^b f(x) dx" },
+    { "q": "Related rates", "a": "Differentiate w.r.t time" },
+    { "q": "Optimization steps", "a": "Model, derivative, critical points" },
+    { "q": "Differentials", "a": "dy ≈ f'(x) dx; linearization" }
+  ]
+}

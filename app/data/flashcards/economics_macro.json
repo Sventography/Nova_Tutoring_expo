@@ -1,0 +1,25 @@
+{
+  "topic": "Economics (Macro)",
+  "cards": [
+    { "q": "GDP measures", "a": "Market value of final goods and services produced domestically in a period" },
+    { "q": "Nominal vs real GDP", "a": "Nominal uses current prices; real uses constant base-year prices" },
+    { "q": "Unemployment rate definition", "a": "Unemployed divided by labor force" },
+    { "q": "CPI purpose", "a": "Measures average price level of a basket of goods" },
+    { "q": "Inflation definition", "a": "Sustained increase in general price level" },
+    { "q": "Okun's law links", "a": "Output gap and unemployment" },
+    { "q": "Aggregate demand components", "a": "C + I + G + NX" },
+    { "q": "Short-run vs long-run AS", "a": "SRAS slopes up; LRAS vertical at potential output" },
+    { "q": "Fiscal policy tools", "a": "Government spending and taxation" },
+    { "q": "Monetary policy tools (central bank)", "a": "Open market operations, discount rate, reserve requirements" },
+    { "q": "Money multiplier (simple)", "a": "1 / reserve ratio (idealized)" },
+    { "q": "Phillips curve (short run)", "a": "Inverse relation between unemployment and inflation" },
+    { "q": "Expansionary vs contractionary policy", "a": "Expansionary raises AD; contractionary lowers AD" },
+    { "q": "Budget deficit vs debt", "a": "Deficit: annual shortfall; Debt: accumulated deficits" },
+    { "q": "Nominal vs real interest rate", "a": "Real = nominal - inflation (approx)" },
+    { "q": "Exchange rate appreciation effect", "a": "Exports down, imports up (NX falls)" },
+    { "q": "Current account includes", "a": "Trade in goods/services, income, transfers" },
+    { "q": "Automatic stabilizers example", "a": "Unemployment insurance, progressive taxes" },
+    { "q": "Crowding out refers to", "a": "Gov borrowing raises rates, reduces private investment" },
+    { "q": "GDP deflator formula", "a": "(Nominal GDP / Real GDP) * 100" }
+  ]
+}

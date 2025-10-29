@@ -1,0 +1,25 @@
+{
+  "topic": "Geometry Essentials",
+  "cards": [
+    { "q": "Distance formula", "a": "d = sqrt((x2-x1)^2 + (y2-y1)^2)" },
+    { "q": "Midpoint formula", "a": "((x1+x2)/2, (y1+y2)/2)" },
+    { "q": "Slope formula", "a": "m = (y2 - y1)/(x2 - x1)" },
+    { "q": "Area: triangle", "a": "A = 1/2 b h" },
+    { "q": "Area: circle", "a": "A = pi r^2" },
+    { "q": "Circumference", "a": "C = 2 pi r" },
+    { "q": "Pythagorean theorem", "a": "a^2 + b^2 = c^2 (right triangle)" },
+    { "q": "30-60-90 triangle ratios", "a": "1 : sqrt(3) : 2 (short : long : hyp)" },
+    { "q": "45-45-90 triangle ratios", "a": "1 : 1 : sqrt(2)" },
+    { "q": "SOH-CAH-TOA", "a": "sin = opp/hyp; cos = adj/hyp; tan = opp/adj" },
+    { "q": "Law of Sines", "a": "a/sin A = b/sin B = c/sin C" },
+    { "q": "Law of Cosines", "a": "c^2 = a^2 + b^2 - 2ab cos C" },
+    { "q": "Similarity criterion", "a": "AA, SAS~, SSS~" },
+    { "q": "Inscribed angle theorem", "a": "Inscribed angle = 1/2 intercepted arc" },
+    { "q": "Arc length", "a": "s = r theta (theta in radians)" },
+    { "q": "Sector area", "a": "A = 1/2 r^2 theta (theta in radians)" },
+    { "q": "Equation of a circle", "a": "(x - h)^2 + (y - k)^2 = r^2" },
+    { "q": "Transformations", "a": "Translations, reflections, rotations, dilations" },
+    { "q": "Polygon interior angle sum", "a": "(n - 2) * 180 degrees" },
+    { "q": "Parallel lines angle facts", "a": "Alt interior and corresponding angles congruent" }
+  ]
+}

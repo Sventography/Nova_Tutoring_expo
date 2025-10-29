@@ -1,0 +1,25 @@
+{
+  "topic": "Art Studio Fundamentals",
+  "cards": [
+    { "q": "Elements of art", "a": "Line, shape, form, space, texture, value, color" },
+    { "q": "Principles of design", "a": "Balance, contrast, emphasis, movement, pattern, rhythm, unity" },
+    { "q": "Primary colors", "a": "Red, yellow, blue" },
+    { "q": "Secondary colors", "a": "Green, orange, purple" },
+    { "q": "Complementary colors", "a": "Opposites on the color wheel (e.g., red-green)" },
+    { "q": "Warm vs cool colors", "a": "Warm: red/orange/yellow; Cool: blue/green/purple" },
+    { "q": "Linear perspective", "a": "Vanishing point and horizon line" },
+    { "q": "Value scale", "a": "Range from light to dark" },
+    { "q": "Media examples", "a": "Pencil, charcoal, ink, watercolor, acrylic, digital" },
+    { "q": "Relief vs intaglio", "a": "Relief prints from raised surface; intaglio from incised lines" },
+    { "q": "Still life", "a": "Arrangement of inanimate objects" },
+    { "q": "Portrait", "a": "Artwork focusing on a person" },
+    { "q": "Gesture drawing", "a": "Quick sketches to capture movement" },
+    { "q": "Cross-hatching", "a": "Overlapping lines for shading" },
+    { "q": "Negative space", "a": "Area around and between subjects" },
+    { "q": "Mixed media", "a": "Combining different materials" },
+    { "q": "Collage", "a": "Assembled paper or materials on surface" },
+    { "q": "Assemblage", "a": "3D collage using found objects" },
+    { "q": "Abstract art", "a": "Emphasis on form/color over representation" },
+    { "q": "Contour drawing", "a": "Outline-focused drawing" }
+  ]
+}

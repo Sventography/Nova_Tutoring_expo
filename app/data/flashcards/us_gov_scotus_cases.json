@@ -1,0 +1,25 @@
+{
+  "topic": "U.S. Government: Landmark Supreme Court Cases",
+  "cards": [
+    { "q": "Marbury v. Madison (1803)", "a": "Judicial review established" },
+    { "q": "McCulloch v. Maryland (1819)", "a": "Implied powers; states can't tax fed" },
+    { "q": "Gibbons v. Ogden (1824)", "a": "Broad commerce clause" },
+    { "q": "Dred Scott (1857)", "a": "Denied citizenship; struck Missouri Compromise" },
+    { "q": "Plessy v. Ferguson (1896)", "a": "Separate but equal (later overturned)" },
+    { "q": "Brown v. Board (1954)", "a": "School desegregation" },
+    { "q": "Mapp v. Ohio (1961)", "a": "Exclusionary rule to states" },
+    { "q": "Gideon v. Wainwright (1963)", "a": "Right to counsel" },
+    { "q": "Miranda v. Arizona (1966)", "a": "Miranda warnings" },
+    { "q": "Tinker v. Des Moines (1969)", "a": "Student speech protected" },
+    { "q": "NY Times v. U.S. (1971)", "a": "Pentagon Papers; prior restraint" },
+    { "q": "Roe v. Wade (1973)", "a": "Abortion rights (later overturned 2022)" },
+    { "q": "U.C. Regents v. Bakke (1978)", "a": "Affirmative action limits" },
+    { "q": "Texas v. Johnson (1989)", "a": "Flag burning = speech" },
+    { "q": "U.S. v. Lopez (1995)", "a": "Limited commerce clause scope" },
+    { "q": "Bush v. Gore (2000)", "a": "Stopped FL recount" },
+    { "q": "Citizens United (2010)", "a": "Corps/Unions political spending = speech" },
+    { "q": "Obergefell v. Hodges (2015)", "a": "Same-sex marriage nationwide" },
+    { "q": "Dobbs v. Jackson (2022)", "a": "Overruled Roe v. Wade" },
+    { "q": "New York State Rifle & Pistol (2022)", "a": "Expanded public carry rights" }
+  ]
+}

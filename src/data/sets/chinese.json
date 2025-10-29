@@ -1,0 +1,22 @@
+[
+  ["你好", "Hello"],
+  ["再见", "Goodbye"],
+  ["请", "Please"],
+  ["谢谢", "Thank you"],
+  ["是", "Yes"],
+  ["不是", "No"],
+  ["洗手间在哪里？", "Where is the bathroom?"],
+  ["这个多少钱？", "How much is this?"],
+  ["我不明白", "I don't understand"],
+  ["你会说英语吗？", "Do you speak English?"],
+  ["帮助", "Help"],
+  ["我需要医生", "I need a doctor"],
+  ["一到十", "One to ten"],
+  ["星期", "Monday to Sunday"],
+  ["月份", "January to December"],
+  ["颜色", "Basic colors"],
+  ["食物", "Common foods"],
+  ["方向", "Left, right, straight"],
+  ["时间", "Time"],
+  ["家庭", "Family members"]
+]

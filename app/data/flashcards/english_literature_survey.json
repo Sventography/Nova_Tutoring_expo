@@ -1,0 +1,25 @@
+{
+  "topic": "English Literature (Survey)",
+  "cards": [
+    { "q": "Old English epic", "a": "Beowulf" },
+    { "q": "Middle English author", "a": "Geoffrey Chaucer" },
+    { "q": "Renaissance hallmark", "a": "Shakespeare; sonnets and drama" },
+    { "q": "Metaphysical poets", "a": "John Donne; elaborate conceits" },
+    { "q": "Neoclassicism traits", "a": "Order, reason, satire (Pope)" },
+    { "q": "Romanticism traits", "a": "Nature, emotion, individual (Wordsworth, Coleridge, Keats)" },
+    { "q": "Victorian themes", "a": "Social realism, morality (Dickens, Eliot)" },
+    { "q": "Modernism traits", "a": "Fragmentation, stream of consciousness (Woolf, Joyce, Eliot)" },
+    { "q": "Harlem Renaissance UK parallel", "a": "Influence seen in transatlantic modernism" },
+    { "q": "Postmodern traits", "a": "Irony, metafiction, pastiche (Pynchon, Carter)" },
+    { "q": "Gothic novel example", "a": "Mary Shelley's Frankenstein" },
+    { "q": "Blank verse", "a": "Unrhymed iambic pentameter" },
+    { "q": "Free verse pioneer", "a": "Walt Whitman (influence on Anglophone poetry)" },
+    { "q": "Sonnet forms", "a": "Petrarchan (abba abba) and Shakespearean (abab cdcd efef gg)" },
+    { "q": "Tragedy elements", "a": "Hamartia, catharsis, reversal" },
+    { "q": "Novel of manners", "a": "Jane Austen's works" },
+    { "q": "Dystopian classics", "a": "Orwell 1984; Huxley Brave New World" },
+    { "q": "Literary device: irony", "a": "Contrast between expectation and reality" },
+    { "q": "Symbol vs motif", "a": "Symbol singular sign; motif recurring element" },
+    { "q": "Close reading focus", "a": "Diction, imagery, syntax, tone" }
+  ]
+}

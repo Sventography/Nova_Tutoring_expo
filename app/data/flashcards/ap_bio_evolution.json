@@ -1,0 +1,25 @@
+{
+  "topic": "AP Biology: Evolution",
+  "cards": [
+    { "q": "Natural selection", "a": "Differential survival/reproduction based on heritable variation" },
+    { "q": "Fitness", "a": "Reproductive success relative to others" },
+    { "q": "Adaptation", "a": "Trait increasing fitness in environment" },
+    { "q": "Homologous structures", "a": "Similar structures from common ancestry" },
+    { "q": "Analogous structures", "a": "Similar function without common ancestry" },
+    { "q": "Vestigial structures", "a": "Reduced, nonfunctional remnants" },
+    { "q": "Speciation", "a": "Formation of new species" },
+    { "q": "Allopatric speciation", "a": "Geographic isolation leads to divergence" },
+    { "q": "Sympatric speciation", "a": "Reproductive isolation without geography" },
+    { "q": "Hardy–Weinberg conditions", "a": "No mutation, migration, selection; large population; random mating" },
+    { "q": "p^2 term", "a": "Frequency of homozygous dominant genotype" },
+    { "q": "2pq term", "a": "Frequency of heterozygous genotype" },
+    { "q": "q^2 term", "a": "Frequency of homozygous recessive genotype" },
+    { "q": "Genetic drift", "a": "Random allele frequency change (bottleneck, founder)" },
+    { "q": "Gene flow", "a": "Migration moves alleles between populations" },
+    { "q": "Mutation", "a": "Source of new genetic variation" },
+    { "q": "Sexual selection", "a": "Mate choice drives trait evolution" },
+    { "q": "Directional selection", "a": "Favors one extreme phenotype" },
+    { "q": "Stabilizing selection", "a": "Favors intermediate phenotypes" },
+    { "q": "Disruptive selection", "a": "Favors both extremes" }
+  ]
+}

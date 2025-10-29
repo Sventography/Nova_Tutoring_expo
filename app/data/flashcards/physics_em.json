@@ -1,0 +1,25 @@
+{
+  "topic": "Physics II (Electricity & Magnetism)",
+  "cards": [
+    { "q": "Coulomb's law", "a": "F = k q1 q2 / r^2" },
+    { "q": "Electric field definition", "a": "Force per unit charge, E = F/q" },
+    { "q": "Electric potential energy", "a": "U = k q1 q2 / r" },
+    { "q": "Potential difference (voltage)", "a": "Delta V = W/q" },
+    { "q": "Capacitance", "a": "C = Q/V" },
+    { "q": "Energy stored in a capacitor", "a": "U = (1/2) C V^2" },
+    { "q": "Ohm's law", "a": "V = I R" },
+    { "q": "Resistors: series vs parallel", "a": "Series: R_total = R1 + R2 + ...; Parallel: 1/R = 1/R1 + 1/R2 + ..." },
+    { "q": "Power in circuits", "a": "P = I V = I^2 R = V^2 / R" },
+    { "q": "Magnetic force on moving charge", "a": "F = q v B sin(theta)" },
+    { "q": "Right-hand rule use", "a": "Find direction of magnetic force or field" },
+    { "q": "Magnetic flux", "a": "Phi_B = B * A * cos(theta)" },
+    { "q": "Faraday's law of induction", "a": "EMF = - dPhi_B/dt" },
+    { "q": "Lenz's law", "a": "Induced current opposes the change in flux" },
+    { "q": "Inductance", "a": "L = Phi / I (conceptually)" },
+    { "q": "Energy in an inductor", "a": "U = (1/2) L I^2" },
+    { "q": "AC vs DC current", "a": "AC alternates direction; DC is constant" },
+    { "q": "Transformer ideal relation", "a": "Vs/Vp = Ns/Np" },
+    { "q": "Maxwell's equations (summary)", "a": "Gauss(E), Gauss(B), Faraday's law, Ampere-Maxwell law" },
+    { "q": "EM waves relation", "a": "E and B fields are perpendicular to each other and to wave direction" }
+  ]
+}

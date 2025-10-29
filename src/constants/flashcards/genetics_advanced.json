@@ -1,0 +1,82 @@
+[
+  {
+    "question": "Central dogma",
+    "answer": "DNA → RNA → Protein"
+  },
+  {
+    "question": "Exon vs intron",
+    "answer": "Exon expressed, intron spliced out"
+  },
+  {
+    "question": "Alternative splicing",
+    "answer": "Different mRNAs from same gene"
+  },
+  {
+    "question": "Epigenetics involves",
+    "answer": "Heritable changes not in DNA sequence"
+  },
+  {
+    "question": "DNA methylation effect",
+    "answer": "Usually silences genes"
+  },
+  {
+    "question": "Histone acetylation effect",
+    "answer": "Activates gene expression"
+  },
+  {
+    "question": "PCR purpose",
+    "answer": "Amplify DNA"
+  },
+  {
+    "question": "Restriction enzyme role",
+    "answer": "Cut DNA at specific sites"
+  },
+  {
+    "question": "CRISPR-Cas9 function",
+    "answer": "Gene editing"
+  },
+  {
+    "question": "Codon table codes for",
+    "answer": "20 amino acids"
+  },
+  {
+    "question": "Start codon",
+    "answer": "AUG (methionine)"
+  },
+  {
+    "question": "Stop codons",
+    "answer": "UAA, UAG, UGA"
+  },
+  {
+    "question": "Frameshift mutation caused by",
+    "answer": "Insertion/deletion not multiple of 3"
+  },
+  {
+    "question": "Silent mutation",
+    "answer": "No amino acid change"
+  },
+  {
+    "question": "Missense mutation",
+    "answer": "Single amino acid change"
+  },
+  {
+    "question": "Nonsense mutation",
+    "answer": "Codon changed to stop"
+  },
+  {
+    "question": "Gel electrophoresis separates",
+    "answer": "DNA fragments by size"
+  },
+  {
+    "question": "DNA replication enzyme",
+    "answer": "DNA polymerase"
+  },
+  {
+    "question": "RNA polymerase role",
+    "answer": "Transcribes DNA to RNA"
+  },
+  {
+    "question": "tRNA role",
+    "answer": "Carries amino acids to ribosome"
+  }
+]

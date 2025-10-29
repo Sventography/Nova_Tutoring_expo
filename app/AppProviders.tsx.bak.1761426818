@@ -1,0 +1,64 @@
+import React, { useEffect } from "react";
+import * as Linking from "expo-linking";
+
+import { ThemeProvider } from "./context/ThemeContext";
+import { UserProvider } from "./context/UserContext";
+import { CoinsProvider, useCoins } from "./context/CoinsContext";
+import { CursorProvider } from "./context/CursorContext";
+import { CollectionsProvider } from "./context/CollectionsContext";
+import { PurchasesProvider } from "./context/PurchasesContext";
+import { StreakProvider } from "./context/StreakContext";
+import { AchievementsProvider } from "./context/AchievementsContext";
+import { ToastProvider } from "./context/ToastContext";
+import { CertificatesProvider } from "./context/CertificatesContext";
+// Add any other providers you already had.
+
+function DevCoinsListener() {
+  const { addCoins } = useCoins();
+  useEffect(() => {
+    const parseAndHandle = (url?: string | null) => {
+      if (!url) return;
+      const { hostname, queryParams, path } = Linking.parse(url);
+      // Accept: novatutoring://coins?add=50000 OR /coins?add=50000
+      const route = (hostname || path || "").toLowerCase();
+      if (route.includes("coins") && queryParams && typeof queryParams.add !== "undefined") {
+        const amt = Number(queryParams.add);
+        if (!Number.isNaN(amt) && amt !== 0) addCoins(amt);
+      }
+    };
+    Linking.getInitialURL().then(parseAndHandle).catch(() => {});
+    const sub = Linking.addEventListener("url", (e) => parseAndHandle(e.url));
+    return (
+    <UserProvider>
+) => sub.remove();
+  }, [addCoins]);
+  return null;
+}
+
+export function AppProviders({ children }: { children: React.ReactNode }) {
+  return (
+    <StreakProvider>
+      <AchievementsProvider>
+        <ToastProvider>
+          <CertificatesProvider>
+            <CoinsProvider>
+              <PurchasesProvider>
+                <CursorProvider>
+                  <ThemeProvider>
+                    <CollectionsProvider>
+                      <DevCoinsListener />
+                      {children}
+                    </CollectionsProvider>
+                  </ThemeProvider>
+                </CursorProvider>
+              </PurchasesProvider>
+            </CoinsProvider>
+          </CertificatesProvider>
+        </ToastProvider>
+      </AchievementsProvider>
+    </StreakProvider>
+    </UserProvider>
+  );
+}
+
+export default AppProviders;

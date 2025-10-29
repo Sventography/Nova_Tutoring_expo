@@ -1,0 +1,25 @@
+{
+  "topic": "Chemistry: Organic I",
+  "cards": [
+    { "q": "Alkane general formula", "a": "C_n H_{2n+2}" },
+    { "q": "Alkene general formula", "a": "C_n H_{2n}" },
+    { "q": "Alkyne general formula", "a": "C_n H_{2n-2}" },
+    { "q": "Aromatic example", "a": "Benzene" },
+    { "q": "Alcohol group", "a": "-OH" },
+    { "q": "Carbonyl group", "a": "C=O" },
+    { "q": "Aldehyde vs ketone", "a": "Aldehyde at chain end; ketone internal" },
+    { "q": "Carboxylic acid group", "a": "-COOH" },
+    { "q": "Ester group", "a": "-COOR" },
+    { "q": "Amine group", "a": "-NH2" },
+    { "q": "Amide group", "a": "-CONH2" },
+    { "q": "SN1 vs SN2", "a": "SN1 via carbocation; SN2 concerted backside" },
+    { "q": "E1 vs E2", "a": "E1 two-step; E2 one-step elimination" },
+    { "q": "Markovnikov rule", "a": "H adds to carbon with more Hs" },
+    { "q": "Isomer categories", "a": "Constitutional vs stereoisomers" },
+    { "q": "Chiral center", "a": "Carbon with 4 different groups" },
+    { "q": "Enantiomers", "a": "Non-superimposable mirror images" },
+    { "q": "Diastereomers", "a": "Stereoisomers not mirror images" },
+    { "q": "Polymer example", "a": "Polyethylene (from ethene)" },
+    { "q": "Hydrocarbon combustion products", "a": "CO2 and H2O" }
+  ]
+}

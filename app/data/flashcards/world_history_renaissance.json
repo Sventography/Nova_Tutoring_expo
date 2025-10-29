@@ -1,0 +1,25 @@
+{
+  "topic": "World History: Renaissance",
+  "cards": [
+    { "q": "Renaissance meaning", "a": "Rebirth of classical learning and arts" },
+    { "q": "Origin region", "a": "Italian city-states (Florence, Venice, Rome)" },
+    { "q": "Humanism definition", "a": "Emphasis on human potential, classical texts" },
+    { "q": "Patronage system", "a": "Wealthy patrons (Medici) fund artists" },
+    { "q": "Linear perspective", "a": "Brunelleschi; depth in painting" },
+    { "q": "Leonardo da Vinci", "a": "Mona Lisa, Last Supper; polymath" },
+    { "q": "Michelangelo", "a": "David, Pietà, Sistine Chapel ceiling" },
+    { "q": "Raphael", "a": "School of Athens" },
+    { "q": "Machiavelli", "a": "The Prince; political realism" },
+    { "q": "Printing press", "a": "Johannes Gutenberg c.1450; spread of ideas" },
+    { "q": "Northern Renaissance", "a": "Dürer, van Eyck; oil painting detail" },
+    { "q": "Erasmus", "a": "Praise of Folly; Christian humanism" },
+    { "q": "Thomas More", "a": "Utopia" },
+    { "q": "Shakespeare", "a": "English drama and sonnets" },
+    { "q": "Secular vs sacred art", "a": "Increased secular themes alongside religious" },
+    { "q": "Civic humanism", "a": "Active participation in public life" },
+    { "q": "Renaissance architecture", "a": "Domes, symmetry, classical orders" },
+    { "q": "Scientific observation", "a": "Empiricism begins to grow" },
+    { "q": "Role of trade", "a": "Wealth from commerce/Banking fuels culture" },
+    { "q": "Legacy", "a": "Laid groundwork for Reformation/Scientific Revolution" }
+  ]
+}

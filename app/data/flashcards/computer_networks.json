@@ -1,0 +1,25 @@
+{
+  "topic": "Computer Networks",
+  "cards": [
+    { "q": "OSI layers count", "a": "7 layers" },
+    { "q": "TCP/IP model layers", "a": "Link, Internet, Transport, Application" },
+    { "q": "HTTP default port", "a": "80 (HTTPS 443)" },
+    { "q": "TCP vs UDP", "a": "Reliable connection vs best-effort datagrams" },
+    { "q": "DNS purpose", "a": "Resolve domain names to IPs" },
+    { "q": "IP addressing versions", "a": "IPv4 32-bit; IPv6 128-bit" },
+    { "q": "Subnet mask role", "a": "Separate network and host bits" },
+    { "q": "DHCP function", "a": "Dynamic IP assignment" },
+    { "q": "NAT purpose", "a": "Translate private to public IPs" },
+    { "q": "Routing protocol example", "a": "OSPF (link-state), BGP (path-vector)" },
+    { "q": "Switch vs router", "a": "Layer 2 frames vs layer 3 packets" },
+    { "q": "ARP use", "a": "Map IP to MAC on LAN" },
+    { "q": "Three-way handshake", "a": "SYN, SYN-ACK, ACK" },
+    { "q": "TLS role", "a": "Encrypt/authenticate application data" },
+    { "q": "CIDR notation", "a": "IP/PrefixLength (e.g., 192.168.1.0/24)" },
+    { "q": "Latency vs throughput", "a": "Delay vs data rate" },
+    { "q": "Packet loss causes", "a": "Congestion, errors, buffer overflow" },
+    { "q": "CDN purpose", "a": "Cache content near users" },
+    { "q": "802.11 standard", "a": "Wi-Fi wireless LAN" },
+    { "q": "QoS meaning", "a": "Quality of Service prioritization" }
+  ]
+}

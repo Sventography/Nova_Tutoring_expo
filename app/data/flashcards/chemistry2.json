@@ -1,0 +1,25 @@
+{
+  "topic": "Chemistry II",
+  "cards": [
+    { "q": "Hybridization sp2 shape", "a": "Trigonal planar, 120 deg" },
+    { "q": "Hybridization sp3 shape", "a": "Tetrahedral, 109.5 deg" },
+    { "q": "Hybridization sp shape", "a": "Linear, 180 deg" },
+    { "q": "Sigma vs pi bond", "a": "Sigma along-axis overlap; pi side-by-side overlap" },
+    { "q": "Formal charge formula", "a": "Valence - (nonbonding + 1/2 bonding)" },
+    { "q": "Lewis acid definition", "a": "Electron pair acceptor" },
+    { "q": "Lewis base definition", "a": "Electron pair donor" },
+    { "q": "Electronegativity periodic trend", "a": "Increase across, decrease down" },
+    { "q": "Bond order calculation", "a": "(bonding - antibonding electrons)/2" },
+    { "q": "Paramagnetic vs diamagnetic", "a": "Unpaired electrons vs all paired" },
+    { "q": "Crystal lattice energy trend", "a": "Larger charge, smaller radius -> stronger" },
+    { "q": "Hydrogen bond strength order", "a": "F-H > O-H > N-H (general trend)" },
+    { "q": "Why water is polar", "a": "Bent geometry and polar O-H bonds" },
+    { "q": "Phase diagram triple point", "a": "All three phases coexist" },
+    { "q": "Phase diagram critical point", "a": "Beyond which liquid/gas indistinguishable" },
+    { "q": "Colligative properties examples", "a": "Freezing point depression, boiling point elevation, osmotic pressure" },
+    { "q": "Raoult's law", "a": "P_solution = X_solvent * P0_solvent" },
+    { "q": "Henderson-Hasselbalch", "a": "pH = pKa + log([A-]/[HA])" },
+    { "q": "Oxidizing vs reducing agent", "a": "Oxidizing agent is reduced; reducing agent is oxidized" },
+    { "q": "Standard cell potential", "a": "E0_cell = E0_cathode - E0_anode" }
+  ]
+}

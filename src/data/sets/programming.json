@@ -1,0 +1,22 @@
+[
+  ["Variable", "Named storage for data."],
+  ["Constant", "Immutable value."],
+  ["Function", "Reusable block of code."],
+  ["Loop", "Repeated execution of a block."],
+  ["Conditional", "Branching logic using if/else."],
+  ["Array", "Ordered list of elements."],
+  ["Object", "Key-value collection."],
+  ["Recursion", "Function calling itself."],
+  ["Algorithm", "Step-by-step procedure for solving a problem."],
+  ["Complexity", "Measure of algorithm efficiency (Big-O)."],
+  ["Class", "Blueprint for creating objects."],
+  ["Inheritance", "Subclass derives from superclass."],
+  ["Encapsulation", "Bundling data with methods."],
+  ["Polymorphism", "Objects behave differently under same interface."],
+  ["Abstraction", "Hiding implementation, exposing essentials."],
+  ["API", "Interface for communication between software."],
+  ["Database", "Organized data collection."],
+  ["SQL", "Language to query relational databases."],
+  ["HTTP", "Protocol of the web."],
+  ["REST", "API design using standard HTTP methods."]
+]

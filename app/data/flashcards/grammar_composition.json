@@ -1,0 +1,25 @@
+{
+  "topic": "Grammar & Composition",
+  "cards": [
+    { "q": "Eight parts of speech (basic)", "a": "Noun, pronoun, verb, adjective, adverb, preposition, conjunction, interjection." },
+    { "q": "Subject–verb agreement rule", "a": "Singular subject → singular verb; plural subject → plural verb." },
+    { "q": "Sentence fragment vs run-on", "a": "Fragment lacks a complete thought; run-on improperly joins clauses." },
+    { "q": "Comma splice fix", "a": "Use period, semicolon, or comma + coordinating conjunction (FANBOYS)." },
+    { "q": "Semicolon usage", "a": "Link closely related independent clauses or separate complex list items." },
+    { "q": "Colon usage", "a": "Introduce a list, explanation, or quotation after a complete clause." },
+    { "q": "Pronoun–antecedent agreement", "a": "Pronoun number/gender must match its antecedent." },
+    { "q": "Active vs passive voice", "a": "Active: subject performs action; Passive: subject receives action." },
+    { "q": "Thesis statement purpose", "a": "States central claim guiding the essay." },
+    { "q": "Topic sentence role", "a": "Introduces the main idea of a paragraph." },
+    { "q": "Unity and coherence", "a": "All sentences support the topic; logical order with transitions." },
+    { "q": "Effective transitions examples", "a": "However, moreover, therefore, for example, meanwhile, consequently." },
+    { "q": "Essay structure (basic)", "a": "Introduction, body paragraphs, conclusion." },
+    { "q": "MLA vs APA (basic difference)", "a": "MLA for humanities; APA for social sciences; different in-text and refs formats." },
+    { "q": "Paraphrase vs quotation vs summary", "a": "Paraphrase restates; quotation copies exactly; summary condenses main ideas." },
+    { "q": "Avoiding plagiarism", "a": "Cite sources; quote or paraphrase correctly; keep track of references." },
+    { "q": "Tone and register", "a": "Tone = attitude; register = level of formality." },
+    { "q": "Common homophones", "a": "Their/there/they’re; your/you’re; its/it’s; affect/effect." },
+    { "q": "Revision strategies", "a": "Read aloud, reverse outline, check clarity, tighten sentences, verify evidence." },
+    { "q": "Proofreading focus", "a": "Spelling, punctuation, formatting, consistent tense/voice." }
+  ]
+}

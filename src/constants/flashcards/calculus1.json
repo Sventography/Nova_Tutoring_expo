@@ -1,0 +1,82 @@
+[
+  {
+    "question": "Limit definition of derivative",
+    "answer": "f'(x)=lim_{h→0}[f(x+h)−f(x)]/h"
+  },
+  {
+    "question": "Derivative of x^n",
+    "answer": "nx^{n−1}"
+  },
+  {
+    "question": "Product rule",
+    "answer": "(fg)'=f'g+fg'"
+  },
+  {
+    "question": "Quotient rule",
+    "answer": "(f/g)'=(f'g−fg')/g^2"
+  },
+  {
+    "question": "Chain rule",
+    "answer": "(f∘g)'(x)=f'(g(x))·g'(x)"
+  },
+  {
+    "question": "Derivative of sin x, cos x",
+    "answer": "cos x, −sin x"
+  },
+  {
+    "question": "Critical points occur when",
+    "answer": "f'=0 or f' undefined"
+  },
+  {
+    "question": "Concave up/down test",
+    "answer": "f''>0 up, f''<0 down"
+  },
+  {
+    "question": "Mean Value Theorem",
+    "answer": "∃c: f'(c)=[f(b)−f(a)]/(b−a)"
+  },
+  {
+    "question": "Indefinite integral of x^n, n≠−1",
+    "answer": "x^{n+1}/(n+1)+C"
+  },
+  {
+    "question": "FTC Part 1",
+    "answer": "d/dx ∫_a^x f(t) dt = f(x)"
+  },
+  {
+    "question": "FTC Part 2",
+    "answer": "∫_a^b f = F(b)−F(a) where F'=f"
+  },
+  {
+    "question": "u-substitution purpose",
+    "answer": "Simplify integrand via substitution"
+  },
+  {
+    "question": "Riemann sum approximates",
+    "answer": "Area under the curve"
+  },
+  {
+    "question": "Optimization steps",
+    "answer": "Model, differentiate, critical points, test, answer"
+  },
+  {
+    "question": "Related rates key idea",
+    "answer": "Differentiate with respect to time"
+  },
+  {
+    "question": "Derivative of e^x and ln x",
+    "answer": "e^x, 1/x"
+  },
+  {
+    "question": "Derivative of a^x",
+    "answer": "a^x ln a"
+  },
+  {
+    "question": "Integral of e^x and 1/x",
+    "answer": "e^x + C, ln|x| + C"
+  },
+  {
+    "question": "L'Hôpital's Rule applies to",
+    "answer": "Indeterminate forms 0/0 or ∞/∞"
+  }
+]

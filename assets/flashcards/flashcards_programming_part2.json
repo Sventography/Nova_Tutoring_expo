@@ -1,0 +1,129 @@
+{
+  "topics": [
+    {
+      "name": "Java Basics",
+      "questions": [
+        {"q": "What keyword defines a class in Java?", "a": "class"},
+        {"q": "What keyword defines a method in Java?", "a": "void / return type"},
+        {"q": "What method is the entry point in Java?", "a": "main()"},
+        {"q": "What symbol is used for comments in Java?", "a": "//"},
+        {"q": "What keyword creates a new object?", "a": "new"},
+        {"q": "What keyword is used for inheritance?", "a": "extends"},
+        {"q": "What keyword is used for interfaces?", "a": "implements"},
+        {"q": "What keyword prevents inheritance?", "a": "final"},
+        {"q": "What keyword is used for constants?", "a": "final"},
+        {"q": "What keyword is used for exceptions?", "a": "try/catch"},
+        {"q": "What keyword is used for returning values?", "a": "return"},
+        {"q": "What keyword is used to exit a loop?", "a": "break"},
+        {"q": "What keyword skips a loop iteration?", "a": "continue"},
+        {"q": "What keyword imports libraries?", "a": "import"},
+        {"q": "What keyword defines a package?", "a": "package"},
+        {"q": "What is JVM?", "a": "Java Virtual Machine"},
+        {"q": "What is JDK?", "a": "Java Development Kit"},
+        {"q": "What is JRE?", "a": "Java Runtime Environment"},
+        {"q": "What does OOP stand for?", "a": "Object-Oriented Programming"},
+        {"q": "What is encapsulation?", "a": "Hiding data using classes and objects"}
+      ]
+    },
+    {
+      "name": "C++ Basics",
+      "questions": [
+        {"q": "What symbol is used for single-line comments in C++?", "a": "//"},
+        {"q": "What symbol is used for multi-line comments in C++?", "a": "/* */"},
+        {"q": "What function is used to output text?", "a": "cout"},
+        {"q": "What function is used to input text?", "a": "cin"},
+        {"q": "What header is required for input/output?", "a": "#include <iostream>"},
+        {"q": "What keyword defines a function?", "a": "return type + name"},
+        {"q": "What keyword creates a new object?", "a": "new"},
+        {"q": "What keyword deletes an object?", "a": "delete"},
+        {"q": "What is a pointer?", "a": "Variable that stores memory address"},
+        {"q": "What is a reference?", "a": "Alias for another variable"},
+        {"q": "What is a constructor?", "a": "Special method for initializing objects"},
+        {"q": "What is a destructor?", "a": "Method to clean up when object is destroyed"},
+        {"q": "What is polymorphism?", "a": "Ability of methods to take many forms"},
+        {"q": "What is inheritance?", "a": "Deriving new classes from existing ones"},
+        {"q": "What is encapsulation?", "a": "Hiding internal details of a class"},
+        {"q": "What keyword makes members private?", "a": "private"},
+        {"q": "What keyword makes members accessible?", "a": "public"},
+        {"q": "What keyword makes members protected?", "a": "protected"},
+        {"q": "What operator is used to access members?", "a": "."},
+        {"q": "What operator is used to access pointer members?", "a": "->"}
+      ]
+    },
+    {
+      "name": "Databases & SQL",
+      "questions": [
+        {"q": "What does SQL stand for?", "a": "Structured Query Language"},
+        {"q": "What keyword retrieves data?", "a": "SELECT"},
+        {"q": "What keyword adds new data?", "a": "INSERT"},
+        {"q": "What keyword modifies data?", "a": "UPDATE"},
+        {"q": "What keyword removes data?", "a": "DELETE"},
+        {"q": "What keyword creates a table?", "a": "CREATE TABLE"},
+        {"q": "What keyword removes a table?", "a": "DROP TABLE"},
+        {"q": "What does WHERE do?", "a": "Filters rows"},
+        {"q": "What does ORDER BY do?", "a": "Sorts rows"},
+        {"q": "What does GROUP BY do?", "a": "Groups rows"},
+        {"q": "What does JOIN do?", "a": "Combines data from tables"},
+        {"q": "What is a primary key?", "a": "Unique identifier for a row"},
+        {"q": "What is a foreign key?", "a": "Links one table to another"},
+        {"q": "What is normalization?", "a": "Organizing data to reduce redundancy"},
+        {"q": "What is a transaction?", "a": "Sequence of database operations"},
+        {"q": "What is ACID?", "a": "Atomicity, Consistency, Isolation, Durability"},
+        {"q": "What is an index?", "a": "Speeds up queries"},
+        {"q": "What is a view?", "a": "Stored query result as a table"},
+        {"q": "What is NoSQL?", "a": "Databases without structured tables"},
+        {"q": "What does CRUD stand for?", "a": "Create, Read, Update, Delete"}
+      ]
+    },
+    {
+      "name": "Cybersecurity Basics",
+      "questions": [
+        {"q": "What does HTTPS stand for?", "a": "HyperText Transfer Protocol Secure"},
+        {"q": "What is encryption?", "a": "Scrambling data to prevent unauthorized access"},
+        {"q": "What is decryption?", "a": "Making encrypted data readable"},
+        {"q": "What is a firewall?", "a": "System that filters network traffic"},
+        {"q": "What is malware?", "a": "Malicious software"},
+        {"q": "What is a virus?", "a": "Self-replicating malicious program"},
+        {"q": "What is a worm?", "a": "Malware that spreads without human action"},
+        {"q": "What is a Trojan horse?", "a": "Malware disguised as useful software"},
+        {"q": "What is phishing?", "a": "Tricking users to reveal info"},
+        {"q": "What is ransomware?", "a": "Malware that locks files until ransom is paid"},
+        {"q": "What is a DDoS attack?", "a": "Distributed Denial of Service"},
+        {"q": "What is a brute force attack?", "a": "Trying all possible passwords"},
+        {"q": "What is hashing?", "a": "One-way function to protect passwords"},
+        {"q": "What is salting?", "a": "Adding random data to protect passwords"},
+        {"q": "What is two-factor authentication?", "a": "Two forms of identity verification"},
+        {"q": "What is social engineering?", "a": "Manipulating people to gain access"},
+        {"q": "What is VPN?", "a": "Virtual Private Network"},
+        {"q": "What is SQL injection?", "a": "Code injection into database queries"},
+        {"q": "What is zero-day exploit?", "a": "Attack before vulnerability is patched"},
+        {"q": "What is penetration testing?", "a": "Testing security by simulating attacks"}
+      ]
+    },
+    {
+      "name": "Software Development Practices",
+      "questions": [
+        {"q": "What is Git?", "a": "Version control system"},
+        {"q": "What is GitHub?", "a": "Platform for hosting Git repositories"},
+        {"q": "What is a repository?", "a": "Storage for code and history"},
+        {"q": "What is a commit?", "a": "Saved change in version control"},
+        {"q": "What is a branch?", "a": "Separate line of development"},
+        {"q": "What is merging?", "a": "Combining branches"},
+        {"q": "What is a pull request?", "a": "Request to merge code"},
+        {"q": "What is continuous integration?", "a": "Automatically testing new code"},
+        {"q": "What is continuous deployment?", "a": "Automatically releasing code"},
+        {"q": "What is agile methodology?", "a": "Iterative development approach"},
+        {"q": "What is Scrum?", "a": "Agile framework with sprints"},
+        {"q": "What is Kanban?", "a": "Workflow method with visual boards"},
+        {"q": "What is test-driven development?", "a": "Write tests before writing code"},
+        {"q": "What is unit testing?", "a": "Testing small parts of code"},
+        {"q": "What is integration testing?", "a": "Testing combined parts of a program"},
+        {"q": "What is debugging?", "a": "Finding and fixing errors"},
+        {"q": "What is code refactoring?", "a": "Improving code without changing behavior"},
+        {"q": "What is pair programming?", "a": "Two programmers working together"},
+        {"q": "What is open source?", "a": "Code available for anyone to use/modify"},
+        {"q": "What is documentation?", "a": "Written explanation of code"}
+      ]
+    }
+  ]
+}

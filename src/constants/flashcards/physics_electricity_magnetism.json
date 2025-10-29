@@ -1,0 +1,82 @@
+[
+  {
+    "question": "Coulomb’s law",
+    "answer": "F = k q1 q2 / r^2"
+  },
+  {
+    "question": "Electric field due to point charge",
+    "answer": "E = k q / r^2"
+  },
+  {
+    "question": "Electric potential energy units",
+    "answer": "Joules"
+  },
+  {
+    "question": "Capacitance of parallel plate",
+    "answer": "C = εA/d"
+  },
+  {
+    "question": "Ohm’s law",
+    "answer": "V = IR"
+  },
+  {
+    "question": "Power in circuits",
+    "answer": "P = IV = I^2R = V^2/R"
+  },
+  {
+    "question": "Magnetic force on moving charge",
+    "answer": "F = q v B sin θ"
+  },
+  {
+    "question": "Right-hand rule applies to",
+    "answer": "Direction of magnetic force or field"
+  },
+  {
+    "question": "Faraday’s law of induction",
+    "answer": "ε = −dΦ_B/dt"
+  },
+  {
+    "question": "Lenz’s law indicates",
+    "answer": "Induced current opposes change"
+  },
+  {
+    "question": "Lorentz force total",
+    "answer": "F = q(E + v×B)"
+  },
+  {
+    "question": "Resistors in series equivalent",
+    "answer": "R_eq = R1 + R2 + …"
+  },
+  {
+    "question": "Resistors in parallel equivalent",
+    "answer": "1/R_eq = 1/R1 + 1/R2 + …"
+  },
+  {
+    "question": "Kirchhoff’s junction rule",
+    "answer": "Sum of currents in = sum out"
+  },
+  {
+    "question": "Kirchhoff’s loop rule",
+    "answer": "Sum of potential changes = 0"
+  },
+  {
+    "question": "Energy stored in capacitor",
+    "answer": "U = 1/2 C V^2"
+  },
+  {
+    "question": "Magnetic field of long straight wire",
+    "answer": "B ∝ I/r"
+  },
+  {
+    "question": "Transformer basic relation",
+    "answer": "V_s/V_p = N_s/N_p"
+  },
+  {
+    "question": "RMS voltage for sine wave",
+    "answer": "V_rms = V_max/√2"
+  },
+  {
+    "question": "Permittivity symbol",
+    "answer": "ε"
+  }
+]

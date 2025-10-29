@@ -1,0 +1,25 @@
+{
+  "topic": "Linear Algebra",
+  "cards": [
+    { "q": "Span & linear independence", "a": "Span = combinations; independence = only trivial combination gives 0" },
+    { "q": "Basis & dimension", "a": "Minimal spanning set; number of vectors" },
+    { "q": "Matrix multiplication rule", "a": "(m×n)(n×p) → m×p; row-by-column" },
+    { "q": "Determinant properties", "a": "Area/volume scale; zero ⇒ singular" },
+    { "q": "Rank–nullity", "a": "rank(A)+nullity(A)=n (columns)" },
+    { "q": "Inverse existence", "a": "A invertible ⇔ det(A)≠0" },
+    { "q": "Eigenvalue equation", "a": "Av = λv" },
+    { "q": "Diagonalization", "a": "A = PDP^{-1} if n eigenvectors" },
+    { "q": "Orthogonality", "a": "v·w=0; orthonormal basis" },
+    { "q": "Gram–Schmidt", "a": "Orthogonalize vectors" },
+    { "q": "Projection formula", "a": "proj_u v = (v·u/‖u‖^2)u" },
+    { "q": "Least squares", "a": "Solve A^T A x = A^T b" },
+    { "q": "SVD", "a": "A=UΣV^T; singular values" },
+    { "q": "Positive definite", "a": "x^T A x > 0 for x≠0" },
+    { "q": "Change of basis", "a": "Coordinates in new basis" },
+    { "q": "Linear transformation", "a": "Preserves addition/scalar mult." },
+    { "q": "Subspace test", "a": "Contains 0; closed under + and scalar" },
+    { "q": "Block matrices", "a": "Partitioned operations" },
+    { "q": "Spectral theorem", "a": "Symmetric A diagonalizable orthogonally" },
+    { "q": "Condition number", "a": "Sensitivity of Ax=b to perturbations" }
+  ]
+}

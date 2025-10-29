@@ -1,0 +1,25 @@
+{
+  "topic": "AP U.S. Government",
+  "cards": [
+    { "q": "Separation of powers", "a": "Legislative, executive, judicial branches" },
+    { "q": "Checks and balances example", "a": "President veto; Congress override" },
+    { "q": "Federalism", "a": "Division of power between national and state governments" },
+    { "q": "Commerce clause", "a": "Expanded federal power over interstate trade" },
+    { "q": "Supremacy clause", "a": "Federal law is supreme over state law" },
+    { "q": "Bill of Rights", "a": "First 10 amendments; protect liberties" },
+    { "q": "Marbury v. Madison", "a": "Established judicial review (1803)" },
+    { "q": "McCulloch v. Maryland", "a": "Upheld implied powers; states cannot tax federal bank" },
+    { "q": "Gideon v. Wainwright", "a": "Right to attorney for felony defendants" },
+    { "q": "Miranda v. Arizona", "a": "Rights must be read to suspects" },
+    { "q": "Brown v. Board", "a": "Ended racial segregation in schools (1954)" },
+    { "q": "Voting Rights Act 1965", "a": "Banned discriminatory voting practices" },
+    { "q": "Electoral College role", "a": "Elects president via state electors" },
+    { "q": "Political socialization", "a": "Process of forming political values" },
+    { "q": "Interest groups", "a": "Influence policy through lobbying" },
+    { "q": "PAC vs Super PAC", "a": "PAC limited; Super PAC unlimited independent spending" },
+    { "q": "Iron triangle", "a": "Congress, bureaucracy, interest groups relationship" },
+    { "q": "Civil liberties vs rights", "a": "Liberties = freedoms; rights = protection from discrimination" },
+    { "q": "Incumbency advantage", "a": "Name recognition, fundraising, gerrymandering" },
+    { "q": "Media as watchdog", "a": "Informs public and monitors government" }
+  ]
+}

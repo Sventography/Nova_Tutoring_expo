@@ -1,0 +1,5 @@
+[
+  { "topic": "Algebra: Linear Equations", "q": "Solve 2x + 3 = 11", "a": "x = 4" },
+  { "topic": "Biology: Cells", "q": "What is the function of mitochondria?", "a": "They produce ATP (cellular energy)." },
+  { "topic": "History: US Civics", "q": "What are the three branches of US government?", "a": "Legislative, Executive, Judicial." }
+]

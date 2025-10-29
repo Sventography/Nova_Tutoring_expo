@@ -1,0 +1,25 @@
+{
+  "topic": "Philosophy 101",
+  "cards": [
+    { "q": "Branches of philosophy", "a": "Metaphysics, epistemology, ethics, logic, aesthetics" },
+    { "q": "Socratic method", "a": "Questioning to probe assumptions" },
+    { "q": "Plato's Forms", "a": "Abstract, perfect universals" },
+    { "q": "Aristotle virtue ethics", "a": "Character & golden mean" },
+    { "q": "Rationalism vs empiricism", "a": "Reason vs experience" },
+    { "q": "Descartes cogito", "a": "\"I think, therefore I am\"" },
+    { "q": "Kant categorical imperative", "a": "Act by universalizable maxims" },
+    { "q": "Utilitarianism", "a": "Maximize happiness (Bentham/Mill)" },
+    { "q": "Existentialism", "a": "Meaning via choice (Sartre, Camus)" },
+    { "q": "Nihilism", "a": "Denial of inherent meaning" },
+    { "q": "Deontology", "a": "Duty-based ethics" },
+    { "q": "Social contract", "a": "Legitimacy from consent" },
+    { "q": "Free will vs determinism", "a": "Agency vs causality" },
+    { "q": "Gettier problem", "a": "Challenges 'justified true belief'" },
+    { "q": "Logical fallacy example", "a": "Ad hominem, straw man, false cause" },
+    { "q": "Deductive vs inductive", "a": "Certain vs probabilistic inference" },
+    { "q": "Analytic vs continental", "a": "Anglo-American vs European traditions" },
+    { "q": "Virtue epistemology", "a": "Intellectual character traits" },
+    { "q": "Phenomenology", "a": "Study of experience structures" },
+    { "q": "Philosophy of mind", "a": "Consciousness, mind–body problem" }
+  ]
+}

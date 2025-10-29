@@ -1,0 +1,25 @@
+{
+  "topic": "Biology: Ecology",
+  "cards": [
+    { "q": "Population vs community", "a": "One species vs multiple species in area" },
+    { "q": "Ecosystem definition", "a": "Community + abiotic environment" },
+    { "q": "Biosphere", "a": "All ecosystems on Earth" },
+    { "q": "Trophic levels", "a": "Producer → consumer → decomposer" },
+    { "q": "10% rule", "a": "~10% energy transfer between levels" },
+    { "q": "Food web", "a": "Interconnected food chains" },
+    { "q": "Niche", "a": "Organism's role and resource use" },
+    { "q": "Carrying capacity (K)", "a": "Max population environment supports" },
+    { "q": "Logistic growth", "a": "S-shaped; limited by K" },
+    { "q": "r vs K selection", "a": "Many small offspring vs few large" },
+    { "q": "Symbiosis types", "a": "Mutualism, commensalism, parasitism" },
+    { "q": "Succession", "a": "Community change over time" },
+    { "q": "Keystone species", "a": "Disproportionate ecosystem impact" },
+    { "q": "Biogeochemical cycles", "a": "Carbon, nitrogen, water, phosphorus" },
+    { "q": "Eutrophication", "a": "Nutrient enrichment → algal blooms" },
+    { "q": "Invasive species", "a": "Non-native causing harm" },
+    { "q": "Biodiversity", "a": "Variety of genes, species, ecosystems" },
+    { "q": "Edge effects", "a": "Habitat boundaries alter conditions" },
+    { "q": "Island biogeography", "a": "Species richness vs area & isolation" },
+    { "q": "Conservation strategy", "a": "Protected areas, corridors, restoration" }
+  ]
+}

@@ -1,0 +1,71 @@
+import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+/** ---- Theme tokens (bg MUST be an array for LinearGradient) ---- */
+const THEMES = {
+  neon:         { bg: ["#000000", "#000000"], text: "#e5f8ff", accent: "#00e5ff", card: "#0b0f14", border: "#00e5ff55", glow: "0 0 24px rgba(0,229,255,0.6)" },
+  starry_night: { bg: ["#0a0d1a", "#000000"], text: "#eaf2ff", accent: "#8ab4ff", card: "#0e1424", border: "#8ab4ff44", glow: "0 0 24px rgba(138,180,255,0.6)" },
+  pink:         { bg: ["#210014", "#2b0a1d"], text: "#ffeaf6", accent: "#ff7ccf", card: "#2b0a1d", border: "#ff7ccf44", glow: "0 0 24px rgba(255,124,207,0.6)" },
+  dark:         { bg: ["#0a0a0a", "#111111"], text: "#f2f2f2", accent: "#7f7fff", card: "#141414", border: "#7f7fff33", glow: "0 0 24px rgba(127,127,255,0.5)" },
+  mint:         { bg: ["#071410", "#0c1f19"], text: "#eafff7", accent: "#72ffd1", card: "#0c1f19", border: "#72ffd144", glow: "0 0 24px rgba(114,255,209,0.5)" },
+  glitter:      { bg: ["#0a0a12", "#121224"], text: "#fbf7ff", accent: "#caa6ff", card: "#121224", border: "#caa6ff44", glow: "0 0 24px rgba(202,166,255,0.6)" },
+  black_gold:   { bg: ["#060606", "#0f0f0f"], text: "#fff7da", accent: "#ffc857", card: "#0f0f0f", border: "#ffc85733", glow: "0 0 24px rgba(255,200,87,0.5)" },
+  crimson:      { bg: ["#170206", "#23050a"], text: "#ffe9ec", accent: "#ff4d6d", card: "#23050a", border: "#ff4d6d33", glow: "0 0 24px rgba(255,77,109,0.5)" },
+  emerald:      { bg: ["#03150d", "#0a2218"], text: "#eaffe9", accent: "#2ee88a", card: "#0a2218", border: "#2ee88a33", glow: "0 0 24px rgba(46,232,138,0.5)" },
+  neon_purple:  { bg: ["#110018", "#1b0a27"], text: "#f9eaff", accent: "#a16cff", card: "#1b0a27", border: "#a16cff33", glow: "0 0 24px rgba(161,108,255,0.55)" },
+  silver:       { bg: ["#0f1014", "#171923"], text: "#f1f5f9", accent: "#cbd5e1", card: "#171923", border: "#cbd5e144", glow: "0 0 24px rgba(203,213,225,0.45)" },
+} as const;
+
+export type ProviderThemeId = keyof typeof THEMES;
+
+type ThemeTokens = (typeof THEMES)[ProviderThemeId];
+
+type ThemeCtx = {
+  themeId: ProviderThemeId;
+  tokens: ThemeTokens;
+  setThemeById: (id: ProviderThemeId | string) => void;
+};
+
+const Ctx = createContext<ThemeCtx | undefined>(undefined);
+
+function normalize(id?: string): ProviderThemeId {
+  const raw = String(id ?? "").toLowerCase().replace(/^theme:/, "");
+  return (raw in THEMES ? (raw as ProviderThemeId) : "neon");
+}
+
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const [themeId, setThemeId] = useState<ProviderThemeId>("neon");
+
+  // Restore saved theme once on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const saved = await AsyncStorage.getItem("@nova/themeId");
+        if (saved) setThemeId(normalize(saved));
+      } catch {}
+    })();
+  }, []);
+
+  const tokens = useMemo(() => THEMES[themeId] ?? THEMES.neon, [themeId]);
+
+  const setThemeById = (id: ProviderThemeId | string) => {
+    const norm = normalize(String(id));
+    setThemeId(norm);
+    AsyncStorage.setItem("@nova/themeId", norm).catch(() => {});
+    try {
+      // optional global event for any listeners
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("nova:theme:equip", { detail: norm }));
+      }
+    } catch {}
+  };
+
+  const value: ThemeCtx = { themeId, tokens, setThemeById };
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+}
+
+export function useTheme() {
+  const ctx = useContext(Ctx);
+  if (!ctx) throw new Error("useTheme must be used inside ThemeProvider");
+  return ctx;
+}

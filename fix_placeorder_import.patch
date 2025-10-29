@@ -1,0 +1,6 @@
+--- a/app/tabs/shop.tsx
++++ b/app/tabs/shop.tsx
+@@ -217,7 +217,6 @@
+ });
+-import { placeOrderEmail } from "../lib/order";
++import { placeOrderEmail } from "../lib/order";

@@ -1,0 +1,25 @@
+{
+  "topic": "Precalculus (Enhancements)",
+  "cards": [
+    { "q": "Inverse function test (graphical)", "a": "Horizontal line test" },
+    { "q": "Log properties: product rule", "a": "log(a*b) = log a + log b" },
+    { "q": "Log properties: power rule", "a": "log(a^k) = k log a" },
+    { "q": "Exponential vs logistic growth", "a": "Exponential unbounded; logistic limited by carrying capacity" },
+    { "q": "Asymptotes: slant (oblique) occurs when", "a": "Degree numerator = degree denominator + 1" },
+    { "q": "Rational roots test checks", "a": "Possible roots p/q from factors of constant and leading coefficient" },
+    { "q": "Remainder theorem states", "a": "f(c) equals remainder when dividing by x - c" },
+    { "q": "Sum and difference formulas (purpose)", "a": "Rewrite trig of sums into products for solving/simplifying" },
+    { "q": "Law of Sines ambiguous case", "a": "SSA can yield 0, 1, or 2 triangles" },
+    { "q": "Vectors: magnitude notation", "a": "|v| = sqrt(vx^2 + vy^2)" },
+    { "q": "Vectors: dot product meaning", "a": "v dot w = |v||w| cos theta" },
+    { "q": "Parametric arc length idea", "a": "Integral sqrt((dx/dt)^2 + (dy/dt)^2) dt" },
+    { "q": "Polar slope dy/dx", "a": "(dr/dtheta sin theta + r cos theta) / (dr/dtheta cos theta - r sin theta)" },
+    { "q": "Polar to rectangular conversion", "a": "x = r cos theta, y = r sin theta" },
+    { "q": "Complex number in trig form", "a": "r(cos theta + i sin theta)" },
+    { "q": "De Moivre's theorem use", "a": "(r cis theta)^n = r^n cis(n theta)" },
+    { "q": "Sequences: monotone and bounded implies", "a": "Convergent" },
+    { "q": "Sigma trick: sum of first n integers", "a": "n(n+1)/2" },
+    { "q": "Sigma trick: sum of first n squares", "a": "n(n+1)(2n+1)/6" },
+    { "q": "Permutation vs combination", "a": "Permutation orders matter; combination orders do not" }
+  ]
+}

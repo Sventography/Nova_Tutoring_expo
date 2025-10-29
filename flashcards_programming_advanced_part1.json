@@ -1,0 +1,129 @@
+{
+  "topics": [
+    {
+      "name": "Artificial Intelligence (AI) Basics",
+      "questions": [
+        {"q": "What does AI stand for?", "a": "Artificial Intelligence"},
+        {"q": "What is AI?", "a": "Simulation of human intelligence by machines"},
+        {"q": "What are the main types of AI?", "a": "Narrow AI, General AI, Super AI"},
+        {"q": "What is Narrow AI?", "a": "AI specialized in one task"},
+        {"q": "What is General AI?", "a": "AI with human-level intelligence"},
+        {"q": "What is Super AI?", "a": "AI smarter than humans"},
+        {"q": "What is natural language processing?", "a": "AI understanding human language"},
+        {"q": "What is computer vision?", "a": "AI interpreting images and video"},
+        {"q": "What is robotics?", "a": "AI controlling machines to act physically"},
+        {"q": "What is expert system?", "a": "AI that mimics decision-making"},
+        {"q": "What is Turing Test?", "a": "Test to see if AI can mimic humans"},
+        {"q": "What is reinforcement learning?", "a": "Learning through rewards and punishments"},
+        {"q": "What is supervised learning?", "a": "Training with labeled data"},
+        {"q": "What is unsupervised learning?", "a": "Training with unlabeled data"},
+        {"q": "What is semi-supervised learning?", "a": "Mix of labeled and unlabeled data"},
+        {"q": "What is bias in AI?", "a": "Systematic errors in decision making"},
+        {"q": "What is AI ethics?", "a": "Moral guidelines for AI development"},
+        {"q": "What is AI used for in healthcare?", "a": "Diagnostics, drug discovery, patient care"},
+        {"q": "What is AI used for in business?", "a": "Automation, analytics, customer service"},
+        {"q": "What is AI used for in gaming?", "a": "NPC behavior, adaptive difficulty"}
+      ]
+    },
+    {
+      "name": "Machine Learning (ML)",
+      "questions": [
+        {"q": "What does ML stand for?", "a": "Machine Learning"},
+        {"q": "What is ML?", "a": "Algorithms that improve with experience"},
+        {"q": "What is training data?", "a": "Data used to teach ML models"},
+        {"q": "What is a model?", "a": "Learned pattern from data"},
+        {"q": "What is a feature?", "a": "Input variable to a model"},
+        {"q": "What is a label?", "a": "Output or target variable"},
+        {"q": "What is classification?", "a": "Predicting categories"},
+        {"q": "What is regression?", "a": "Predicting continuous values"},
+        {"q": "What is clustering?", "a": "Grouping similar data points"},
+        {"q": "What is overfitting?", "a": "Model fits training data too well"},
+        {"q": "What is underfitting?", "a": "Model too simple for data"},
+        {"q": "What is cross-validation?", "a": "Testing model with different data splits"},
+        {"q": "What is gradient descent?", "a": "Algorithm for minimizing error"},
+        {"q": "What is a loss function?", "a": "Measures error in predictions"},
+        {"q": "What is a confusion matrix?", "a": "Table showing classification performance"},
+        {"q": "What is precision?", "a": "Correct positive predictions / total predicted positives"},
+        {"q": "What is recall?", "a": "Correct positive predictions / total actual positives"},
+        {"q": "What is F1 score?", "a": "Harmonic mean of precision and recall"},
+        {"q": "What is supervised ML?", "a": "Learning with labeled data"},
+        {"q": "What is unsupervised ML?", "a": "Learning without labels"}
+      ]
+    },
+    {
+      "name": "Deep Learning & Neural Networks",
+      "questions": [
+        {"q": "What is deep learning?", "a": "Subset of ML using neural networks"},
+        {"q": "What is a neural network?", "a": "System inspired by the brain’s neurons"},
+        {"q": "What is an input layer?", "a": "Layer that receives data"},
+        {"q": "What is a hidden layer?", "a": "Layers that process features"},
+        {"q": "What is an output layer?", "a": "Layer that gives predictions"},
+        {"q": "What is an activation function?", "a": "Function that introduces non-linearity"},
+        {"q": "What is ReLU?", "a": "Rectified Linear Unit activation function"},
+        {"q": "What is sigmoid?", "a": "Activation function with outputs between 0 and 1"},
+        {"q": "What is softmax?", "a": "Activation that gives probability distribution"},
+        {"q": "What is backpropagation?", "a": "Algorithm to train neural networks"},
+        {"q": "What is a convolutional neural network (CNN)?", "a": "NN for image recognition"},
+        {"q": "What is a recurrent neural network (RNN)?", "a": "NN for sequence data"},
+        {"q": "What is LSTM?", "a": "Long Short-Term Memory, type of RNN"},
+        {"q": "What is GAN?", "a": "Generative Adversarial Network"},
+        {"q": "What is a transformer model?", "a": "NN using self-attention"},
+        {"q": "What is BERT?", "a": "Transformer for natural language understanding"},
+        {"q": "What is GPT?", "a": "Generative Pre-trained Transformer"},
+        {"q": "What is dropout in NN?", "a": "Technique to prevent overfitting"},
+        {"q": "What is epoch?", "a": "One pass through training data"},
+        {"q": "What is batch size?", "a": "Number of samples processed at once"}
+      ]
+    },
+    {
+      "name": "Data Science & Analytics",
+      "questions": [
+        {"q": "What is data science?", "a": "Study of extracting insights from data"},
+        {"q": "What is big data?", "a": "Extremely large datasets"},
+        {"q": "What is structured data?", "a": "Organized data in rows and columns"},
+        {"q": "What is unstructured data?", "a": "Data without predefined format"},
+        {"q": "What is a data pipeline?", "a": "System for moving and processing data"},
+        {"q": "What is data cleaning?", "a": "Removing errors and inconsistencies"},
+        {"q": "What is data visualization?", "a": "Graphical representation of data"},
+        {"q": "What is a histogram?", "a": "Chart showing frequency distribution"},
+        {"q": "What is a scatter plot?", "a": "Graph of two variables"},
+        {"q": "What is correlation?", "a": "Relationship between variables"},
+        {"q": "What is causation?", "a": "One variable directly affects another"},
+        {"q": "What is regression analysis?", "a": "Modeling relationships between variables"},
+        {"q": "What is classification analysis?", "a": "Categorizing data"},
+        {"q": "What is clustering analysis?", "a": "Grouping similar data"},
+        {"q": "What is ETL?", "a": "Extract, Transform, Load process"},
+        {"q": "What is SQL used for in data science?", "a": "Querying databases"},
+        {"q": "What is Python used for in data science?", "a": "Analysis, ML, visualization"},
+        {"q": "What is R used for?", "a": "Statistical computing"},
+        {"q": "What is data mining?", "a": "Finding patterns in data"},
+        {"q": "What is anomaly detection?", "a": "Finding unusual data points"}
+      ]
+    },
+    {
+      "name": "Cloud Computing",
+      "questions": [
+        {"q": "What is cloud computing?", "a": "Using remote servers over the internet"},
+        {"q": "What are the main cloud models?", "a": "IaaS, PaaS, SaaS"},
+        {"q": "What does IaaS stand for?", "a": "Infrastructure as a Service"},
+        {"q": "What does PaaS stand for?", "a": "Platform as a Service"},
+        {"q": "What does SaaS stand for?", "a": "Software as a Service"},
+        {"q": "What is virtualization?", "a": "Creating virtual versions of resources"},
+        {"q": "What is a cloud provider?", "a": "Company offering cloud services"},
+        {"q": "Name 3 major cloud providers.", "a": "AWS, Azure, Google Cloud"},
+        {"q": "What is a private cloud?", "a": "Cloud used by one organization"},
+        {"q": "What is a public cloud?", "a": "Cloud shared by multiple organizations"},
+        {"q": "What is a hybrid cloud?", "a": "Mix of private and public cloud"},
+        {"q": "What is serverless computing?", "a": "Run code without managing servers"},
+        {"q": "What is cloud storage?", "a": "Storing data online"},
+        {"q": "What is CDN?", "a": "Content Delivery Network"},
+        {"q": "What is elasticity in cloud?", "a": "Scaling resources up or down"},
+        {"q": "What is scalability?", "a": "Ability to handle growth"},
+        {"q": "What is cloud security?", "a": "Protecting cloud systems"},
+        {"q": "What is multi-tenancy?", "a": "Multiple users share resources"},
+        {"q": "What is Kubernetes?", "a": "Container orchestration system"},
+        {"q": "What is Docker?", "a": "Platform for containerized applications"}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "topic": "American Literature",
+  "cards": [
+    { "q": "Puritan writers", "a": "Anne Bradstreet, Jonathan Edwards" },
+    { "q": "Enlightenment figures", "a": "Benjamin Franklin, Thomas Paine" },
+    { "q": "Transcendentalists", "a": "Ralph Waldo Emerson, Henry David Thoreau" },
+    { "q": "American Romanticism traits", "a": "Emotion, nature, individualism (Hawthorne, Poe)" },
+    { "q": "Realism hallmark", "a": "Everyday life and truthful representation (Twain, Howells)" },
+    { "q": "Naturalism focus", "a": "Determinism, environment and heredity (Crane, Dreiser)" },
+    { "q": "Harlem Renaissance writers", "a": "Langston Hughes, Zora Neale Hurston" },
+    { "q": "Modernism features", "a": "Fragmentation, stream of consciousness (Faulkner, Hemingway, Fitzgerald)" },
+    { "q": "Beat Generation", "a": "Allen Ginsberg, Jack Kerouac; counterculture themes" },
+    { "q": "Confessional poetry", "a": "Personal subject matter (Sylvia Plath, Robert Lowell)" },
+    { "q": "Southern Gothic", "a": "Dark themes, decay (Flannery O'Connor, Faulkner)" },
+    { "q": "Postmodern traits", "a": "Metafiction, irony, pastiche (Pynchon, DeLillo)" },
+    { "q": "Regionalism example", "a": "Kate Chopin, Willa Cather depict local color" },
+    { "q": "Free verse pioneer", "a": "Walt Whitman (Leaves of Grass)" },
+    { "q": "Imagism advocate", "a": "Ezra Pound; precise imagery and economy" },
+    { "q": "American Dream theme", "a": "Ambition and disillusion (The Great Gatsby)" },
+    { "q": "Multicultural voices", "a": "Toni Morrison, Amy Tan, Sandra Cisneros" },
+    { "q": "Native American literature", "a": "N. Scott Momaday, Leslie Marmon Silko" },
+    { "q": "Stream of consciousness", "a": "Interior monologue technique (Faulkner)" },
+    { "q": "Minimalism example", "a": "Raymond Carver; pared-down style" }
+  ]
+}

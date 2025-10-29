@@ -1,0 +1,25 @@
+{
+  "topic": "Calculus BC: Series & Parametrics",
+  "cards": [
+    { "q": "Taylor series at a", "a": "Σ f^(n)(a)/n! · (x−a)^n" },
+    { "q": "Maclaurin e^x", "a": "Σ x^n / n!" },
+    { "q": "Maclaurin sin x", "a": "Σ (-1)^n x^{2n+1}/(2n+1)!" },
+    { "q": "Maclaurin cos x", "a": "Σ (-1)^n x^{2n}/(2n)!" },
+    { "q": "Geometric series", "a": "Σ ar^{n} converges if |r|<1; sum=a/(1−r)" },
+    { "q": "Ratio test", "a": "lim |a_{n+1}/a_n| < 1 → convergent" },
+    { "q": "Root test", "a": "lim √[n]{|a_n|} < 1 → convergent" },
+    { "q": "Integral/comparison tests", "a": "Compare to known series or improper integral" },
+    { "q": "Alternating series test", "a": "Decreasing terms → 0 ⇒ convergent" },
+    { "q": "Radius of convergence", "a": "Distance to nearest singularity" },
+    { "q": "Differentiate series", "a": "Term-by-term within interval of conv." },
+    { "q": "Integrate series", "a": "Term-by-term within interval of conv." },
+    { "q": "Parametric slope", "a": "dy/dx = (dy/dt)/(dx/dt)" },
+    { "q": "Parametric arc length", "a": "∫√[(dx/dt)^2+(dy/dt)^2] dt" },
+    { "q": "Polar area", "a": "A = 1/2 ∫ r(θ)^2 dθ" },
+    { "q": "Polar arc length", "a": "∫√[r^2 + (dr/dθ)^2] dθ" },
+    { "q": "L'Hôpital's Rule", "a": "Use for 0/0 or ∞/∞ forms" },
+    { "q": "Partial fractions", "a": "Decompose rational function to integrate" },
+    { "q": "Series error (alternating)", "a": "≤ absolute value of next term" },
+    { "q": "Power series center shift", "a": "Expand around a to improve convergence near a" }
+  ]
+}

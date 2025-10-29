@@ -1,0 +1,25 @@
+{
+  "topic": "Astronomy (Core)",
+  "cards": [
+    { "q": "Light year definition", "a": "Distance light travels in one year (~9.46e12 km)" },
+    { "q": "AU (astronomical unit)", "a": "Mean Earth-Sun distance (~150 million km)" },
+    { "q": "H-R diagram axes", "a": "Luminosity vs temperature (spectral class)" },
+    { "q": "Main sequence stars fuse", "a": "Hydrogen into helium" },
+    { "q": "Red giant stage means", "a": "Star exhausted hydrogen core" },
+    { "q": "Supernova results in", "a": "Neutron star or black hole" },
+    { "q": "Planet order outward", "a": "Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, Neptune" },
+    { "q": "Kepler's 1st law", "a": "Planets orbit in ellipses with Sun at focus" },
+    { "q": "Kepler's 2nd law", "a": "Equal areas in equal times" },
+    { "q": "Kepler's 3rd law", "a": "P^2 ∝ a^3" },
+    { "q": "Telescope types", "a": "Refractor (lenses), reflector (mirrors)" },
+    { "q": "Electromagnetic spectrum order", "a": "Radio, micro, IR, visible, UV, X-ray, gamma" },
+    { "q": "Galaxy type examples", "a": "Spiral, elliptical, irregular" },
+    { "q": "Milky Way type", "a": "Barred spiral" },
+    { "q": "Universe expansion evidence", "a": "Redshift of galaxies (Hubble's law)" },
+    { "q": "CMB (cosmic microwave background)", "a": "Radiation remnant from Big Bang" },
+    { "q": "Dark matter evidence", "a": "Galaxy rotation curves, lensing" },
+    { "q": "Dark energy effect", "a": "Accelerating expansion" },
+    { "q": "Exoplanet detection methods", "a": "Transit and radial velocity" },
+    { "q": "Solar cycle period", "a": "About 11 years" }
+  ]
+}

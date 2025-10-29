@@ -1,0 +1,129 @@
+{
+  "topics": [
+    {
+      "name": "Programming Basics",
+      "questions": [
+        {"q": "What is a variable?", "a": "A storage location for data"},
+        {"q": "What is a constant?", "a": "A value that cannot change"},
+        {"q": "What is a loop?", "a": "A structure that repeats code"},
+        {"q": "What is a for loop used for?", "a": "Repeating code a fixed number of times"},
+        {"q": "What is a while loop used for?", "a": "Repeating code while a condition is true"},
+        {"q": "What is an if statement?", "a": "Code that runs only if a condition is true"},
+        {"q": "What is an else statement?", "a": "Code that runs if the condition is false"},
+        {"q": "What is a function?", "a": "Reusable block of code"},
+        {"q": "What is recursion?", "a": "A function calling itself"},
+        {"q": "What is an array?", "a": "A collection of elements in order"},
+        {"q": "What is a comment in code?", "a": "Text ignored by the compiler for humans"},
+        {"q": "What is pseudocode?", "a": "Plain language steps for an algorithm"},
+        {"q": "What is debugging?", "a": "Finding and fixing errors"},
+        {"q": "What is a syntax error?", "a": "Mistake in code structure"},
+        {"q": "What is a logic error?", "a": "Code runs but gives the wrong result"},
+        {"q": "What is an IDE?", "a": "Integrated Development Environment"},
+        {"q": "What is a compiler?", "a": "Converts code into machine language"},
+        {"q": "What is an interpreter?", "a": "Executes code line by line"},
+        {"q": "What is source code?", "a": "Human-readable code"},
+        {"q": "What is machine code?", "a": "Binary instructions for computers"}
+      ]
+    },
+    {
+      "name": "Data Structures",
+      "questions": [
+        {"q": "What is an array?", "a": "A collection of elements with an index"},
+        {"q": "What is a list?", "a": "An ordered collection of elements"},
+        {"q": "What is a stack?", "a": "Data structure with LIFO order"},
+        {"q": "What is a queue?", "a": "Data structure with FIFO order"},
+        {"q": "What is a linked list?", "a": "A sequence of nodes with pointers"},
+        {"q": "What is a hash table?", "a": "Data structure that maps keys to values"},
+        {"q": "What is a binary tree?", "a": "Tree where each node has up to 2 children"},
+        {"q": "What is a binary search tree?", "a": "Tree with ordered nodes for fast searching"},
+        {"q": "What is a heap?", "a": "Tree-based structure for priority queues"},
+        {"q": "What is a graph?", "a": "Collection of nodes and edges"},
+        {"q": "What is a directed graph?", "a": "Graph where edges have direction"},
+        {"q": "What is an undirected graph?", "a": "Graph where edges have no direction"},
+        {"q": "What is a set?", "a": "Unordered collection of unique items"},
+        {"q": "What is a dictionary/map?", "a": "Key-value data structure"},
+        {"q": "What is an adjacency list?", "a": "Graph representation using lists"},
+        {"q": "What is an adjacency matrix?", "a": "Graph representation using a grid"},
+        {"q": "What is depth-first search?", "a": "Exploring as far as possible before backtracking"},
+        {"q": "What is breadth-first search?", "a": "Exploring level by level"},
+        {"q": "What is a trie?", "a": "Tree used for storing strings"},
+        {"q": "What is big-O for array access?", "a": "O(1)"}
+      ]
+    },
+    {
+      "name": "Algorithms",
+      "questions": [
+        {"q": "What is an algorithm?", "a": "Step-by-step instructions to solve a problem"},
+        {"q": "What is time complexity?", "a": "How running time grows with input size"},
+        {"q": "What is space complexity?", "a": "How much memory an algorithm uses"},
+        {"q": "What is Big O notation?", "a": "Describes worst-case performance"},
+        {"q": "What is Big Ω notation?", "a": "Describes best-case performance"},
+        {"q": "What is Big Θ notation?", "a": "Describes average-case performance"},
+        {"q": "What is linear search?", "a": "Check each element one by one"},
+        {"q": "What is binary search?", "a": "Search by halving a sorted list"},
+        {"q": "What is bubble sort?", "a": "Repeatedly swap adjacent elements"},
+        {"q": "What is insertion sort?", "a": "Insert elements into correct position"},
+        {"q": "What is selection sort?", "a": "Repeatedly select minimum element"},
+        {"q": "What is merge sort?", "a": "Divide and merge sorted halves"},
+        {"q": "What is quicksort?", "a": "Partition around a pivot"},
+        {"q": "What is heap sort?", "a": "Sort using a heap structure"},
+        {"q": "What is dynamic programming?", "a": "Solve problems by reusing subproblem results"},
+        {"q": "What is greedy algorithm?", "a": "Choose best option at each step"},
+        {"q": "What is divide and conquer?", "a": "Break problem into smaller problems"},
+        {"q": "What is backtracking?", "a": "Try solutions and undo if needed"},
+        {"q": "What is NP-complete?", "a": "Problems believed to be hard to solve"},
+        {"q": "What is big-O for binary search?", "a": "O(log n)"}
+      ]
+    },
+    {
+      "name": "Web Development",
+      "questions": [
+        {"q": "What does HTML stand for?", "a": "HyperText Markup Language"},
+        {"q": "What does CSS stand for?", "a": "Cascading Style Sheets"},
+        {"q": "What does JS stand for?", "a": "JavaScript"},
+        {"q": "What is the purpose of HTML?", "a": "Structure of web pages"},
+        {"q": "What is the purpose of CSS?", "a": "Styling of web pages"},
+        {"q": "What is the purpose of JavaScript?", "a": "Interactivity on web pages"},
+        {"q": "What is a div in HTML?", "a": "Container element"},
+        {"q": "What is a span in HTML?", "a": "Inline container"},
+        {"q": "What is an ID in HTML?", "a": "Unique identifier"},
+        {"q": "What is a class in HTML/CSS?", "a": "Reusable style definition"},
+        {"q": "What is a responsive design?", "a": "Layout that adapts to screen size"},
+        {"q": "What is a media query?", "a": "CSS rule for screen conditions"},
+        {"q": "What is the DOM?", "a": "Document Object Model"},
+        {"q": "What is AJAX?", "a": "Asynchronous JavaScript and XML"},
+        {"q": "What is JSON?", "a": "JavaScript Object Notation"},
+        {"q": "What is an API?", "a": "Application Programming Interface"},
+        {"q": "What is REST?", "a": "Representational State Transfer"},
+        {"q": "What is a cookie?", "a": "Data stored by a website in browser"},
+        {"q": "What is localStorage?", "a": "Web storage for key-value pairs"},
+        {"q": "What is sessionStorage?", "a": "Temporary storage for a session"}
+      ]
+    },
+    {
+      "name": "Python Basics",
+      "questions": [
+        {"q": "What keyword defines a function in Python?", "a": "def"},
+        {"q": "What keyword defines a class in Python?", "a": "class"},
+        {"q": "What is Python’s print function?", "a": "print()"},
+        {"q": "How do you create a variable in Python?", "a": "name = value"},
+        {"q": "What symbol is used for comments in Python?", "a": "#"},
+        {"q": "What is a list in Python?", "a": "Ordered collection of items"},
+        {"q": "What is a tuple in Python?", "a": "Immutable ordered collection"},
+        {"q": "What is a dictionary in Python?", "a": "Key-value pairs"},
+        {"q": "What is a set in Python?", "a": "Unordered collection of unique items"},
+        {"q": "What keyword is used for conditions?", "a": "if"},
+        {"q": "What keyword is used for loops?", "a": "for/while"},
+        {"q": "What keyword exits a loop?", "a": "break"},
+        {"q": "What keyword skips an iteration?", "a": "continue"},
+        {"q": "What keyword defines a function with unknown behavior?", "a": "pass"},
+        {"q": "What keyword is used for imports?", "a": "import"},
+        {"q": "What keyword is used for exceptions?", "a": "try/except"},
+        {"q": "What keyword creates a generator?", "a": "yield"},
+        {"q": "What function gives length of a list?", "a": "len()"},
+        {"q": "What function converts string to int?", "a": "int()"},
+        {"q": "What function converts int to string?", "a": "str()"}
+      ]
+    }
+  ]
+}

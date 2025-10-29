@@ -1,0 +1,22 @@
+[
+  ["Quadratic formula", "x = [-b ± √(b²-4ac)]/(2a)"],
+  ["Slope-intercept form", "y = mx + b"],
+  ["Point-slope form", "y - y₁ = m(x - x₁)"],
+  ["Slope", "m = (y₂ - y₁)/(x₂ - x₁)"],
+  ["Zero product property", "If ab=0 then a=0 or b=0"],
+  ["Factor by grouping", "ax²+bx+cx+d → group pairs"],
+  ["Completing the square", "x²+bx → (x+b/2)² - (b/2)²"],
+  ["Exponent product rule", "a^m·a^n=a^(m+n)"],
+  ["Exponent power rule", "(a^m)^n=a^(mn)"],
+  ["Exponent quotient rule", "a^m/a^n=a^(m-n)"],
+  ["Negative exponent", "a^-n=1/a^n"],
+  ["Radical-exponent link", "√[n]{a}=a^(1/n)"],
+  ["Absolute value", "|x| distance from 0"],
+  ["Function notation", "f(x) outputs for input x"],
+  ["Domain", "All allowed x-values"],
+  ["Range", "All produced y-values"],
+  ["Inverse function", "Swap x,y and solve for y"],
+  ["Log definition", "log_b(a)=c ⇔ b^c=a"],
+  ["Change of base", "log_b(a)=ln(a)/ln(b)"],
+  ["Arithmetic sequence", "a_n=a₁+(n-1)d"]
+]

@@ -1,0 +1,25 @@
+{
+  "topic": "U.S. Economics Policy",
+  "cards": [
+    { "q": "Fiscal policy tools", "a": "Government spending and taxation" },
+    { "q": "Monetary policy tools", "a": "Open market operations, reserve requirements, discount rate" },
+    { "q": "Federal Reserve mandate", "a": "Maximum employment and stable prices (and moderate long-term rates)" },
+    { "q": "Budget deficit vs surplus", "a": "Deficit: spending > revenue; surplus: revenue > spending" },
+    { "q": "Automatic stabilizers", "a": "Unemployment insurance, progressive taxes" },
+    { "q": "Discretionary fiscal policy", "a": "Deliberate changes in spending/taxes" },
+    { "q": "Supply-side policy example", "a": "Tax cuts to encourage investment" },
+    { "q": "Demand-side policy example", "a": "Increased government spending to boost demand" },
+    { "q": "Inflation measure", "a": "CPI or PCE price index" },
+    { "q": "Unemployment types", "a": "Frictional, structural, cyclical" },
+    { "q": "Phillips curve idea", "a": "Short-run tradeoff between inflation and unemployment" },
+    { "q": "Tariffs and quotas", "a": "Trade barriers that raise import prices or limit quantity" },
+    { "q": "Antitrust policy goal", "a": "Promote competition and prevent monopolies" },
+    { "q": "Minimum wage policy effect", "a": "Raises wage floor; debates on employment impact" },
+    { "q": "Earned Income Tax Credit", "a": "Refundable credit for low-to-moderate income workers" },
+    { "q": "Social Security purpose", "a": "Retirement, disability, survivor benefits" },
+    { "q": "Medicare vs Medicaid", "a": "Medicare: seniors/disabled; Medicaid: low-income" },
+    { "q": "Budget process start", "a": "President submits proposal to Congress" },
+    { "q": "Debt vs deficit", "a": "Debt is accumulated deficits; deficit is annual gap" },
+    { "q": "Countercyclical policy", "a": "Stimulus in recessions, restraint in booms" }
+  ]
+}

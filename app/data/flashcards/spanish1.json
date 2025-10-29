@@ -1,0 +1,25 @@
+{
+  "topic": "Spanish I",
+  "cards": [
+    { "q": "How do you say “hello” and “goodbye” in Spanish?", "a": "Hola; Adiós" },
+    { "q": "Formal vs informal 'you' in Spanish", "a": "Tú (informal), Usted (formal)" },
+    { "q": "Conjugate ‘ser’ (to be) present tense", "a": "soy, eres, es, somos, son" },
+    { "q": "Conjugate ‘estar’ (to be) present tense", "a": "estoy, estás, está, estamos, están" },
+    { "q": "When to use ‘ser’ vs ‘estar’?", "a": "Ser: identity, origin, traits, time; Estar: states/conditions, location, feelings." },
+    { "q": "Numbers 1–10 in Spanish", "a": "uno, dos, tres, cuatro, cinco, seis, siete, ocho, nueve, diez" },
+    { "q": "Days of the week", "a": "lunes, martes, miércoles, jueves, viernes, sábado, domingo" },
+    { "q": "Common question words", "a": "quién, qué, dónde, cuándo, por qué, cómo" },
+    { "q": "Definite articles (the)", "a": "el, la, los, las" },
+    { "q": "Indefinite articles (a/an, some)", "a": "un, una, unos, unas" },
+    { "q": "Colors red, blue, green, yellow", "a": "rojo, azul, verde, amarillo" },
+    { "q": "How do you say family: mother, father, brother, sister?", "a": "madre, padre, hermano, hermana" },
+    { "q": "How do you ask 'What time is it?' in Spanish?", "a": "¿Qué hora es?" },
+    { "q": "Translate: 'I am hungry'", "a": "Tengo hambre" },
+    { "q": "Translate: 'I like apples'", "a": "Me gustan las manzanas" },
+    { "q": "Translate: 'Where is the bathroom?'", "a": "¿Dónde está el baño?" },
+    { "q": "Translate: 'How are you?'", "a": "¿Cómo estás?" },
+    { "q": "Translate: 'Good morning' and 'Good night'", "a": "Buenos días; Buenas noches" },
+    { "q": "Conjugate 'tener' (to have) present tense", "a": "tengo, tienes, tiene, tenemos, tienen" },
+    { "q": "Conjugate 'ir' (to go) present tense", "a": "voy, vas, va, vamos, van" }
+  ]
+}

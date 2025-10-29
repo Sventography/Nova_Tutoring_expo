@@ -1,0 +1,129 @@
+{
+  "topics": [
+    {
+      "name": "First Aid & Emergency Care",
+      "questions": [
+        {"q": "What is the first step in CPR?", "a": "Check responsiveness and call for help"},
+        {"q": "What is the CPR compression rate per minute?", "a": "100–120 compressions"},
+        {"q": "How deep should CPR compressions be for adults?", "a": "About 2 inches (5 cm)"},
+        {"q": "What number do you call for emergencies in the U.S.?", "a": "911"},
+        {"q": "What is the Heimlich maneuver used for?", "a": "Choking"},
+        {"q": "What do you do for a severe burn?", "a": "Cool with water, cover with clean cloth"},
+        {"q": "What do you do for a nosebleed?", "a": "Pinch nose, lean forward"},
+        {"q": "What do you do for a fracture?", "a": "Immobilize and seek medical help"},
+        {"q": "What do you do for heavy bleeding?", "a": "Apply pressure to the wound"},
+        {"q": "What do you do if someone is unconscious but breathing?", "a": "Place in recovery position"},
+        {"q": "What is shock in first aid?", "a": "Body not getting enough blood flow"},
+        {"q": "What do you do for shock?", "a": "Lay person down, elevate legs, keep warm"},
+        {"q": "What is an AED?", "a": "Automated External Defibrillator"},
+        {"q": "What does an AED do?", "a": "Delivers a shock to restore heart rhythm"},
+        {"q": "What do you do for heatstroke?", "a": "Cool person quickly, seek emergency help"},
+        {"q": "What do you do for hypothermia?", "a": "Warm person slowly"},
+        {"q": "What do you do for poisoning?", "a": "Call poison control"},
+        {"q": "What do you do for an insect sting?", "a": "Remove stinger, apply cold pack"},
+        {"q": "What do you do for a sprain?", "a": "Rest, Ice, Compression, Elevation (RICE)"},
+        {"q": "What is the recovery position?", "a": "On the side, head tilted back"}
+      ]
+    },
+    {
+      "name": "Nutrition & Dietetics",
+      "questions": [
+        {"q": "What nutrient is the body’s main energy source?", "a": "Carbohydrates"},
+        {"q": "What nutrient builds muscle?", "a": "Protein"},
+        {"q": "What nutrient insulates the body?", "a": "Fat"},
+        {"q": "What nutrient regulates body processes?", "a": "Vitamins"},
+        {"q": "What mineral strengthens bones?", "a": "Calcium"},
+        {"q": "What mineral carries oxygen in blood?", "a": "Iron"},
+        {"q": "What vitamin prevents scurvy?", "a": "Vitamin C"},
+        {"q": "What vitamin prevents rickets?", "a": "Vitamin D"},
+        {"q": "What vitamin is good for vision?", "a": "Vitamin A"},
+        {"q": "What vitamin helps with blood clotting?", "a": "Vitamin K"},
+        {"q": "What vitamin helps metabolism?", "a": "B vitamins"},
+        {"q": "How many calories are in 1 gram of carbs?", "a": "4"},
+        {"q": "How many calories are in 1 gram of protein?", "a": "4"},
+        {"q": "How many calories are in 1 gram of fat?", "a": "9"},
+        {"q": "What nutrient is most essential?", "a": "Water"},
+        {"q": "What is fiber important for?", "a": "Digestive health"},
+        {"q": "What diet restricts carbs?", "a": "Keto diet"},
+        {"q": "What diet avoids animal products?", "a": "Vegan diet"},
+        {"q": "What is BMI?", "a": "Body Mass Index"},
+        {"q": "What is malnutrition?", "a": "Lack of proper nutrition"}
+      ]
+    },
+    {
+      "name": "Public Health",
+      "questions": [
+        {"q": "What is public health?", "a": "Protecting and improving community health"},
+        {"q": "What is epidemiology?", "a": "Study of disease in populations"},
+        {"q": "What is a pandemic?", "a": "Disease outbreak worldwide"},
+        {"q": "What is an epidemic?", "a": "Disease outbreak in a region"},
+        {"q": "What is an endemic?", "a": "Disease regularly found in a region"},
+        {"q": "What is herd immunity?", "a": "When enough people are immune to stop spread"},
+        {"q": "What is vaccination?", "a": "Immunization against disease"},
+        {"q": "What is sanitation?", "a": "Clean water and waste systems"},
+        {"q": "What is quarantine?", "a": "Separating those exposed to disease"},
+        {"q": "What is isolation?", "a": "Separating sick people from healthy"},
+        {"q": "What is WHO?", "a": "World Health Organization"},
+        {"q": "What is CDC?", "a": "Centers for Disease Control and Prevention"},
+        {"q": "What is morbidity?", "a": "Rate of illness"},
+        {"q": "What is mortality?", "a": "Rate of death"},
+        {"q": "What is life expectancy?", "a": "Average years a person lives"},
+        {"q": "What is health equity?", "a": "Fair access to healthcare"},
+        {"q": "What is occupational health?", "a": "Health at the workplace"},
+        {"q": "What is environmental health?", "a": "Health effects of the environment"},
+        {"q": "What is mental health?", "a": "Psychological well-being"},
+        {"q": "What is global health?", "a": "Health issues that cross borders"}
+      ]
+    },
+    {
+      "name": "Medical Technology",
+      "questions": [
+        {"q": "What does MRI stand for?", "a": "Magnetic Resonance Imaging"},
+        {"q": "What does CT scan stand for?", "a": "Computed Tomography"},
+        {"q": "What does X-ray show?", "a": "Bones and dense tissues"},
+        {"q": "What does ultrasound use?", "a": "Sound waves"},
+        {"q": "What does ECG measure?", "a": "Electrical activity of the heart"},
+        {"q": "What does EEG measure?", "a": "Electrical activity of the brain"},
+        {"q": "What is a pacemaker?", "a": "Device that regulates heartbeat"},
+        {"q": "What is dialysis?", "a": "Artificial filtering of blood"},
+        {"q": "What is prosthesis?", "a": "Artificial body part"},
+        {"q": "What is endoscopy?", "a": "Viewing inside the body with a scope"},
+        {"q": "What is laparoscopy?", "a": "Minimally invasive surgery"},
+        {"q": "What is robotic surgery?", "a": "Surgery using robotic systems"},
+        {"q": "What is telemedicine?", "a": "Healthcare via telecommunications"},
+        {"q": "What is 3D printing used for?", "a": "Creating implants and prosthetics"},
+        {"q": "What is genetic testing?", "a": "Analyzing DNA for health risks"},
+        {"q": "What is CRISPR?", "a": "Gene-editing technology"},
+        {"q": "What is nanomedicine?", "a": "Medical use of nanotechnology"},
+        {"q": "What is wearable health tech?", "a": "Devices tracking health (like smartwatches)"},
+        {"q": "What is AI in healthcare?", "a": "Using AI for diagnosis and treatment"},
+        {"q": "What is electronic health record (EHR)?", "a": "Digital version of patient medical history"}
+      ]
+    },
+    {
+      "name": "Healthcare Professions",
+      "questions": [
+        {"q": "Who treats patients with general illnesses?", "a": "Primary care physician"},
+        {"q": "Who performs surgery?", "a": "Surgeon"},
+        {"q": "Who delivers babies?", "a": "Obstetrician"},
+        {"q": "Who specializes in children’s health?", "a": "Pediatrician"},
+        {"q": "Who specializes in the heart?", "a": "Cardiologist"},
+        {"q": "Who specializes in the brain?", "a": "Neurologist"},
+        {"q": "Who specializes in cancer?", "a": "Oncologist"},
+        {"q": "Who specializes in skin?", "a": "Dermatologist"},
+        {"q": "Who specializes in teeth?", "a": "Dentist"},
+        {"q": "Who specializes in the eyes?", "a": "Ophthalmologist"},
+        {"q": "Who gives anesthesia during surgery?", "a": "Anesthesiologist"},
+        {"q": "Who provides nursing care?", "a": "Nurse"},
+        {"q": "Who assists physicians with exams?", "a": "Physician Assistant"},
+        {"q": "Who provides physical therapy?", "a": "Physical Therapist"},
+        {"q": "Who provides mental health therapy?", "a": "Psychologist or Psychiatrist"},
+        {"q": "Who dispenses medications?", "a": "Pharmacist"},
+        {"q": "Who draws blood?", "a": "Phlebotomist"},
+        {"q": "Who takes X-rays?", "a": "Radiologic Technologist"},
+        {"q": "Who helps with speech disorders?", "a": "Speech-Language Pathologist"},
+        {"q": "Who responds to emergencies?", "a": "Paramedic/EMT"}
+      ]
+    }
+  ]
+}

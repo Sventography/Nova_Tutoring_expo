@@ -1,0 +1,25 @@
+{
+  "topic": "Art History: Global Survey",
+  "cards": [
+    { "q": "Prehistoric art", "a": "Cave paintings, Venus figurines" },
+    { "q": "Egyptian canon", "a": "Composite view, hierarchical scale" },
+    { "q": "Greek orders", "a": "Doric, Ionic, Corinthian" },
+    { "q": "Roman innovations", "a": "Arch, vault, dome" },
+    { "q": "Byzantine features", "a": "Mosaics, gold backgrounds" },
+    { "q": "Islamic art motif", "a": "Geometric arabesques, calligraphy" },
+    { "q": "Gothic hallmark", "a": "Pointed arches, stained glass" },
+    { "q": "Renaissance ideal", "a": "Humanism, linear perspective" },
+    { "q": "Baroque traits", "a": "Dramatic light, movement" },
+    { "q": "Neoclassicism", "a": "Classical revival, moral clarity" },
+    { "q": "Romanticism", "a": "Emotion, sublime nature" },
+    { "q": "Impressionism", "a": "Light/color, en plein air" },
+    { "q": "Post-Impressionism", "a": "Van Gogh, Cézanne, Gauguin" },
+    { "q": "Cubism", "a": "Fragmented planes (Picasso)" },
+    { "q": "Dada/Surrealism", "a": "Anti-art, dream imagery" },
+    { "q": "Abstract Expressionism", "a": "Action/color field painting" },
+    { "q": "Pop Art", "a": "Mass culture imagery" },
+    { "q": "Global contemporary", "a": "Installation, video, performance" },
+    { "q": "Non-Western highlight", "a": "African masks; Japanese ukiyo-e" },
+    { "q": "Art analysis method", "a": "Form, content, context, function" }
+  ]
+}

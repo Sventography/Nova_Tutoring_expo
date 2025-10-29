@@ -1,0 +1,25 @@
+{
+  "topic": "Chemistry I (General)",
+  "cards": [
+    { "q": "Atom definition", "a": "Smallest unit of element retaining chemical properties" },
+    { "q": "Atomic number", "a": "Number of protons" },
+    { "q": "Mass number", "a": "Protons + neutrons" },
+    { "q": "Isotopes definition", "a": "Same element, different neutrons" },
+    { "q": "Periodic table groups", "a": "Columns; similar properties" },
+    { "q": "Periodic table periods", "a": "Rows; same principal energy level" },
+    { "q": "Ionic bond", "a": "Electrostatic attraction cation-anion" },
+    { "q": "Covalent bond", "a": "Shared electron pairs" },
+    { "q": "Electronegativity trend", "a": "Increases across, decreases down" },
+    { "q": "Ionization energy trend", "a": "Increases across, decreases down" },
+    { "q": "Octet rule", "a": "Atoms tend to 8 valence electrons" },
+    { "q": "Mole definition", "a": "6.022e23 particles" },
+    { "q": "Molarity formula", "a": "mol/L solution" },
+    { "q": "Empirical formula", "a": "Simplest whole-number ratio" },
+    { "q": "Percent composition formula", "a": "Mass element/total mass x 100%" },
+    { "q": "Stoichiometry basis", "a": "Balanced equations" },
+    { "q": "Gas law PV=nRT constant R", "a": "0.08206 L atm / mol K" },
+    { "q": "Acid definition (Arrhenius)", "a": "Produces H+" },
+    { "q": "Base definition (Arrhenius)", "a": "Produces OH-" },
+    { "q": "Oxidation definition", "a": "Loss of electrons" }
+  ]
+}

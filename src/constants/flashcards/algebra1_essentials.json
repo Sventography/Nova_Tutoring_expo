@@ -1,0 +1,82 @@
+[
+  {
+    "question": "Distributive property",
+    "answer": "a(b+c)=ab+ac"
+  },
+  {
+    "question": "Combine like terms example",
+    "answer": "2x+3x=5x"
+  },
+  {
+    "question": "Solve for x: x+5=12",
+    "answer": "x=7"
+  },
+  {
+    "question": "Solve for x: 3x=15",
+    "answer": "x=5"
+  },
+  {
+    "question": "Slope formula",
+    "answer": "(y2−y1)/(x2−x1)"
+  },
+  {
+    "question": "Slope-intercept form",
+    "answer": "y=mx+b"
+  },
+  {
+    "question": "Point-slope form",
+    "answer": "y−y1=m(x−x1)"
+  },
+  {
+    "question": "Standard form of linear eq",
+    "answer": "Ax+By=C"
+  },
+  {
+    "question": "Absolute value definition",
+    "answer": "Distance from 0 on number line"
+  },
+  {
+    "question": "Inequality symbols",
+    "answer": "<, >, ≤, ≥"
+  },
+  {
+    "question": "Solve inequality: 2x+1<5",
+    "answer": "x<2"
+  },
+  {
+    "question": "Exponent product rule",
+    "answer": "a^m·a^n=a^(m+n)"
+  },
+  {
+    "question": "Exponent power rule",
+    "answer": "(a^m)^n=a^(mn)"
+  },
+  {
+    "question": "Exponent negative rule",
+    "answer": "a^(−n)=1/a^n"
+  },
+  {
+    "question": "Radical sqrt(25)",
+    "answer": "5"
+  },
+  {
+    "question": "Quadratic standard form",
+    "answer": "ax^2+bx+c=0"
+  },
+  {
+    "question": "Factoring x^2+5x+6",
+    "answer": "(x+2)(x+3)"
+  },
+  {
+    "question": "Graph vertex form",
+    "answer": "y=a(x−h)^2+k"
+  },
+  {
+    "question": "System of eq solutions",
+    "answer": "Intersection of lines"
+  },
+  {
+    "question": "Function definition",
+    "answer": "Each input has exactly one output"
+  }
+]

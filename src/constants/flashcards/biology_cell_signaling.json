@@ -1,0 +1,82 @@
+[
+  {
+    "question": "Cell signaling stages",
+    "answer": "Reception, transduction, response"
+  },
+  {
+    "question": "Ligand definition",
+    "answer": "Molecule that binds a receptor"
+  },
+  {
+    "question": "GPCR stands for",
+    "answer": "G protein–coupled receptor"
+  },
+  {
+    "question": "Second messenger examples",
+    "answer": "cAMP, Ca2+, IP3, DAG"
+  },
+  {
+    "question": "Adenylyl cyclase produces",
+    "answer": "cAMP from ATP"
+  },
+  {
+    "question": "Protein kinase A activated by",
+    "answer": "cAMP"
+  },
+  {
+    "question": "Phosphorylation typically",
+    "answer": "Activates or deactivates proteins"
+  },
+  {
+    "question": "RTK stands for",
+    "answer": "Receptor tyrosine kinase"
+  },
+  {
+    "question": "RTK dimerization leads to",
+    "answer": "Autophosphorylation of tyrosines"
+  },
+  {
+    "question": "MAPK cascade order",
+    "answer": "Ras → Raf → MEK → ERK"
+  },
+  {
+    "question": "Calmodulin binds",
+    "answer": "Calcium ions (Ca2+)"
+  },
+  {
+    "question": "Nitric oxide (NO) signaling feature",
+    "answer": "Small gaseous paracrine messenger"
+  },
+  {
+    "question": "Endocrine vs paracrine",
+    "answer": "Hormones via blood vs local diffusion"
+  },
+  {
+    "question": "Autocrine signaling",
+    "answer": "Cell targets itself"
+  },
+  {
+    "question": "Ligand-gated ion channel opens by",
+    "answer": "Ligand binding"
+  },
+  {
+    "question": "Steroid hormones bind",
+    "answer": "Intracellular receptors"
+  },
+  {
+    "question": "cAMP is broken down by",
+    "answer": "Phosphodiesterase"
+  },
+  {
+    "question": "Desensitization of receptors",
+    "answer": "Reduces signaling responsiveness"
+  },
+  {
+    "question": "Apoptosis key proteases",
+    "answer": "Caspases"
+  },
+  {
+    "question": "Quorum sensing occurs in",
+    "answer": "Bacteria communicating by autoinducers"
+  }
+]

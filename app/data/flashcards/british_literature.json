@@ -1,0 +1,25 @@
+{
+  "topic": "British Literature Survey",
+  "cards": [
+    { "q": "Beowulf origin", "a": "Old English epic" },
+    { "q": "Chaucer’s work", "a": "The Canterbury Tales" },
+    { "q": "Shakespeare genres", "a": "Tragedy, comedy, history" },
+    { "q": "Milton’s epic", "a": "Paradise Lost" },
+    { "q": "Romantic poets", "a": "Wordsworth, Coleridge, Keats, Shelley" },
+    { "q": "Victorian novelists", "a": "Dickens, Brontës, Hardy" },
+    { "q": "Modernist writers", "a": "Virginia Woolf, James Joyce, T.S. Eliot" },
+    { "q": "Satirical novel", "a": "Swift’s Gulliver’s Travels" },
+    { "q": "Restoration comedy", "a": "Witty plays 1600s" },
+    { "q": "Gothic fiction", "a": "Mary Shelley, Frankenstein" },
+    { "q": "Postcolonial authors", "a": "Salman Rushdie, Zadie Smith" },
+    { "q": "Drama highlight", "a": "Shaw, Wilde" },
+    { "q": "Epic hero traits", "a": "Courage, fate, honor" },
+    { "q": "Elegy form", "a": "Mourning poem (Gray’s Elegy)" },
+    { "q": "Satire purpose", "a": "Critique society with humor" },
+    { "q": "Realism traits", "a": "Everyday life depiction" },
+    { "q": "Allegory example", "a": "Spenser’s The Faerie Queene" },
+    { "q": "Feminist lit voices", "a": "Woolf, A Room of One’s Own" },
+    { "q": "Children’s classics", "a": "Carroll’s Alice, Milne’s Pooh" },
+    { "q": "Contemporary themes", "a": "Identity, class, diversity" }
+  ]
+}

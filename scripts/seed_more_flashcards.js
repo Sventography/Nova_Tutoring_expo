@@ -1,0 +1,188 @@
+const fs=require('fs'),p='app/data/flashcards.json';const d=JSON.parse(fs.readFileSync(p,'utf8'));const U=(t,c)=>{const i=(d.topics||[]).findIndex(x=>x.title===t);const cards=c.map(([q,a])=>({q,a}));if(i>=0)d.topics[i]={title:t,cards};else(d.topics||(d.topics=[])).push({title:t,cards})};
+
+U("Data Structures",[
+["Array access time","O(1)"],
+["Linked list insert at head","O(1)"],
+["Stack principle","LIFO"],
+["Queue principle","FIFO"],
+["Hash table average lookup","O(1)"],
+["Hash collision strategy example","Separate chaining"],
+["Binary tree height of balanced n","O(log n)"],
+["BST property","Left<root<right"],
+["Heap property","Parent ≤ children (min-heap)"],
+["Heap use case","Priority queue"],
+["Trie purpose","Prefix lookups"],
+["Set vs Map","Set stores keys only"],
+["Union-Find operation","Find returns set rep"],
+["Union-Find optimization","Path compression"],
+["Balanced BST examples","AVL, Red-Black"],
+["LRU cache structure","Hash map + doubly list"],
+["Segment tree use","Range query/update"],
+["Fenwick tree use","Prefix sums"],
+["Bloom filter trait","False positives possible"],
+["Deque meaning","Double-ended queue"]
+]);
+
+U("Algorithms",[
+["Binary search time","O(log n)"],
+["Merge sort time","O(n log n)"],
+["Quick sort average time","O(n log n)"],
+["Quick sort worst time","O(n^2)"],
+["Stable sort example","Merge sort"],
+["Dijkstra requirement","Nonnegative edges"],
+["A* improvement","Heuristic guides search"],
+["Topological sort input","DAG"],
+["Kruskal uses","Disjoint set"],
+["Prim vs Kruskal","Grow tree vs pick edges"],
+["Greedy example","Activity selection"],
+["DP definition","Optimal substructure+overlap"],
+["Knuth–Morris–Pratt use","Substring search"],
+["Sliding window use","Subarray problems"],
+["Two-pointer pattern","Sorted arrays/pairs"],
+["Divide and conquer idea","Split, solve, combine"],
+["Reservoir sampling use","Stream sampling"],
+["Kadane solves","Max subarray sum"],
+["Bellman–Ford handles","Negative edges"],
+["Floyd–Warshall finds","All-pairs shortest paths"]
+]);
+
+U("Operating Systems",[
+["Process vs thread","Process has own address space; thread shares"],
+["Context switch cost","CPU state save/restore"],
+["Scheduling goal","Fairness and throughput"],
+["Mutex vs semaphore","Mutex single owner; semaphore counter"],
+["Deadlock conditions","Mutual exclusion, hold/wait, no preemption, circular wait"],
+["Virtual memory purpose","Abstraction of large contiguous memory"],
+["Paging unit","Fixed-size page frames"],
+["TLB role","Caches page table entries"],
+["Syscall transition","User → kernel mode"],
+["Copy-on-write benefit","Delay duplication until write"],
+["Race condition","Outcome depends on timing"],
+["Critical section","Code needing mutual exclusion"],
+["File descriptor","Handle to open file/socket"],
+["inode stores","Metadata and pointers"],
+["Memory-mapped I/O","File mapped into address space"],
+["Cgroups purpose","Resource limits"],
+["Namespaces purpose","Isolation of resources"],
+["OOM killer","Terminates to reclaim memory"],
+["Swapping","Move pages to disk"],
+["Signals","Async notifications to processes"]
+]);
+
+U("Networking",[
+["OSI layers count","7"],
+["Transport protocols","TCP and UDP"],
+["TCP handshake","SYN,SYN-ACK,ACK"],
+["TLS purpose","Encrypt transport"],
+["DNS role","Name to IP resolution"],
+["CDN benefit","Lower latency via edge"],
+["NAT purpose","Many private to one public IP"],
+["Subnet mask use","Split network/host bits"],
+["CIDR example","192.168.1.0/24"],
+["Routing vs switching","Inter-network vs intra-network"],
+["BGP use","Inter-domain routing"],
+["HTTP/2 feature","Multiplexing"],
+["HTTP/3 base","QUIC/UDP"],
+["Latency vs throughput","Delay vs volume per time"],
+["MTU meaning","Max transmission unit"],
+["Keep-alive","Reuse TCP connection"],
+["WebSocket","Full-duplex over single TCP"],
+["HSTS","Force HTTPS"],
+["CORS","Cross-origin resource sharing"],
+["Packet loss effect","Retransmissions, lower throughput"]
+]);
+
+U("Databases",[
+["ACID stands for","Atomicity, Consistency, Isolation, Durability"],
+["Normalization goal","Reduce redundancy"],
+["Primary key","Unique row identifier"],
+["Foreign key","References another table key"],
+["Index purpose","Faster lookups"],
+["B-tree index trait","Balanced ordered nodes"],
+["Hash index trait","O(1) equality lookups"],
+["Transaction","All-or-nothing operation group"],
+["Isolation level example","Read committed"],
+["MVCC benefit","Readers don’t block writers"],
+["Sharding","Horizontal partitioning"],
+["Replication","Copy data to other nodes"],
+["CAP theorem","Consistency, Availability, Partition tolerance"],
+["Eventual consistency","Updates propagate over time"],
+["Query plan","DB execution strategy"],
+["OLTP vs OLAP","Transactional vs analytical"],
+["Star schema","Fact with dimension tables"],
+["CDC","Change data capture"],
+["Connection pool","Reuse DB connections"],
+["Write-ahead log","Log before data pages"]
+]);
+
+U("Web Development",[
+["Semantic HTML example","<article>"],
+["Flexbox axis","Main and cross"],
+["CSS Grid use","2D layouts"],
+["Responsive design unit","rem, %, vw/vh"],
+["Accessibility attribute","aria-label"],
+["DOM stands for","Document Object Model"],
+["SPA vs MPA","Single vs multiple pages"],
+["SSR vs CSR","Server vs client rendering"],
+["Bundler example","Vite, Webpack"],
+["Transpiler example","Babel, SWC"],
+["Cookie vs localStorage","Cookie sent to server"],
+["SameSite purpose","CSRF mitigation"],
+["CSP purpose","Mitigate XSS"],
+["Service worker use","Offline caching"],
+["PWA trait","Installable web app"],
+["Debounce vs throttle","Delay vs limit rate"],
+["Fetch default method","GET"],
+["HTTP status 201","Created"],
+["Form validation API","Constraint validation"],
+["ARIA role example","role='button'"]
+]);
+
+U("Mobile Development",[
+["Native vs cross-platform","Platform SDKs vs shared codebase"],
+["RN bridge","JS <-> native modules"],
+["Expo vs bare","Managed vs custom native"],
+["Navigation lib","@react-navigation/native"],
+["State library","Redux, Zustand"],
+["Gesture lib","react-native-gesture-handler"],
+["Animation lib","react-native-reanimated"],
+["Offline storage","AsyncStorage"],
+["Push service","FCM/APNs"],
+["Deep linking","Open app via URL scheme"],
+["App signing","Keystore/Certificates"],
+["Permissions","Runtime prompts"],
+["Profiling tool","Flipper"],
+["Bundle size cut","Code splitting/inline requires"],
+["OTA updates","EAS updates"],
+["EAS build","Cloud builds"],
+["Universal links","HTTP links to app"],
+["Device sensors","Accelerometer, GPS"],
+["Layout system","Flexbox"],
+["Accessibility API","AccessibilityInfo"]
+]);
+
+U("Cybersecurity",[
+["CIA triad","Confidentiality, Integrity, Availability"],
+["Hashing vs encryption","One-way vs reversible"],
+["Symmetric vs asymmetric","Shared key vs keypair"],
+["XSS","Inject client-side scripts"],
+["CSRF","Cross-site request forgery"],
+["SQL injection","Manipulate queries via input"],
+["Clickjacking","UI overlay to trick clicks"],
+["Password hashing","BCrypt, Argon2"],
+["Salt purpose","Defeat rainbow tables"],
+["MFA benefit","Extra authentication factor"],
+["Zero trust","Never trust, always verify"],
+["Least privilege","Minimum required access"],
+["RBAC","Role-based access control"],
+["Secret management","Vault, KMS"],
+["Key rotation","Regularly replace keys"],
+["Pentest","Authorized security testing"],
+["Threat modeling","Identify and rank risks"],
+["Security headers","CSP, HSTS"],
+["SSRF","Server-side request forgery"],
+["RCE","Remote code execution"]
+]);
+
+fs.writeFileSync(p,JSON.stringify(d,null,2));
+console.log('topics',d.topics.length,'cards',d.topics.reduce((s,t)=>s+t.cards.length,0));

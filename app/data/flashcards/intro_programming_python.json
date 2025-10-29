@@ -1,0 +1,25 @@
+{
+  "topic": "Intro to Programming (Python)",
+  "cards": [
+    { "q": "Variable assignment", "a": "name = value" },
+    { "q": "Data types", "a": "int, float, str, bool, list, dict, tuple, set" },
+    { "q": "If/elif/else", "a": "Conditional branching" },
+    { "q": "For loop", "a": "Iterate over iterable" },
+    { "q": "While loop", "a": "Repeat until condition false" },
+    { "q": "Function define", "a": "def f(x): return x" },
+    { "q": "List comprehension", "a": "[f(x) for x in xs]" },
+    { "q": "Slicing", "a": "seq[start:stop:step]" },
+    { "q": "Dictionary access", "a": "d[key] or d.get(key)" },
+    { "q": "Exceptions", "a": "try/except/finally" },
+    { "q": "File I/O", "a": "with open('f') as f: ..." },
+    { "q": "Modules/import", "a": "import math; from x import y" },
+    { "q": "Virtual env", "a": "python -m venv venv" },
+    { "q": "pip install", "a": "pip install package" },
+    { "q": "PEP8", "a": "Style guide for Python code" },
+    { "q": "Mutable vs immutable", "a": "list/dict vs int/str/tuple" },
+    { "q": "Args/kwargs", "a": "*args, **kwargs for flexibility" },
+    { "q": "Generators", "a": "yield values lazily" },
+    { "q": "Unit testing", "a": "unittest or pytest" },
+    { "q": "Time complexity", "a": "Big-O basics for operations" }
+  ]
+}

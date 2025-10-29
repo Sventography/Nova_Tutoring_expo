@@ -1,0 +1,25 @@
+{
+  "topic": "Biology II (Advanced)",
+  "cards": [
+    { "q": "Hardy-Weinberg assumptions (name 3)", "a": "Large population, random mating, no mutation, no migration, no selection" },
+    { "q": "Define genetic drift", "a": "Random change in allele frequencies, stronger in small populations" },
+    { "q": "Bottleneck vs founder effect", "a": "Bottleneck: sharp population reduction; Founder: small group colonizes new area" },
+    { "q": "Allopatric vs sympatric speciation", "a": "Allopatric: geographic isolation; Sympatric: same area, reproductive barriers" },
+    { "q": "Stabilizing vs directional selection", "a": "Stabilizing favors intermediates; directional favors one extreme" },
+    { "q": "Innate vs adaptive immunity", "a": "Innate is rapid, nonspecific; adaptive is specific, has memory" },
+    { "q": "Humoral vs cell-mediated immunity", "a": "Humoral uses B cells/antibodies; cell-mediated uses T cells" },
+    { "q": "Antibody basic structure", "a": "2 heavy and 2 light chains forming variable and constant regions" },
+    { "q": "Nephron segments (order)", "a": "Bowman capsule, PCT, loop of Henle, DCT, collecting duct" },
+    { "q": "Countercurrent multiplier occurs in", "a": "Loop of Henle of juxtamedullary nephrons" },
+    { "q": "Cardiac conduction pathway", "a": "SA node, AV node, bundle of His, bundle branches, Purkinje fibers" },
+    { "q": "Bohr effect describes", "a": "CO2/H+ reduce hemoglobin affinity for O2, promoting unloading" },
+    { "q": "Operon parts (prokaryotes)", "a": "Promoter, operator, structural genes, regulator" },
+    { "q": "Epistasis definition", "a": "One gene affects expression of another gene" },
+    { "q": "Trophic levels energy transfer rule", "a": "About 10 percent energy transfer to next level" },
+    { "q": "Gross vs net primary productivity", "a": "GPP is total photosynthesis; NPP = GPP - respiration" },
+    { "q": "Keystone species role", "a": "Disproportionate effect on ecosystem relative to abundance" },
+    { "q": "r-selected vs K-selected species", "a": "r: many offspring, little care; K: few offspring, high care" },
+    { "q": "Hormone types and receptors", "a": "Peptide: cell surface; steroid: intracellular receptors" },
+    { "q": "Positive vs negative feedback (example)", "a": "Negative: insulin lowers glucose; Positive: oxytocin during labor" }
+  ]
+}

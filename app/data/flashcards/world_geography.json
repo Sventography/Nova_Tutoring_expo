@@ -1,0 +1,25 @@
+{
+  "topic": "World Geography",
+  "cards": [
+    { "q": "7 continents", "a": "Africa, Antarctica, Asia, Australia, Europe, North America, South America" },
+    { "q": "Largest ocean", "a": "Pacific Ocean" },
+    { "q": "Longest river", "a": "Nile (Amazon also cited)" },
+    { "q": "Highest mountain", "a": "Mount Everest" },
+    { "q": "Largest hot desert", "a": "Sahara" },
+    { "q": "Equator", "a": "0 degrees latitude" },
+    { "q": "Prime Meridian", "a": "0 degrees longitude (Greenwich)" },
+    { "q": "Tropic of Cancer", "a": "23.5 N" },
+    { "q": "Tropic of Capricorn", "a": "23.5 S" },
+    { "q": "Climate zones", "a": "Tropical, temperate, polar" },
+    { "q": "Largest country by area", "a": "Russia" },
+    { "q": "Most populous country", "a": "India (2020s)" },
+    { "q": "Most populous metro", "a": "Tokyo, Japan" },
+    { "q": "U.S. states number", "a": "50" },
+    { "q": "EU members (2025)", "a": "27" },
+    { "q": "Great Lakes", "a": "Superior, Michigan, Huron, Erie, Ontario" },
+    { "q": "Longest mountain range", "a": "Andes" },
+    { "q": "Ring of Fire", "a": "Pacific plate boundary volcanism" },
+    { "q": "Largest island (non-continent)", "a": "Greenland" },
+    { "q": "Smallest country", "a": "Vatican City" }
+  ]
+}

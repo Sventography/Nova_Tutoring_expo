@@ -1,0 +1,82 @@
+[
+  {
+    "question": "OOP pillars",
+    "answer": "Encapsulation, inheritance, polymorphism, abstraction"
+  },
+  {
+    "question": "Class vs object",
+    "answer": "Blueprint vs instance"
+  },
+  {
+    "question": "Constructor purpose",
+    "answer": "Initialize new object state"
+  },
+  {
+    "question": "Method overloading",
+    "answer": "Same name, different parameters"
+  },
+  {
+    "question": "Method overriding",
+    "answer": "Subclass replaces superclass method"
+  },
+  {
+    "question": "Access modifiers in Java",
+    "answer": "public, protected, default, private"
+  },
+  {
+    "question": "Static method belongs to",
+    "answer": "Class, not instance"
+  },
+  {
+    "question": "Interface defines",
+    "answer": "Contract of methods without implementation"
+  },
+  {
+    "question": "Abstract class",
+    "answer": "Cannot instantiate; may contain abstract methods"
+  },
+  {
+    "question": "ArrayList vs array",
+    "answer": "Resizable vs fixed length"
+  },
+  {
+    "question": "HashMap stores",
+    "answer": "Key–value pairs"
+  },
+  {
+    "question": "Equals vs = in Java",
+    "answer": "equals compares content; = assigns"
+  },
+  {
+    "question": "== vs equals for objects",
+    "answer": "== reference equality; equals content"
+  },
+  {
+    "question": "try–catch used for",
+    "answer": "Exception handling"
+  },
+  {
+    "question": "Runtime vs compile-time error",
+    "answer": "Occurs during execution vs during build"
+  },
+  {
+    "question": "Recursion base case",
+    "answer": "Stopping condition to prevent infinite calls"
+  },
+  {
+    "question": "Big-O of binary search",
+    "answer": "O(log n)"
+  },
+  {
+    "question": "Immutable example in Java",
+    "answer": "String"
+  },
+  {
+    "question": "Generics purpose",
+    "answer": "Type safety at compile time"
+  },
+  {
+    "question": "for-each loop iterates over",
+    "answer": "Elements in an array or Iterable"
+  }
+]

@@ -1,0 +1,25 @@
+{
+  "topic": "Philosophy Basics",
+  "cards": [
+    { "q": "Branches: metaphysics studies", "a": "Nature of reality and being" },
+    { "q": "Epistemology studies", "a": "Nature and scope of knowledge" },
+    { "q": "Ethics studies", "a": "Moral values, right and wrong" },
+    { "q": "Logic studies", "a": "Valid reasoning and argument forms" },
+    { "q": "Socrates method", "a": "Questioning to expose contradictions" },
+    { "q": "Plato theory of Forms", "a": "Abstract perfect entities ground reality" },
+    { "q": "Aristotle virtue ethics key", "a": "Habit and the golden mean" },
+    { "q": "Descartes cogito phrase", "a": "I think, therefore I am" },
+    { "q": "Empiricism vs rationalism", "a": "Empiricism: knowledge from experience; rationalism: from reason" },
+    { "q": "Kant categorical imperative", "a": "Act only on maxims you can will universal" },
+    { "q": "Utilitarianism principle", "a": "Maximize overall happiness" },
+    { "q": "Existentialism focus", "a": "Individual freedom, choice, authenticity" },
+    { "q": "Nihilism claim", "a": "Denies inherent meaning or value" },
+    { "q": "Social contract theorists", "a": "Hobbes, Locke, Rousseau" },
+    { "q": "Deductive vs inductive", "a": "Deductive guarantees; inductive probable" },
+    { "q": "Fallacy example: ad hominem", "a": "Attack person instead of argument" },
+    { "q": "Compatibilism debates", "a": "Free will with determinism" },
+    { "q": "Mind-body problem asks", "a": "Relation of mental states and physical brain" },
+    { "q": "Trolley problem area", "a": "Applied ethics, moral dilemmas" },
+    { "q": "Phenomenology founder", "a": "Edmund Husserl" }
+  ]
+}

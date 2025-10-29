@@ -1,0 +1,1722 @@
+[
+  {
+    "title": "Japanese Essentials",
+    "name": "Japanese Essentials",
+    "cards": [
+      {
+        "q": "Hello",
+        "a": "こんにちは"
+      },
+      {
+        "q": "Good morning",
+        "a": "おはようございます"
+      },
+      {
+        "q": "Good evening",
+        "a": "こんばんは"
+      },
+      {
+        "q": "Good night",
+        "a": "おやすみなさい"
+      },
+      {
+        "q": "Thank you",
+        "a": "ありがとうございます"
+      },
+      {
+        "q": "Thanks",
+        "a": "ありがとう"
+      },
+      {
+        "q": "Please",
+        "a": "お願いします"
+      },
+      {
+        "q": "Excuse me",
+        "a": "すみません"
+      },
+      {
+        "q": "I’m sorry",
+        "a": "ごめんなさい"
+      },
+      {
+        "q": "Yes",
+        "a": "はい"
+      },
+      {
+        "q": "No",
+        "a": "いいえ"
+      },
+      {
+        "q": "OK",
+        "a": "大丈夫です"
+      },
+      {
+        "q": "I don’t understand",
+        "a": "わかりません"
+      },
+      {
+        "q": "Do you speak English?",
+        "a": "英語を話せますか"
+      },
+      {
+        "q": "One moment please",
+        "a": "少々お待ちください"
+      },
+      {
+        "q": "I see",
+        "a": "なるほど"
+      },
+      {
+        "q": "Really?",
+        "a": "本当ですか"
+      },
+      {
+        "q": "What is this?",
+        "a": "これは何ですか"
+      },
+      {
+        "q": "Where is the toilet?",
+        "a": "トイレはどこですか"
+      },
+      {
+        "q": "Help",
+        "a": "助けて"
+      }
+    ]
+  },
+  {
+    "title": "Japanese Greetings",
+    "name": "Japanese Greetings",
+    "cards": [
+      {
+        "q": "Nice to meet you",
+        "a": "はじめまして"
+      },
+      {
+        "q": "Please treat me well",
+        "a": "よろしくお願いします"
+      },
+      {
+        "q": "Long time no see",
+        "a": "お久しぶりです"
+      },
+      {
+        "q": "See you",
+        "a": "またね"
+      },
+      {
+        "q": "See you tomorrow",
+        "a": "また明日"
+      },
+      {
+        "q": "Goodbye",
+        "a": "さようなら"
+      },
+      {
+        "q": "Welcome",
+        "a": "いらっしゃいませ"
+      },
+      {
+        "q": "Take care",
+        "a": "気をつけて"
+      },
+      {
+        "q": "How are you?",
+        "a": "お元気ですか"
+      },
+      {
+        "q": "I’m fine",
+        "a": "元気です"
+      },
+      {
+        "q": "Good job",
+        "a": "お疲れ様です"
+      },
+      {
+        "q": "Congrats",
+        "a": "おめでとうございます"
+      },
+      {
+        "q": "Happy birthday",
+        "a": "お誕生日おめでとう"
+      },
+      {
+        "q": "Happy New Year",
+        "a": "あけましておめでとうございます"
+      },
+      {
+        "q": "Good luck",
+        "a": "頑張って"
+      },
+      {
+        "q": "Thanks for your work",
+        "a": "お疲れ様でした"
+      },
+      {
+        "q": "Sorry to bother you",
+        "a": "お邪魔します"
+      },
+      {
+        "q": "I’m home",
+        "a": "ただいま"
+      },
+      {
+        "q": "Welcome back",
+        "a": "お帰りなさい"
+      },
+      {
+        "q": "I’m leaving",
+        "a": "行ってきます"
+      }
+    ]
+  },
+  {
+    "title": "Japanese Travel Phrases",
+    "name": "Japanese Travel Phrases",
+    "cards": [
+      {
+        "q": "Where is the station?",
+        "a": "駅はどこですか"
+      },
+      {
+        "q": "I need a taxi",
+        "a": "タクシーが必要です"
+      },
+      {
+        "q": "How much is the ticket?",
+        "a": "切符はいくらですか"
+      },
+      {
+        "q": "One way please",
+        "a": "片道でお願いします"
+      },
+      {
+        "q": "Round trip please",
+        "a": "往復でお願いします"
+      },
+      {
+        "q": "What time does it leave?",
+        "a": "何時に出発しますか"
+      },
+      {
+        "q": "What time does it arrive?",
+        "a": "何時に到着しますか"
+      },
+      {
+        "q": "Platform",
+        "a": "ホーム"
+      },
+      {
+        "q": "Gate",
+        "a": "ゲート"
+      },
+      {
+        "q": "Exit",
+        "a": "出口"
+      },
+      {
+        "q": "Entrance",
+        "a": "入口"
+      },
+      {
+        "q": "Hotel",
+        "a": "ホテル"
+      },
+      {
+        "q": "Reservation",
+        "a": "予約"
+      },
+      {
+        "q": "Passport",
+        "a": "パスポート"
+      },
+      {
+        "q": "Map",
+        "a": "地図"
+      },
+      {
+        "q": "Left",
+        "a": "左"
+      },
+      {
+        "q": "Right",
+        "a": "右"
+      },
+      {
+        "q": "Straight ahead",
+        "a": "まっすぐ"
+      },
+      {
+        "q": "Near",
+        "a": "近い"
+      },
+      {
+        "q": "Far",
+        "a": "遠い"
+      }
+    ]
+  },
+  {
+    "title": "Japanese Dining Phrases",
+    "name": "Japanese Dining Phrases",
+    "cards": [
+      {
+        "q": "A table for two",
+        "a": "二人です"
+      },
+      {
+        "q": "Menu please",
+        "a": "メニューお願いします"
+      },
+      {
+        "q": "Water please",
+        "a": "お水をお願いします"
+      },
+      {
+        "q": "I’m vegetarian",
+        "a": "ベジタリアンです"
+      },
+      {
+        "q": "No pork please",
+        "a": "豚肉は抜いてください"
+      },
+      {
+        "q": "It’s delicious",
+        "a": "おいしいです"
+      },
+      {
+        "q": "Check please",
+        "a": "お会計お願いします"
+      },
+      {
+        "q": "Another serving",
+        "a": "もう一つお願いします"
+      },
+      {
+        "q": "I’m full",
+        "a": "お腹いっぱいです"
+      },
+      {
+        "q": "What do you recommend?",
+        "a": "おすすめは何ですか"
+      },
+      {
+        "q": "Without wasabi",
+        "a": "わさび抜きで"
+      },
+      {
+        "q": "Less spicy please",
+        "a": "辛さ控えめでお願いします"
+      },
+      {
+        "q": "Allergy",
+        "a": "アレルギー"
+      },
+      {
+        "q": "Gluten-free",
+        "a": "グルテンフリー"
+      },
+      {
+        "q": "Hot tea please",
+        "a": "お茶をお願いします"
+      },
+      {
+        "q": "Cold water please",
+        "a": "冷たい水をお願いします"
+      },
+      {
+        "q": "Rice",
+        "a": "ご飯"
+      },
+      {
+        "q": "Soup",
+        "a": "スープ"
+      },
+      {
+        "q": "Separate bill",
+        "a": "別々でお願いします"
+      },
+      {
+        "q": "Takeout please",
+        "a": "お持ち帰りでお願いします"
+      }
+    ]
+  },
+  {
+    "title": "Japanese Numbers",
+    "name": "Japanese Numbers",
+    "cards": [
+      {
+        "q": "0",
+        "a": "零/れい"
+      },
+      {
+        "q": "1",
+        "a": "一/いち"
+      },
+      {
+        "q": "2",
+        "a": "二/に"
+      },
+      {
+        "q": "3",
+        "a": "三/さん"
+      },
+      {
+        "q": "4",
+        "a": "四/し・よん"
+      },
+      {
+        "q": "5",
+        "a": "五/ご"
+      },
+      {
+        "q": "6",
+        "a": "六/ろく"
+      },
+      {
+        "q": "7",
+        "a": "七/しち・なな"
+      },
+      {
+        "q": "8",
+        "a": "八/はち"
+      },
+      {
+        "q": "9",
+        "a": "九/きゅう・く"
+      },
+      {
+        "q": "10",
+        "a": "十/じゅう"
+      },
+      {
+        "q": "100",
+        "a": "百/ひゃく"
+      },
+      {
+        "q": "1000",
+        "a": "千/せん"
+      },
+      {
+        "q": "10000",
+        "a": "万/まん"
+      },
+      {
+        "q": "First",
+        "a": "第一/だいいち"
+      },
+      {
+        "q": "Second",
+        "a": "第二/だいに"
+      },
+      {
+        "q": "Third",
+        "a": "第三/だいさん"
+      },
+      {
+        "q": "Half",
+        "a": "半/はん"
+      },
+      {
+        "q": "Few",
+        "a": "少し/すこし"
+      },
+      {
+        "q": "Many",
+        "a": "多い/おおい"
+      }
+    ]
+  },
+  {
+    "title": "Japanese Time & Date",
+    "name": "Japanese Time & Date",
+    "cards": [
+      {
+        "q": "Now",
+        "a": "今/いま"
+      },
+      {
+        "q": "Today",
+        "a": "今日/きょう"
+      },
+      {
+        "q": "Tomorrow",
+        "a": "明日/あした"
+      },
+      {
+        "q": "Yesterday",
+        "a": "昨日/きのう"
+      },
+      {
+        "q": "Morning",
+        "a": "朝/あさ"
+      },
+      {
+        "q": "Afternoon",
+        "a": "昼/ひる"
+      },
+      {
+        "q": "Evening",
+        "a": "夕方/ゆうがた"
+      },
+      {
+        "q": "Night",
+        "a": "夜/よる"
+      },
+      {
+        "q": "Week",
+        "a": "週/しゅう"
+      },
+      {
+        "q": "Month",
+        "a": "月/つき・がつ"
+      },
+      {
+        "q": "Year",
+        "a": "年/とし・ねん"
+      },
+      {
+        "q": "Minute",
+        "a": "分/ふん・ぷん"
+      },
+      {
+        "q": "Hour",
+        "a": "時/じ"
+      },
+      {
+        "q": "What time is it?",
+        "a": "今何時ですか"
+      },
+      {
+        "q": "At what time?",
+        "a": "何時に"
+      },
+      {
+        "q": "Weekend",
+        "a": "週末/しゅうまつ"
+      },
+      {
+        "q": "Holiday",
+        "a": "祝日/しゅくじつ"
+      },
+      {
+        "q": "Birthday",
+        "a": "誕生日/たんじょうび"
+      },
+      {
+        "q": "This week",
+        "a": "今週/こんしゅう"
+      },
+      {
+        "q": "Next week",
+        "a": "来週/らいしゅう"
+      }
+    ]
+  },
+  {
+    "title": "Japanese Days & Months",
+    "name": "Japanese Days & Months",
+    "cards": [
+      {
+        "q": "Monday",
+        "a": "月曜日/げつようび"
+      },
+      {
+        "q": "Tuesday",
+        "a": "火曜日/かようび"
+      },
+      {
+        "q": "Wednesday",
+        "a": "水曜日/すいようび"
+      },
+      {
+        "q": "Thursday",
+        "a": "木曜日/もくようび"
+      },
+      {
+        "q": "Friday",
+        "a": "金曜日/きんようび"
+      },
+      {
+        "q": "Saturday",
+        "a": "土曜日/どようび"
+      },
+      {
+        "q": "Sunday",
+        "a": "日曜日/にちようび"
+      },
+      {
+        "q": "January",
+        "a": "一月/いちがつ"
+      },
+      {
+        "q": "February",
+        "a": "二月/にがつ"
+      },
+      {
+        "q": "March",
+        "a": "三月/さんがつ"
+      },
+      {
+        "q": "April",
+        "a": "四月/しがつ"
+      },
+      {
+        "q": "May",
+        "a": "五月/ごがつ"
+      },
+      {
+        "q": "June",
+        "a": "六月/ろくがつ"
+      },
+      {
+        "q": "July",
+        "a": "七月/しちがつ"
+      },
+      {
+        "q": "August",
+        "a": "八月/はちがつ"
+      },
+      {
+        "q": "September",
+        "a": "九月/くがつ"
+      },
+      {
+        "q": "October",
+        "a": "十月/じゅうがつ"
+      },
+      {
+        "q": "November",
+        "a": "十一月/じゅういちがつ"
+      },
+      {
+        "q": "December",
+        "a": "十二月/じゅうにがつ"
+      },
+      {
+        "q": "Weekend",
+        "a": "週末/しゅうまつ"
+      }
+    ]
+  },
+  {
+    "title": "Japanese Directions",
+    "name": "Japanese Directions",
+    "cards": [
+      {
+        "q": "Left",
+        "a": "左"
+      },
+      {
+        "q": "Right",
+        "a": "右"
+      },
+      {
+        "q": "Straight",
+        "a": "まっすぐ"
+      },
+      {
+        "q": "North",
+        "a": "北"
+      },
+      {
+        "q": "South",
+        "a": "南"
+      },
+      {
+        "q": "East",
+        "a": "東"
+      },
+      {
+        "q": "West",
+        "a": "西"
+      },
+      {
+        "q": "Near",
+        "a": "近い"
+      },
+      {
+        "q": "Far",
+        "a": "遠い"
+      },
+      {
+        "q": "Next to",
+        "a": "隣"
+      },
+      {
+        "q": "Across from",
+        "a": "向かい"
+      },
+      {
+        "q": "Corner",
+        "a": "角"
+      },
+      {
+        "q": "Intersection",
+        "a": "交差点"
+      },
+      {
+        "q": "Traffic light",
+        "a": "信号"
+      },
+      {
+        "q": "Bridge",
+        "a": "橋"
+      },
+      {
+        "q": "Road",
+        "a": "道"
+      },
+      {
+        "q": "Street",
+        "a": "通り"
+      },
+      {
+        "q": "Map",
+        "a": "地図"
+      },
+      {
+        "q": "Lost",
+        "a": "迷いました"
+      },
+      {
+        "q": "Which way?",
+        "a": "どっちですか"
+      }
+    ]
+  },
+  {
+    "title": "Japanese Shopping",
+    "name": "Japanese Shopping",
+    "cards": [
+      {
+        "q": "How much is this?",
+        "a": "これはいくらですか"
+      },
+      {
+        "q": "Expensive",
+        "a": "高い"
+      },
+      {
+        "q": "Cheap",
+        "a": "安い"
+      },
+      {
+        "q": "Discount",
+        "a": "割引"
+      },
+      {
+        "q": "Cash",
+        "a": "現金"
+      },
+      {
+        "q": "Credit card",
+        "a": "クレジットカード"
+      },
+      {
+        "q": "Receipt",
+        "a": "レシート"
+      },
+      {
+        "q": "Bag",
+        "a": "袋"
+      },
+      {
+        "q": "Try on",
+        "a": "試着"
+      },
+      {
+        "q": "Size",
+        "a": "サイズ"
+      },
+      {
+        "q": "Small",
+        "a": "小さい"
+      },
+      {
+        "q": "Medium",
+        "a": "中"
+      },
+      {
+        "q": "Large",
+        "a": "大きい"
+      },
+      {
+        "q": "Color",
+        "a": "色"
+      },
+      {
+        "q": "Exchange",
+        "a": "交換"
+      },
+      {
+        "q": "Return",
+        "a": "返品"
+      },
+      {
+        "q": "Sold out",
+        "a": "売り切れ"
+      },
+      {
+        "q": "New",
+        "a": "新しい"
+      },
+      {
+        "q": "Used",
+        "a": "中古"
+      },
+      {
+        "q": "Where is the register?",
+        "a": "レジはどこですか"
+      }
+    ]
+  },
+  {
+    "title": "Japanese Emergencies",
+    "name": "Japanese Emergencies",
+    "cards": [
+      {
+        "q": "Help",
+        "a": "助けて"
+      },
+      {
+        "q": "Call the police",
+        "a": "警察を呼んでください"
+      },
+      {
+        "q": "Call an ambulance",
+        "a": "救急車を呼んでください"
+      },
+      {
+        "q": "I’m lost",
+        "a": "迷いました"
+      },
+      {
+        "q": "I’m sick",
+        "a": "具合が悪いです"
+      },
+      {
+        "q": "I’m injured",
+        "a": "けがをしました"
+      },
+      {
+        "q": "Allergic to...",
+        "a": "…にアレルギーがあります"
+      },
+      {
+        "q": "Fire",
+        "a": "火事"
+      },
+      {
+        "q": "Hospital",
+        "a": "病院"
+      },
+      {
+        "q": "Pharmacy",
+        "a": "薬局"
+      },
+      {
+        "q": "Danger",
+        "a": "危険"
+      },
+      {
+        "q": "Safe",
+        "a": "安全"
+      },
+      {
+        "q": "Where is the embassy?",
+        "a": "大使館はどこですか"
+      },
+      {
+        "q": "Lost my passport",
+        "a": "パスポートを失くしました"
+      },
+      {
+        "q": "I was robbed",
+        "a": "盗まれました"
+      },
+      {
+        "q": "I need help",
+        "a": "助けが必要です"
+      },
+      {
+        "q": "Emergency exit",
+        "a": "非常口"
+      },
+      {
+        "q": "Earthquake",
+        "a": "地震"
+      },
+      {
+        "q": "Typhoon",
+        "a": "台風"
+      },
+      {
+        "q": "Shelter",
+        "a": "避難所"
+      }
+    ]
+  },
+  {
+    "title": "Japanese Weather",
+    "name": "Japanese Weather",
+    "cards": [
+      {
+        "q": "Weather",
+        "a": "天気"
+      },
+      {
+        "q": "Sunny",
+        "a": "晴れ"
+      },
+      {
+        "q": "Cloudy",
+        "a": "曇り"
+      },
+      {
+        "q": "Rainy",
+        "a": "雨"
+      },
+      {
+        "q": "Snowy",
+        "a": "雪"
+      },
+      {
+        "q": "Windy",
+        "a": "風が強い"
+      },
+      {
+        "q": "Hot",
+        "a": "暑い"
+      },
+      {
+        "q": "Cold",
+        "a": "寒い"
+      },
+      {
+        "q": "Humid",
+        "a": "湿気が多い"
+      },
+      {
+        "q": "Temperature",
+        "a": "気温"
+      },
+      {
+        "q": "Forecast",
+        "a": "予報"
+      },
+      {
+        "q": "Storm",
+        "a": "嵐"
+      },
+      {
+        "q": "Thunder",
+        "a": "雷"
+      },
+      {
+        "q": "Lightning",
+        "a": "稲妻"
+      },
+      {
+        "q": "Flood",
+        "a": "洪水"
+      },
+      {
+        "q": "Drought",
+        "a": "干ばつ"
+      },
+      {
+        "q": "Clear sky",
+        "a": "快晴"
+      },
+      {
+        "q": "Drizzle",
+        "a": "霧雨"
+      },
+      {
+        "q": "Fog",
+        "a": "霧"
+      },
+      {
+        "q": "Rainbow",
+        "a": "虹"
+      }
+    ]
+  },
+  {
+    "title": "Japanese Family",
+    "name": "Japanese Family",
+    "cards": [
+      {
+        "q": "Family",
+        "a": "家族"
+      },
+      {
+        "q": "Father",
+        "a": "父"
+      },
+      {
+        "q": "Mother",
+        "a": "母"
+      },
+      {
+        "q": "Older brother",
+        "a": "兄"
+      },
+      {
+        "q": "Older sister",
+        "a": "姉"
+      },
+      {
+        "q": "Younger brother",
+        "a": "弟"
+      },
+      {
+        "q": "Younger sister",
+        "a": "妹"
+      },
+      {
+        "q": "Grandfather",
+        "a": "祖父"
+      },
+      {
+        "q": "Grandmother",
+        "a": "祖母"
+      },
+      {
+        "q": "Husband",
+        "a": "夫"
+      },
+      {
+        "q": "Wife",
+        "a": "妻"
+      },
+      {
+        "q": "Child",
+        "a": "子供"
+      },
+      {
+        "q": "Son",
+        "a": "息子"
+      },
+      {
+        "q": "Daughter",
+        "a": "娘"
+      },
+      {
+        "q": "Uncle",
+        "a": "おじ"
+      },
+      {
+        "q": "Aunt",
+        "a": "おば"
+      },
+      {
+        "q": "Cousin",
+        "a": "いとこ"
+      },
+      {
+        "q": "Relative",
+        "a": "親戚"
+      },
+      {
+        "q": "Parents",
+        "a": "両親"
+      },
+      {
+        "q": "Siblings",
+        "a": "兄弟"
+      }
+    ]
+  },
+  {
+    "title": "Japanese School & Work",
+    "name": "Japanese School & Work",
+    "cards": [
+      {
+        "q": "School",
+        "a": "学校"
+      },
+      {
+        "q": "Teacher",
+        "a": "先生"
+      },
+      {
+        "q": "Student",
+        "a": "学生"
+      },
+      {
+        "q": "Class",
+        "a": "授業"
+      },
+      {
+        "q": "Exam",
+        "a": "試験"
+      },
+      {
+        "q": "Homework",
+        "a": "宿題"
+      },
+      {
+        "q": "Company",
+        "a": "会社"
+      },
+      {
+        "q": "Office",
+        "a": "オフィス"
+      },
+      {
+        "q": "Boss",
+        "a": "上司"
+      },
+      {
+        "q": "Colleague",
+        "a": "同僚"
+      },
+      {
+        "q": "Meeting",
+        "a": "会議"
+      },
+      {
+        "q": "Schedule",
+        "a": "予定"
+      },
+      {
+        "q": "Project",
+        "a": "プロジェクト"
+      },
+      {
+        "q": "Deadline",
+        "a": "締切"
+      },
+      {
+        "q": "Break",
+        "a": "休憩"
+      },
+      {
+        "q": "Salary",
+        "a": "給料"
+      },
+      {
+        "q": "Work from home",
+        "a": "在宅勤務"
+      },
+      {
+        "q": "Commute",
+        "a": "通勤"
+      },
+      {
+        "q": "Promotion",
+        "a": "昇進"
+      },
+      {
+        "q": "Resume",
+        "a": "履歴書"
+      }
+    ]
+  },
+  {
+    "title": "Japanese Common Verbs",
+    "name": "Japanese Common Verbs",
+    "cards": [
+      {
+        "q": "To eat",
+        "a": "食べる"
+      },
+      {
+        "q": "To drink",
+        "a": "飲む"
+      },
+      {
+        "q": "To go",
+        "a": "行く"
+      },
+      {
+        "q": "To come",
+        "a": "来る"
+      },
+      {
+        "q": "To see",
+        "a": "見る"
+      },
+      {
+        "q": "To hear",
+        "a": "聞く"
+      },
+      {
+        "q": "To speak",
+        "a": "話す"
+      },
+      {
+        "q": "To read",
+        "a": "読む"
+      },
+      {
+        "q": "To write",
+        "a": "書く"
+      },
+      {
+        "q": "To buy",
+        "a": "買う"
+      },
+      {
+        "q": "To sell",
+        "a": "売る"
+      },
+      {
+        "q": "To make",
+        "a": "作る"
+      },
+      {
+        "q": "To use",
+        "a": "使う"
+      },
+      {
+        "q": "To meet",
+        "a": "会う"
+      },
+      {
+        "q": "To live",
+        "a": "住む"
+      },
+      {
+        "q": "To sleep",
+        "a": "寝る"
+      },
+      {
+        "q": "To wake",
+        "a": "起きる"
+      },
+      {
+        "q": "To work",
+        "a": "働く"
+      },
+      {
+        "q": "To study",
+        "a": "勉強する"
+      },
+      {
+        "q": "To play",
+        "a": "遊ぶ"
+      }
+    ]
+  },
+  {
+    "title": "Japanese Adjectives",
+    "name": "Japanese Adjectives",
+    "cards": [
+      {
+        "q": "Big",
+        "a": "大きい"
+      },
+      {
+        "q": "Small",
+        "a": "小さい"
+      },
+      {
+        "q": "New",
+        "a": "新しい"
+      },
+      {
+        "q": "Old",
+        "a": "古い"
+      },
+      {
+        "q": "Good",
+        "a": "良い"
+      },
+      {
+        "q": "Bad",
+        "a": "悪い"
+      },
+      {
+        "q": "Fast",
+        "a": "速い"
+      },
+      {
+        "q": "Slow",
+        "a": "遅い"
+      },
+      {
+        "q": "Expensive",
+        "a": "高い"
+      },
+      {
+        "q": "Cheap",
+        "a": "安い"
+      },
+      {
+        "q": "Easy",
+        "a": "簡単"
+      },
+      {
+        "q": "Difficult",
+        "a": "難しい"
+      },
+      {
+        "q": "Interesting",
+        "a": "面白い"
+      },
+      {
+        "q": "Boring",
+        "a": "つまらない"
+      },
+      {
+        "q": "Busy",
+        "a": "忙しい"
+      },
+      {
+        "q": "Free (time)",
+        "a": "暇"
+      },
+      {
+        "q": "Hot (object)",
+        "a": "熱い"
+      },
+      {
+        "q": "Cold (object)",
+        "a": "冷たい"
+      },
+      {
+        "q": "Kind",
+        "a": "優しい"
+      },
+      {
+        "q": "Scary",
+        "a": "怖い"
+      }
+    ]
+  },
+  {
+    "title": "Japanese Particles",
+    "name": "Japanese Particles",
+    "cards": [
+      {
+        "q": "は (topic)",
+        "a": "主題"
+      },
+      {
+        "q": "が (subject)",
+        "a": "主語"
+      },
+      {
+        "q": "を (object)",
+        "a": "目的語"
+      },
+      {
+        "q": "に (time/place)",
+        "a": "時・場所"
+      },
+      {
+        "q": "へ (direction)",
+        "a": "方向"
+      },
+      {
+        "q": "で (location/method)",
+        "a": "場所・手段"
+      },
+      {
+        "q": "と (and/with)",
+        "a": "並列・共同"
+      },
+      {
+        "q": "も (also)",
+        "a": "同様"
+      },
+      {
+        "q": "から (from)",
+        "a": "起点"
+      },
+      {
+        "q": "まで (to/until)",
+        "a": "終点"
+      },
+      {
+        "q": "より (than)",
+        "a": "比較"
+      },
+      {
+        "q": "や (A, B, etc.)",
+        "a": "例示"
+      },
+      {
+        "q": "の (possession)",
+        "a": "所有"
+      },
+      {
+        "q": "か (question)",
+        "a": "疑問"
+      },
+      {
+        "q": "ね (seeking agree.)",
+        "a": "確認"
+      },
+      {
+        "q": "よ (assertive)",
+        "a": "断定"
+      },
+      {
+        "q": "ぞ (emphasis)",
+        "a": "強調"
+      },
+      {
+        "q": "しか (only)",
+        "a": "限定"
+      },
+      {
+        "q": "だけ (only)",
+        "a": "限定"
+      },
+      {
+        "q": "こそ (emphasis)",
+        "a": "強調"
+      }
+    ]
+  },
+  {
+    "title": "Kanji N5 Set 1",
+    "name": "Kanji N5 Set 1",
+    "cards": [
+      {
+        "q": "日",
+        "a": "sun/day"
+      },
+      {
+        "q": "月",
+        "a": "moon/month"
+      },
+      {
+        "q": "火",
+        "a": "fire"
+      },
+      {
+        "q": "水",
+        "a": "water"
+      },
+      {
+        "q": "木",
+        "a": "tree"
+      },
+      {
+        "q": "金",
+        "a": "gold/money"
+      },
+      {
+        "q": "土",
+        "a": "earth"
+      },
+      {
+        "q": "山",
+        "a": "mountain"
+      },
+      {
+        "q": "川",
+        "a": "river"
+      },
+      {
+        "q": "田",
+        "a": "rice field"
+      },
+      {
+        "q": "人",
+        "a": "person"
+      },
+      {
+        "q": "口",
+        "a": "mouth"
+      },
+      {
+        "q": "目",
+        "a": "eye"
+      },
+      {
+        "q": "耳",
+        "a": "ear"
+      },
+      {
+        "q": "手",
+        "a": "hand"
+      },
+      {
+        "q": "足",
+        "a": "foot"
+      },
+      {
+        "q": "力",
+        "a": "power"
+      },
+      {
+        "q": "気",
+        "a": "spirit"
+      },
+      {
+        "q": "雨",
+        "a": "rain"
+      },
+      {
+        "q": "車",
+        "a": "car"
+      }
+    ]
+  },
+  {
+    "title": "Kanji N5 Set 2",
+    "name": "Kanji N5 Set 2",
+    "cards": [
+      {
+        "q": "学",
+        "a": "study"
+      },
+      {
+        "q": "校",
+        "a": "school"
+      },
+      {
+        "q": "先",
+        "a": "previous"
+      },
+      {
+        "q": "生",
+        "a": "life/student"
+      },
+      {
+        "q": "友",
+        "a": "friend"
+      },
+      {
+        "q": "本",
+        "a": "book"
+      },
+      {
+        "q": "文",
+        "a": "sentence"
+      },
+      {
+        "q": "字",
+        "a": "character"
+      },
+      {
+        "q": "間",
+        "a": "interval"
+      },
+      {
+        "q": "時",
+        "a": "time"
+      },
+      {
+        "q": "上",
+        "a": "up"
+      },
+      {
+        "q": "下",
+        "a": "down"
+      },
+      {
+        "q": "中",
+        "a": "middle"
+      },
+      {
+        "q": "大",
+        "a": "big"
+      },
+      {
+        "q": "小",
+        "a": "small"
+      },
+      {
+        "q": "長",
+        "a": "long"
+      },
+      {
+        "q": "高",
+        "a": "tall/expensive"
+      },
+      {
+        "q": "安",
+        "a": "cheap/safe"
+      },
+      {
+        "q": "新",
+        "a": "new"
+      },
+      {
+        "q": "古",
+        "a": "old"
+      }
+    ]
+  },
+  {
+    "title": "Kanji N5 Set 3",
+    "name": "Kanji N5 Set 3",
+    "cards": [
+      {
+        "q": "白",
+        "a": "white"
+      },
+      {
+        "q": "黒",
+        "a": "black"
+      },
+      {
+        "q": "赤",
+        "a": "red"
+      },
+      {
+        "q": "青",
+        "a": "blue"
+      },
+      {
+        "q": "色",
+        "a": "color"
+      },
+      {
+        "q": "早",
+        "a": "early"
+      },
+      {
+        "q": "行",
+        "a": "go"
+      },
+      {
+        "q": "来",
+        "a": "come"
+      },
+      {
+        "q": "帰",
+        "a": "return"
+      },
+      {
+        "q": "食",
+        "a": "eat"
+      },
+      {
+        "q": "飲",
+        "a": "drink"
+      },
+      {
+        "q": "見",
+        "a": "see"
+      },
+      {
+        "q": "聞",
+        "a": "hear"
+      },
+      {
+        "q": "話",
+        "a": "speak"
+      },
+      {
+        "q": "読",
+        "a": "read"
+      },
+      {
+        "q": "書",
+        "a": "write"
+      },
+      {
+        "q": "買",
+        "a": "buy"
+      },
+      {
+        "q": "売",
+        "a": "sell"
+      },
+      {
+        "q": "会",
+        "a": "meet"
+      },
+      {
+        "q": "住",
+        "a": "live"
+      }
+    ]
+  },
+  {
+    "title": "Kanji N5 Set 4",
+    "name": "Kanji N5 Set 4",
+    "cards": [
+      {
+        "q": "入",
+        "a": "enter"
+      },
+      {
+        "q": "出",
+        "a": "exit"
+      },
+      {
+        "q": "立",
+        "a": "stand"
+      },
+      {
+        "q": "座",
+        "a": "sit"
+      },
+      {
+        "q": "休",
+        "a": "rest"
+      },
+      {
+        "q": "何",
+        "a": "what"
+      },
+      {
+        "q": "名",
+        "a": "name"
+      },
+      {
+        "q": "年",
+        "a": "year"
+      },
+      {
+        "q": "先",
+        "a": "ahead"
+      },
+      {
+        "q": "今",
+        "a": "now"
+      },
+      {
+        "q": "午",
+        "a": "noon"
+      },
+      {
+        "q": "前",
+        "a": "before"
+      },
+      {
+        "q": "後",
+        "a": "after"
+      },
+      {
+        "q": "毎",
+        "a": "every"
+      },
+      {
+        "q": "半",
+        "a": "half"
+      },
+      {
+        "q": "分",
+        "a": "minute"
+      },
+      {
+        "q": "国",
+        "a": "country"
+      },
+      {
+        "q": "天",
+        "a": "heaven"
+      },
+      {
+        "q": "気",
+        "a": "spirit"
+      },
+      {
+        "q": "電",
+        "a": "electric"
+      }
+    ]
+  }
+]

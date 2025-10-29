@@ -1,0 +1,22 @@
+[
+  ["Newton's first law", "Inertia"],
+  ["Newton's second law", "F=ma"],
+  ["Newton's third law", "Equal and opposite pairs"],
+  ["Kinetic energy", "½mv²"],
+  ["Potential energy", "mgh"],
+  ["Momentum", "p=mv"],
+  ["Conservation of energy", "Energy constant in isolated system"],
+  ["Work", "W=Fd cosθ"],
+  ["Power", "P=W/t"],
+  ["Ohm's law", "V=IR"],
+  ["Coulomb's law", "F=k q₁q₂/r²"],
+  ["Wave speed", "v=fλ"],
+  ["Refraction", "Bending entering new medium"],
+  ["Doppler effect", "Frequency shift from motion"],
+  ["Second law thermo", "Entropy increases"],
+  ["Specific heat", "q=mcΔT"],
+  ["SHM", "x(t)=A cos(ωt+φ)"],
+  ["Torque", "τ=rF sinθ"],
+  ["Universal gravitation", "F=Gm₁m₂/r²"],
+  ["Relativity idea", "Time/length depend on frame"]
+]

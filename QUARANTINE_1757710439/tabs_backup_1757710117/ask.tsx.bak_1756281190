@@ -1,0 +1,101 @@
+import React, { useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+
+export default function Ask() {
+  const [question, setQuestion] = useState('');
+  const [answer, setAnswer] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleAsk = async () => {
+    if (!question.trim()) return;
+    setLoading(true);
+    setAnswer('');
+    try {
+      // Fetch from OpenAI
+      const aiRes = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${process.env.EXPO_PUBLIC_OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [{ role: 'system', content: 'Answer sassily but helpfully, cite sources as OpenAI + Wikipedia.' },
+                     { role: 'user', content: question }]
+        }),
+      });
+      const aiJson = await aiRes.json();
+      const aiText = aiJson.choices?.[0]?.message?.content || '';
+
+      // Fetch from Wikipedia
+      const wikiRes = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/${encodeURIComponent(question)}`);
+      const wikiJson = await wikiRes.json();
+      const wikiText = wikiJson?.extract || '';
+
+      setAnswer(`${aiText}\n\nFrom Wikipedia: ${wikiText}`);
+    } catch (err) {
+      setAnswer('Ugh, something went wrong. Try again, human.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <KeyboardAvoidingView style={s.wrap} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <View style={s.card}>
+        {loading ? (
+          <View style={s.think}>
+            <ActivityIndicator size="small" color="#00eaff" />
+            <Text style={s.thinkTxt}> Nova is thinking…</Text>
+          </View>
+        ) : (
+          !!answer && <Text style={s.txt}>{answer}</Text>
+        )}
+      </View>
+
+      <View style={s.inputBar}>
+        <View style={s.inputShell}>
+          <TextInput
+            style={s.input}
+            placeholder="Ask Nova anything…"
+            placeholderTextColor="#666"
+            value={question}
+            onChangeText={setQuestion}
+          />
+        </View>
+        <TouchableOpacity style={s.askBtn} onPress={handleAsk}>
+          <Text style={s.askTxt}>Ask</Text>
+        </TouchableOpacity>
+      </View>
+    </KeyboardAvoidingView>
+  );
+}
+
+const s = StyleSheet.create({
+  wrap:{flex:1,backgroundColor:'#000',justifyContent:'space-between'},
+  card:{
+    margin:16,padding:16,
+    backgroundColor:'#0b1220',
+    borderRadius:14,
+    borderWidth:2,borderColor:'#0ff',
+    shadowColor:'#00eaff',
+    shadowOpacity:0.4,shadowRadius:12,shadowOffset:{width:0,height:0}
+  },
+  txt:{color:'#e6f7ff',fontSize:16,lineHeight:22},
+  think:{flexDirection:'row',alignItems:'center'},
+  thinkTxt:{color:'#a8ecff',marginLeft:8,fontWeight:'700'},
+  inputBar:{flexDirection:'row',alignItems:'center',padding:12},
+  inputShell:{
+    flex:1,borderRadius:14,
+    backgroundColor:'#0b1220',
+    borderWidth:2,borderColor:'#00eaff',
+    paddingHorizontal:12,paddingVertical:6
+  },
+  input:{color:'#e6f7ff',fontSize:16},
+  askBtn:{
+    backgroundColor:'#00d0ff',
+    paddingHorizontal:18,paddingVertical:12,
+    borderRadius:14,marginLeft:10
+  },
+  askTxt:{color:'#00111a',fontWeight:'900'}
+});

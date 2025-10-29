@@ -1,0 +1,25 @@
+{
+  "topic": "French III",
+  "cards": [
+    { "q": "Plus-que-parfait formation", "a": "Imparfait of avoir/etre + past participle" },
+    { "q": "Futur anterieur formation", "a": "Futur of avoir/etre + past participle" },
+    { "q": "Conditionnel passe", "a": "Conditionnel of avoir/etre + past participle" },
+    { "q": "Subjonctif triggers", "a": "Doute, emotion, volonte, necessite" },
+    { "q": "Si clauses types", "a": "Si present -> futur; si imparfait -> conditionnel; si plus-que-parfait -> cond passe" },
+    { "q": "Relative pronouns advanced", "a": "lequel/laquelle/lesquels/lesquelles" },
+    { "q": "Dont usage", "a": "Replaces de + noun" },
+    { "q": "Gerondif formation", "a": "en + present participle (nous form stem + ant)" },
+    { "q": "Y vs en", "a": "y replaces a+place/thing; en replaces de+thing/quantity" },
+    { "q": "Negation doubles", "a": "ne... jamais, ne... plus, ne... personne" },
+    { "q": "Passive voice", "a": "etre + past participle (agreement with subject)" },
+    { "q": "Indirect speech tense shift", "a": "Il a dit qu'il viendrait" },
+    { "q": "Restrictions with depuis", "a": "Action started in past still ongoing" },
+    { "q": "Time expressions pendant vs pour", "a": "Pendant finished duration; pour planned future" },
+    { "q": "Register: tutoiement vs vouvoiement", "a": "Informal tu vs formal vous" },
+    { "q": "Idioms example", "a": "Il pleut des cordes (raining hard)" },
+    { "q": "Participles agreement with avoir", "a": "Agree if DO precedes" },
+    { "q": "Si seulement + imparfait", "a": "Express wish contrary to present" },
+    { "q": "Concessive bien que + subjonctif", "a": "Bien que ce soit difficile" },
+    { "q": "Impers. expressions", "a": "Il faut que, il vaut mieux que" }
+  ]
+}

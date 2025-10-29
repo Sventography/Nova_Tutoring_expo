@@ -1,0 +1,91 @@
+import React, { useEffect, useRef, useState } from 'react'
+import { SafeAreaView, View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, StyleSheet, ActivityIndicator, Animated, Platform } from 'react-native'
+import DonateFAB from '../components/DonateFAB'
+import { getAnswer } from '../../lib/qa'
+
+export default function Ask(){
+  const [question,setQuestion]=useState('')
+  const [answer,setAnswer]=useState('')
+  const [loading,setLoading]=useState(false)
+  const blink=useRef(new Animated.Value(0)).current
+
+  useEffect(()=>{
+    if(loading){
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(blink,{toValue:1,duration:600,useNativeDriver:true}),
+          Animated.timing(blink,{toValue:0,duration:600,useNativeDriver:true})
+        ])
+      ).start()
+    }else{
+      blink.stopAnimation()
+      blink.setValue(0)
+    }
+  },[loading])
+
+  async function handleAsk(){
+    if(!question.trim()) return
+    setLoading(true)
+    setAnswer('')
+    try{
+      const txt = await getAnswer(question)
+      setAnswer(txt || 'No answer available.')
+    }catch(e:any){
+      setAnswer('No answer available.')
+    }
+    setLoading(false)
+  }
+
+  const thinkOpacity=blink.interpolate({inputRange:[0,1],outputRange:[0.3,1]})
+
+  return(
+    <SafeAreaView style={s.wrap}>
+      <KeyboardAvoidingView style={s.wrap} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+        <View style={s.body}>
+          {!!answer && (
+            <View style={s.answerBox}>
+              <Text style={s.answer}>{answer}</Text>
+            </View>
+          )}
+
+          {loading && (
+            <View style={s.thinkRow}>
+              <Animated.Text style={[s.think,{opacity:thinkOpacity}]}>Nova is thinking…</Animated.Text>
+              <ActivityIndicator size="small" color="#0ff" style={{marginLeft:8}}/>
+            </View>
+          )}
+        </View>
+
+        <View style={s.inputRow}>
+          <TextInput
+            style={s.input}
+            placeholder="Ask Nova anything..."
+            placeholderTextColor="#555"
+            value={question}
+            onChangeText={setQuestion}
+            returnKeyType="send"
+            onSubmitEditing={handleAsk}
+          />
+          <TouchableOpacity onPress={handleAsk} style={s.btn}>
+            <Text style={s.btnTxt}>Ask</Text>
+          </TouchableOpacity>
+        </View>
+
+        <DonateFAB/>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  )
+}
+
+const s=StyleSheet.create({
+  wrap:{flex:1,backgroundColor:'#000'},
+  body:{flex:1,padding:12},
+  inputRow:{flexDirection:'row',padding:12,alignItems:'center',borderTopWidth:1,borderTopColor:'#222',backgroundColor:'#000'},
+  input:{flex:1,backgroundColor:'#111',color:'#fff',padding:12,borderRadius:12,borderWidth:1,borderColor:'#00e5ff',shadowColor:'#00e5ff',shadowOpacity:0.6,shadowRadius:6,shadowOffset:{width:0,height:0}},
+  btn:{marginLeft:10,backgroundColor:'#00e5ff',paddingHorizontal:16,paddingVertical:10,borderRadius:12},
+  btnTxt:{color:'#00111a',fontWeight:'900'},
+  thinkRow:{flexDirection:'row',alignSelf:'center',marginVertical:10,alignItems:'center'},
+  think:{color:'#00e5ff',fontWeight:'700'},
+  answerBox:{marginVertical:16,padding:14,backgroundColor:'#0b1220',borderRadius:12,borderWidth:1,borderColor:'#00e5ff'},
+  answer:{color:'#fff'}
+})

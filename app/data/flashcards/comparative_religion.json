@@ -1,0 +1,25 @@
+{
+  "topic": "Comparative Religion",
+  "cards": [
+    { "q": "Christianity central figure", "a": "Jesus Christ" },
+    { "q": "Islam holy book", "a": "Qur'an" },
+    { "q": "Judaism covenant key person", "a": "Abraham" },
+    { "q": "Hinduism main texts", "a": "Vedas, Upanishads, Bhagavad Gita" },
+    { "q": "Buddhism founder", "a": "Siddhartha Gautama (Buddha)" },
+    { "q": "Four Noble Truths", "a": "Life is suffering, cause is desire, end desire, follow Eightfold Path" },
+    { "q": "Confucianism emphasis", "a": "Ethics, family, social harmony" },
+    { "q": "Daoism (Taoism) focus", "a": "Harmony with Dao, natural flow" },
+    { "q": "Sikhism founder", "a": "Guru Nanak" },
+    { "q": "Shinto practices center on", "a": "Kami (spirits) and rituals" },
+    { "q": "Zoroastrianism central concept", "a": "Struggle between good (Ahura Mazda) and evil (Angra Mainyu)" },
+    { "q": "Baháʼí Faith teaching", "a": "Unity of all religions and humanity" },
+    { "q": "Christian Trinity doctrine", "a": "Father, Son, Holy Spirit are one God" },
+    { "q": "Islam Five Pillars", "a": "Shahada, Salat, Zakat, Sawm, Hajj" },
+    { "q": "Jewish Sabbath day", "a": "Saturday (Shabbat)" },
+    { "q": "Buddhist Nirvana meaning", "a": "Release from cycle of rebirth" },
+    { "q": "Hindu karma concept", "a": "Actions influence future lives" },
+    { "q": "Confucian filial piety", "a": "Respect for parents/ancestors" },
+    { "q": "Sikh scripture", "a": "Guru Granth Sahib" },
+    { "q": "Shinto shrine term", "a": "Jinja" }
+  ]
+}

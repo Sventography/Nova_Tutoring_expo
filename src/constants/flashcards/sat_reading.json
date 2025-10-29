@@ -1,0 +1,82 @@
+[
+  {
+    "question": "Main idea questions ask for",
+    "answer": "Central claim or purpose"
+  },
+  {
+    "question": "Inference questions require",
+    "answer": "Conclusion supported by text"
+  },
+  {
+    "question": "Evidence questions ask for",
+    "answer": "Line references that support an answer"
+  },
+  {
+    "question": "Vocabulary-in-context",
+    "answer": "Meaning of a word as used in passage"
+  },
+  {
+    "question": "Function questions ask",
+    "answer": "Why an author includes a detail"
+  },
+  {
+    "question": "Tone/attitude detection",
+    "answer": "Author’s feeling toward topic"
+  },
+  {
+    "question": "Paired passages strategy",
+    "answer": "Answer each passage before comparing"
+  },
+  {
+    "question": "Charts and graphs",
+    "answer": "Use data to answer text-integrated questions"
+  },
+  {
+    "question": "Wrong-answer traps",
+    "answer": "Too broad, extreme, unsupported, out of scope"
+  },
+  {
+    "question": "Best approach to passage",
+    "answer": "Active reading with brief annotations"
+  },
+  {
+    "question": "Literal vs inferential",
+    "answer": "Stated directly vs implied"
+  },
+  {
+    "question": "Process of elimination",
+    "answer": "Remove clearly wrong choices"
+  },
+  {
+    "question": "Command of evidence",
+    "answer": "Select support for previous answer"
+  },
+  {
+    "question": "Author’s purpose options",
+    "answer": "Inform, persuade, entertain, analyze"
+  },
+  {
+    "question": "Structure questions target",
+    "answer": "Organization and transitions"
+  },
+  {
+    "question": "Dual meaning words require",
+    "answer": "Use context to choose sense"
+  },
+  {
+    "question": "Time management",
+    "answer": "Pace roughly one minute per question"
+  },
+  {
+    "question": "Line-citation accuracy",
+    "answer": "Check nearby lines for context"
+  },
+  {
+    "question": "Global vs detail",
+    "answer": "Overall meaning vs specific facts"
+  },
+  {
+    "question": "Consistent paraphrase",
+    "answer": "Match meaning, not wording"
+  }
+]

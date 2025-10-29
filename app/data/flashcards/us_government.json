@@ -1,0 +1,25 @@
+{
+  "topic": "U.S. Government & Politics",
+  "cards": [
+    { "q": "Separation of powers meaning", "a": "Division into legislative, executive, judicial branches" },
+    { "q": "Checks and balances example", "a": "President veto; Congress override; Courts judicial review" },
+    { "q": "Federalism definition", "a": "Power shared between national and state governments" },
+    { "q": "Bill of Rights purpose", "a": "Protects individual liberties from government infringement" },
+    { "q": "House vs Senate differences", "a": "House: 2-year terms, proportional; Senate: 6-year terms, 2 per state" },
+    { "q": "How many Supreme Court justices?", "a": "9" },
+    { "q": "Judicial review landmark case", "a": "Marbury v. Madison (1803)" },
+    { "q": "Impeachment basics", "a": "House impeaches; Senate tries; removal needs 2/3 vote" },
+    { "q": "Electoral College purpose", "a": "Indirectly elects president via state electors" },
+    { "q": "Civil liberties vs civil rights", "a": "Liberties = freedoms; Rights = protections from discrimination" },
+    { "q": "Primary vs caucus", "a": "Primary: ballot election; Caucus: open meeting selection" },
+    { "q": "Political socialization factors", "a": "Family, education, media, peers, events" },
+    { "q": "Interest group definition", "a": "Organization seeking to influence policy" },
+    { "q": "PAC vs Super PAC", "a": "PAC: limited donations; Super PAC: unlimited independent spending" },
+    { "q": "First Amendment rights", "a": "Religion, speech, press, assembly, petition" },
+    { "q": "Due process amendments", "a": "5th (federal), 14th (state)" },
+    { "q": "Equal Protection Clause location", "a": "14th Amendment" },
+    { "q": "Voting rights expansion amendments", "a": "15th, 19th, 24th, 26th" },
+    { "q": "Filibuster applies to", "a": "U.S. Senate; cloture ends debate (60 votes)" },
+    { "q": "Incumbency advantage includes", "a": "Name recognition, fundraising, constituent services" }
+  ]
+}

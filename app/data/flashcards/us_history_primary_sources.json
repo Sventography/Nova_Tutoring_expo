@@ -1,0 +1,25 @@
+{
+  "topic": "U.S. History: Primary Sources",
+  "cards": [
+    { "q": "Declaration of Independence author lead", "a": "Thomas Jefferson (1776)" },
+    { "q": "Federalist Papers authors", "a": "Hamilton, Madison, Jay (Publius)" },
+    { "q": "U.S. Constitution preamble begins", "a": "We the People" },
+    { "q": "Bill of Rights purpose", "a": "First 10 amendments protecting liberties" },
+    { "q": "Washington's Farewell Address warned of", "a": "Parties and foreign entanglements" },
+    { "q": "Gettysburg Address theme", "a": "National unity, new birth of freedom (1863, Lincoln)" },
+    { "q": "Emancipation Proclamation effect", "a": "Freed slaves in rebelling states (1863)" },
+    { "q": "Seneca Falls Declaration modeled on", "a": "Declaration of Independence (1848)" },
+    { "q": "Plessy v. Ferguson document upheld", "a": "Separate but equal (1896)" },
+    { "q": "Roosevelt Corollary asserted", "a": "U.S. policing power in Western Hemisphere" },
+    { "q": "Four Freedoms speech author", "a": "FDR (1941)" },
+    { "q": "Marshall Plan document aimed to", "a": "Rebuild Europe post WWII (1948)" },
+    { "q": "Truman Doctrine pledged", "a": "Aid to resist communism (1947)" },
+    { "q": "Letter from Birmingham Jail author", "a": "Martin Luther King Jr. (1963)" },
+    { "q": "Civil Rights Act text (1964) outlawed", "a": "Discrimination by race, color, religion, sex, national origin" },
+    { "q": "Gulf of Tonkin Resolution allowed", "a": "LBJ to use force in Vietnam (1964)" },
+    { "q": "War Powers Resolution (1973) limits", "a": "Presidential war making without Congress" },
+    { "q": "Pentagon Papers revealed", "a": "U.S. policy decisions in Vietnam War" },
+    { "q": "Obergefell v. Hodges ruling text effect", "a": "Marriage equality nationwide (2015)" },
+    { "q": "USA PATRIOT Act focus", "a": "Counterterrorism tools after 2001" }
+  ]
+}

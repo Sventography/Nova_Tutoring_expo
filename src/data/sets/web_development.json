@@ -1,0 +1,22 @@
+[
+  ["HTML", "Structure of web pages."],
+  ["CSS", "Presentation and layout."],
+  ["JavaScript", "Client-side programming."],
+  ["Responsive Design", "Layouts adapt to device size."],
+  ["Flexbox", "1D layout system in CSS."],
+  ["Grid", "2D layout system in CSS."],
+  ["Accessibility", "Inclusive design for all users."],
+  ["SEO Basics", "Improve search visibility."],
+  ["HTTP", "Protocol for web communication."],
+  ["Fetch API", "Request data from servers."],
+  ["REST", "Resource-based API style."],
+  ["GraphQL", "Query language for APIs."],
+  ["SPA", "Single-page application."],
+  ["SSR/SSG", "Server-side render / static generation."],
+  ["Webpack/Vite", "Module bundlers/build tools."],
+  ["Frameworks", "React, Vue, Svelte, etc."],
+  ["State Management", "Redux, Zustand, Context."],
+  ["Auth", "Login, sessions, tokens."],
+  ["Security", "XSS, CSRF, HTTPS best practices."],
+  ["Testing", "Unit, integration, E2E tests."]
+]

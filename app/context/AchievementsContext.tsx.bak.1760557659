@@ -1,0 +1,198 @@
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { ACHIEVEMENTS, ACHIEVEMENT_LIST, SUBJECTS, subjectKey } from "../constants/achievements";
+import { useCoins } from "./CoinsContext";
+import { useToast } from "./ToastContext";
+import {  Platform, DeviceEventEmitter  } from "react-native";
+const DBG = (...a) => console.log("[ACH]", ...a);
+
+type UnlockedMap = Record<string, number>;
+type Counters = {
+  askCount: number;
+  voiceCount: number;
+  quizzesTaken: number;
+  brainPairs: number;
+  purchases: number;
+  bestQuizPct: number;
+  quizzesTakenBySubject: Record<string, number>;
+  bestQuizPctBySubject: Record<string, number>;
+};
+
+type AchievementsCtx = {
+  unlocked: UnlockedMap;
+  counters: Counters;
+  unlock: (id: string) => Promise<boolean>;
+  incAsk: () => Promise<void>;
+  incVoice: () => Promise<void>;
+  onQuizFinished: (scorePct: number, subject?: string) => Promise<void>;
+  onBrainsPair: (bothCorrect: boolean) => Promise<void>;
+  onPurchase: () => Promise<void>;
+};
+
+const Ctx = createContext<AchievementsCtx>({
+  unlocked: {},
+  counters: {
+    askCount: 0, voiceCount: 0, quizzesTaken: 0, brainPairs: 0, purchases: 0, bestQuizPct: 0,
+    quizzesTakenBySubject: {}, bestQuizPctBySubject: {},
+  },
+  unlock: async () => false,
+  incAsk: async () => {}, incVoice: async () => {},
+  onQuizFinished: async () => {}, onBrainsPair: async () => {}, onPurchase: async () => {},
+});
+
+const STORE_KEY = "@nova/achievements";
+export const ACHIEVEMENT_EVENT = "novaAchievementUnlocked";
+
+const DEFAULT_COUNTERS: Counters = {
+  askCount: 0,
+  voiceCount: 0,
+  quizzesTaken: 0,
+  brainPairs: 0,
+  purchases: 0,
+  bestQuizPct: 0,
+  quizzesTakenBySubject: {},
+  bestQuizPctBySubject: {},
+};
+
+export function AchievementsProvider({ children }: { children: React.ReactNode }) {
+  const [unlocked, setUnlocked] = useState<UnlockedMap>({});
+  const [counters, setCounters] = useState<Counters>(DEFAULT_COUNTERS);
+
+  // Coins + Toast APIs (safe)
+  const coinsApi = useCoins() as any;
+  const toastApi = useToast?.();
+  const showToast = toastApi?.showToast ?? ((msg: string) => { try { (window as any)?.__nova_toast?.(msg); } catch {} });
+
+  async function awardCoins(amount: number) {
+    if (!amount || amount <= 0) return;
+    if (typeof coinsApi?.addCoins === "function") await coinsApi.addCoins(amount);
+    else if (typeof coinsApi?.setCoins === "function") coinsApi.setCoins(Number(coinsApi?.coins ?? 0) + amount);
+    else if (typeof coinsApi?.credit === "function") await coinsApi.credit(amount);
+  }
+
+  useEffect(() => {
+    (async () => {
+      const raw = await AsyncStorage.getItem(STORE_KEY);
+      if (!raw) return;
+      try {
+        const parsed = JSON.parse(raw);
+        setUnlocked(parsed.unlocked || {});
+        setCounters({ ...DEFAULT_COUNTERS, ...(parsed.counters || {}) });
+      } catch {}
+    })();
+  }, []);
+
+  const persist = useCallback(async (u: UnlockedMap, c: Counters) => {
+    await AsyncStorage.setItem(STORE_KEY, JSON.stringify({ unlocked: u, counters: c }));
+  }, []);
+
+  const emitUnlocked = useCallback((payload: { id: string; ts: number }) => {
+    try {
+      if (Platform.OS === "web") (window as any)?.dispatchEvent?.(new CustomEvent(ACHIEVEMENT_EVENT, { detail: payload }));
+      else DeviceEventEmitter.emit(ACHIEVEMENT_EVENT, payload);
+    } catch {}
+  }, []);
+
+  DBG("provider mount");
+const doUnlock = useCallback(async (id: string) => {
+    DBG("attempt unlock",id,"known?",!!ACHIEVEMENTS[id],"already?",!!unlocked[id]);
+if (unlocked[id]) return false;
+    const meta = ACHIEVEMENTS[id];
+    if (!meta) return false;
+    const ts = Date.now();
+    const next = { ...unlocked, [id]: ts };
+    setUnlocked(next);
+    await persist(next, counters);
+    DBG("unlocked",id,"coins",meta.coins);
+await awardCoins(meta.coins);
+    try { showToast?.(`🏆 ${meta.title} +${meta.coins} coins`); } catch {}
+    emitUnlocked({ id, ts });
+    return true;
+  }, [unlocked, counters, persist, showToast, emitUnlocked]);
+
+  const unlock = useCallback(async (id: string) => doUnlock(id), [doUnlock]);
+
+  // ------- Volume milestone checker (prefix + count) -------
+  const checkCountMilestone = useCallback(async (prefix: string, count: number) => {
+    const id = `${prefix}${count}`;
+    if (ACHIEVEMENTS[id]) await doUnlock(id);
+  }, [doUnlock]);
+
+  DBG("incAsk");
+const incAsk = useCallback(async () => {
+    const c = { ...counters, askCount: counters.askCount + 1 };
+    setCounters(c); await persist(unlocked, c);
+    await checkCountMilestone("ask_", c.askCount);
+  }, [counters, unlocked, persist, checkCountMilestone]);
+
+  DBG("incVoice");
+const incVoice = useCallback(async () => {
+    const c = { ...counters, voiceCount: counters.voiceCount + 1 };
+    setCounters(c); await persist(unlocked, c);
+    await checkCountMilestone("voice_", c.voiceCount);
+  }, [counters, unlocked, persist, checkCountMilestone]);
+const onQuizFinished = useCallback(async (scorePct: number, subject?: string) => {
+  DBG("quizFinished", scorePct, subject);
+  DBG("quizFinished", scorePct, subject);
+    const pct = Math.round(scorePct);
+    const sk = subjectKey(subject);
+    // Global counters
+    const best = Math.max(counters.bestQuizPct, pct);
+    const totalTaken = counters.quizzesTaken + 1;
+
+    // Subject counters
+    const subjTaken = { ...counters.quizzesTakenBySubject };
+    const subjBest = { ...counters.bestQuizPctBySubject };
+    if (sk) {
+      subjTaken[sk] = (subjTaken[sk] || 0) + 1;
+      subjBest[sk] = Math.max(subjBest[sk] || 0, pct);
+    }
+
+    const c: Counters = {
+      ...counters,
+      bestQuizPct: best,
+      quizzesTaken: totalTaken,
+      quizzesTakenBySubject: subjTaken,
+      bestQuizPctBySubject: subjBest,
+    };
+    setCounters(c);
+    await persist(unlocked, c);
+
+    // Global performance thresholds
+    for (let p of [80, 85, 90, 95, 100]) {
+      if (pct >= p) await doUnlock(`quiz_${p}`);
+    }
+    // Subject performance thresholds
+    if (sk) {
+      for (let p of [80, 85, 90, 95, 100]) {
+        if (pct >= p) await doUnlock(`quiz_${sk}_${p}`);
+      }
+    }
+
+    // Global volume thresholds
+    await checkCountMilestone("quiz_taken_", totalTaken);
+    // Subject volume thresholds
+    if (sk) await checkCountMilestone(`quiz_taken_${sk}_`, subjTaken[sk]);
+  }, [counters, unlocked, persist, doUnlock, checkCountMilestone]);
+
+  const onBrainsPair = useCallback(async (bothCorrect: boolean) => {
+    if (!bothCorrect) return;
+    const c = { ...counters, brainPairs: counters.brainPairs + 1 };
+    setCounters(c); await persist(unlocked, c);
+    await checkCountMilestone("brain_pair_", c.brainPairs);
+  }, [counters, unlocked, persist, checkCountMilestone]);
+
+  const onPurchase = useCallback(async () => {
+    const c = { ...counters, purchases: counters.purchases + 1 };
+    setCounters(c); await persist(unlocked, c);
+    await checkCountMilestone("purchase_", c.purchases);
+  }, [counters, unlocked, persist, checkCountMilestone]);
+
+  const value = useMemo(() => ({
+    unlocked, counters, unlock, incAsk, incVoice, onQuizFinished, onBrainsPair, onPurchase
+  }), [unlocked, counters, unlock, incAsk, incVoice, onQuizFinished, onBrainsPair, onPurchase]);
+
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+}
+
+export function useAchievements() { return useContext(Ctx); }

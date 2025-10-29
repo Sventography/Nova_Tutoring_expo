@@ -1,0 +1,25 @@
+{
+  "topic": "French I (Extra Set)",
+  "cards": [
+    { "q": "Introduce a friend", "a": "Je te presente Paul. / Je vous presente Paul." },
+    { "q": "Ask name politely", "a": "Comment vous appelez-vous ?" },
+    { "q": "Ask How are you", "a": "Ca va ? / Comment ca va ?" },
+    { "q": "Tell your age", "a": "J'ai 16 ans." },
+    { "q": "Say where you live", "a": "J'habite a Paris." },
+    { "q": "Classroom objects (3)", "a": "un livre, un stylo, un cahier" },
+    { "q": "Negation with ne...pas example", "a": "Je ne mange pas." },
+    { "q": "Verb avoir present", "a": "j'ai, tu as, il a, nous avons, vous avez, ils ont" },
+    { "q": "Verb aller present", "a": "je vais, tu vas, il va, nous allons, vous allez, ils vont" },
+    { "q": "Time: What time is it", "a": "Quelle heure est-il ?" },
+    { "q": "Order food politely", "a": "Je voudrais un cafe, s'il vous plait." },
+    { "q": "Ask price", "a": "C'est combien ?" },
+    { "q": "Directions: left/right/straight", "a": "gauche / droite / tout droit" },
+    { "q": "Prepositions: in/on/under", "a": "dans / sur / sous" },
+    { "q": "Days of week review", "a": "lundi a dimanche" },
+    { "q": "Make simple future with aller", "a": "Je vais etudier ce soir." },
+    { "q": "Make near past with venir de", "a": "Je viens de finir." },
+    { "q": "Question inversion example", "a": "Parles-tu francais ?" },
+    { "q": "Partitive article", "a": "du, de la, de l', des" },
+    { "q": "Basic adjectives agreement", "a": "grand/grande; petit/petite (gender and number)" }
+  ]
+}

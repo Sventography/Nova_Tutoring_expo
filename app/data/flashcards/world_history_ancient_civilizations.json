@@ -1,0 +1,25 @@
+{
+  "topic": "World History: Ancient Civilizations",
+  "cards": [
+    { "q": "Mesopotamia rivers", "a": "Tigris and Euphrates" },
+    { "q": "Code of Hammurabi significance", "a": "Earliest known written legal codes" },
+    { "q": "Ancient Egypt river", "a": "Nile; predictable floods" },
+    { "q": "Phoenicians known for", "a": "Alphabet and maritime trade" },
+    { "q": "Hebrews key idea", "a": "Monotheism; covenant tradition" },
+    { "q": "Indus Valley features", "a": "Planned cities, drainage, undeciphered script" },
+    { "q": "Vedic period texts", "a": "Vedas foundational to Hinduism" },
+    { "q": "China early dynasties", "a": "Shang then Zhou (Mandate of Heaven)" },
+    { "q": "Confucian virtues", "a": "Ren, li, xiao; social harmony" },
+    { "q": "Daoism focus", "a": "Living in accordance with the Dao" },
+    { "q": "Classical Greece polis examples", "a": "Athens and Sparta" },
+    { "q": "Athenian democracy trait", "a": "Citizen assembly, direct participation (limited citizenship)" },
+    { "q": "Alexander the Great result", "a": "Hellenistic cultural diffusion" },
+    { "q": "Roman Republic structure", "a": "Consuls, Senate, Assemblies; checks and balances" },
+    { "q": "Pax Romana period", "a": "Relative peace 27 BCE to 180 CE" },
+    { "q": "Maurya emperor Ashoka", "a": "Buddhist patron; edicts on governance" },
+    { "q": "Gupta golden age known for", "a": "Mathematics, arts, literature in India" },
+    { "q": "Mesoamerican civilizations", "a": "Olmec, Maya, later Aztec" },
+    { "q": "Andean civilization", "a": "Chavin, later Inca (roads, terraces)" },
+    { "q": "Silk Road effect", "a": "Trade of goods, ideas, disease across Eurasia" }
+  ]
+}

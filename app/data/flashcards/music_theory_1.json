@@ -1,0 +1,25 @@
+{
+  "topic": "Music Theory I",
+  "cards": [
+    { "q": "Staff & clefs", "a": "Treble, bass; five lines/four spaces" },
+    { "q": "Note values", "a": "Whole, half, quarter, eighth, sixteenth" },
+    { "q": "Time signature", "a": "Beats per measure; beat note" },
+    { "q": "Key signatures", "a": "Sharps/flats indicating scale" },
+    { "q": "Major scale pattern", "a": "W-W-H-W-W-W-H" },
+    { "q": "Natural minor pattern", "a": "W-H-W-W-H-W-W" },
+    { "q": "Harmonic vs melodic minor", "a": "Raised 7th; raised 6th & 7th ascending" },
+    { "q": "Intervals", "a": "Unison→octave; quality (M, m, P, A, d)" },
+    { "q": "Triad qualities", "a": "Major, minor, diminished, augmented" },
+    { "q": "Seventh chords", "a": "MM7, Mm7, mm7, ø7, o7" },
+    { "q": "Roman numerals (major)", "a": "I ii iii IV V vi vii°" },
+    { "q": "Cadences", "a": "Authentic, half, plagal, deceptive" },
+    { "q": "Voice leading rule", "a": "Avoid parallel 5ths/8ves" },
+    { "q": "Chord inversions", "a": "Figured bass 6, 6/4 etc." },
+    { "q": "Functional harmony", "a": "Tonic, predominant, dominant" },
+    { "q": "Form types", "a": "Binary, ternary, rondo, sonata" },
+    { "q": "Rhythmic devices", "a": "Syncopation, hemiola" },
+    { "q": "Transposition", "a": "Shift pitches by interval" },
+    { "q": "Circle of fifths use", "a": "Key relationships, accidentals" },
+    { "q": "Ear training tip", "a": "Sing scale degrees; identify intervals" }
+  ]
+}

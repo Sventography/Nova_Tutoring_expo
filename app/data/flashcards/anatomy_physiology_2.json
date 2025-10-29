@@ -1,0 +1,25 @@
+{
+  "topic": "Anatomy & Physiology II",
+  "cards": [
+    { "q": "Endocrine control vs nervous control", "a": "Endocrine slower, longer-lasting; nervous faster, targeted" },
+    { "q": "Thyroid hormone main effect", "a": "Increases metabolic rate" },
+    { "q": "Insulin vs glucagon roles", "a": "Insulin lowers blood glucose; glucagon raises it" },
+    { "q": "Blood composition", "a": "Plasma, red cells, white cells, platelets" },
+    { "q": "Cardiac conduction key nodes", "a": "SA node and AV node" },
+    { "q": "ECG P, QRS, T waves represent", "a": "Atrial depol, ventricular depol, ventricular repol" },
+    { "q": "Starling law of the heart", "a": "Increased venous return increases stroke volume" },
+    { "q": "Gas transport: most CO2 carried as", "a": "Bicarbonate (HCO3-)" },
+    { "q": "Hemoglobin saturation shifts right when", "a": "High CO2, high H+, high temperature" },
+    { "q": "Innate immunity cells examples", "a": "Neutrophils, macrophages, NK cells" },
+    { "q": "Adaptive immunity cell types", "a": "B lymphocytes (humoral), T lymphocytes (cell-mediated)" },
+    { "q": "Antigen presenting cells include", "a": "Dendritic cells, macrophages, B cells" },
+    { "q": "Kidney hormone for RBC production", "a": "Erythropoietin" },
+    { "q": "Acid base balance organ partners", "a": "Lungs (CO2) and kidneys (H+, HCO3-)" },
+    { "q": "Digestive accessory organs", "a": "Liver, gallbladder, pancreas" },
+    { "q": "Small intestine segments", "a": "Duodenum, jejunum, ileum" },
+    { "q": "Female cycle hormones", "a": "FSH, LH, estrogen, progesterone" },
+    { "q": "Spermatogenesis occurs in", "a": "Seminiferous tubules of testes" },
+    { "q": "Bone remodeling cells", "a": "Osteoclasts (resorb), osteoblasts (build)" },
+    { "q": "Glomerular filtration driven by", "a": "Hydrostatic pressure in glomerular capillaries" }
+  ]
+}

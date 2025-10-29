@@ -1,0 +1,82 @@
+[
+  {
+    "question": "Angle sum identity for tan",
+    "answer": "tan(a+b) = (tan a + tan b)/(1 − tan a tan b)"
+  },
+  {
+    "question": "Half-angle formula for cos",
+    "answer": "cos^2(x/2) = (1+cos x)/2"
+  },
+  {
+    "question": "Power-reduction for sin^2 x",
+    "answer": "(1 − cos 2x)/2"
+  },
+  {
+    "question": "Product-to-sum sin a sin b",
+    "answer": "½[cos(a−b) − cos(a+b)]"
+  },
+  {
+    "question": "Sum-to-product sin a + sin b",
+    "answer": "2 sin((a+b)/2) cos((a−b)/2)"
+  },
+  {
+    "question": "Law of cosines for angle",
+    "answer": "cos C = (a^2+b^2−c^2)/(2ab)"
+  },
+  {
+    "question": "Area of triangle using trig",
+    "answer": "(1/2)ab sin C"
+  },
+  {
+    "question": "Heron’s formula",
+    "answer": "√[s(s−a)(s−b)(s−c)]"
+  },
+  {
+    "question": "SSA ambiguous case applies to",
+    "answer": "Law of sines"
+  },
+  {
+    "question": "Inverse trig principal values",
+    "answer": "arcsin ∈ [−π/2,π/2], arccos ∈ [0,π], arctan ∈ (−π/2,π/2)"
+  },
+  {
+    "question": "Polar to rectangular conversion",
+    "answer": "x = r cos θ, y = r sin θ"
+  },
+  {
+    "question": "Rectangular to polar θ",
+    "answer": "atan2(y, x)"
+  },
+  {
+    "question": "Complex number in polar form",
+    "answer": "z = r(cos θ + i sin θ)"
+  },
+  {
+    "question": "De Moivre’s theorem",
+    "answer": "(cos θ + i sin θ)^n = cos nθ + i sin nθ"
+  },
+  {
+    "question": "Roots of unity count",
+    "answer": "n distinct complex roots of z^n = 1"
+  },
+  {
+    "question": "Sine rule ambiguous conditions",
+    "answer": "Given a, A, and b; may have 0,1,2 triangles"
+  },
+  {
+    "question": "Graph phase shift of sin(bx−c)",
+    "answer": "Shift right by c/b"
+  },
+  {
+    "question": "Radian-degree conversion",
+    "answer": "180° = π radians"
+  },
+  {
+    "question": "Angle of elevation uses",
+    "answer": "tan θ = opp/adj"
+  },
+  {
+    "question": "Arc length s",
+    "answer": "s = rθ (θ in radians)"
+  }
+]

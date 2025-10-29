@@ -1,0 +1,25 @@
+{
+  "topic": "German I (Beginner)",
+  "cards": [
+    { "q": "Hallo / Tschüss", "a": "Hello / Bye" },
+    { "q": "Bitte / Danke / Gern geschehen", "a": "Please / Thanks / You're welcome" },
+    { "q": "Ja / Nein", "a": "Yes / No" },
+    { "q": "Wie heißt du?", "a": "What's your name?" },
+    { "q": "Zahlen 1–10", "a": "eins, zwei, drei, vier, fünf, sechs, sieben, acht, neun, zehn" },
+    { "q": "Tage (Mo–So)", "a": "Montag, Dienstag, Mittwoch, Donnerstag, Freitag, Samstag, Sonntag" },
+    { "q": "Sein (ich/du/er)", "a": "bin, bist, ist" },
+    { "q": "Haben (ich/du/er)", "a": "habe, hast, hat" },
+    { "q": "Fragewörter", "a": "wer, was, wann, wo, warum, wie" },
+    { "q": "Familie Wörter", "a": "Mutter, Vater, Bruder, Schwester, Sohn, Tochter" },
+    { "q": "Farben (3)", "a": "rot, blau, grün" },
+    { "q": "Klassenobjekte (3)", "a": "Buch, Bleistift, Heft" },
+    { "q": "Regelmäßige -en Präsens", "a": "ich -e, du -st, er -t, wir -en, ihr -t, sie -en" },
+    { "q": "Bestimmte Artikel", "a": "der (m), die (f), das (n), die (Pl.)" },
+    { "q": "Satzstellung", "a": "Verb an zweiter Position in Aussagesätzen" },
+    { "q": "Höflichkeitsform", "a": "Sie (formal)" },
+    { "q": "Wie geht's?", "a": "How are you?" },
+    { "q": "Woher kommst du?", "a": "Where are you from?" },
+    { "q": "Ich mag / Ich mag nicht", "a": "I like / I don't like" },
+    { "q": "Umlaut Buchstaben", "a": "ä, ö, ü; ß (Eszett)" }
+  ]
+}

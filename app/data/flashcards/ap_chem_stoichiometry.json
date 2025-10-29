@@ -1,0 +1,25 @@
+{
+  "topic": "AP Chemistry: Stoichiometry & Reactions",
+  "cards": [
+    { "q": "Mole definition", "a": "6.022×10^23 particles" },
+    { "q": "Molar mass unit", "a": "g/mol" },
+    { "q": "Percent composition", "a": "Mass of element / molar mass × 100%" },
+    { "q": "Empirical formula", "a": "Lowest whole-number ratio of atoms" },
+    { "q": "Limiting reactant", "a": "Reactant that runs out first" },
+    { "q": "Theoretical yield", "a": "Max product from stoichiometry" },
+    { "q": "Percent yield", "a": "Actual/Theoretical × 100%" },
+    { "q": "Solute vs solvent", "a": "Dissolved substance vs dissolving medium" },
+    { "q": "Molarity (M)", "a": "mol solute / L solution" },
+    { "q": "Dilution formula", "a": "M1V1 = M2V2" },
+    { "q": "Spectator ion", "a": "Ion unchanged in reaction" },
+    { "q": "Net ionic equation", "a": "Only species that change" },
+    { "q": "Strong electrolyte example", "a": "NaCl (fully dissociates)" },
+    { "q": "Precipitation reaction", "a": "Insoluble solid forms" },
+    { "q": "Acid-base neutralization", "a": "Acid + base → salt + water" },
+    { "q": "Gas stoichiometry at STP", "a": "1 mol gas = 22.4 L" },
+    { "q": "Redox: oxidation", "a": "Loss of electrons; O.N. increases" },
+    { "q": "Redox: reduction", "a": "Gain of electrons; O.N. decreases" },
+    { "q": "Oxidizing agent", "a": "Gets reduced; causes oxidation" },
+    { "q": "Balancing redox (acidic)", "a": "Balance atoms, O with H2O, H with H+, electrons" }
+  ]
+}

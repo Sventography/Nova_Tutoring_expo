@@ -1,0 +1,82 @@
+[
+  {
+    "question": "Noun definition",
+    "answer": "Person, place, thing, or idea"
+  },
+  {
+    "question": "Verb definition",
+    "answer": "Action or state of being"
+  },
+  {
+    "question": "Adjective definition",
+    "answer": "Describes a noun"
+  },
+  {
+    "question": "Adverb definition",
+    "answer": "Modifies verb, adjective, or another adverb"
+  },
+  {
+    "question": "Pronoun definition",
+    "answer": "Word that replaces a noun"
+  },
+  {
+    "question": "Preposition definition",
+    "answer": "Word showing relationship (in, on, under)"
+  },
+  {
+    "question": "Conjunction definition",
+    "answer": "Connects words/clauses"
+  },
+  {
+    "question": "Interjection definition",
+    "answer": "Word expressing emotion (oh!, wow!)"
+  },
+  {
+    "question": "Subject of a sentence",
+    "answer": "Who/what the sentence is about"
+  },
+  {
+    "question": "Predicate of a sentence",
+    "answer": "What is said about the subject"
+  },
+  {
+    "question": "Run-on sentence is",
+    "answer": "Two independent clauses joined incorrectly"
+  },
+  {
+    "question": "Fragment sentence is",
+    "answer": "Incomplete thought lacking subject or verb"
+  },
+  {
+    "question": "Define independent clause",
+    "answer": "Clause that can stand alone"
+  },
+  {
+    "question": "Define dependent clause",
+    "answer": "Clause that cannot stand alone"
+  },
+  {
+    "question": "Define simple sentence",
+    "answer": "One independent clause"
+  },
+  {
+    "question": "Define compound sentence",
+    "answer": "Two independent clauses joined by conjunction"
+  },
+  {
+    "question": "Define complex sentence",
+    "answer": "Independent + dependent clause"
+  },
+  {
+    "question": "Apostrophe use",
+    "answer": "Show possession or contractions"
+  },
+  {
+    "question": "Semicolon use",
+    "answer": "Join related independent clauses"
+  },
+  {
+    "question": "Colon use",
+    "answer": "Introduce list, quote, or explanation"
+  }
+]

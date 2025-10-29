@@ -1,0 +1,25 @@
+{
+  "topic": "Chemistry AP",
+  "cards": [
+    { "q": "Beer-Lambert law form", "a": "A = e l c (absorbance proportional to concentration)" },
+    { "q": "Identify limiting reactant quickly", "a": "Convert each reactant to moles of product; smallest wins" },
+    { "q": "Percent yield formula", "a": "actual/theoretical x 100%" },
+    { "q": "IMF strength order common", "a": "Ion-dipole > H-bond > dipole-dipole > dispersion" },
+    { "q": "Boiling point trends with IMF", "a": "Stronger IMF -> higher boiling point" },
+    { "q": "Kinetic molecular theory one postulate", "a": "Particles have negligible volume relative to container" },
+    { "q": "Real gases deviate when", "a": "Low temperature, high pressure (IMFs and volume matter)" },
+    { "q": "Chromatography separation basis", "a": "Differing attraction to stationary vs mobile phases" },
+    { "q": "Calorimetry equation", "a": "q = m c deltaT (sign shows in/out)" },
+    { "q": "Hess's law idea", "a": "DeltaH is path independent; add reactions and enthalpies" },
+    { "q": "Entropy increases when", "a": "More moles of gas, higher T, more disorder" },
+    { "q": "DeltaG and spontaneity at 25C", "a": "DeltaG < 0 spontaneous; =0 equilibrium; >0 nonspontaneous" },
+    { "q": "Relation DeltaG and K", "a": "DeltaG = -RT ln K" },
+    { "q": "Q vs K use", "a": "Compare Q to K to predict shift (Q<K shifts to products)" },
+    { "q": "Acid base: strong vs weak", "a": "Strong fully dissociate; weak partially" },
+    { "q": "pH and pOH relation at 25C", "a": "pH + pOH = 14" },
+    { "q": "Buffer capacity increases with", "a": "Higher concentrations and equal acid/base ratio" },
+    { "q": "Titration curve strong acid strong base", "a": "Equivalence at pH 7; steep near eq point" },
+    { "q": "Electrolysis cell sign convention", "a": "Nonspontaneous; requires power source; anode positive" },
+    { "q": "Rate law from data method", "a": "Use initial rates; hold one reactant constant to find orders" }
+  ]
+}

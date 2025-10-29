@@ -1,0 +1,21 @@
+{
+  "ap_bio_cells": { "id": "ap_bio_cells", "title": "AP Bio Cells", "group": "Science" },
+  "ap_bio_evolution": { "id": "ap_bio_evolution", "title": "AP Bio Evolution", "group": "Science" },
+  "ap_biology": { "id": "ap_biology", "title": "AP Biology I", "group": "Science" },
+  "ap_calculus_ab": { "id": "ap_calculus_ab", "title": "AP Calculus AB", "group": "Math" },
+  "ap_chem_stoichiometry": { "id": "ap_chem_stoichiometry", "title": "AP Chem Stoichiometry", "group": "Science" },
+  "ap_chemistry": { "id": "ap_chemistry", "title": "AP Chemistry", "group": "Science" },
+  "ap_env": { "id": "ap_env", "title": "AP Environmental", "group": "Science" },
+  "ap_literature_terms": { "id": "ap_literature_terms", "title": "AP Literature Terms", "group": "English" },
+  "ap_macroeconomics": { "id": "ap_macroeconomics", "title": "AP Macroeconomics", "group": "Social Studies" },
+  "ap_physics_1": { "id": "ap_physics_1", "title": "AP Physics 1", "group": "Science" },
+  "ap_physics_em": { "id": "ap_physics_em", "title": "AP Physics EM", "group": "Science" },
+  "ap_physics_mechanics": { "id": "ap_physics_mechanics", "title": "AP Physics Mechanics", "group": "Science" },
+  "ap_statistics": { "id": "ap_statistics", "title": "AP Statistics", "group": "Math" },
+  "ap_statistics_inference": { "id": "ap_statistics_inference", "title": "AP Statistics Inference", "group": "Math" },
+  "ap_us_history_2": { "id": "ap_us_history_2", "title": "AP US History 2", "group": "Social Studies" },
+  "ap_us_history_3": { "id": "ap_us_history_3", "title": "AP US History 3", "group": "Social Studies" },
+  "computer_networks": { "id": "computer_networks", "title": "Computer Networks", "group": "CS" },
+  "computer_science_terms": { "id": "computer_science_terms", "title": "Computer Science Terms", "group": "CS" },
+  "cs_algorithms": { "id": "cs_algorithms", "title": "CS Algorithms", "group": "CS" }
+}

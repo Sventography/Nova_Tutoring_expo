@@ -1,0 +1,25 @@
+{
+  "topic": "World Geography: Capitals & Regions",
+  "cards": [
+    { "q": "Canada capital", "a": "Ottawa" },
+    { "q": "Brazil capital", "a": "Brasília" },
+    { "q": "Nigeria capital", "a": "Abuja" },
+    { "q": "Egypt capital", "a": "Cairo" },
+    { "q": "Turkey capital", "a": "Ankara" },
+    { "q": "India capital", "a": "New Delhi" },
+    { "q": "China capital", "a": "Beijing" },
+    { "q": "Japan capital", "a": "Tokyo" },
+    { "q": "Australia capital", "a": "Canberra" },
+    { "q": "New Zealand capital", "a": "Wellington" },
+    { "q": "Mexico capital", "a": "Mexico City" },
+    { "q": "Argentina capital", "a": "Buenos Aires" },
+    { "q": "Germany capital", "a": "Berlin" },
+    { "q": "France capital", "a": "Paris" },
+    { "q": "Italy capital", "a": "Rome" },
+    { "q": "Spain capital", "a": "Madrid" },
+    { "q": "Russia capital", "a": "Moscow" },
+    { "q": "South Africa capitals", "a": "Pretoria (admin), Cape Town (legis), Bloemfontein (judicial)" },
+    { "q": "Indonesia capital", "a": "Jakarta (moving to Nusantara)" },
+    { "q": "Saudi Arabia capital", "a": "Riyadh" }
+  ]
+}

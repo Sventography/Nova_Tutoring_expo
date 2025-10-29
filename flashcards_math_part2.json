@@ -1,0 +1,129 @@
+{
+  "topics": [
+    {
+      "name": "Biology Basics",
+      "questions": [
+        {"q": "What is the basic unit of life?", "a": "Cell"},
+        {"q": "What carries genetic information?", "a": "DNA"},
+        {"q": "What part of the cell controls activities?", "a": "Nucleus"},
+        {"q": "What part of the cell produces energy?", "a": "Mitochondria"},
+        {"q": "What process do plants use to make food?", "a": "Photosynthesis"},
+        {"q": "What gas do plants release during photosynthesis?", "a": "Oxygen"},
+        {"q": "What gas do humans exhale?", "a": "Carbon dioxide"},
+        {"q": "What part of the blood carries oxygen?", "a": "Red blood cells"},
+        {"q": "What part of the blood fights infection?", "a": "White blood cells"},
+        {"q": "What organ pumps blood?", "a": "Heart"},
+        {"q": "What organ filters blood?", "a": "Kidneys"},
+        {"q": "What organ is used for breathing?", "a": "Lungs"},
+        {"q": "What organ digests food?", "a": "Stomach"},
+        {"q": "What is the largest organ in the body?", "a": "Skin"},
+        {"q": "What is the study of heredity called?", "a": "Genetics"},
+        {"q": "What are the male sex cells called?", "a": "Sperm"},
+        {"q": "What are the female sex cells called?", "a": "Eggs"},
+        {"q": "What is the process of cell division called?", "a": "Mitosis"},
+        {"q": "What process produces gametes?", "a": "Meiosis"},
+        {"q": "What molecule carries energy in cells?", "a": "ATP"}
+      ]
+    },
+    {
+      "name": "Chemistry Basics",
+      "questions": [
+        {"q": "What is the smallest unit of matter?", "a": "Atom"},
+        {"q": "What is the center of an atom called?", "a": "Nucleus"},
+        {"q": "What particles are in the nucleus?", "a": "Protons and neutrons"},
+        {"q": "What particle orbits the nucleus?", "a": "Electron"},
+        {"q": "What is the periodic table symbol for hydrogen?", "a": "H"},
+        {"q": "What is the periodic table symbol for oxygen?", "a": "O"},
+        {"q": "What is H2O?", "a": "Water"},
+        {"q": "What is CO2?", "a": "Carbon dioxide"},
+        {"q": "What is NaCl?", "a": "Salt"},
+        {"q": "What is the atomic number of carbon?", "a": "6"},
+        {"q": "What is the lightest element?", "a": "Hydrogen"},
+        {"q": "What is the hardest natural substance?", "a": "Diamond"},
+        {"q": "What type of bond shares electrons?", "a": "Covalent bond"},
+        {"q": "What type of bond transfers electrons?", "a": "Ionic bond"},
+        {"q": "What pH is neutral?", "a": "7"},
+        {"q": "What pH is acidic?", "a": "Less than 7"},
+        {"q": "What pH is basic?", "a": "More than 7"},
+        {"q": "What is the chemical symbol for gold?", "a": "Au"},
+        {"q": "What is the chemical symbol for silver?", "a": "Ag"},
+        {"q": "What is the chemical symbol for iron?", "a": "Fe"}
+      ]
+    },
+    {
+      "name": "Physics Basics",
+      "questions": [
+        {"q": "What force pulls objects to Earth?", "a": "Gravity"},
+        {"q": "What is the unit of force?", "a": "Newton"},
+        {"q": "What is the unit of energy?", "a": "Joule"},
+        {"q": "What is the speed of light?", "a": "299,792 km/s"},
+        {"q": "What is the formula for speed?", "a": "Distance ÷ Time"},
+        {"q": "What is the formula for force?", "a": "Mass × Acceleration"},
+        {"q": "What is inertia?", "a": "Resistance to change in motion"},
+        {"q": "What particle has a negative charge?", "a": "Electron"},
+        {"q": "What particle has a positive charge?", "a": "Proton"},
+        {"q": "What particle has no charge?", "a": "Neutron"},
+        {"q": "What is potential energy based on?", "a": "Position"},
+        {"q": "What is kinetic energy based on?", "a": "Motion"},
+        {"q": "What is the acceleration due to gravity?", "a": "9.8 m/s²"},
+        {"q": "What is the SI unit of power?", "a": "Watt"},
+        {"q": "What is the SI unit of temperature?", "a": "Kelvin"},
+        {"q": "What is heat transfer through direct contact?", "a": "Conduction"},
+        {"q": "What is heat transfer through fluids?", "a": "Convection"},
+        {"q": "What is heat transfer through waves?", "a": "Radiation"},
+        {"q": "What is the second law of motion?", "a": "F = ma"},
+        {"q": "What is the first law of motion?", "a": "An object stays at rest or in motion unless acted on"}
+      ]
+    },
+    {
+      "name": "Earth Science",
+      "questions": [
+        {"q": "What layer of Earth do we live on?", "a": "Crust"},
+        {"q": "What is the layer beneath the crust?", "a": "Mantle"},
+        {"q": "What is the hottest layer of the Earth?", "a": "Inner core"},
+        {"q": "What gas makes up most of the atmosphere?", "a": "Nitrogen"},
+        {"q": "What is the second most abundant gas?", "a": "Oxygen"},
+        {"q": "What causes day and night?", "a": "Earth’s rotation"},
+        {"q": "What causes seasons?", "a": "Tilt of Earth’s axis"},
+        {"q": "What is the water cycle?", "a": "Evaporation, condensation, precipitation"},
+        {"q": "What type of rock is formed from lava?", "a": "Igneous"},
+        {"q": "What type of rock is formed from layers?", "a": "Sedimentary"},
+        {"q": "What type of rock is changed by heat/pressure?", "a": "Metamorphic"},
+        {"q": "What do we call molten rock underground?", "a": "Magma"},
+        {"q": "What do we call molten rock above ground?", "a": "Lava"},
+        {"q": "What is the study of weather called?", "a": "Meteorology"},
+        {"q": "What is the study of earthquakes called?", "a": "Seismology"},
+        {"q": "What is the study of rocks called?", "a": "Geology"},
+        {"q": "What is the study of oceans called?", "a": "Oceanography"},
+        {"q": "What is the study of stars called?", "a": "Astronomy"},
+        {"q": "What is the layer protecting Earth from UV rays?", "a": "Ozone layer"},
+        {"q": "What is global warming caused by?", "a": "Greenhouse gases"}
+      ]
+    },
+    {
+      "name": "Computer Science Basics",
+      "questions": [
+        {"q": "What does CPU stand for?", "a": "Central Processing Unit"},
+        {"q": "What does GPU stand for?", "a": "Graphics Processing Unit"},
+        {"q": "What does RAM stand for?", "a": "Random Access Memory"},
+        {"q": "What does HTML stand for?", "a": "HyperText Markup Language"},
+        {"q": "What does CSS stand for?", "a": "Cascading Style Sheets"},
+        {"q": "What does JS stand for?", "a": "JavaScript"},
+        {"q": "What is binary based on?", "a": "0s and 1s"},
+        {"q": "What does HTTP stand for?", "a": "HyperText Transfer Protocol"},
+        {"q": "What does URL stand for?", "a": "Uniform Resource Locator"},
+        {"q": "What does IP stand for?", "a": "Internet Protocol"},
+        {"q": "What does AI stand for?", "a": "Artificial Intelligence"},
+        {"q": "What does ML stand for?", "a": "Machine Learning"},
+        {"q": "What does DB stand for?", "a": "Database"},
+        {"q": "What does SQL stand for?", "a": "Structured Query Language"},
+        {"q": "What does API stand for?", "a": "Application Programming Interface"},
+        {"q": "What does IDE stand for?", "a": "Integrated Development Environment"},
+        {"q": "What does OOP stand for?", "a": "Object-Oriented Programming"},
+        {"q": "What does GUI stand for?", "a": "Graphical User Interface"},
+        {"q": "What does LAN stand for?", "a": "Local Area Network"},
+        {"q": "What does WAN stand for?", "a": "Wide Area Network"}
+      ]
+    }
+  ]
+}

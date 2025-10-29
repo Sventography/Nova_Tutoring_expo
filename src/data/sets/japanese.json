@@ -1,0 +1,22 @@
+[
+  ["こんにちは", "Hello"],
+  ["さようなら", "Goodbye"],
+  ["お願いします", "Please"],
+  ["ありがとう", "Thank you"],
+  ["はい", "Yes"],
+  ["いいえ", "No"],
+  ["トイレはどこですか？", "Where is the bathroom?"],
+  ["いくらですか？", "How much is it?"],
+  ["わかりません", "I don't understand"],
+  ["英語を話せますか？", "Do you speak English?"],
+  ["助けて", "Help"],
+  ["医者が必要です", "I need a doctor"],
+  ["一から十", "One to ten"],
+  ["曜日", "Monday to Sunday"],
+  ["月", "January to December"],
+  ["色", "Basic colors"],
+  ["食べ物", "Common foods"],
+  ["道順", "Left, right, straight"],
+  ["時間", "Time"],
+  ["家族", "Family members"]
+]

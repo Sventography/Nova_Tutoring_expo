@@ -1,0 +1,44 @@
+{
+  "expo": {
+    "name": "Nova Tutoring",
+    "slug": "nova-tutoring",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "nova",
+    "userInterfaceStyle": "automatic",
+    "icon": "./app/assets/icon.png",
+    "splash": {
+      "image": "./app/assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#000000"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.anonymous.nova-tutoring"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./app/assets/adaptive-icon.png",
+        "backgroundColor": "#000000"
+      },
+      "package": "com.anonymous.novatutoring"
+    },
+    "web": {
+      "favicon": "./app/assets/favicon.png"
+    },
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
+    "entryPoint": "./expo-router/entry",
+    "plugins": [
+      "expo-router",
+      "expo-web-browser",
+      "@stripe/stripe-react-native"
+    ]
+  }
+}

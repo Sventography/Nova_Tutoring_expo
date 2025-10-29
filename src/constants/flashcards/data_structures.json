@@ -1,0 +1,82 @@
+[
+  {
+    "question": "Stack principle",
+    "answer": "LIFO (Last In, First Out)"
+  },
+  {
+    "question": "Queue principle",
+    "answer": "FIFO (First In, First Out)"
+  },
+  {
+    "question": "Array index starts at",
+    "answer": "0"
+  },
+  {
+    "question": "Linked list node stores",
+    "answer": "Data and pointer to next node"
+  },
+  {
+    "question": "Doubly linked list adds",
+    "answer": "Pointer to previous node"
+  },
+  {
+    "question": "Binary tree max children per node",
+    "answer": "2"
+  },
+  {
+    "question": "Binary search tree property",
+    "answer": "Left < root < right"
+  },
+  {
+    "question": "Balanced tree advantage",
+    "answer": "O(log n) operations"
+  },
+  {
+    "question": "Hash table uses",
+    "answer": "Hash function to map keys to buckets"
+  },
+  {
+    "question": "Collision resolution methods",
+    "answer": "Chaining, open addressing"
+  },
+  {
+    "question": "Graph defined by",
+    "answer": "Vertices (nodes) and edges"
+  },
+  {
+    "question": "Directed graph has",
+    "answer": "Edges with direction"
+  },
+  {
+    "question": "Undirected graph has",
+    "answer": "Edges without direction"
+  },
+  {
+    "question": "Weighted graph has",
+    "answer": "Edges with costs"
+  },
+  {
+    "question": "Adjacency matrix vs list",
+    "answer": "Matrix dense; list sparse"
+  },
+  {
+    "question": "Heap property",
+    "answer": "Parent ≥ children (max-heap) or ≤ (min-heap)"
+  },
+  {
+    "question": "Trie stores",
+    "answer": "Strings by prefix"
+  },
+  {
+    "question": "Deque supports",
+    "answer": "Insert/remove at both ends"
+  },
+  {
+    "question": "Priority queue uses",
+    "answer": "Heap"
+  },
+  {
+    "question": "Set data structure stores",
+    "answer": "Unique elements"
+  }
+]

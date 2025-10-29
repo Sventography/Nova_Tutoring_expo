@@ -1,0 +1,104 @@
+{
+  "topics": [
+    {
+      "name": "Mythology",
+      "questions": [
+        {"q": "Who was the king of the Greek gods?", "a": "Zeus"},
+        {"q": "Who was the goddess of wisdom?", "a": "Athena"},
+        {"q": "Who was the god of the sea?", "a": "Poseidon"},
+        {"q": "Who was the Greek god of the underworld?", "a": "Hades"},
+        {"q": "Who was the Roman equivalent of Zeus?", "a": "Jupiter"},
+        {"q": "Who flew too close to the sun?", "a": "Icarus"},
+        {"q": "Who is the Norse god of thunder?", "a": "Thor"},
+        {"q": "Who is the Norse father of gods?", "a": "Odin"},
+        {"q": "Who is the trickster god in Norse mythology?", "a": "Loki"},
+        {"q": "What creature is half man, half bull?", "a": "Minotaur"},
+        {"q": "Who turned everything he touched to gold?", "a": "King Midas"},
+        {"q": "What bird rose from its ashes?", "a": "Phoenix"},
+        {"q": "Who is the goddess of love in Roman mythology?", "a": "Venus"},
+        {"q": "Who carried the world on his shoulders?", "a": "Atlas"},
+        {"q": "Who gave fire to humans?", "a": "Prometheus"},
+        {"q": "Who is the Egyptian sun god?", "a": "Ra"},
+        {"q": "Who is the Egyptian god of the afterlife?", "a": "Osiris"},
+        {"q": "Who is the Egyptian goddess with a cat head?", "a": "Bastet"},
+        {"q": "Who is the Hindu god with an elephant head?", "a": "Ganesha"},
+        {"q": "What Norse tree connects the worlds?", "a": "Yggdrasil"}
+      ]
+    },
+    {
+      "name": "Animals",
+      "questions": [
+        {"q": "What is the fastest land animal?", "a": "Cheetah"},
+        {"q": "What is the largest mammal?", "a": "Blue whale"},
+        {"q": "What is the tallest land animal?", "a": "Giraffe"},
+        {"q": "What animal is known as the king of the jungle?", "a": "Lion"},
+        {"q": "What animal is the symbol of Australia?", "a": "Kangaroo"},
+        {"q": "What bird can mimic human speech?", "a": "Parrot"},
+        {"q": "What is the only mammal capable of flight?", "a": "Bat"},
+        {"q": "What is the slowest animal?", "a": "Sloth"},
+        {"q": "What is the largest reptile?", "a": "Saltwater crocodile"},
+        {"q": "What animal has black and white stripes?", "a": "Zebra"},
+        {"q": "What is the largest land animal?", "a": "Elephant"},
+        {"q": "What animal produces silk?", "a": "Silkworm"},
+        {"q": "What is the fastest bird?", "a": "Peregrine falcon"},
+        {"q": "What mammal lays eggs?", "a": "Platypus"},
+        {"q": "What animal is known for its hump?", "a": "Camel"},
+        {"q": "What animal is a marsupial with a pouch?", "a": "Kangaroo"},
+        {"q": "What animal is known for playing dead?", "a": "Opossum"},
+        {"q": "What animal lives the longest?", "a": "Greenland shark"},
+        {"q": "What insect makes honey?", "a": "Bee"},
+        {"q": "What animal can change its color?", "a": "Chameleon"}
+      ]
+    },
+    {
+      "name": "Food & Culture",
+      "questions": [
+        {"q": "What country is sushi from?", "a": "Japan"},
+        {"q": "What country is pizza from?", "a": "Italy"},
+        {"q": "What country is tacos from?", "a": "Mexico"},
+        {"q": "What country is curry from?", "a": "India"},
+        {"q": "What country is paella from?", "a": "Spain"},
+        {"q": "What country is croissant from?", "a": "France"},
+        {"q": "What country is kimchi from?", "a": "Korea"},
+        {"q": "What country is bratwurst from?", "a": "Germany"},
+        {"q": "What country is poutine from?", "a": "Canada"},
+        {"q": "What country is falafel from?", "a": "Middle East"},
+        {"q": "What country is kebab from?", "a": "Turkey"},
+        {"q": "What country is pho from?", "a": "Vietnam"},
+        {"q": "What country is dim sum from?", "a": "China"},
+        {"q": "What country is baklava from?", "a": "Greece/Turkey"},
+        {"q": "What country is borscht from?", "a": "Russia/Ukraine"},
+        {"q": "What country is ceviche from?", "a": "Peru"},
+        {"q": "What country is gnocchi from?", "a": "Italy"},
+        {"q": "What country is churros from?", "a": "Spain"},
+        {"q": "What country is hummus from?", "a": "Middle East"},
+        {"q": "What country is ramen from?", "a": "Japan"}
+      ]
+    },
+    {
+      "name": "Pop Culture",
+      "questions": [
+        {"q": "Who played Iron Man in the Marvel movies?", "a": "Robert Downey Jr."},
+        {"q": "Who is the singer of 'Bad Romance'?", "a": "Lady Gaga"},
+        {"q": "What show features dragons and the Iron Throne?", "a": "Game of Thrones"},
+        {"q": "Who is the creator of Star Wars?", "a": "George Lucas"},
+        {"q": "What is the name of Harry Potter’s school?", "a": "Hogwarts"},
+        {"q": "Who plays Jack Sparrow in Pirates of the Caribbean?", "a": "Johnny Depp"},
+        {"q": "What superhero is also known as the Dark Knight?", "a": "Batman"},
+        {"q": "Who sang 'Thriller'?", "a": "Michael Jackson"},
+        {"q": "What is the name of the yellow sponge cartoon?", "a": "SpongeBob SquarePants"},
+        {"q": "What movie features Elsa and Anna?", "a": "Frozen"},
+        {"q": "What wizard is Gandalf in?", "a": "The Lord of the Rings"},
+        {"q": "Who is known as 'Queen Bey'?", "a": "Beyoncé"},
+        {"q": "What series has Pikachu?", "a": "Pokémon"},
+        {"q": "What Netflix show features Eleven?", "a": "Stranger Things"},
+        {"q": "Who is Tony Stark’s AI assistant?", "a": "JARVIS"},
+        {"q": "What is the name of the magic ring in Tolkien’s works?", "a": "The One Ring"},
+        {"q": "Who sang 'Shake It Off'?", "a": "Taylor Swift"},
+        {"q": "Who is the fastest superhero?", "a": "The Flash"},
+        {"q": "Who created the Marvel universe?", "a": "Stan Lee"},
+        {"q": "Who is the purple villain in Avengers?", "a": "Thanos"}
+      ]
+    }
+  ]
+}

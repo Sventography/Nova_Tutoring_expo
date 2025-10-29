@@ -1,0 +1,25 @@
+{
+  "topic": "English Literature: American",
+  "cards": [
+    { "q": "Author of The Scarlet Letter", "a": "Nathaniel Hawthorne" },
+    { "q": "Transcendentalist figures (2)", "a": "Ralph Waldo Emerson, Henry David Thoreau" },
+    { "q": "Main theme of The Adventures of Huckleberry Finn", "a": "Race, morality, and freedom" },
+    { "q": "Poet of Leaves of Grass", "a": "Walt Whitman" },
+    { "q": "Poet known for slant rhyme and dashes", "a": "Emily Dickinson" },
+    { "q": "Author of The Great Gatsby", "a": "F. Scott Fitzgerald" },
+    { "q": "Harlem Renaissance novelist of Their Eyes Were Watching God", "a": "Zora Neale Hurston" },
+    { "q": "Author of The Grapes of Wrath", "a": "John Steinbeck" },
+    { "q": "Southern Gothic author of A Good Man Is Hard to Find", "a": "Flannery O'Connor" },
+    { "q": "Playwright of Death of a Salesman", "a": "Arthur Miller" },
+    { "q": "Beat Generation poet of Howl", "a": "Allen Ginsberg" },
+    { "q": "Postmodern author of Slaughterhouse-Five", "a": "Kurt Vonnegut" },
+    { "q": "Toni Morrison novel on memory and slavery", "a": "Beloved" },
+    { "q": "Theme of The Crucible", "a": "Hysteria, reputation, McCarthyism allegory" },
+    { "q": "American Romanticism traits", "a": "Emotion, nature, individualism" },
+    { "q": "Realism traits", "a": "Everyday life, plausible events, social issues" },
+    { "q": "Naturalism traits", "a": "Determinism, environment and heredity shape fate" },
+    { "q": "Author of Invisible Man (1952)", "a": "Ralph Ellison" },
+    { "q": "Maxine Hong Kingston genre blend", "a": "Memoir, myth, identity (The Woman Warrior)" },
+    { "q": "Common AP term: motif", "a": "Recurring element with thematic significance" }
+  ]
+}

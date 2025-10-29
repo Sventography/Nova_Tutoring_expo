@@ -1,0 +1,25 @@
+{
+  "topic": "Earth Science: Geology",
+  "cards": [
+    { "q": "Earth layers", "a": "Crust, mantle, core" },
+    { "q": "Plate tectonics driver", "a": "Mantle convection" },
+    { "q": "Igneous rocks", "a": "Intrusive (granite) vs extrusive (basalt)" },
+    { "q": "Sedimentary rocks", "a": "Clastic, chemical, organic" },
+    { "q": "Metamorphic rocks", "a": "Foliated (gneiss) vs nonfoliated (marble)" },
+    { "q": "Rock cycle", "a": "Interconversion via heat/pressure/erosion" },
+    { "q": "Mineral definition", "a": "Naturally occurring crystalline solid" },
+    { "q": "Seismic waves", "a": "P (compressional) & S (shear)" },
+    { "q": "Richter/Moment magnitude", "a": "Earthquake energy scales" },
+    { "q": "Volcano types", "a": "Shield, stratovolcano, cinder cone" },
+    { "q": "Weathering vs erosion", "a": "Breakdown vs transport" },
+    { "q": "Stratigraphy principle", "a": "Superposition & original horizontality" },
+    { "q": "Unconformity", "a": "Gap in geologic record" },
+    { "q": "Relative vs absolute dating", "a": "Order of events vs radiometric ages" },
+    { "q": "Fossil fuels", "a": "Coal, oil, gas from organic matter" },
+    { "q": "Groundwater term", "a": "Aquifer; water table" },
+    { "q": "Karst", "a": "Limestone dissolution landforms" },
+    { "q": "Ore deposit", "a": "Economically valuable mineral concentration" },
+    { "q": "Mass wasting", "a": "Downslope soil/rock movement" },
+    { "q": "Geologic time eons", "a": "Hadean, Archean, Proterozoic, Phanerozoic" }
+  ]
+}

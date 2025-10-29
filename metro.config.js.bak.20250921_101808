@@ -1,0 +1,20 @@
+const { getDefaultConfig } = require("expo/metro-config");
+const path = require("path");
+
+const config = getDefaultConfig(__dirname);
+
+// 1) Don’t try to bundle RN internals used only by the native Stripe SDK on web
+config.resolver = config.resolver || {};
+config.resolver.blockList = [
+  /@stripe\/stripe-react-native\/lib\/module\/specs\/.*/i,
+];
+
+// 2) On *web*, alias the Stripe module to our stub outside the app/ tree.
+//    (On native, Metro will prefer the real package because the stub file
+//     has a .web.ts extension, which isn’t chosen on iOS/Android.)
+config.resolver.alias = {
+  ...(config.resolver.alias || {}),
+  "@stripe/stripe-react-native": path.resolve(__dirname, "stubs/stripe-react-native.web"),
+};
+
+module.exports = config;

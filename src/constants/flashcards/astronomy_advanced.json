@@ -1,0 +1,82 @@
+[
+  {
+    "question": "Hubble–Lemaître law",
+    "answer": "v = H0 d"
+  },
+  {
+    "question": "ΛCDM stands for",
+    "answer": "Lambda Cold Dark Matter model"
+  },
+  {
+    "question": "Cosmic baryon acoustic oscillations used for",
+    "answer": "Standard ruler in cosmology"
+  },
+  {
+    "question": "Type Ia supernovae are",
+    "answer": "Standardizable candles from white dwarf detonation"
+  },
+  {
+    "question": "Redshift z definition",
+    "answer": "Δλ/λ_emit = (λ_obs − λ_emit)/λ_emit"
+  },
+  {
+    "question": "CMB temperature anisotropy scale",
+    "answer": "~10^-5"
+  },
+  {
+    "question": "Galaxy rotation curve implies",
+    "answer": "Dark matter halos"
+  },
+  {
+    "question": "Schwarzschild radius",
+    "answer": "r_s = 2GM/c^2"
+  },
+  {
+    "question": "AGN power source",
+    "answer": "Accretion onto supermassive black hole"
+  },
+  {
+    "question": "Exoplanet radial velocity detects",
+    "answer": "Doppler wobble of star"
+  },
+  {
+    "question": "Transit depth gives",
+    "answer": "Planet-to-star area ratio"
+  },
+  {
+    "question": "TTV method",
+    "answer": "Transit timing variations reveal additional planets"
+  },
+  {
+    "question": "Metallicity [Fe/H] describes",
+    "answer": "Log ratio vs solar of iron to hydrogen"
+  },
+  {
+    "question": "Nucleosynthesis in massive stars",
+    "answer": "Up to iron via fusion shells"
+  },
+  {
+    "question": "r-process creates",
+    "answer": "Heavy elements in mergers/supernovae"
+  },
+  {
+    "question": "Jeans instability criterion",
+    "answer": "When gravity overcomes pressure support"
+  },
+  {
+    "question": "Virial theorem states",
+    "answer": "2K + U = 0 in bound systems"
+  },
+  {
+    "question": "Strong lensing produces",
+    "answer": "Multiple images/arcs"
+  },
+  {
+    "question": "K-correction accounts for",
+    "answer": "Redshifted SED in observed band"
+  },
+  {
+    "question": "Inflation solves",
+    "answer": "Horizon and flatness problems"
+  }
+]

@@ -1,0 +1,25 @@
+{
+  "topic": "World History III (20th-21st Century)",
+  "cards": [
+    { "q": "World War I dates", "a": "1914-1918" },
+    { "q": "Treaty ending WWI", "a": "Treaty of Versailles, 1919" },
+    { "q": "Russian Revolution year", "a": "1917; Bolshevik/Communist rule" },
+    { "q": "Great Depression global decade", "a": "1930s" },
+    { "q": "World War II dates", "a": "1939-1945" },
+    { "q": "Holocaust estimated deaths", "a": "6 million Jews; millions of others" },
+    { "q": "Cold War main features", "a": "US-USSR rivalry, arms race, ideology" },
+    { "q": "Decolonization peak period", "a": "1945-1975 (Africa, Asia, Caribbean)" },
+    { "q": "United Nations founded", "a": "1945" },
+    { "q": "Chinese Communist Revolution year", "a": "1949 (Mao Zedong)" },
+    { "q": "Korean War years", "a": "1950-1953" },
+    { "q": "Cuban Missile Crisis year", "a": "1962" },
+    { "q": "Fall of Berlin Wall year", "a": "1989" },
+    { "q": "Rwandan Genocide year", "a": "1994" },
+    { "q": "European Union treaty (formation)", "a": "Maastricht Treaty, 1993" },
+    { "q": "9/11 attacks year", "a": "2001" },
+    { "q": "Arab Spring start year", "a": "2011" },
+    { "q": "COVID-19 pandemic declared", "a": "2020 by WHO" },
+    { "q": "21st century tech revolutions", "a": "Internet, smartphones, social media, AI" },
+    { "q": "Climate agreements (2)", "a": "Kyoto 1997; Paris 2015" }
+  ]
+}

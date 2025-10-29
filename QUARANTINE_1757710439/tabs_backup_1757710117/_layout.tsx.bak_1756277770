@@ -1,0 +1,29 @@
+import React from 'react';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { Tabs } from 'expo-router';
+import AuthProvider from '../components/AuthContext';
+import ToastProvider from '../components/ToastProvider';
+
+export default function Layout() {
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <AuthProvider>
+        <ToastProvider>
+          <Tabs screenOptions={{ headerShown: false }}>
+            <Tabs.Screen name="ask" options={{ title: 'Ask' }} />
+            <Tabs.Screen name="flashcards" options={{ title: 'Flashcards' }} />
+            <Tabs.Screen name="quiz" options={{ title: 'Quiz' }} />
+            <Tabs.Screen name="collection" options={{ title: 'Collection' }} />
+            <Tabs.Screen name="relax" options={{ title: 'Relax' }} />
+            <Tabs.Screen name="achievements" options={{ title: 'Achievements' }} />
+            <Tabs.Screen name="shop" options={{ title: 'Shop' }} />
+            <Tabs.Screen name="account" options={{ title: 'Account' }} />
+          </Tabs>
+        </ToastProvider>
+      </AuthProvider>
+    </GestureHandlerRootView>
+  );
+}
+export { WalletProvider };
+export { AchievementsProvider };
+export { ToastProvider };

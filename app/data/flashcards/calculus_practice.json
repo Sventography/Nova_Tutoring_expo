@@ -1,0 +1,25 @@
+{
+  "topic": "Calculus Practice (Optimization & Related Rates)",
+  "cards": [
+    { "q": "Optimization steps", "a": "1) Identify quantity to optimize 2) Write constraints 3) Express as function 4) Differentiate 5) Solve critical points" },
+    { "q": "Critical point definition", "a": "f'(x) = 0 or undefined in domain" },
+    { "q": "Second derivative test use", "a": "Positive = local min, negative = local max" },
+    { "q": "Example: maximize area with fixed perimeter square vs rectangle", "a": "Square gives max area" },
+    { "q": "Cylinder of volume V minimize surface area uses", "a": "Calculus optimization problem" },
+    { "q": "Related rates process", "a": "Differentiate equation wrt t, substitute values" },
+    { "q": "Cone volume formula", "a": "(1/3) π r^2 h" },
+    { "q": "Shadow problem type", "a": "Similar triangles and related rates" },
+    { "q": "Ladder sliding problem type", "a": "Pythagorean theorem + related rates" },
+    { "q": "Air inflating balloon radius problem type", "a": "Sphere volume derivative" },
+    { "q": "Sphere volume formula", "a": "(4/3) π r^3" },
+    { "q": "d/dt of sphere volume", "a": "dV/dt = 4πr^2 dr/dt" },
+    { "q": "Optimization constraint elimination", "a": "Express variables in terms of one" },
+    { "q": "Open box from sheet optimization uses", "a": "Cut squares, maximize volume" },
+    { "q": "Rate units check", "a": "Always include unit/time in answer" },
+    { "q": "Speed vs velocity in calculus", "a": "Speed = |velocity|" },
+    { "q": "Optimization local vs global extrema", "a": "Global requires checking endpoints too" },
+    { "q": "Oil spill circle growth problem uses", "a": "Area = πr^2, differentiate wrt time" },
+    { "q": "Related rates need to use", "a": "Chain rule" },
+    { "q": "Optimization common trick", "a": "Symmetry often gives extremum" }
+  ]
+}

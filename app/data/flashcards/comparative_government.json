@@ -1,0 +1,25 @@
+{
+  "topic": "Comparative Government & Politics",
+  "cards": [
+    { "q": "Regime types", "a": "Democracy, hybrid, authoritarian" },
+    { "q": "Presidential vs parliamentary", "a": "Separated mandate vs fused exec-legis" },
+    { "q": "Unitary vs federal", "a": "Centralized vs shared sovereignty" },
+    { "q": "PR vs SMD", "a": "Proportional representation vs single-member districts" },
+    { "q": "Party system types", "a": "Two-party, multiparty, dominant-party" },
+    { "q": "Civil society", "a": "Independent associations/NGOs" },
+    { "q": "Political culture", "a": "Values/norms about politics" },
+    { "q": "State capacity", "a": "Ability to implement decisions" },
+    { "q": "Rule of law", "a": "Laws constrain rulers equally" },
+    { "q": "Authoritarian tools", "a": "Coercion, co-optation, propaganda" },
+    { "q": "Electoral systems impact", "a": "Affect party fragmentation" },
+    { "q": "Welfare state models", "a": "Liberal, corporatist, social-democratic" },
+    { "q": "Judicial review variance", "a": "Strong vs weak courts" },
+    { "q": "Central bank independence", "a": "Limits political business cycles" },
+    { "q": "Constitutional design", "a": "Rights, checks, amendment rules" },
+    { "q": "Interest representation", "a": "Pluralism vs corporatism" },
+    { "q": "State–religion relations", "a": "Established vs secular" },
+    { "q": "Ethnic conflict causes", "a": "Institutions, inequalities, history" },
+    { "q": "Democratic backsliding", "a": "Erosion of norms/institutions" },
+    { "q": "Global governance", "a": "EU, UN, WTO roles" }
+  ]
+}

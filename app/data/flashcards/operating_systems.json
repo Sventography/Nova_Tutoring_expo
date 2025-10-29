@@ -1,0 +1,25 @@
+{
+  "topic": "Operating Systems",
+  "cards": [
+    { "q": "OS primary roles", "a": "Process, memory, I/O, storage management" },
+    { "q": "Kernel vs user space", "a": "Privileged core vs applications" },
+    { "q": "Process vs thread", "a": "Independent address space vs lightweight unit" },
+    { "q": "Context switch", "a": "Save/restore CPU state between processes" },
+    { "q": "CPU scheduling algorithms", "a": "FCFS, SJF, Priority, RR, Multilevel" },
+    { "q": "Deadlock conditions", "a": "Mutual exclusion, hold & wait, no preemption, circular wait" },
+    { "q": "Semaphore purpose", "a": "Synchronize access to resources" },
+    { "q": "Virtual memory", "a": "Address translation via paging" },
+    { "q": "Page replacement example", "a": "LRU, FIFO, Optimal" },
+    { "q": "Thrashing", "a": "Excessive paging reduces performance" },
+    { "q": "File system", "a": "Organizes files/directories on storage" },
+    { "q": "Journaling FS", "a": "Logs changes to protect integrity" },
+    { "q": "System call example", "a": "read, write, fork, exec, open" },
+    { "q": "Monolithic vs microkernel", "a": "All services in kernel vs minimal core" },
+    { "q": "Interrupt", "a": "Signal to CPU to handle event" },
+    { "q": "DMA role", "a": "Direct Memory Access for I/O efficiency" },
+    { "q": "I/O scheduling", "a": "FCFS, SSTF, SCAN, C-SCAN" },
+    { "q": "Security principle", "a": "Least privilege" },
+    { "q": "System virtualization", "a": "Hypervisors run VMs (Type 1/2)" },
+    { "q": "Container vs VM", "a": "Shared kernel vs full OS per VM" }
+  ]
+}

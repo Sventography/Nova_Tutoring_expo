@@ -1,0 +1,25 @@
+{
+  "topic": "Statistics: Probability",
+  "cards": [
+    { "q": "Probability range", "a": "0 to 1" },
+    { "q": "Complement rule", "a": "P(A') = 1 - P(A)" },
+    { "q": "Addition rule", "a": "P(A or B) = P(A)+P(B)-P(A and B)" },
+    { "q": "Multiplication rule", "a": "P(A and B) = P(A)*P(B|A)" },
+    { "q": "Independent events", "a": "P(A and B) = P(A)P(B)" },
+    { "q": "Mutually exclusive", "a": "P(A and B) = 0" },
+    { "q": "Conditional probability", "a": "P(A|B) = P(A and B)/P(B)" },
+    { "q": "Bayes' theorem", "a": "P(A|B) = P(B|A)P(A)/P(B)" },
+    { "q": "Expected value", "a": "E[X] = sum x*P(x)" },
+    { "q": "Variance", "a": "Var(X) = E[X^2] - (E[X])^2" },
+    { "q": "Binomial distribution", "a": "n trials, p constant, 2 outcomes" },
+    { "q": "Poisson distribution", "a": "Counts in fixed interval" },
+    { "q": "Normal distribution", "a": "Bell-shaped; mean=median=mode" },
+    { "q": "Uniform distribution", "a": "All outcomes equal probability" },
+    { "q": "Geometric distribution", "a": "Trials until first success" },
+    { "q": "Hypergeometric distribution", "a": "Sampling without replacement" },
+    { "q": "CLT statement", "a": "Sample mean ~ normal for large n" },
+    { "q": "LLN statement", "a": "Sample mean -> population mean" },
+    { "q": "Markov chain", "a": "Next state depends only on current" },
+    { "q": "Monte Carlo simulation", "a": "Random sampling to approximate results" }
+  ]
+}

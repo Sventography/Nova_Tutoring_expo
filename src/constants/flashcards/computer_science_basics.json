@@ -1,0 +1,82 @@
+[
+  {
+    "question": "Binary uses which digits",
+    "answer": "0 and 1"
+  },
+  {
+    "question": "1 byte equals",
+    "answer": "8 bits"
+  },
+  {
+    "question": "High-level programming language example",
+    "answer": "Python, Java"
+  },
+  {
+    "question": "Low-level programming language example",
+    "answer": "Assembly"
+  },
+  {
+    "question": "Compiler does what",
+    "answer": "Translates code into machine language"
+  },
+  {
+    "question": "Interpreter does what",
+    "answer": "Executes code line by line"
+  },
+  {
+    "question": "Variable is",
+    "answer": "Named storage for data"
+  },
+  {
+    "question": "Constant is",
+    "answer": "Value that does not change"
+  },
+  {
+    "question": "If/else is an example of",
+    "answer": "Conditional statement"
+  },
+  {
+    "question": "For/while are examples of",
+    "answer": "Loops"
+  },
+  {
+    "question": "Boolean values are",
+    "answer": "True and False"
+  },
+  {
+    "question": "Array definition",
+    "answer": "Ordered collection of elements"
+  },
+  {
+    "question": "Function definition",
+    "answer": "Reusable block of code"
+  },
+  {
+    "question": "Parameter vs argument",
+    "answer": "Parameter is placeholder; argument is actual value"
+  },
+  {
+    "question": "Syntax error is",
+    "answer": "Mistake in code grammar"
+  },
+  {
+    "question": "Logic error is",
+    "answer": "Code runs but gives wrong output"
+  },
+  {
+    "question": "Runtime error is",
+    "answer": "Error occurs while program executes"
+  },
+  {
+    "question": "IDE stands for",
+    "answer": "Integrated Development Environment"
+  },
+  {
+    "question": "Flowchart symbol for decision",
+    "answer": "Diamond"
+  },
+  {
+    "question": "Binary 1010 equals decimal",
+    "answer": "10"
+  }
+]

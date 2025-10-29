@@ -1,0 +1,25 @@
+{
+  "topic": "Human Geography",
+  "cards": [
+    { "q": "Spatial diffusion types", "a": "Relocation, contagious, hierarchical, stimulus" },
+    { "q": "Population density types", "a": "Arithmetic, physiological, agricultural" },
+    { "q": "Demographic Transition Stage 1", "a": "High birth/death; low growth" },
+    { "q": "Demographic Transition Stage 2", "a": "High birth, falling death; rapid growth" },
+    { "q": "Demographic Transition Stage 3", "a": "Falling birth, low death; slowing growth" },
+    { "q": "Demographic Transition Stage 4", "a": "Low birth/death; stable population" },
+    { "q": "Dependency ratio", "a": "Dependents (0-14, 65+) / working-age" },
+    { "q": "Push vs pull factor", "a": "Repels from origin vs attracts to destination" },
+    { "q": "Cultural landscape", "a": "Human imprint on the physical environment" },
+    { "q": "Language family example", "a": "Indo-European" },
+    { "q": "Universalizing religions", "a": "Christianity, Islam, Buddhism" },
+    { "q": "Ethnic religions", "a": "Hinduism, Judaism" },
+    { "q": "Nation-state", "a": "State whose territory corresponds to a nation" },
+    { "q": "Gerrymandering goal", "a": "Manipulate districts for advantage" },
+    { "q": "Von Thünen model focus", "a": "Land use rings around market" },
+    { "q": "Weber least-cost theory", "a": "Minimize transport, labor, agglomeration costs" },
+    { "q": "Central place theory", "a": "Hierarchy of settlements and services" },
+    { "q": "Primate city", "a": "Largest city >2x next largest" },
+    { "q": "Greenbelt purpose", "a": "Preserve open space around cities" },
+    { "q": "HDI components", "a": "Income, education, life expectancy" }
+  ]
+}

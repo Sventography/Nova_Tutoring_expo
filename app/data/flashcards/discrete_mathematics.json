@@ -1,0 +1,25 @@
+{
+  "topic": "Discrete Mathematics",
+  "cards": [
+    { "q": "Set operations", "a": "Union ∪, intersection ∩, complement" },
+    { "q": "De Morgan's laws", "a": "¬(A∧B)=¬A∨¬B; ¬(A∨B)=¬A∧¬B" },
+    { "q": "Implication equivalence", "a": "p→q ≡ ¬p ∨ q" },
+    { "q": "Contrapositive", "a": "p→q ≡ ¬q → ¬p" },
+    { "q": "Proof by induction", "a": "Base case + inductive step" },
+    { "q": "Pigeonhole principle", "a": "More items than boxes ⇒ collision" },
+    { "q": "Permutation count", "a": "n! or nPr = n!/(n−r)!" },
+    { "q": "Combination count", "a": "nCr = n!/(r!(n−r)!)" },
+    { "q": "Graph definitions", "a": "Vertices & edges; degree of vertex" },
+    { "q": "Euler vs Hamilton path", "a": "Uses every edge vs every vertex once" },
+    { "q": "Bipartite graph test", "a": "No odd cycles" },
+    { "q": "Tree properties", "a": "Connected acyclic; n−1 edges" },
+    { "q": "Planar graph condition", "a": "K5 and K3,3 nonplanar (Kuratowski)" },
+    { "q": "Big-O definition", "a": "Asymptotic upper bound" },
+    { "q": "Recurrence example", "a": "T(n)=2T(n/2)+n → O(n log n)" },
+    { "q": "Boolean algebra identity", "a": "x∨(x∧y)=x" },
+    { "q": "Modular arithmetic", "a": "a ≡ b (mod m) if m | (a−b)" },
+    { "q": "GCD via Euclid", "a": "gcd(a,b)=gcd(b, a mod b)" },
+    { "q": "Prime definition", "a": "Divisible only by 1 and itself" },
+    { "q": "RSA fact", "a": "Relies on factoring large integers" }
+  ]
+}

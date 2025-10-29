@@ -1,0 +1,25 @@
+{
+  "topic": "Environmental Science AP",
+  "cards": [
+    { "q": "Sustainability definition", "a": "Meet present needs without harming future generations" },
+    { "q": "Ecological footprint measures", "a": "Land/water area needed for consumption and waste" },
+    { "q": "Biodiversity types", "a": "Genetic, species, ecosystem" },
+    { "q": "Biome examples", "a": "Tundra, desert, rainforest, grassland, temperate forest" },
+    { "q": "Nitrogen cycle steps", "a": "Fixation, nitrification, assimilation, ammonification, denitrification" },
+    { "q": "Carbon cycle reservoirs", "a": "Atmosphere, oceans, biomass, fossil fuels, soils" },
+    { "q": "Water cycle stages", "a": "Evaporation, condensation, precipitation, runoff, infiltration" },
+    { "q": "Carrying capacity", "a": "Max population that environment can sustain" },
+    { "q": "Population growth models", "a": "Exponential vs logistic (with carrying capacity)" },
+    { "q": "Tragedy of the commons", "a": "Overuse of shared resources without regulation" },
+    { "q": "Primary pollutants example", "a": "CO, SO2, NOx, particulate matter" },
+    { "q": "Secondary pollutants example", "a": "Ozone in smog, peroxyacyl nitrates" },
+    { "q": "Greenhouse gases", "a": "CO2, CH4, N2O, water vapor, ozone" },
+    { "q": "Acid rain cause", "a": "SO2 and NOx form acids in atmosphere" },
+    { "q": "Renewable energy examples", "a": "Solar, wind, hydro, geothermal, biomass" },
+    { "q": "Nonrenewable energy examples", "a": "Coal, oil, natural gas, uranium" },
+    { "q": "EPA role", "a": "Administers and enforces environmental laws in the U.S." },
+    { "q": "Clean Air Act purpose", "a": "Control air pollution and set standards" },
+    { "q": "Endangered Species Act purpose", "a": "Protect species at risk of extinction" },
+    { "q": "Kyoto Protocol focus", "a": "International greenhouse gas reductions" }
+  ]
+}

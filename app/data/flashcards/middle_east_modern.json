@@ -1,0 +1,25 @@
+{
+  "topic": "Middle East History: 20th–21st Century",
+  "cards": [
+    { "q": "Ottoman Empire fall", "a": "After WWI; mandates created" },
+    { "q": "Sykes–Picot", "a": "1916 secret partition plan" },
+    { "q": "Creation of Israel", "a": "1948; Arab–Israeli conflicts" },
+    { "q": "Suez Crisis 1956", "a": "Egypt vs UK/France/Israel" },
+    { "q": "OPEC oil embargo", "a": "1973; price shocks" },
+    { "q": "Iranian Revolution", "a": "1979; Islamic Republic" },
+    { "q": "Iran–Iraq War", "a": "1980–88 prolonged conflict" },
+    { "q": "Gulf War 1991", "a": "Iraq expelled from Kuwait" },
+    { "q": "Oslo Accords", "a": "1993; Israel–PLO framework" },
+    { "q": "U.S. Iraq War", "a": "2003–2011; regime change" },
+    { "q": "Arab Spring", "a": "2010–11 uprisings" },
+    { "q": "Syrian civil war", "a": "From 2011; humanitarian crisis" },
+    { "q": "GCC states", "a": "Oil wealth; diversification" },
+    { "q": "Kurdish question", "a": "Stateless nation across borders" },
+    { "q": "Abraham Accords", "a": "2020 normalization deals" },
+    { "q": "Water scarcity", "a": "Resource/technology challenges" },
+    { "q": "Refugee flows", "a": "From conflicts to neighbors/Europe" },
+    { "q": "Palestinian statehood", "a": "Disputed status/negotiations" },
+    { "q": "Energy transition", "a": "Shift beyond oil/gas" },
+    { "q": "Cultural heritage risk", "a": "Sites threatened by war/looting" }
+  ]
+}

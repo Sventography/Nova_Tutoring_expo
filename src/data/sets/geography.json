@@ -1,0 +1,22 @@
+[
+  ["Latitude", "Distance north/south of Equator."],
+  ["Longitude", "Distance east/west of Prime Meridian."],
+  ["Scale", "Relationship of map distance to real distance."],
+  ["Topography", "Surface features of a region."],
+  ["Climate", "Long-term weather patterns."],
+  ["Biome", "Large ecological region (e.g., tundra, desert)."],
+  ["Plate Tectonics", "Movement of Earth’s lithospheric plates."],
+  ["Ring of Fire", "Pacific zone of volcanoes and earthquakes."],
+  ["Population Density", "People per unit area."],
+  ["Urbanization", "Growth of cities and urban areas."],
+  ["Migration", "Movement of people from one place to another."],
+  ["Push-Pull Factors", "Reasons people leave/are attracted to places."],
+  ["Cultural Diffusion", "Spread of cultural traits."],
+  ["GDP per Capita", "Economic output per person."],
+  ["HDI", "Human Development Index combining key indicators."],
+  ["Infrastructure", "Basic systems: transport, power, water."],
+  ["Arable Land", "Land suitable for farming."],
+  ["Sustainable Development", "Meeting needs without harming future needs."],
+  ["Spatial Analysis", "Examining geographic patterns/relationships."],
+  ["GIS", "Geographic Information Systems for mapping data."]
+]

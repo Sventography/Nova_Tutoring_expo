@@ -1,0 +1,25 @@
+{
+  "topic": "Computer Science: Python Programming",
+  "cards": [
+    { "q": "Print Hello World in Python", "a": "print('Hello, World!')" },
+    { "q": "List vs tuple difference", "a": "List is mutable [ ], tuple is immutable ( )" },
+    { "q": "Dictionary literal example", "a": "{'a': 1, 'b': 2}" },
+    { "q": "Set literal removes what automatically", "a": "Duplicate elements" },
+    { "q": "List comprehension example", "a": "[x*x for x in range(5)]" },
+    { "q": "Slice s[2:7:2] means", "a": "From index 2 to 6 step 2" },
+    { "q": "Truthy and falsy examples", "a": "Falsy: 0, '', None, [], {} ; others typically truthy" },
+    { "q": "Function with default arg", "a": "def f(x, y=0): return x+y" },
+    { "q": "*args vs **kwargs", "a": "*args: tuple of extra positional; **kwargs: dict of extra named" },
+    { "q": "Lambda expression example", "a": "lambda x: x*2" },
+    { "q": "PEP 8 is", "a": "Python style guide" },
+    { "q": "Virtual environment purpose", "a": "Isolate project dependencies" },
+    { "q": "Import from module", "a": "from math import sqrt" },
+    { "q": "File read one-liner", "a": "with open('f.txt') as f: data=f.read()" },
+    { "q": "Exception handling skeleton", "a": "try: ... except ValueError as e: ... finally: ..." },
+    { "q": "List vs generator expression memory", "a": "List stores all; generator yields lazily" },
+    { "q": "Big-O of list append vs insert(0,x)", "a": "append O(1) amortized; insert at front O(n)" },
+    { "q": "Dataclass basic use", "a": "@dataclass class P: x:int; y:int" },
+    { "q": "Unit test framework in stdlib", "a": "unittest" },
+    { "q": "pip command to install requests", "a": "pip install requests" }
+  ]
+}

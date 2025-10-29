@@ -1,0 +1,25 @@
+{
+  "topic": "Anatomy & Physiology I",
+  "cards": [
+    { "q": "Levels of organization", "a": "Chemical → cellular → tissue → organ → system → organism" },
+    { "q": "Homeostasis definition", "a": "Maintain internal stability via feedback" },
+    { "q": "Negative feedback example", "a": "Thermoregulation (sweating/shivering)" },
+    { "q": "Anatomical planes", "a": "Sagittal, coronal, transverse" },
+    { "q": "Four tissue types", "a": "Epithelial, connective, muscle, nervous" },
+    { "q": "Epithelial traits", "a": "Avascular, tightly packed, polarity" },
+    { "q": "Connective traits", "a": "Matrix + cells; support/bind" },
+    { "q": "Skin layers", "a": "Epidermis, dermis, hypodermis" },
+    { "q": "Bone cell types", "a": "Osteoblasts, osteocytes, osteoclasts" },
+    { "q": "Endochondral ossification", "a": "Cartilage model → bone" },
+    { "q": "Joint classifications", "a": "Fibrous, cartilaginous, synovial" },
+    { "q": "Muscle types", "a": "Skeletal, cardiac, smooth" },
+    { "q": "Sarcomere proteins", "a": "Actin, myosin; sliding filament" },
+    { "q": "Neuromuscular junction", "a": "ACh release triggers contraction" },
+    { "q": "Neuron parts", "a": "Soma, dendrites, axon" },
+    { "q": "Glial cells example", "a": "Astrocytes, oligodendrocytes, Schwann" },
+    { "q": "Action potential phases", "a": "Depolarization → repolarization → hyperpolarization" },
+    { "q": "CNS vs PNS", "a": "Brain/spinal cord vs nerves/ganglia" },
+    { "q": "Reflex arc", "a": "Receptor → sensory → interneuron → motor → effector" },
+    { "q": "Special senses", "a": "Vision, hearing, taste, smell, balance" }
+  ]
+}

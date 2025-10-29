@@ -1,0 +1,60 @@
+import React, { createContext, useContext, useEffect, useMemo, useState, useCallback } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+export type User = {
+  id?: string;
+  name?: string;
+  email?: string;
+  avatarUri?: string;
+  username?: string;
+};
+
+type Ctx = {
+  user: User | null;
+  setUser: (u: User | null) => void;
+  updateUser: (patch: Partial<User>) => void;
+  updateProfile: (patch: Partial<User>) => Promise<void>;
+  signOut: () => void;
+  reload: () => Promise<void>;
+};
+
+const KEY = "@nova/user";
+const C = createContext<Ctx | null>(null);
+
+export function UserProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUserState] = useState<User | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem(KEY);
+        if (raw) setUserState(JSON.parse(raw));
+      } catch {}
+    })();
+  }, []);
+
+  useEffect(() => {
+    AsyncStorage.setItem(KEY, JSON.stringify(user ?? {})).catch(() => {});
+  }, [user]);
+
+  const setUser = useCallback((u: User | null) => setUserState(u), []);
+  const updateUser = useCallback((patch: Partial<User>) => {
+    setUserState(prev => ({ ...(prev ?? {}), ...patch }));
+  }, []);
+  const signOut = useCallback(() => setUserState(null), []);
+  const reload = useCallback(async () => {
+    try {
+      const raw = await AsyncStorage.getItem(KEY);
+      if (raw) setUserState(JSON.parse(raw));
+    } catch {}
+  }, []);
+
+  const value = useMemo(() => ({ user, setUser, updateUser, updateProfile, signOut, reload }), [user, setUser, updateUser, signOut, reload]);
+  return <C.Provider value={value}>{children}</C.Provider>;
+}
+
+export function useUser(){
+  const ctx = useContext(C);
+  if (!ctx) throw new Error("useUser must be used inside UserProvider");
+  return ctx;
+}

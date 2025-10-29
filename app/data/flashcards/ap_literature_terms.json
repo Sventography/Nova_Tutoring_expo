@@ -1,0 +1,25 @@
+{
+  "topic": "AP Literature Terms",
+  "cards": [
+    { "q": "Alliteration", "a": "Repetition of initial consonant sounds" },
+    { "q": "Allusion", "a": "Reference to a well known work or event" },
+    { "q": "Ambiguity", "a": "Multiple possible meanings" },
+    { "q": "Anaphora", "a": "Repetition at the start of successive clauses" },
+    { "q": "Apostrophe (rhetorical)", "a": "Addressing an absent or abstract entity" },
+    { "q": "Assonance", "a": "Repetition of vowel sounds" },
+    { "q": "Caesura", "a": "Pause in a line of poetry" },
+    { "q": "Conceit", "a": "Extended complex metaphor" },
+    { "q": "Diction", "a": "Author's word choice" },
+    { "q": "Enjambment", "a": "Line continues without punctuation pause" },
+    { "q": "Irony types", "a": "Verbal, situational, dramatic" },
+    { "q": "Juxtaposition", "a": "Placement of contrasting elements" },
+    { "q": "Metonymy", "a": "Substitute name with related thing (the crown for monarchy)" },
+    { "q": "Synecdoche", "a": "Part represents whole (wheels for car)" },
+    { "q": "Oxymoron", "a": "Contradictory terms together (deafening silence)" },
+    { "q": "Paradox", "a": "Self contradictory yet true statement" },
+    { "q": "Tone", "a": "Author's attitude toward subject" },
+    { "q": "Theme", "a": "Central idea or message" },
+    { "q": "Motif", "a": "Recurring element with symbolic meaning" },
+    { "q": "Bildungsroman", "a": "Coming of age novel" }
+  ]
+}

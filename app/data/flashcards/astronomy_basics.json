@@ -1,0 +1,25 @@
+{
+  "topic": "Astronomy Basics",
+  "cards": [
+    { "q": "Light-year", "a": "Distance light travels in one year" },
+    { "q": "Astronomical Unit (AU)", "a": "Average Earth–Sun distance" },
+    { "q": "H–R diagram axes", "a": "Luminosity vs temperature" },
+    { "q": "Main-sequence star", "a": "Hydrogen fusion in core" },
+    { "q": "Red giant", "a": "Expanded, cooler surface; He fusion" },
+    { "q": "White dwarf", "a": "Degenerate remnant of low-mass star" },
+    { "q": "Supernova", "a": "Catastrophic stellar explosion" },
+    { "q": "Neutron star", "a": "Ultra-dense remnant; pulsars" },
+    { "q": "Black hole", "a": "Escape velocity > c; event horizon" },
+    { "q": "Galaxy types", "a": "Spiral, elliptical, irregular" },
+    { "q": "Milky Way type", "a": "Barred spiral" },
+    { "q": "Universe expansion", "a": "Redshift (Hubble's law)" },
+    { "q": "CMB", "a": "Cosmic Microwave Background radiation" },
+    { "q": "Planet order", "a": "Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, Neptune" },
+    { "q": "Asteroid belt", "a": "Between Mars and Jupiter" },
+    { "q": "Kuiper Belt", "a": "Beyond Neptune; icy bodies" },
+    { "q": "Oort Cloud", "a": "Distant spherical comet reservoir" },
+    { "q": "Eclipse types", "a": "Solar and lunar" },
+    { "q": "Lunar cycle length", "a": "~29.5 days (synodic month)" },
+    { "q": "Exoplanet transit method", "a": "Brightness dips when planet crosses star" }
+  ]
+}

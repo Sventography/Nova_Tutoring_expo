@@ -1,0 +1,25 @@
+{
+  "topic": "English Literature: British",
+  "cards": [
+    { "q": "Author of Beowulf language", "a": "Old English (anonymous poet)" },
+    { "q": "Author of The Canterbury Tales", "a": "Geoffrey Chaucer" },
+    { "q": "Shakespeare tragic heroes (2 examples)", "a": "Hamlet, Macbeth, Othello, King Lear" },
+    { "q": "Metaphysical poet known for conceits", "a": "John Donne" },
+    { "q": "Paradise Lost poet", "a": "John Milton" },
+    { "q": "Romantic poets (2)", "a": "Wordsworth, Coleridge, Byron, Shelley, Keats" },
+    { "q": "Victorian novelist of Great Expectations", "a": "Charles Dickens" },
+    { "q": "Author of Jane Eyre", "a": "Charlotte Bronte" },
+    { "q": "Austen novel critiquing manners and marriage", "a": "Pride and Prejudice" },
+    { "q": "Modernist author of Mrs Dalloway", "a": "Virginia Woolf" },
+    { "q": "Irish author of Ulysses", "a": "James Joyce" },
+    { "q": "Poet of The Waste Land", "a": "T. S. Eliot" },
+    { "q": "Postcolonial novelist of Things Fall Apart (often taught in Brit lit contexts)", "a": "Chinua Achebe" },
+    { "q": "Dystopian author of 1984", "a": "George Orwell" },
+    { "q": "Satirist of Gulliver's Travels", "a": "Jonathan Swift" },
+    { "q": "Romanticism traits", "a": "Nature, emotion, imagination, sublime" },
+    { "q": "Modernism traits", "a": "Fragmentation, stream of consciousness, ambiguity" },
+    { "q": "Epic definition", "a": "Long narrative poem about heroic deeds" },
+    { "q": "Blank verse definition", "a": "Unrhymed iambic pentameter" },
+    { "q": "Bildungsroman definition", "a": "Coming-of-age novel" }
+  ]
+}

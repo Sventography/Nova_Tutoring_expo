@@ -1,0 +1,25 @@
+{
+  "topic": "Latin II",
+  "cards": [
+    { "q": "Imperfect tense endings (1st conj.)", "a": "-bam, -bas, -bat, -bamus, -batis, -bant" },
+    { "q": "Future tense 1st/2nd conjugation endings", "a": "-bo, -bis, -bit, -bimus, -bitis, -bunt" },
+    { "q": "Future tense 3rd/4th conjugation endings", "a": "-am, -es, -et, -emus, -etis, -ent" },
+    { "q": "Perfect tense endings", "a": "-i, -isti, -it, -imus, -istis, -erunt" },
+    { "q": "Pluperfect tense formation", "a": "Perfect stem + eram, eras, erat, eramus, eratis, erant" },
+    { "q": "Future perfect tense formation", "a": "Perfect stem + ero, eris, erit, erimus, eritis, erint" },
+    { "q": "Relative pronoun forms", "a": "qui, quae, quod" },
+    { "q": "Demonstratives this/that", "a": "hic, haec, hoc; ille, illa, illud" },
+    { "q": "Interrogative pronoun", "a": "quis, quid" },
+    { "q": "Gerund definition", "a": "Verbal noun ending in -nd" },
+    { "q": "Gerundive use", "a": "Verbal adjective expressing necessity" },
+    { "q": "Ablative absolute example", "a": "Urbe capta, milites fugerunt (With the city captured, soldiers fled)" },
+    { "q": "Indirect statement structure", "a": "Accusative subject + infinitive" },
+    { "q": "Cum clause types", "a": "Temporal, causal, concessive" },
+    { "q": "Purpose clause intro word", "a": "ut (in order that)" },
+    { "q": "Result clause signal", "a": "tam, ita, sic + ut" },
+    { "q": "Conditional clause types", "a": "Real, potential, contrary-to-fact" },
+    { "q": "Subjunctive mood uses", "a": "Purpose, result, indirect command, indirect question" },
+    { "q": "Supine definition", "a": "Verbal noun used in limited cases, accusative/ablative forms" },
+    { "q": "Deponent verbs trait", "a": "Passive forms, active meanings" }
+  ]
+}

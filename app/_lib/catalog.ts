@@ -1,0 +1,452 @@
+export const COINS_PER_DOLLAR = 1000;
+export const dollarsToCoins = (usd: number) => Math.round(usd * COINS_PER_DOLLAR);
+
+export type Category =
+  | "plushies"
+  | "clothing"
+  | "tangibles"
+  | "cursor"
+  | "theme"
+  | "bundle"
+  | "coin_pack";
+
+export const CATEGORY_BORDER: Record<Category, string> = {
+  plushies:  "#00e5ff",
+  clothing:  "#FFD700", // gold border for clothing
+  tangibles: "#14b8a6",
+  cursor:    "#22c55e",
+  theme:     "#b67cff",
+  bundle:    "#f97316",
+  coin_pack: "#f59e0b",
+};
+
+export type CatalogItem = {
+  id: string;
+  title: string;
+  desc?: string;
+  category: Category;
+  priceUSD?: number;     // coin packs: USD only
+  priceCoins?: number;   // omit for coin packs
+  image?: any;
+  altImageKey?: string;  // for flip (front/back or alt angle)
+  themeId?: string;      // for themes only
+};
+
+const img = {
+  // plushies
+  plushie_nova_front:        require("../assets/shop/plushie_nova_pajamas_front.png"),
+  plushie_nova_back:         require("../assets/shop/plushie_nova_pajamas_back.png"),
+
+  // bunny with book (now paired)
+  nova_bunny_book_plushie_front: require("../assets/shop/nova_bunny_book_plushie_front.png"),
+  nova_bunny_book_plushie_back:  require("../assets/shop/nova_bunny_book_plushie_back.png"),
+
+  // star plushie (paired)
+  plushie_star_front:        require("../assets/shop/plushie_star_front.png"),
+  plushie_star_back:         require("../assets/shop/plushie_star_back.png"),
+
+  // bunny classic + white (already paired)
+  plushie_bunny_front:       require("../assets/shop/plushie_bunny_front.png"),
+  plushie_bunny_back:        require("../assets/shop/plushie_bunny_back.png"),
+  plushie_bunny_front_white: require("../assets/shop/plushie_bunny_front_white.png"),
+  plushie_bunny_back_white:  require("../assets/shop/plushie_bunny_back_white.png"),
+
+  // devil + purple (now paired)
+  nova_plushie_devil_front:  require("../assets/shop/nova_plushie_devil_front.png"),
+  nova_plushie_devil_back:   require("../assets/shop/nova_plushie_devil_back.png"),
+  nova_plushie_purple_front: require("../assets/shop/nova_plushie_purple_front.png"),
+  nova_plushie_purple_back:  require("../assets/shop/nova_plushie_purple_back.png"),
+
+  // clothing
+  beanie:         require("../assets/shop/beanie.png"),
+  hoodie:         require("../assets/shop/hoodie.png"),
+  tee_front:      require("../assets/shop/tee_front.png"),
+  tee_front_glow: require("../assets/shop/tee_front_glow.png"),
+  pajamas:        require("../assets/shop/pajamas.png"),
+  pajama_bottoms: require("../assets/shop/pajama_bottoms.png"),
+  sweat_bottoms:  require("../assets/shop/sweat_bottoms.png"),
+  hat:            require("../assets/shop/hat.png"),
+
+  // tangibles (other)
+  keychain:   require("../assets/shop/keychain.png"),
+  stationery: require("../assets/shop/stationery.png"),
+  case:       require("../assets/shop/case.png"),
+
+  // cursors
+  glow_cursor:       require("../assets/shop/glow_cursor.png"),
+  orb_cursor:        require("../assets/shop/orb_cursor.png"),
+  star_trail_cursor: require("../assets/shop/star_trail_cursor.png"),
+
+  // themes
+  neon_theme:           require("../assets/shop/neon_theme.png"),
+  star_theme:           require("../assets/shop/star_theme.png"),
+  pink_theme:           require("../assets/shop/pink_theme.png"),
+  dark_theme:           require("../assets/shop/dark_theme.png"),
+  mint_theme:           require("../assets/shop/mint_theme.png"),
+  glitter_theme:        require("../assets/shop/glitter_theme.png"),
+  theme_black_gold:     require("../assets/shop/theme_black_gold.png"),
+  theme_crimson_dream:  require("../assets/shop/theme_crimson_dream.png"),
+  theme_emerald_wave:   require("../assets/shop/theme_emerald_wave.png"),
+  theme_neon_purple:    require("../assets/shop/theme_neon_purple.png"),
+  theme_silver_frost:   require("../assets/shop/theme_silver_frost.png"),
+
+  // bundles / coin art
+  bundle_neon:  require("../assets/shop/bundle_neon.png"),
+  coins_1000:   require("../assets/shop/coins_1000.png"),
+  coins_5000:   require("../assets/shop/coins_5000.png"),
+};
+
+/* Prices: bump ×2 where requested:
+   keychain 15→30, stationery 24→48, phone case 20→40, hat 30→60,
+   pajamas set 45→90, pj bottoms 25→50, sweat bottoms 35→70.
+*/
+export const catalog: CatalogItem[] = [
+  // --- Plushies (front/back via altImageKey)
+  {
+    id: "plushie_nova_pajamas",
+    title: "Nova Plushie (Pajamas)",
+    category: "plushies",
+    priceUSD: 60,
+    priceCoins: dollarsToCoins(60),
+    image: img.plushie_nova_front,
+    altImageKey: "plushie_nova_back",
+    desc: "Cuddly Nova in cozy pajamas. Flip to see the back!",
+  },
+  {
+    id: "plushie_bunny_classic",
+    title: "Bunny Plushie (Classic)",
+    category: "plushies",
+    priceUSD: 60,
+    priceCoins: dollarsToCoins(60),
+    image: img.plushie_bunny_front,
+    altImageKey: "plushie_bunny_back",
+    desc: "The original Nova bunny—classic smile, classic vibes.",
+  },
+  {
+    id: "plushie_bunny_white",
+    title: "Bunny Plushie (White)",
+    category: "plushies",
+    priceUSD: 60,
+    priceCoins: dollarsToCoins(60),
+    image: img.plushie_bunny_front_white,
+    altImageKey: "plushie_bunny_back_white",
+    desc: "Clean white edition of the fan-favorite bunny.",
+  },
+  {
+    id: "plushie_star",
+    title: "Star Plushie",
+    category: "plushies",
+    priceUSD: 60,
+    priceCoins: dollarsToCoins(60),
+    image: img.plushie_star_front,
+    altImageKey: "plushie_star_back",
+    desc: "A soft star to brighten any desk or bed.",
+  },
+  {
+    id: "plushie_bunny_book",
+    title: "Bunny Plushie (Book)",
+    category: "plushies",
+    priceUSD: 60,
+    priceCoins: dollarsToCoins(60),
+    image: img.nova_bunny_book_plushie_front,
+    altImageKey: "nova_bunny_book_plushie_back",
+    desc: "Bunny with a book—your study buddy mascot.",
+  },
+  {
+    id: "plushie_devil",
+    title: "Nova Plushie Devil",
+    category: "plushies",
+    priceUSD: 60,
+    priceCoins: dollarsToCoins(60),
+    image: img.nova_plushie_devil_front,
+    altImageKey: "nova_plushie_devil_back",
+    desc: "Mischievous horns, maximum cute.",
+  },
+  {
+    id: "plushie_purple",
+    title: "Nova Plushie Purple",
+    category: "plushies",
+    priceUSD: 60,
+    priceCoins: dollarsToCoins(60),
+    image: img.nova_plushie_purple_front,
+    altImageKey: "nova_plushie_purple_back",
+    desc: "Vibrant purple plush with chill energy.",
+  },
+
+  // --- Clothing (TEE COMBINED: uses altImageKey for the glow close-up)
+  {
+    id: "tee_nova_glow",
+    title: "Nova Glow Tee",
+    category: "clothing",
+    priceUSD: 80,
+    priceCoins: dollarsToCoins(80),
+    image: img.tee_front,
+    altImageKey: "tee_front_glow",
+    desc: "Premium tee with a luminous Nova crest. Tap to view the glow detail.",
+  },
+  {
+    id: "hoodie_nova",
+    title: "Nova Hoodie",
+    category: "clothing",
+    priceUSD: 120,
+    priceCoins: dollarsToCoins(120),
+    image: img.hoodie,
+    desc: "Heavyweight hoodie—warm, soft, and built for all-nighters.",
+  },
+  {
+    id: "beanie_nova",
+    title: "Nova Beanie",
+    category: "clothing",
+    priceUSD: 45,
+    priceCoins: dollarsToCoins(45),
+    image: img.beanie,
+    desc: "Cozy cuffed beanie with the Nova mark.",
+  },
+  {
+    id: "pajamas",
+    title: "Pajamas (Set)",
+    category: "clothing",
+    priceUSD: 90,
+    priceCoins: dollarsToCoins(90),
+    image: img.pajamas,
+    desc: "Two-piece pajama set for ultra-comfy study sessions.",
+  },
+  {
+    id: "pajama_bottoms",
+    title: "Pajama Bottoms",
+    category: "clothing",
+    priceUSD: 50,
+    priceCoins: dollarsToCoins(50),
+    image: img.pajama_bottoms,
+    desc: "Soft lounge bottoms—pair with your favorite tee.",
+  },
+  {
+    id: "sweat_bottoms",
+    title: "Sweat Bottoms",
+    category: "clothing",
+    priceUSD: 70,
+    priceCoins: dollarsToCoins(70),
+    image: img.sweat_bottoms,
+    desc: "Relaxed fit sweatpants for everyday comfort.",
+  },
+  {
+    id: "hat",
+    title: "Hat",
+    category: "clothing",
+    priceUSD: 60,
+    priceCoins: dollarsToCoins(60),
+    image: img.hat,
+    desc: "Adjustable cap with the Nova emblem.",
+  },
+
+  // --- Tangibles (other)
+  {
+    id: "keychain_nova",
+    title: "Nova Keychain",
+    category: "tangibles",
+    priceUSD: 30,
+    priceCoins: dollarsToCoins(30),
+    image: img.keychain,
+    desc: "Metal keychain—carry Nova wherever you go.",
+  },
+  {
+    id: "stationery_set",
+    title: "Stationery Set",
+    category: "tangibles",
+    priceUSD: 48,
+    priceCoins: dollarsToCoins(48),
+    image: img.stationery,
+    desc: "Stickers, note cards, and more—desk-ready essentials.",
+  },
+  {
+    id: "phone_case",
+    title: "Phone Case",
+    category: "tangibles",
+    priceUSD: 40,
+    priceCoins: dollarsToCoins(40),
+    image: img.case,
+    desc: "Protective case with a smooth matte Nova finish.",
+  },
+
+  // --- Cursors
+  {
+    id: "cursor_glow",
+    title: "Cursor: Glow",
+    category: "cursor",
+    priceUSD: 3,
+    priceCoins: dollarsToCoins(3),
+    image: img.glow_cursor,
+    desc: "Subtle neon glow for your pointer.",
+  },
+  {
+    id: "cursor_orb",
+    title: "Cursor: Orb Glow",
+    category: "cursor",
+    priceUSD: 3,
+    priceCoins: dollarsToCoins(3),
+    image: img.orb_cursor,
+    desc: "Spherical glow with smooth motion.",
+  },
+  {
+    id: "cursor_star_trail",
+    title: "Cursor: Star Trail",
+    category: "cursor",
+    priceUSD: 3,
+    priceCoins: dollarsToCoins(3),
+    image: img.star_trail_cursor,
+    desc: "A sparkling tail that follows each move.",
+  },
+
+  // --- Themes
+  {
+    id: "theme_neon",
+    title: "Theme: Neon Nova",
+    category: "theme",
+    themeId: "neon",
+    priceUSD: 6,
+    priceCoins: dollarsToCoins(6),
+    image: img.neon_theme,
+    desc: "Bold neon accents on dark—signature Nova.",
+  },
+  {
+    id: "theme:starry",
+    title: "Theme: Starry Night",
+    category: "theme",
+    themeId: "theme:starry",
+    priceUSD: 6,
+    priceCoins: dollarsToCoins(6),
+    image: img.star_theme,
+    desc: "Midnight skies and distant galaxies.",
+  },
+  {
+    id: "theme_pink",
+    title: "Theme: Pink Dawn",
+    category: "theme",
+    themeId: "pink",
+    priceUSD: 6,
+    priceCoins: dollarsToCoins(6),
+    image: img.pink_theme,
+    desc: "Warm pink gradients for a soft glow.",
+  },
+  {
+    id: "theme_dark",
+    title: "Theme: Dark Nova",
+    category: "theme",
+    themeId: "dark",
+    priceUSD: 6,
+    priceCoins: dollarsToCoins(6),
+    image: img.dark_theme,
+    desc: "Ultra-dark minimal—the hacker vibe.",
+  },
+  {
+    id: "theme_mint",
+    title: "Theme: Mint Breeze",
+    category: "theme",
+    themeId: "mint",
+    priceUSD: 6,
+    priceCoins: dollarsToCoins(6),
+    image: img.mint_theme,
+    desc: "Cool mints with breezy contrast.",
+  },
+  {
+    id: "theme_glitter",
+    title: "Theme: Glitter",
+    category: "theme",
+    themeId: "glitter",
+    priceUSD: 6,
+    priceCoins: dollarsToCoins(6),
+    image: img.glitter_theme,
+    desc: "Sparkles everywhere—because you can.",
+  },
+  {
+    id: "theme_black_gold",
+    title: "Theme: Black & Gold",
+    category: "theme",
+    themeId: "black_gold",
+    priceUSD: 6,
+    priceCoins: dollarsToCoins(6),
+    image: img.theme_black_gold,
+    desc: "Luxury black with gold trim.",
+  },
+  {
+    id: "theme_crimson_dream",
+    title: "Theme: Crimson Dream",
+    category: "theme",
+    themeId: "crimson_dream",
+    priceUSD: 6,
+    priceCoins: dollarsToCoins(6),
+    image: img.theme_crimson_dream,
+    desc: "Deep reds with soft highlights.",
+  },
+  {
+    id: "theme_emerald_wave",
+    title: "Theme: Emerald Wave",
+    category: "theme",
+    themeId: "emerald_wave",
+    priceUSD: 6,
+    priceCoins: dollarsToCoins(6),
+    image: img.theme_emerald_wave,
+    desc: "Jewel-toned greens that pop.",
+  },
+  {
+    id: "theme_neon_purple",
+    title: "Theme: Neon Purple",
+    category: "theme",
+    themeId: "neon_purple",
+    priceUSD: 6,
+    priceCoins: dollarsToCoins(6),
+    image: img.theme_neon_purple,
+    desc: "Electric purples with neon edges.",
+  },
+  {
+    id: "theme_silver_frost",
+    title: "Theme: Silver Frost",
+    category: "theme",
+    themeId: "silver_frost",
+    priceUSD: 6,
+    priceCoins: dollarsToCoins(6),
+    image: img.theme_silver_frost,
+    desc: "Icy chrome with subtle shine.",
+  },
+
+  // --- Bundles
+  {
+    id: "bundle_neon",
+    title: "Neon Starter Bundle",
+    category: "bundle",
+    priceUSD: 12,
+    priceCoins: dollarsToCoins(12),
+    image: img.bundle_neon,
+    desc: "Neon theme + Orb cursor combo.",
+  },
+
+  // --- Coin Packs (USD only)
+  {
+    id: "pack_1k",
+    title: "1,000 coins",
+    category: "coin_pack",
+    priceUSD: 1,
+    image: img.coins_1000,
+    desc: "Quick top-up for small unlocks.",
+  },
+  {
+    id: "pack_5k",
+    title: "5,000 coins",
+    category: "coin_pack",
+    priceUSD: 5,
+    image: img.coins_5000,
+    desc: "Best for a few premium items.",
+  },
+];
+
+// Alt images used by flip logic
+export const altImages: Record<string, any> = {
+  plushie_nova_back:               img.plushie_nova_back,
+  plushie_bunny_back:              img.plushie_bunny_back,
+  plushie_bunny_back_white:        img.plushie_bunny_back_white,
+  plushie_star_back:               img.plushie_star_back,
+  nova_bunny_book_plushie_back:    img.nova_bunny_book_plushie_back,
+  nova_plushie_devil_back:         img.nova_plushie_devil_back,
+  nova_plushie_purple_back:        img.nova_plushie_purple_back,
+  tee_front_glow:                  img.tee_front_glow,
+};

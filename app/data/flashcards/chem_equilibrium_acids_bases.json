@@ -1,0 +1,25 @@
+{
+  "topic": "Chemistry: Equilibrium & Acids–Bases",
+  "cards": [
+    { "q": "Equilibrium expression", "a": "K = [products]^coeff / [reactants]^coeff" },
+    { "q": "Le Châtelier factors", "a": "Concentration, pressure, temperature" },
+    { "q": "Reaction quotient Q", "a": "Compare Q to K to predict shift" },
+    { "q": "Strong acids", "a": "HCl, HBr, HI, HNO3, HClO4, H2SO4*" },
+    { "q": "Strong bases", "a": "Group 1/2 hydroxides (soluble)" },
+    { "q": "Ka and pKa", "a": "pKa = −log Ka; lower pKa = stronger acid" },
+    { "q": "Kb relation", "a": "Ka·Kb = Kw" },
+    { "q": "Buffer definition", "a": "Weak acid/base + conjugate" },
+    { "q": "Henderson–Hasselbalch", "a": "pH = pKa + log(A−/HA)" },
+    { "q": "Titration curve feature", "a": "Equivalence point; indicators" },
+    { "q": "Common ion effect", "a": "Suppresses ionization" },
+    { "q": "Solubility product", "a": "Ksp for sparingly soluble salts" },
+    { "q": "pH of strong acid", "a": "pH = −log[H+]" },
+    { "q": "Polyprotic acids", "a": "Multiple Ka steps" },
+    { "q": "Acid–base indicators", "a": "Color change over pH range" },
+    { "q": "Amphiprotic", "a": "Acts as acid or base (e.g., HCO3−)" },
+    { "q": "Percent ionization", "a": "% = [H+]/C × 100" },
+    { "q": "Buffer capacity", "a": "Amount of acid/base resisted" },
+    { "q": "Salt hydrolysis", "a": "Conjugates alter pH" },
+    { "q": "Lewis acid/base", "a": "e− pair acceptor/donor" }
+  ]
+}

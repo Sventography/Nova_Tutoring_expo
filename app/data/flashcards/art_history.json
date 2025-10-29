@@ -1,0 +1,25 @@
+{
+  "topic": "Art History",
+  "cards": [
+    { "q": "Prehistoric example", "a": "Lascaux cave paintings" },
+    { "q": "Egyptian art feature", "a": "Composite view; tomb and temple art" },
+    { "q": "Greek ideal", "a": "Idealized human form; contrapposto" },
+    { "q": "Roman trait", "a": "Realism; portraiture; engineering monuments" },
+    { "q": "Byzantine hallmark", "a": "Mosaics and icons" },
+    { "q": "Gothic architecture", "a": "Pointed arches, rib vaults, stained glass" },
+    { "q": "Renaissance trait", "a": "Linear perspective, naturalism, humanism" },
+    { "q": "Baroque trait", "a": "Dramatic light and movement" },
+    { "q": "Neoclassicism", "a": "Classical revival, clarity" },
+    { "q": "Romanticism", "a": "Emotion, nature, sublime" },
+    { "q": "Realism", "a": "Everyday subjects, social critique" },
+    { "q": "Impressionism", "a": "Light and color; Monet" },
+    { "q": "Post Impressionism", "a": "Van Gogh, Cezanne, Gauguin" },
+    { "q": "Cubism", "a": "Picasso and Braque; multiple viewpoints" },
+    { "q": "Dada", "a": "Anti art reaction to war" },
+    { "q": "Surrealism", "a": "Dream imagery and the unconscious" },
+    { "q": "Abstract Expressionism", "a": "Gestural painting; Pollock" },
+    { "q": "Pop Art", "a": "Mass culture imagery; Warhol" },
+    { "q": "Minimalism", "a": "Reduction to essentials" },
+    { "q": "Contemporary art", "a": "Post 1970s diverse media and themes" }
+  ]
+}

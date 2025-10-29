@@ -1,0 +1,22 @@
+[
+  ["Data Pipeline", "Ingest, clean, transform, load."],
+  ["EDA", "Exploratory data analysis."],
+  ["Feature Engineering", "Create informative variables."],
+  ["Train/Test Split", "Holdout data for evaluation."],
+  ["Cross-Validation", "Robust model assessment."],
+  ["Bias-Variance Tradeoff", "Balance under/overfitting."],
+  ["Linear Regression", "Predict continuous target."],
+  ["Logistic Regression", "Binary classification."],
+  ["Decision Trees", "Rule-based splits of data."],
+  ["Random Forest", "Ensemble of many trees."],
+  ["Gradient Boosting", "Sequentially improved trees."],
+  ["SVM", "Margins with kernel trick."],
+  ["K-Means", "Partition into k clusters."],
+  ["PCA", "Reduce dimensionality via components."],
+  ["ROC AUC", "Binary classifier performance metric."],
+  ["Precision/Recall", "Quality of positive predictions."],
+  ["Regularization", "L1/L2 to control complexity."],
+  ["Hyperparameter Tuning", "Grid/random/bayes search."],
+  ["Model Drift", "Performance change over time."],
+  ["MLOps", "Deploying/monitoring ML in production."]
+]

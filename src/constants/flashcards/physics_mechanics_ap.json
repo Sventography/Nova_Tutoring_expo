@@ -1,0 +1,82 @@
+[
+  {
+    "question": "Displacement vs distance",
+    "answer": "Vector vs scalar"
+  },
+  {
+    "question": "Velocity vs speed",
+    "answer": "Displacement/time vs distance/time"
+  },
+  {
+    "question": "Acceleration units",
+    "answer": "m/s^2"
+  },
+  {
+    "question": "Newton’s First Law",
+    "answer": "Object in motion stays in motion unless force acts"
+  },
+  {
+    "question": "Newton’s Second Law",
+    "answer": "F=ma"
+  },
+  {
+    "question": "Newton’s Third Law",
+    "answer": "Equal and opposite forces"
+  },
+  {
+    "question": "Momentum formula",
+    "answer": "p=mv"
+  },
+  {
+    "question": "Impulse formula",
+    "answer": "FΔt=Δp"
+  },
+  {
+    "question": "Kinetic energy formula",
+    "answer": "½mv^2"
+  },
+  {
+    "question": "Potential energy formula",
+    "answer": "mgh"
+  },
+  {
+    "question": "Work formula",
+    "answer": "F·d cosθ"
+  },
+  {
+    "question": "Power formula",
+    "answer": "Work/time"
+  },
+  {
+    "question": "Conservation of energy",
+    "answer": "Energy cannot be created or destroyed"
+  },
+  {
+    "question": "Conservation of momentum",
+    "answer": "Total momentum constant in closed system"
+  },
+  {
+    "question": "Centripetal acceleration",
+    "answer": "v^2/r"
+  },
+  {
+    "question": "Universal gravitation formula",
+    "answer": "F=Gm1m2/r^2"
+  },
+  {
+    "question": "Projectile motion x-component",
+    "answer": "vx constant"
+  },
+  {
+    "question": "Projectile motion y-component",
+    "answer": "vy changes due to g"
+  },
+  {
+    "question": "Torque formula",
+    "answer": "rF sinθ"
+  },
+  {
+    "question": "Rotational inertia depends on",
+    "answer": "Mass distribution"
+  }
+]

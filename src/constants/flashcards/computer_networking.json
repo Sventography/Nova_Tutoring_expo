@@ -1,0 +1,82 @@
+[
+  {
+    "question": "IP stands for",
+    "answer": "Internet Protocol"
+  },
+  {
+    "question": "TCP stands for",
+    "answer": "Transmission Control Protocol"
+  },
+  {
+    "question": "HTTP stands for",
+    "answer": "HyperText Transfer Protocol"
+  },
+  {
+    "question": "HTTPS adds",
+    "answer": "Encryption with SSL/TLS"
+  },
+  {
+    "question": "DNS purpose",
+    "answer": "Translate domain names to IP addresses"
+  },
+  {
+    "question": "DHCP purpose",
+    "answer": "Assign dynamic IP addresses"
+  },
+  {
+    "question": "LAN stands for",
+    "answer": "Local Area Network"
+  },
+  {
+    "question": "WAN stands for",
+    "answer": "Wide Area Network"
+  },
+  {
+    "question": "Router function",
+    "answer": "Forward packets between networks"
+  },
+  {
+    "question": "Switch function",
+    "answer": "Connect devices within a LAN"
+  },
+  {
+    "question": "Firewall function",
+    "answer": "Control network traffic based on rules"
+  },
+  {
+    "question": "OSI model layers",
+    "answer": "7 layers (Physical → Application)"
+  },
+  {
+    "question": "Packet definition",
+    "answer": "Unit of data sent over a network"
+  },
+  {
+    "question": "IPV4 address length",
+    "answer": "32 bits"
+  },
+  {
+    "question": "IPV6 address length",
+    "answer": "128 bits"
+  },
+  {
+    "question": "Ping command tests",
+    "answer": "Network connectivity/latency"
+  },
+  {
+    "question": "Bandwidth definition",
+    "answer": "Max data transfer rate"
+  },
+  {
+    "question": "Latency definition",
+    "answer": "Delay in data transmission"
+  },
+  {
+    "question": "VPN stands for",
+    "answer": "Virtual Private Network"
+  },
+  {
+    "question": "SSID stands for",
+    "answer": "Service Set Identifier"
+  }
+]

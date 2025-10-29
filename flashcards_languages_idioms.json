@@ -1,0 +1,129 @@
+{
+  "topics": [
+    {
+      "name": "Spanish Idioms",
+      "questions": [
+        {"q": "What does 'Más vale tarde que nunca' mean?", "a": "Better late than never"},
+        {"q": "What does 'Estar en las nubes' mean?", "a": "To be daydreaming"},
+        {"q": "What does 'Ser pan comido' mean?", "a": "To be a piece of cake"},
+        {"q": "What does 'Tirar la toalla' mean?", "a": "To throw in the towel"},
+        {"q": "What does 'Vale la pena' mean?", "a": "It's worth it"},
+        {"q": "What does 'En boca cerrada no entran moscas' mean?", "a": "Silence is golden"},
+        {"q": "What does 'Estar como una cabra' mean?", "a": "To be a little crazy"},
+        {"q": "What does 'No tener pelos en la lengua' mean?", "a": "To speak bluntly"},
+        {"q": "What does 'Ser uña y carne' mean?", "a": "To be inseparable"},
+        {"q": "What does 'Ojos que no ven, corazón que no siente' mean?", "a": "Out of sight, out of mind"},
+        {"q": "What does 'Estar hecho polvo' mean?", "a": "To be exhausted"},
+        {"q": "What does 'Ser la oveja negra' mean?", "a": "To be the black sheep"},
+        {"q": "What does 'Dar en el clavo' mean?", "a": "To hit the nail on the head"},
+        {"q": "What does 'Estar sin blanca' mean?", "a": "To be broke"},
+        {"q": "What does 'Hacerse la vista gorda' mean?", "a": "To turn a blind eye"},
+        {"q": "What does 'Matar dos pájaros de un tiro' mean?", "a": "To kill two birds with one stone"},
+        {"q": "What does 'Estar entre la espada y la pared' mean?", "a": "To be between a rock and a hard place"},
+        {"q": "What does 'Ser todo oídos' mean?", "a": "To be all ears"},
+        {"q": "What does 'Tener la sartén por el mango' mean?", "a": "To be in control"},
+        {"q": "What does 'Estar en apuros' mean?", "a": "To be in trouble"}
+      ]
+    },
+    {
+      "name": "French Proverbs",
+      "questions": [
+        {"q": "What does 'Petit à petit, l’oiseau fait son nid' mean?", "a": "Little by little, the bird builds its nest"},
+        {"q": "What does 'Mieux vaut prévenir que guérir' mean?", "a": "Better safe than sorry"},
+        {"q": "What does 'Qui vivra verra' mean?", "a": "Time will tell"},
+        {"q": "What does 'L’habit ne fait pas le moine' mean?", "a": "Don’t judge a book by its cover"},
+        {"q": "What does 'Tout ce qui brille n’est pas or' mean?", "a": "All that glitters is not gold"},
+        {"q": "What does 'L’appétit vient en mangeant' mean?", "a": "The appetite comes with eating"},
+        {"q": "What does 'Après la pluie, le beau temps' mean?", "a": "After the rain comes sunshine"},
+        {"q": "What does 'Il ne faut pas vendre la peau de l’ours avant de l’avoir tué' mean?", "a": "Don’t count your chickens before they hatch"},
+        {"q": "What does 'Loin des yeux, loin du cœur' mean?", "a": "Out of sight, out of mind"},
+        {"q": "What does 'Mieux vaut tard que jamais' mean?", "a": "Better late than never"},
+        {"q": "What does 'Qui se ressemble s’assemble' mean?", "a": "Birds of a feather flock together"},
+        {"q": "What does 'Chacun voit midi à sa porte' mean?", "a": "Everyone sees noon at their own door (people see things their own way)"},
+        {"q": "What does 'Il n’y a pas de fumée sans feu' mean?", "a": "There’s no smoke without fire"},
+        {"q": "What does 'Pierre qui roule n’amasse pas mousse' mean?", "a": "A rolling stone gathers no moss"},
+        {"q": "What does 'Un tiens vaut mieux que deux tu l’auras' mean?", "a": "A bird in the hand is worth two in the bush"},
+        {"q": "What does 'Tant va la cruche à l’eau qu’à la fin elle se casse' mean?", "a": "If you keep doing something risky, it will eventually go wrong"},
+        {"q": "What does 'Aide-toi, le ciel t’aidera' mean?", "a": "God helps those who help themselves"},
+        {"q": "What does 'Les murs ont des oreilles' mean?", "a": "The walls have ears"},
+        {"q": "What does 'On ne fait pas d’omelette sans casser des œufs' mean?", "a": "You can’t make an omelette without breaking eggs"},
+        {"q": "What does 'Qui court deux lièvres à la fois n’en prend aucun' mean?", "a": "Chasing two rabbits at once, you catch none"}
+      ]
+    },
+    {
+      "name": "German Slang",
+      "questions": [
+        {"q": "What does 'Alter!' mean in German slang?", "a": "Dude!"},
+        {"q": "What does 'Geil' mean in German slang?", "a": "Cool / awesome"},
+        {"q": "What does 'Krass' mean in German slang?", "a": "Extreme / unbelievable"},
+        {"q": "What does 'Quatsch' mean in German slang?", "a": "Nonsense"},
+        {"q": "What does 'Bock haben' mean?", "a": "To feel like doing something"},
+        {"q": "What does 'Kein Bock' mean?", "a": "Don’t feel like it"},
+        {"q": "What does 'Hammer!' mean in German slang?", "a": "Amazing!"},
+        {"q": "What does 'Na?' mean in German slang?", "a": "Hey, what’s up?"},
+        {"q": "What does 'Zocken' mean in German slang?", "a": "To play video games"},
+        {"q": "What does 'Bescheuert' mean?", "a": "Crazy / stupid"},
+        {"q": "What does 'Alter Schwede!' mean?", "a": "Wow! / Incredible!"},
+        {"q": "What does 'Moin!' mean in German slang?", "a": "Hi! (esp. northern Germany)"},
+        {"q": "What does 'Kohle' mean in German slang?", "a": "Money (slang: cash)"},
+        {"q": "What does 'Auf jeden!' mean?", "a": "Definitely!"},
+        {"q": "What does 'Läuft!' mean?", "a": "It’s going well!"},
+        {"q": "What does 'Dufte' mean in German slang?", "a": "Cool / nice"},
+        {"q": "What does 'Klar doch!' mean?", "a": "Of course!"},
+        {"q": "What does 'Mach’s gut!' mean?", "a": "Take care!"},
+        {"q": "What does 'Bis später!' mean?", "a": "See you later!"},
+        {"q": "What does 'Alles klar?' mean?", "a": "Everything okay?"}
+      ]
+    },
+    {
+      "name": "Japanese Expressions",
+      "questions": [
+        {"q": "What does 'いただきます (Itadakimasu)' mean?", "a": "Said before eating (I humbly receive)"},
+        {"q": "What does 'ごちそうさまでした (Gochisousama deshita)' mean?", "a": "Said after eating (Thank you for the meal)"},
+        {"q": "What does 'よろしくお願いします (Yoroshiku onegaishimasu)' mean?", "a": "Please take care of me / Nice to meet you"},
+        {"q": "What does 'お疲れ様です (Otsukaresama desu)' mean?", "a": "Thanks for your hard work"},
+        {"q": "What does 'いってきます (Ittekimasu)' mean?", "a": "I’m leaving (and will come back)"},
+        {"q": "What does 'いってらっしゃい (Itterasshai)' mean?", "a": "Take care / see you later (reply)"},
+        {"q": "What does 'ただいま (Tadaima)' mean?", "a": "I’m home"},
+        {"q": "What does 'おかえり (Okaeri)' mean?", "a": "Welcome back"},
+        {"q": "What does 'すみません (Sumimasen)' mean?", "a": "Excuse me / I’m sorry"},
+        {"q": "What does 'もしもし (Moshi moshi)' mean?", "a": "Hello (on the phone)"},
+        {"q": "What does 'がんばって (Ganbatte)' mean?", "a": "Do your best / Good luck"},
+        {"q": "What does 'かわいい (Kawaii)' mean?", "a": "Cute"},
+        {"q": "What does 'すごい (Sugoi)' mean?", "a": "Amazing"},
+        {"q": "What does 'だめ (Dame)' mean?", "a": "No good / Not allowed"},
+        {"q": "What does 'はい (Hai)' mean?", "a": "Yes"},
+        {"q": "What does 'いいえ (Iie)' mean?", "a": "No"},
+        {"q": "What does '何 (Nani)' mean?", "a": "What"},
+        {"q": "What does 'どこ (Doko)' mean?", "a": "Where"},
+        {"q": "What does 'いつ (Itsu)' mean?", "a": "When"},
+        {"q": "What does '誰 (Dare)' mean?", "a": "Who"}
+      ]
+    },
+    {
+      "name": "Italian Proverbs",
+      "questions": [
+        {"q": "What does 'Chi dorme non piglia pesci' mean?", "a": "You snooze, you lose"},
+        {"q": "What does 'Meglio soli che male accompagnati' mean?", "a": "Better alone than in bad company"},
+        {"q": "What does 'L’abito non fa il monaco' mean?", "a": "Clothes don’t make the man"},
+        {"q": "What does 'Chi va piano va sano e va lontano' mean?", "a": "Slow and steady wins the race"},
+        {"q": "What does 'Tutte le strade portano a Roma' mean?", "a": "All roads lead to Rome"},
+        {"q": "What does 'Non è tutto oro quel che luccica' mean?", "a": "All that glitters is not gold"},
+        {"q": "What does 'Tra il dire e il fare c’è di mezzo il mare' mean?", "a": "Easier said than done"},
+        {"q": "What does 'Paese che vai, usanza che trovi' mean?", "a": "When in Rome, do as the Romans do"},
+        {"q": "What does 'Chi trova un amico trova un tesoro' mean?", "a": "A friend in need is a friend indeed"},
+        {"q": "What does 'Ride bene chi ride ultimo' mean?", "a": "He who laughs last, laughs best"},
+        {"q": "What does 'Occhio per occhio, dente per dente' mean?", "a": "An eye for an eye, a tooth for a tooth"},
+        {"q": "What does 'La speranza è l’ultima a morire' mean?", "a": "Hope is the last to die"},
+        {"q": "What does 'Non si può avere la botte piena e la moglie ubriaca' mean?", "a": "You can’t have your cake and eat it too"},
+        {"q": "What does 'Chi semina vento raccoglie tempesta' mean?", "a": "You reap what you sow"},
+        {"q": "What does 'Gallina vecchia fa buon brodo' mean?", "a": "Old hens make good broth (age brings wisdom)"},
+        {"q": "What does 'Acqua passata non macina più' mean?", "a": "Water under the bridge"},
+        {"q": "What does 'Non tutte le ciambelle riescono col buco' mean?", "a": "Not everything turns out perfectly"},
+        {"q": "What does 'Chi troppo vuole nulla stringe' mean?", "a": "Grasp all, lose all"},
+        {"q": "What does 'La calma è la virtù dei forti' mean?", "a": "Calmness is the virtue of the strong"},
+        {"q": "What does 'Ogni morte di papa' mean?", "a": "Once in a blue moon"}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "topic": "Music Theory (AP)",
+  "cards": [
+    { "q": "Major scale interval pattern", "a": "W W H W W W H" },
+    { "q": "Natural minor pattern", "a": "W H W W H W W" },
+    { "q": "Harmonic minor change", "a": "Raised 7th scale degree" },
+    { "q": "Melodic minor ascending change", "a": "Raised 6th and 7th ascending; natural minor descending" },
+    { "q": "Triad qualities", "a": "Major, minor, diminished, augmented" },
+    { "q": "Seventh chord types (4)", "a": "Major 7, dominant 7, minor 7, half-diminished 7" },
+    { "q": "Roman numerals in major key", "a": "I ii iii IV V vi vii°" },
+    { "q": "Cadence: authentic (V-I) vs plagal (IV-I)", "a": "Perfect/authentic is strongest; plagal is amen cadence" },
+    { "q": "Deceptive cadence", "a": "V to vi (in major) instead of I" },
+    { "q": "Voice leading rule about parallels", "a": "Avoid parallel perfect 5ths and octaves" },
+    { "q": "Non-chord tones examples", "a": "Passing, neighbor, suspension, anticipation" },
+    { "q": "Figured bass 6 means", "a": "First inversion triad (6/3)" },
+    { "q": "Common modulation method", "a": "Pivot chord modulation" },
+    { "q": "Circle of fifths clockwise motion adds", "a": "Sharps" },
+    { "q": "Simple vs compound meter", "a": "Simple: beat divides into 2; compound: beat divides into 3" },
+    { "q": "Syncopation definition", "a": "Emphasis on weak beats or offbeats" },
+    { "q": "Augmentation vs diminution", "a": "Theme with longer vs shorter note values" },
+    { "q": "Counterpoint species (name any)", "a": "First species (note-against-note), etc." },
+    { "q": "Timbre refers to", "a": "Tone color/quality of sound" },
+    { "q": "Form example", "a": "Binary (AB), Ternary (ABA), Sonata form" }
+  ]
+}

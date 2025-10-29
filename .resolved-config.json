@@ -1,0 +1,41 @@
+env: load .env
+env: export EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY EXPO_PUBLIC_PAYMENTS_URL
+
+{
+  name: [32m'Nova Tutoring'[39m,
+  slug: [32m'nova-tutoring'[39m,
+  version: [32m'1.0.0'[39m,
+  orientation: [32m'portrait'[39m,
+  icon: [32m'./app/assets/icon.png'[39m,
+  scheme: [32m'nova'[39m,
+  userInterfaceStyle: [32m'automatic'[39m,
+  assetBundlePatterns: [
+    [32m'**/*'[39m
+  ],
+  platforms: [
+    [32m'ios'[39m,
+    [32m'android'[39m,
+    [32m'web'[39m
+  ],
+  entryPoint: [32m'./expo-router/entry'[39m,
+  description: [90mundefined[39m,
+  sdkVersion: [32m'54.0.0'[39m,
+  splash: {
+    image: [32m'./app/assets/splash.png'[39m,
+    resizeMode: [32m'contain'[39m,
+    backgroundColor: [32m'#000000'[39m
+  },
+  ios: {
+    supportsTablet: [33mtrue[39m
+  },
+  android: {
+    adaptiveIcon: {
+      foregroundImage: [32m'./app/assets/adaptive-icon.png'[39m,
+      backgroundColor: [32m'#000000'[39m
+    }
+  },
+  web: {
+    favicon: [32m'./app/assets/favicon.png'[39m
+  }
+}
+

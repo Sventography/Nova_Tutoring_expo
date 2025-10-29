@@ -1,0 +1,25 @@
+{
+  "topic": "Precalculus",
+  "cards": [
+    { "q": "Domain vs range", "a": "Allowed inputs vs outputs" },
+    { "q": "Even vs odd function", "a": "f(-x)=f(x) vs f(-x)=-f(x)" },
+    { "q": "Function composition", "a": "f(g(x))" },
+    { "q": "Inverse function", "a": "f^{-1} undoes f; reflect across y=x" },
+    { "q": "Polynomial end behavior", "a": "Dominated by leading term degree & sign" },
+    { "q": "Rational function asymptotes", "a": "Vertical at denominator zeros; horizontal/oblique by degrees" },
+    { "q": "Exponential & log inverse", "a": "e^x and ln(x) are inverses" },
+    { "q": "Trig reciprocals", "a": "csc=1/sin, sec=1/cos, cot=1/tan" },
+    { "q": "Trig sum/difference", "a": "sin(A±B), cos(A±B), tan(A±B)" },
+    { "q": "Polar coordinates", "a": "x=r cosθ, y=r sinθ" },
+    { "q": "Parametric form", "a": "x=f(t), y=g(t)" },
+    { "q": "Conic—parabola", "a": "Points equidistant from focus & directrix" },
+    { "q": "Conic—ellipse", "a": "x^2/a^2 + y^2/b^2 = 1" },
+    { "q": "Conic—hyperbola", "a": "x^2/a^2 − y^2/b^2 = 1 (or swapped)" },
+    { "q": "Vectors in plane", "a": "⟨a,b⟩; magnitude √(a^2+b^2)" },
+    { "q": "Dot product", "a": "a·b = |a||b|cosθ; projection" },
+    { "q": "Sequences types", "a": "Arithmetic & geometric" },
+    { "q": "Series notation", "a": "Σ for summation; geometric sum formula" },
+    { "q": "Limit intuition", "a": "Approach value as x→c" },
+    { "q": "Continuity", "a": "Limit exists = function value at c" }
+  ]
+}

@@ -1,0 +1,22 @@
+[
+  ["Simple Interest", "I=Prt."],
+  ["Compound Interest", "A=P(1+r/n)^{nt}."],
+  ["Time Value of Money", "Money now > money later."],
+  ["NPV", "Present value of cash flows minus cost."],
+  ["IRR", "Rate where NPV=0."],
+  ["Payback Period", "Time to recover investment."],
+  ["Risk vs Return", "Higher expected return → higher risk."],
+  ["Diversification", "Spread risk across assets."],
+  ["Stock", "Ownership share in a company."],
+  ["Bond", "Debt security with interest payments."],
+  ["ETF", "Fund traded on an exchange."],
+  ["Beta", "Volatility relative to market."],
+  ["Sharpe Ratio", "Excess return per unit risk."],
+  ["Liquidity", "Ease of converting to cash."],
+  ["Leverage", "Using borrowed funds to invest."],
+  ["P/E Ratio", "Price per share / earnings per share."],
+  ["Dividend", "Portion of profits paid to shareholders."],
+  ["Yield", "Income return on investment."],
+  ["Credit Score", "Measure of creditworthiness."],
+  ["Budget", "Plan for income and expenses."]
+]

@@ -1,0 +1,82 @@
+[
+  {
+    "question": "Parameter vs statistic",
+    "answer": "Population value vs sample value"
+  },
+  {
+    "question": "Standard error of mean",
+    "answer": "s/√n (or σ/√n)"
+  },
+  {
+    "question": "Conditions for one-sample t",
+    "answer": "Random, nearly normal or n large, unknown σ"
+  },
+  {
+    "question": "Two-sample t conditions",
+    "answer": "Independent groups, random, nearly normal"
+  },
+  {
+    "question": "Paired t-test used for",
+    "answer": "Matched pairs or before–after"
+  },
+  {
+    "question": "Hypotheses format",
+    "answer": "H0: parameter = value; Ha: <, >, or ≠"
+  },
+  {
+    "question": "p-value meaning",
+    "answer": "Probability of result as or more extreme if H0 true"
+  },
+  {
+    "question": "Type I error",
+    "answer": "Reject true H0 (α)"
+  },
+  {
+    "question": "Type II error",
+    "answer": "Fail to reject false H0 (β)"
+  },
+  {
+    "question": "Power of a test",
+    "answer": "1 − β"
+  },
+  {
+    "question": "CI for mean (σ unknown)",
+    "answer": "x̄ ± t*·(s/√n)"
+  },
+  {
+    "question": "CI for proportion",
+    "answer": "p̂ ± z*·√[p̂(1−p̂)/n]"
+  },
+  {
+    "question": "Two-proportion z-test condition",
+    "answer": "np̂, n(1−p̂) ≥ 10 in each group"
+  },
+  {
+    "question": "Chi-square GOF tests",
+    "answer": "Distribution fits proposed model"
+  },
+  {
+    "question": "Chi-square independence tests",
+    "answer": "Association in contingency table"
+  },
+  {
+    "question": "ANOVA null hypothesis",
+    "answer": "All group means equal"
+  },
+  {
+    "question": "Multiple comparisons need",
+    "answer": "Adjustment (e.g., Bonferroni)"
+  },
+  {
+    "question": "Interpret CI",
+    "answer": "We are X% confident interval captures true parameter"
+  },
+  {
+    "question": "Effect size example",
+    "answer": "Cohen’s d"
+  },
+  {
+    "question": "Nonparametric alternative",
+    "answer": "Mann–Whitney U, Wilcoxon signed-rank"
+  }
+]

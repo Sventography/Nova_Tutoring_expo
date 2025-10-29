@@ -1,0 +1,25 @@
+{
+  "topic": "Earth Science",
+  "cards": [
+    { "q": "Layers of Earth", "a": "Crust, mantle, outer core, inner core" },
+    { "q": "Rock types", "a": "Igneous, sedimentary, metamorphic" },
+    { "q": "Rock cycle", "a": "Processes transform rock types" },
+    { "q": "Plate tectonics", "a": "Lithospheric plates move on asthenosphere" },
+    { "q": "Convergent boundary", "a": "Collision/subduction; trenches, mountains" },
+    { "q": "Divergent boundary", "a": "Spreading; mid-ocean ridges, rifts" },
+    { "q": "Transform boundary", "a": "Lateral sliding; earthquakes" },
+    { "q": "Seismic waves", "a": "P-waves (longitudinal), S-waves (transverse)" },
+    { "q": "Richter vs moment magnitude", "a": "Legacy vs modern energy-based scale" },
+    { "q": "Volcano types", "a": "Shield, composite, cinder cone" },
+    { "q": "Weathering vs erosion", "a": "Breakdown vs transport of material" },
+    { "q": "Water cycle", "a": "Evaporation, condensation, precipitation, runoff" },
+    { "q": "Atmospheric layers", "a": "Troposphere, stratosphere, mesosphere, thermosphere, exosphere" },
+    { "q": "Ozone layer", "a": "Absorbs UV in stratosphere" },
+    { "q": "Ocean currents drivers", "a": "Wind, density (salinity/temp), Coriolis" },
+    { "q": "El Niño", "a": "Warm Pacific anomaly alters climate" },
+    { "q": "Mineral", "a": "Naturally occurring, inorganic, crystalline solid" },
+    { "q": "Fossil", "a": "Preserved remains/traces of past life" },
+    { "q": "Geologic time eons", "a": "Hadean, Archean, Proterozoic, Phanerozoic" },
+    { "q": "Big Bang age", "a": "~13.8 billion years ago" }
+  ]
+}

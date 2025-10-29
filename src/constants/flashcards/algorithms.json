@@ -1,0 +1,82 @@
+[
+  {
+    "question": "Algorithm definition",
+    "answer": "Step-by-step procedure to solve a problem"
+  },
+  {
+    "question": "Linear search time complexity",
+    "answer": "O(n)"
+  },
+  {
+    "question": "Binary search requirement",
+    "answer": "Sorted list"
+  },
+  {
+    "question": "Binary search time complexity",
+    "answer": "O(log n)"
+  },
+  {
+    "question": "Bubble sort average complexity",
+    "answer": "O(n^2)"
+  },
+  {
+    "question": "Merge sort average complexity",
+    "answer": "O(n log n)"
+  },
+  {
+    "question": "Quick sort average complexity",
+    "answer": "O(n log n)"
+  },
+  {
+    "question": "Quick sort worst case",
+    "answer": "O(n^2)"
+  },
+  {
+    "question": "Selection sort complexity",
+    "answer": "O(n^2)"
+  },
+  {
+    "question": "Insertion sort best case",
+    "answer": "O(n)"
+  },
+  {
+    "question": "Heap sort complexity",
+    "answer": "O(n log n)"
+  },
+  {
+    "question": "Graph traversal BFS uses",
+    "answer": "Queue"
+  },
+  {
+    "question": "Graph traversal DFS uses",
+    "answer": "Stack (recursion)"
+  },
+  {
+    "question": "Dijkstra’s algorithm finds",
+    "answer": "Shortest path in weighted graph"
+  },
+  {
+    "question": "Kruskal’s algorithm builds",
+    "answer": "Minimum spanning tree"
+  },
+  {
+    "question": "Big-O notation measures",
+    "answer": "Asymptotic runtime upper bound"
+  },
+  {
+    "question": "Big-Theta measures",
+    "answer": "Tight runtime bound"
+  },
+  {
+    "question": "Big-Omega measures",
+    "answer": "Asymptotic lower bound"
+  },
+  {
+    "question": "Greedy algorithm chooses",
+    "answer": "Locally optimal step each time"
+  },
+  {
+    "question": "Dynamic programming uses",
+    "answer": "Overlapping subproblems and memoization"
+  }
+]

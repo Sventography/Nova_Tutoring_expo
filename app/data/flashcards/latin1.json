@@ -1,0 +1,25 @@
+{
+  "topic": "Latin I",
+  "cards": [
+    { "q": "Latin alphabet note", "a": "Classical Latin used 23 letters; no J, U, W" },
+    { "q": "Case system purpose", "a": "Indicates grammatical role via noun endings" },
+    { "q": "Nominative vs accusative", "a": "Subject vs direct object" },
+    { "q": "Genitive case meaning", "a": "Possession (of)" },
+    { "q": "Dative case meaning", "a": "Indirect object (to/for)" },
+    { "q": "Ablative case uses", "a": "Means, manner, separation, with prepositions" },
+    { "q": "First declension endings (nom/gen sg)", "a": "a, ae (mostly feminine)" },
+    { "q": "Second declension endings (nom/gen sg)", "a": "us/er, i (mostly masculine/neuter)" },
+    { "q": "Third declension genitive singular", "a": "is" },
+    { "q": "Verb principal parts (example: amo)", "a": "amo, amare, amavi, amatus" },
+    { "q": "Present tense endings (1st conj.)", "a": "-o, -s, -t, -mus, -tis, -nt" },
+    { "q": "Sum, esse present", "a": "sum, es, est, sumus, estis, sunt" },
+    { "q": "Object of preposition in Latin often takes", "a": "Accusative or ablative" },
+    { "q": "Word order tendency", "a": "SOV (flexible due to cases)" },
+    { "q": "Adjective agreement rule", "a": "Agree in gender, number, and case with noun" },
+    { "q": "Basic numbers 1-3", "a": "unus, duo, tres" },
+    { "q": "Family words (mother, father, son, daughter)", "a": "mater, pater, filius, filia" },
+    { "q": "Salve/Salvete used for", "a": "Hello (sg/pl)" },
+    { "q": "Vale/Valete used for", "a": "Goodbye (sg/pl)" },
+    { "q": "SPQR stands for", "a": "Senatus Populusque Romanus" }
+  ]
+}

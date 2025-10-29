@@ -1,0 +1,82 @@
+[
+  {
+    "question": "Randomization in experiments ensures",
+    "answer": "Balances confounders across groups"
+  },
+  {
+    "question": "Blocking purpose",
+    "answer": "Reduce variability by grouping similar units"
+  },
+  {
+    "question": "SRS stands for",
+    "answer": "Simple Random Sample"
+  },
+  {
+    "question": "Stratified sampling",
+    "answer": "Sample within homogeneous subgroups"
+  },
+  {
+    "question": "Cluster sampling",
+    "answer": "Sample groups then survey all within"
+  },
+  {
+    "question": "Sampling bias occurs when",
+    "answer": "Non-representative selection"
+  },
+  {
+    "question": "Confounding variable",
+    "answer": "Associated with both explanatory and response"
+  },
+  {
+    "question": "Residual plot for good fit",
+    "answer": "Random scatter around zero"
+  },
+  {
+    "question": "Coefficient of determination",
+    "answer": "R^2"
+  },
+  {
+    "question": "Sampling distribution of mean",
+    "answer": "Mean μ, SD σ/√n"
+  },
+  {
+    "question": "Standard error",
+    "answer": "Estimate of SD of statistic"
+  },
+  {
+    "question": "Conditions for proportion z-test",
+    "answer": "np̂ ≥ 10 and n(1−p̂) ≥ 10"
+  },
+  {
+    "question": "Two-sample t conditions",
+    "answer": "Independent, nearly normal or large n"
+  },
+  {
+    "question": "Power of a test",
+    "answer": "1 − β, probability to reject false H0"
+  },
+  {
+    "question": "Type I error rate",
+    "answer": "α"
+  },
+  {
+    "question": "Paired t-test use",
+    "answer": "Matched pairs or before/after"
+  },
+  {
+    "question": "ANOVA null hypothesis",
+    "answer": "All group means are equal"
+  },
+  {
+    "question": "Chi-square expected counts",
+    "answer": "(row total × column total)/grand total"
+  },
+  {
+    "question": "Multiple comparisons adjustment",
+    "answer": "Control familywise error (e.g., Bonferroni)"
+  },
+  {
+    "question": "Residual =",
+    "answer": "Observed − fitted"
+  }
+]

@@ -1,0 +1,85 @@
+import React,{useEffect,useMemo,useRef,useState} from 'react';
+import {SafeAreaView,View,Text,TextInput,TouchableOpacity,KeyboardAvoidingView,Platform,StyleSheet,ActivityIndicator,Animated,Easing,ScrollView} from 'react-native';
+import {ask} from '../../lib/ask';
+
+export default function Ask(){
+  const [q,setQ]=useState('');
+  const [a,setA]=useState('');
+  const [busy,setBusy]=useState(false);
+  const [used,setUsed]=useState<{ai:boolean;wiki:boolean}>({ai:false,wiki:false});
+  const blink=useRef(new Animated.Value(0)).current;
+
+  useEffect(()=>{
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(blink,{toValue:1,duration:600,useNativeDriver:true,easing:Easing.inOut(Easing.quad)}),
+        Animated.timing(blink,{toValue:0,duration:600,useNativeDriver:true,easing:Easing.inOut(Easing.quad)})
+      ])
+    ).start();
+  },[blink]);
+
+  async function go(){
+    const qq=q.trim();
+    if(!qq) return;
+    setBusy(true);
+    setA('');
+    const r=await ask(qq);
+    setA(r.text);
+    setUsed({ai:r.usedOpenAI,wiki:r.usedWiki});
+    setBusy(false);
+  }
+
+  const thinkingOpacity=blink.interpolate({inputRange:[0,1],outputRange:[0.25,1]});
+
+  return (
+    <SafeAreaView style={s.wrap}>
+      <ScrollView style={{flex:1}} contentContainerStyle={{padding:16}}>
+        {!!a && (
+          <View style={s.card}>
+            <Text style={s.txt}>{a}</Text>
+            <Text style={[s.txt,{marginTop:12,opacity:0.7}]}>
+              Sources: {used.ai?'OpenAI':''}{used.ai&&used.wiki?', ':''}{used.wiki?'Wikipedia':''}{!used.ai&&!used.wiki?'OpenAI, Wikipedia':''}
+            </Text>
+          </View>
+        )}
+        {busy && (
+          <Animated.View style={[s.think,{opacity:thinkingOpacity}]}>
+            <Text style={s.thinkTxt}>Nova is thinking…</Text>
+          </Animated.View>
+        )}
+      </ScrollView>
+
+      <KeyboardAvoidingView behavior={Platform.select({ios:'padding',android:undefined})} keyboardVerticalOffset={Platform.select({ios:24,android:0})}>
+        <View style={s.inputBar}>
+          <View style={s.inputShell}>
+            <TextInput
+              style={s.input}
+              placeholder="Ask anything…"
+              placeholderTextColor="#9cc"
+              value={q}
+              onChangeText={setQ}
+              returnKeyType="send"
+              onSubmitEditing={go}
+            />
+          </View>
+          <TouchableOpacity onPress={go} disabled={busy} style={s.askBtn}>
+            {busy? <ActivityIndicator/> : <Text style={s.askTxt}>Ask</Text>}
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+}
+
+const s=StyleSheet.create({
+  wrap:{flex:1,backgroundColor:'#000'},
+  card:{backgroundColor:'#0b1220',borderRadius:14,padding:16,borderWidth:2,borderColor:'#0ff',shadowColor:'#00eaff',shadowOpacity:0.4,shadowRadius:12,shadowOffset:{width:0,height:0}},
+  txt:{color:'#e6f7ff',fontSize:16,lineHeight:22},
+  think:{alignSelf:'center',marginTop:12,backgroundColor:'#021826',paddingHorizontal:12,paddingVertical:6,borderRadius:999},
+  thinkTxt:{color:'#a8ecff',fontWeight:'700'},
+  inputBar:{flexDirection:'row',alignItems:'center',gap:10,paddingVertical:10,paddingHorizontal:12},
+  inputShell:{flex:1,borderRadius:14,backgroundColor:'#0b1220',borderWidth:2,borderColor:'#00eaff',shadowColor:'#00eaff',shadowOpacity:0.45,shadowRadius:18,shadowOffset:{width:0,height:0}},
+  input:{paddingHorizontal:14,paddingVertical:12,color:'#e6f7ff',fontSize:16},
+  askBtn:{backgroundColor:'#00d0ff',paddingHorizontal:18,paddingVertical:12,borderRadius:14},
+  askTxt:{color:'#00111a',fontWeight:'900'}
+});

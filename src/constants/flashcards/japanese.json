@@ -1,0 +1,82 @@
+[
+  {
+    "question": "Three scripts of Japanese",
+    "answer": "Hiragana, Katakana, Kanji"
+  },
+  {
+    "question": "Topic marker particle",
+    "answer": "は (wa)"
+  },
+  {
+    "question": "Subject marker particle",
+    "answer": "が (ga)"
+  },
+  {
+    "question": "Object marker particle",
+    "answer": "を (o)"
+  },
+  {
+    "question": "Location/goal particle",
+    "answer": "に (ni)"
+  },
+  {
+    "question": "Location of action particle",
+    "answer": "で (de)"
+  },
+  {
+    "question": "Polite present verb ending",
+    "answer": "-ます"
+  },
+  {
+    "question": "Negative polite present",
+    "answer": "-ません"
+  },
+  {
+    "question": "Past polite",
+    "answer": "-ました"
+  },
+  {
+    "question": "Adjective types",
+    "answer": "い-adjectives and な-adjectives"
+  },
+  {
+    "question": "Make い-adjective negative",
+    "answer": "drop い + くない"
+  },
+  {
+    "question": "Te-form use",
+    "answer": "Connecting actions, requests, progressive"
+  },
+  {
+    "question": "Request with ください",
+    "answer": "Verb-て + ください"
+  },
+  {
+    "question": "Existence verbs",
+    "answer": "いる (animate), ある (inanimate)"
+  },
+  {
+    "question": "Counter for people",
+    "answer": "〜人 (nin)"
+  },
+  {
+    "question": "Saying ‘can do’",
+    "answer": "〜ことができる or potential form"
+  },
+  {
+    "question": "Past negative polite",
+    "answer": "-ませんでした"
+  },
+  {
+    "question": "Question particle",
+    "answer": "か"
+  },
+  {
+    "question": "Possession particle",
+    "answer": "の"
+  },
+  {
+    "question": "SOV basic word order",
+    "answer": "Subject–Object–Verb"
+  }
+]

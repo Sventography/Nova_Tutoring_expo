@@ -1,0 +1,30 @@
+[
+  {
+    "id": "first_teaser",
+    "title": "Riddle Me This",
+    "description": "Solve your very first Brain Teaser.",
+    "difficulty": "bronze",
+    "coins": 10
+  },
+  {
+    "id": "both_teasers_day",
+    "title": "Double Riddle Master",
+    "description": "Solve both Brain Teasers in the same day.",
+    "difficulty": "silver",
+    "coins": 25
+  },
+  {
+    "id": "teaser_streak_7",
+    "title": "Riddle Streak",
+    "description": "Solve at least one Brain Teaser each day for 7 days straight.",
+    "difficulty": "gold",
+    "coins": 100
+  },
+  {
+    "id": "teaser_total_50",
+    "title": "Riddle Legend",
+    "description": "Solve 50 Brain Teasers in total.",
+    "difficulty": "diamond",
+    "coins": 250
+  }
+]

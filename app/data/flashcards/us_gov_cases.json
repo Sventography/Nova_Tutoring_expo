@@ -1,0 +1,25 @@
+{
+  "topic": "U.S. Government: Supreme Court Cases",
+  "cards": [
+    { "q": "Marbury v Madison (1803)", "a": "Established judicial review" },
+    { "q": "McCulloch v Maryland (1819)", "a": "Implied powers; states cannot tax federal bank" },
+    { "q": "Gibbons v Ogden (1824)", "a": "Broad view of commerce clause" },
+    { "q": "Dred Scott v Sandford (1857)", "a": "African Americans not citizens (overturned later)" },
+    { "q": "Plessy v Ferguson (1896)", "a": "Separate but equal allowed (overruled 1954)" },
+    { "q": "Brown v Board (1954)", "a": "School segregation unconstitutional" },
+    { "q": "Gideon v Wainwright (1963)", "a": "Right to counsel in felony cases" },
+    { "q": "Miranda v Arizona (1966)", "a": "Miranda warnings required" },
+    { "q": "New York Times v U.S. (1971)", "a": "Pentagon Papers; prior restraint limited" },
+    { "q": "Roe v Wade (1973)", "a": "Abortion rights (later changed by Dobbs 2022)" },
+    { "q": "U.S. v Nixon (1974)", "a": "Executive privilege limited" },
+    { "q": "Tinker v Des Moines (1969)", "a": "Student speech protected" },
+    { "q": "Engel v Vitale (1962)", "a": "No school sponsored prayer" },
+    { "q": "Mapp v Ohio (1961)", "a": "Exclusionary rule applies to states" },
+    { "q": "Texas v Johnson (1989)", "a": "Flag burning protected speech" },
+    { "q": "Bush v Gore (2000)", "a": "Stopped Florida recount" },
+    { "q": "Citizens United v FEC (2010)", "a": "Independent political spending protected" },
+    { "q": "Obergefell v Hodges (2015)", "a": "Same sex marriage legalized" },
+    { "q": "McDonald v Chicago (2010)", "a": "Incorporated 2nd Amendment" },
+    { "q": "Shelby County v Holder (2013)", "a": "Weakened Voting Rights Act preclearance" }
+  ]
+}

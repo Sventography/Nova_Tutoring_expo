@@ -1,0 +1,25 @@
+{
+  "topic": "World History: Asia",
+  "cards": [
+    { "q": "Indus Valley cities", "a": "Harappa and Mohenjo-Daro; grid plans and drainage" },
+    { "q": "Mandate of Heaven idea", "a": "Zhou justification for ruling legitimacy" },
+    { "q": "Confucian virtues emphasize", "a": "Filial piety, ritual propriety, benevolence" },
+    { "q": "Han dynasty innovations", "a": "Paper, civil service exams, Silk Road expansion" },
+    { "q": "Gupta Empire noted for", "a": "Art, math (zero), and Hindu culture revival" },
+    { "q": "Tang and Song achievements", "a": "Gunpowder, compass, woodblock printing" },
+    { "q": "Mongol Yuan impact on China", "a": "Expanded trade; Pax Mongolica" },
+    { "q": "Ming dynasty voyages led by", "a": "Zheng He in early 1400s" },
+    { "q": "Tokugawa Japan policy", "a": "Sakoku isolation; stable feudal order" },
+    { "q": "Qing dynasty last emperor", "a": "Puyi (abdicated 1912)" },
+    { "q": "Opium Wars outcome", "a": "Unequal treaties; treaty ports opened" },
+    { "q": "Meiji Restoration (1868) effect", "a": "Rapid modernization and industrialization of Japan" },
+    { "q": "Indian independence leader", "a": "Mahatma Gandhi; nonviolent resistance" },
+    { "q": "Partition of India year", "a": "1947; India and Pakistan created" },
+    { "q": "Chinese Civil War result 1949", "a": "PRC established; Nationalists to Taiwan" },
+    { "q": "Cultural Revolution years", "a": "1966-1976; Red Guards, upheaval" },
+    { "q": "Korean War years", "a": "1950-1953; peninsula divided at DMZ" },
+    { "q": "Vietnam War context", "a": "Cold War conflict; reunification 1975" },
+    { "q": "Asian Tigers economies", "a": "South Korea, Taiwan, Hong Kong, Singapore rapid growth" },
+    { "q": "ASEAN purpose", "a": "Regional cooperation in SE Asia (founded 1967)" }
+  ]
+}

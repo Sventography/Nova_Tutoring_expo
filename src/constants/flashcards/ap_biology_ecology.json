@@ -1,0 +1,82 @@
+[
+  {
+    "question": "Primary productivity measures",
+    "answer": "Rate of biomass formation by producers"
+  },
+  {
+    "question": "Gross vs net primary productivity",
+    "answer": "GPP is total; NPP = GPP − respiration"
+  },
+  {
+    "question": "10% rule refers to",
+    "answer": "~10% of energy transfers to next trophic level"
+  },
+  {
+    "question": "Top-down control is driven by",
+    "answer": "Consumers/predators"
+  },
+  {
+    "question": "Bottom-up control is driven by",
+    "answer": "Resource availability"
+  },
+  {
+    "question": "Keystone species effect",
+    "answer": "Disproportionate influence on community"
+  },
+  {
+    "question": "Species richness vs evenness",
+    "answer": "Number of species vs relative abundance"
+  },
+  {
+    "question": "Shannon index captures",
+    "answer": "Diversity (richness + evenness)"
+  },
+  {
+    "question": "Fundamental vs realized niche",
+    "answer": "Potential vs actual niche occupied"
+  },
+  {
+    "question": "Competitive exclusion principle",
+    "answer": "No two species share identical niche indefinitely"
+  },
+  {
+    "question": "Resource partitioning reduces",
+    "answer": "Competition by niche differentiation"
+  },
+  {
+    "question": "Island biogeography predicts",
+    "answer": "Bigger/near islands have more species"
+  },
+  {
+    "question": "Succession primary vs secondary",
+    "answer": "No soil vs soil present"
+  },
+  {
+    "question": "r-selected traits",
+    "answer": "High reproduction, short lifespan"
+  },
+  {
+    "question": "K-selected traits",
+    "answer": "Low reproduction, high parental care"
+  },
+  {
+    "question": "Eutrophication trigger",
+    "answer": "Nutrient enrichment (N,P) leading to hypoxia"
+  },
+  {
+    "question": "Nitrogen fixation does",
+    "answer": "Converts N2 to ammonia/ammonium"
+  },
+  {
+    "question": "Carbon sink example",
+    "answer": "Oceans, forests, soils"
+  },
+  {
+    "question": "Edge effects increase",
+    "answer": "Species adapted to boundaries"
+  },
+  {
+    "question": "Biological magnification means",
+    "answer": "Toxins increase up trophic levels"
+  }
+]

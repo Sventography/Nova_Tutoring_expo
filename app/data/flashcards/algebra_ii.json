@@ -1,0 +1,25 @@
+{
+  "topic": "Algebra II",
+  "cards": [
+    { "q": "Quadratic standard form", "a": "ax^2 + bx + c" },
+    { "q": "Quadratic formula", "a": "x = [-b ± √(b^2 - 4ac)]/(2a)" },
+    { "q": "Discriminant meaning", "a": "b^2 - 4ac; determines number/type of roots" },
+    { "q": "Vertex form", "a": "a(x - h)^2 + k; vertex (h, k)" },
+    { "q": "Completing the square", "a": "Create perfect square trinomial to solve" },
+    { "q": "Polynomial division", "a": "Long or synthetic division methods" },
+    { "q": "Remainder Theorem", "a": "f(c) equals remainder of division by (x - c)" },
+    { "q": "Exponent rules", "a": "a^m a^n = a^{m+n}; (a^m)^n = a^{mn}" },
+    { "q": "Log properties", "a": "log(ab)=log a+log b; log(a^k)=k log a" },
+    { "q": "Change of base", "a": "log_b a = (log a)/(log b)" },
+    { "q": "Exponential growth/decay", "a": "y = y0 a^t (a>1 growth; 0<a<1 decay)" },
+    { "q": "Function composition", "a": "(f ∘ g)(x) = f(g(x))" },
+    { "q": "Inverse function test", "a": "Horizontal line test" },
+    { "q": "Complex number i^2", "a": "-1" },
+    { "q": "Conjugate of a+bi", "a": "a - bi; used to rationalize" },
+    { "q": "Arithmetic sequence", "a": "a_n = a1 + (n-1)d" },
+    { "q": "Geometric sequence", "a": "a_n = a1 r^{n-1}" },
+    { "q": "Binomial theorem", "a": "Use nCr coefficients to expand (a+b)^n" },
+    { "q": "Systems solving", "a": "Substitution, elimination, matrices" },
+    { "q": "Absolute value equation", "a": "|x|=a → x=±a; consider piecewise cases" }
+  ]
+}

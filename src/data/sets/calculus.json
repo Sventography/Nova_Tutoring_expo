@@ -1,0 +1,22 @@
+[
+  ["Limit", "Value f(x) approaches as x→a."],
+  ["Continuity", "No breaks: lim = value at point."],
+  ["Derivative", "Instantaneous rate of change."],
+  ["Power Rule", "d/dx x^n = n x^(n-1)."],
+  ["Product Rule", "(fg)' = f'g + fg'."],
+  ["Quotient Rule", "(f/g)' = (f'g − fg')/g²."],
+  ["Chain Rule", "(f∘g)' = (f'∘g)·g'."],
+  ["Critical Point", "f'(x)=0 or undefined."],
+  ["Mean Value Theorem", "Slope secant = slope tangent somewhere."],
+  ["Optimization", "Max/min using derivatives."],
+  ["Definite Integral", "Signed area under curve."],
+  ["FTC Part I", "Derivative of integral returns integrand."],
+  ["FTC Part II", "∫_a^b f = F(b)-F(a)."],
+  ["Substitution", "Integrate via variable change."],
+  ["Integration by Parts", "∫u dv = uv − ∫v du."],
+  ["Partial Fractions", "Decompose rational integrand."],
+  ["L'Hôpital's Rule", "Use derivatives for 0/0, ∞/∞ limits."],
+  ["Series Convergence", "Tests: ratio, root, integral."],
+  ["Taylor Series", "Power series expansion at a point."],
+  ["Differential Eq", "Equations involving derivatives."]
+]

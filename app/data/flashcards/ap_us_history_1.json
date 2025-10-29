@@ -1,0 +1,25 @@
+{
+  "topic": "AP U.S. History: Colonial to Civil War",
+  "cards": [
+    { "q": "Jamestown founded year", "a": "1607" },
+    { "q": "Mayflower Compact purpose", "a": "Self-government agreement" },
+    { "q": "Great Awakening result", "a": "Religious revival; challenged authority" },
+    { "q": "French and Indian War outcome", "a": "British win; debt -> taxes" },
+    { "q": "Declaration of Independence year", "a": "1776" },
+    { "q": "Articles of Confederation weakness", "a": "Weak central gov; no tax power" },
+    { "q": "Constitution ratified", "a": "1788" },
+    { "q": "Bill of Rights added", "a": "1791" },
+    { "q": "Louisiana Purchase year", "a": "1803" },
+    { "q": "War of 1812 cause", "a": "Impressment; trade restrictions" },
+    { "q": "Missouri Compromise", "a": "1820; balanced slave/free states" },
+    { "q": "Monroe Doctrine", "a": "Warned Europe not to colonize Americas" },
+    { "q": "Trail of Tears", "a": "Cherokee forced removal 1830s" },
+    { "q": "Mexican-American War years", "a": "1846-1848" },
+    { "q": "Compromise of 1850", "a": "CA free; Fugitive Slave Act" },
+    { "q": "Kansas-Nebraska Act", "a": "1854; popular sovereignty -> Bleeding Kansas" },
+    { "q": "Dred Scott decision", "a": "Slaves not citizens; Congress no power to ban slavery" },
+    { "q": "Lincoln elected", "a": "1860" },
+    { "q": "Civil War years", "a": "1861-1865" },
+    { "q": "Emancipation Proclamation", "a": "1863; freed slaves in rebellion states" }
+  ]
+}

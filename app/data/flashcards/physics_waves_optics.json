@@ -1,0 +1,25 @@
+{
+  "topic": "Physics: Waves & Optics",
+  "cards": [
+    { "q": "Wave speed", "a": "v = fλ" },
+    { "q": "Superposition principle", "a": "Waves add algebraically" },
+    { "q": "Standing wave condition", "a": "Nodes/antinodes; resonance" },
+    { "q": "Doppler effect", "a": "Frequency shift due to motion" },
+    { "q": "Sound intensity level", "a": "β = 10 log10(I/I0) dB" },
+    { "q": "Snell's law", "a": "n1 sinθ1 = n2 sinθ2" },
+    { "q": "Critical angle/total internal reflection", "a": "θc when n1>n2; beyond → TIR" },
+    { "q": "Thin lens equation", "a": "1/f = 1/do + 1/di" },
+    { "q": "Magnification", "a": "m = −di/do = hi/ho" },
+    { "q": "Interference (Young's)", "a": "Bright when d sinθ = mλ" },
+    { "q": "Diffraction grating", "a": "a sinθ = mλ" },
+    { "q": "Single-slit minima", "a": "a sinθ = mλ (m≠0)" },
+    { "q": "Polarizers", "a": "I = I0 cos^2θ (Malus)" },
+    { "q": "Huygens principle", "a": "Wavefront as secondary sources" },
+    { "q": "Dispersion", "a": "n varies with λ; prisms" },
+    { "q": "Coherence", "a": "Stable phase relationship" },
+    { "q": "Optical path length", "a": "n×geometric path" },
+    { "q": "Resolution limit", "a": "Rayleigh: θ ≈ 1.22 λ/D" },
+    { "q": "Mirrors vs lenses", "a": "Reflection vs refraction" },
+    { "q": "Fiber optics principle", "a": "Guided by TIR" }
+  ]
+}

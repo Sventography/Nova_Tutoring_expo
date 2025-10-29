@@ -1,0 +1,25 @@
+{
+  "topic": "Statistics: Inference & Regression",
+  "cards": [
+    { "q": "Parameter vs statistic", "a": "Population quantity vs sample estimate" },
+    { "q": "Sampling distribution", "a": "Distribution of a statistic over samples" },
+    { "q": "Standard error", "a": "SD of sampling distribution" },
+    { "q": "Confidence interval form", "a": "Estimate ± (critical value)(SE)" },
+    { "q": "Null vs alternative", "a": "H0 no effect; H1 effect/difference" },
+    { "q": "p-value meaning", "a": "Prob. of data if H0 true" },
+    { "q": "Type I vs Type II", "a": "False positive (α) vs false negative (β)" },
+    { "q": "Power of a test", "a": "1 - β; chance to detect true effect" },
+    { "q": "t-test uses", "a": "Means with unknown σ, small n" },
+    { "q": "ANOVA purpose", "a": "Compare >2 means" },
+    { "q": "Chi-square test", "a": "Categorical association/goodness-of-fit" },
+    { "q": "Correlation r", "a": "Linear association strength −1 to 1" },
+    { "q": "OLS assumptions", "a": "Linearity, independence, homoscedasticity, normal errors" },
+    { "q": "Regression equation", "a": "ŷ = β0 + β1x" },
+    { "q": "R^2 meaning", "a": "Variance explained by model" },
+    { "q": "Residual", "a": "Observed − predicted value" },
+    { "q": "Multicollinearity issue", "a": "Predictors highly correlated" },
+    { "q": "Logistic regression output", "a": "Probability via log-odds" },
+    { "q": "Nonparametric example", "a": "Mann–Whitney U, Kruskal–Wallis" },
+    { "q": "Multiple testing control", "a": "Bonferroni, FDR (Benjamini–Hochberg)" }
+  ]
+}

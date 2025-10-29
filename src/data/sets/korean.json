@@ -1,0 +1,22 @@
+[
+  ["안녕하세요", "Hello"],
+  ["안녕히 가세요", "Goodbye"],
+  ["제발", "Please"],
+  ["감사합니다", "Thank you"],
+  ["네", "Yes"],
+  ["아니요", "No"],
+  ["화장실 어디예요?", "Where is the bathroom?"],
+  ["얼마예요?", "How much is it?"],
+  ["이해하지 못해요", "I don't understand"],
+  ["영어 하세요?", "Do you speak English?"],
+  ["도와주세요", "Help"],
+  ["의사가 필요해요", "I need a doctor"],
+  ["하나부터 열까지", "One to ten"],
+  ["요일", "Monday to Sunday"],
+  ["달", "January to December"],
+  ["색깔", "Basic colors"],
+  ["음식", "Common foods"],
+  ["길 안내", "Left, right, straight"],
+  ["시간", "Time"],
+  ["가족", "Family members"]
+]

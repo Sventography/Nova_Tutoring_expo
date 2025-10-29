@@ -1,0 +1,25 @@
+{
+  "topic": "Physics: Electricity & Magnetism",
+  "cards": [
+    { "q": "Coulomb's law", "a": "F = k q1 q2 / r^2" },
+    { "q": "Electric field", "a": "E = F/q; due to point charge kq/r^2" },
+    { "q": "Electric potential V", "a": "Work per charge; units volt" },
+    { "q": "Capacitance", "a": "C = Q/V; parallel plate C=εA/d" },
+    { "q": "Energy in capacitor", "a": "U = 1/2 C V^2" },
+    { "q": "Ohm's law", "a": "V = I R" },
+    { "q": "Power electric", "a": "P = IV = I^2R = V^2/R" },
+    { "q": "Series resistors", "a": "R_eq = R1+R2+…" },
+    { "q": "Parallel resistors", "a": "1/R_eq = 1/R1 + 1/R2 + …" },
+    { "q": "Kirchhoff's rules", "a": "Junction: ΣI=0; Loop: ΣΔV=0" },
+    { "q": "Magnetic force on charge", "a": "F = q v B sinθ" },
+    { "q": "Magnetic force on wire", "a": "F = I L B sinθ" },
+    { "q": "Biot–Savart/Ampère idea", "a": "Current creates magnetic field" },
+    { "q": "Flux & Faraday's law", "a": "ε = − dΦ_B/dt" },
+    { "q": "Inductance", "a": "V_L = L di/dt" },
+    { "q": "RL time constant", "a": "τ = L/R" },
+    { "q": "RC time constant", "a": "τ = R C" },
+    { "q": "Maxwell's unification", "a": "Electromagnetic waves, c = 1/√(μ₀ε₀)" },
+    { "q": "Polarization", "a": "Electric field orientation of light" },
+    { "q": "AC peak–rms relation", "a": "Vrms = Vp/√2; Irms = Ip/√2" }
+  ]
+}

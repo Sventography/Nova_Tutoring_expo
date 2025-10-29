@@ -1,0 +1,25 @@
+{
+  "topic": "Chemistry: Atomic Structure & Periodic Trends",
+  "cards": [
+    { "q": "Electron configuration order", "a": "Aufbau: 1s 2s 2p 3s 3p 4s 3d ..." },
+    { "q": "Hund's rule", "a": "Maximize unpaired spins" },
+    { "q": "Pauli principle", "a": "2 e− per orbital, opposite spins" },
+    { "q": "Effective nuclear charge (Zeff)", "a": "↑ across period; influences size" },
+    { "q": "Atomic radius trend", "a": "↓ across, ↑ down" },
+    { "q": "Ionization energy trend", "a": "↑ across, ↓ down" },
+    { "q": "Electron affinity", "a": "Energy change adding e−" },
+    { "q": "Electronegativity scale", "a": "Pauling; F highest" },
+    { "q": "Isoelectronic series size", "a": "More protons → smaller radius" },
+    { "q": "Quantum numbers set", "a": "n, l, m_l, m_s" },
+    { "q": "Orbital shapes", "a": "s spherical, p dumbbell, d clover" },
+    { "q": "Photoelectron spectroscopy", "a": "Binding energies verify shells" },
+    { "q": "Ionic vs covalent", "a": "Transfer vs share electrons" },
+    { "q": "Lattice energy", "a": "Stronger for small/high charge ions" },
+    { "q": "Hybridization", "a": "sp, sp2, sp3 etc." },
+    { "q": "VSEPR shapes", "a": "AX_nE_m predicts geometry" },
+    { "q": "Paramagnetic vs diamagnetic", "a": "Unpaired vs all paired e−" },
+    { "q": "Transition metals", "a": "Variable oxidation; colored complexes" },
+    { "q": "Lanthanide contraction", "a": "4f shrink affects later elements" },
+    { "q": "Photoelectric threshold", "a": "ϕ work function" }
+  ]
+}

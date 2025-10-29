@@ -1,0 +1,129 @@
+{
+  "topics": [
+    {
+      "name": "Health & Nutrition",
+      "questions": [
+        {"q": "What nutrient is the body’s main source of energy?", "a": "Carbohydrates"},
+        {"q": "What nutrient builds and repairs muscles?", "a": "Protein"},
+        {"q": "What nutrient stores energy and insulates?", "a": "Fat"},
+        {"q": "What nutrient helps regulate body processes?", "a": "Vitamins"},
+        {"q": "What nutrient builds strong bones and teeth?", "a": "Calcium"},
+        {"q": "What nutrient carries oxygen in blood?", "a": "Iron"},
+        {"q": "What nutrient prevents scurvy?", "a": "Vitamin C"},
+        {"q": "What nutrient prevents rickets?", "a": "Vitamin D"},
+        {"q": "What nutrient prevents night blindness?", "a": "Vitamin A"},
+        {"q": "What nutrient helps blood clotting?", "a": "Vitamin K"},
+        {"q": "What nutrient prevents goiter?", "a": "Iodine"},
+        {"q": "What nutrient is important for metabolism?", "a": "B vitamins"},
+        {"q": "What nutrient is most essential to life?", "a": "Water"},
+        {"q": "What is BMI used for?", "a": "Measure of body fat"},
+        {"q": "What is the average normal human body temperature?", "a": "37°C or 98.6°F"},
+        {"q": "What is the main cause of Type 2 diabetes?", "a": "Insulin resistance"},
+        {"q": "What is the main cause of heart disease?", "a": "Blocked arteries"},
+        {"q": "What is the healthy blood pressure range?", "a": "Around 120/80 mmHg"},
+        {"q": "What is anorexia?", "a": "An eating disorder with extreme food restriction"},
+        {"q": "What is obesity?", "a": "Excess body fat"}
+      ]
+    },
+    {
+      "name": "Political Science",
+      "questions": [
+        {"q": "What is democracy?", "a": "Government by the people"},
+        {"q": "What is a republic?", "a": "Government with elected representatives"},
+        {"q": "What is monarchy?", "a": "Rule by a king or queen"},
+        {"q": "What is dictatorship?", "a": "Rule by one leader with absolute power"},
+        {"q": "What is anarchy?", "a": "Absence of government"},
+        {"q": "What are civil rights?", "a": "Individual freedoms protected by law"},
+        {"q": "What is the Constitution?", "a": "Fundamental law of a nation"},
+        {"q": "What is separation of powers?", "a": "Division of government branches"},
+        {"q": "What are checks and balances?", "a": "System preventing abuse of power"},
+        {"q": "What is federalism?", "a": "Division of power between national and state govts"},
+        {"q": "What is communism?", "a": "System where property is publicly owned"},
+        {"q": "What is socialism?", "a": "System with collective ownership"},
+        {"q": "What is capitalism?", "a": "System with private ownership"},
+        {"q": "What is totalitarianism?", "a": "Government with total control"},
+        {"q": "What is nationalism?", "a": "Pride and loyalty to one’s country"},
+        {"q": "What is globalization?", "a": "Process of world interconnection"},
+        {"q": "What is diplomacy?", "a": "Managing international relations"},
+        {"q": "What is foreign policy?", "a": "Strategy for dealing with other nations"},
+        {"q": "What is public policy?", "a": "Government actions to address issues"},
+        {"q": "What is political ideology?", "a": "Set of beliefs about government"}
+      ]
+    },
+    {
+      "name": "Psychology Basics",
+      "questions": [
+        {"q": "Who is considered the father of psychoanalysis?", "a": "Sigmund Freud"},
+        {"q": "Who is known for behaviorism?", "a": "B.F. Skinner"},
+        {"q": "Who developed classical conditioning?", "a": "Ivan Pavlov"},
+        {"q": "Who developed operant conditioning?", "a": "B.F. Skinner"},
+        {"q": "Who developed the hierarchy of needs?", "a": "Abraham Maslow"},
+        {"q": "Who is known for cognitive development theory?", "a": "Jean Piaget"},
+        {"q": "What is the study of the mind and behavior?", "a": "Psychology"},
+        {"q": "What is memory?", "a": "Ability to store and recall information"},
+        {"q": "What is perception?", "a": "Interpretation of sensory information"},
+        {"q": "What is learning?", "a": "Process of acquiring knowledge or skills"},
+        {"q": "What is motivation?", "a": "Reason for behavior or actions"},
+        {"q": "What is emotion?", "a": "Feelings that influence behavior"},
+        {"q": "What is personality?", "a": "Unique traits of an individual"},
+        {"q": "What is intelligence?", "a": "Ability to acquire and apply knowledge"},
+        {"q": "What is stress?", "a": "Response to challenging demands"},
+        {"q": "What is anxiety?", "a": "Excessive worry or fear"},
+        {"q": "What is depression?", "a": "Persistent sadness or loss of interest"},
+        {"q": "What is social psychology?", "a": "Study of how people influence each other"},
+        {"q": "What is developmental psychology?", "a": "Study of growth and change over time"},
+        {"q": "What is abnormal psychology?", "a": "Study of mental disorders"}
+      ]
+    },
+    {
+      "name": "Environmental Science",
+      "questions": [
+        {"q": "What is the main cause of global warming?", "a": "Greenhouse gases"},
+        {"q": "What gas do humans exhale?", "a": "Carbon dioxide"},
+        {"q": "What gas do plants release?", "a": "Oxygen"},
+        {"q": "What is deforestation?", "a": "Cutting down forests"},
+        {"q": "What is pollution?", "a": "Contamination of environment"},
+        {"q": "What is renewable energy?", "a": "Energy from natural sources like wind, solar"},
+        {"q": "What is nonrenewable energy?", "a": "Energy from finite sources like coal, oil"},
+        {"q": "What is recycling?", "a": "Reusing materials"},
+        {"q": "What is biodiversity?", "a": "Variety of life forms"},
+        {"q": "What is extinction?", "a": "Complete loss of a species"},
+        {"q": "What is endangered species?", "a": "Species at risk of extinction"},
+        {"q": "What is overfishing?", "a": "Catching fish faster than they reproduce"},
+        {"q": "What is desertification?", "a": "Spread of desert conditions"},
+        {"q": "What is ozone layer depletion?", "a": "Loss of ozone in atmosphere"},
+        {"q": "What is acid rain?", "a": "Rain mixed with pollutants"},
+        {"q": "What is conservation?", "a": "Protecting natural resources"},
+        {"q": "What is ecosystem?", "a": "Community of living things in environment"},
+        {"q": "What is habitat?", "a": "Place where organisms live"},
+        {"q": "What is climate change?", "a": "Long-term change in Earth’s climate"},
+        {"q": "What is sustainability?", "a": "Using resources without depleting them"}
+      ]
+    },
+    {
+      "name": "Art & Music Theory",
+      "questions": [
+        {"q": "What are the primary colors?", "a": "Red, blue, yellow"},
+        {"q": "What are the secondary colors?", "a": "Green, orange, purple"},
+        {"q": "What is perspective in art?", "a": "Creating depth in 2D"},
+        {"q": "What is composition in art?", "a": "Arrangement of elements"},
+        {"q": "What are the musical notes in a scale?", "a": "Do, Re, Mi, Fa, Sol, La, Ti"},
+        {"q": "What is tempo in music?", "a": "Speed of the beat"},
+        {"q": "What is rhythm?", "a": "Pattern of sounds and silences"},
+        {"q": "What is harmony?", "a": "Combination of sounds"},
+        {"q": "What is melody?", "a": "Main tune"},
+        {"q": "What is dynamics in music?", "a": "Loudness or softness"},
+        {"q": "What is pitch?", "a": "Highness or lowness of sound"},
+        {"q": "What is timbre?", "a": "Tone color of sound"},
+        {"q": "What is texture in music?", "a": "How many layers of sound"},
+        {"q": "What is a chord?", "a": "Group of notes played together"},
+        {"q": "What is a scale?", "a": "Series of notes in order"},
+        {"q": "What is improvisation?", "a": "Making music on the spot"},
+        {"q": "What is a symphony?", "a": "Large musical composition"},
+        {"q": "What is an opera?", "a": "Drama set to music"},
+        {"q": "What is perspective drawing?", "a": "3D illusion in art"},
+        {"q": "What is abstract art?", "a": "Art that doesn’t represent reality directly"}
+      ]
+    }
+  ]
+}

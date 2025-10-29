@@ -1,0 +1,25 @@
+{
+  "topic": "Health & Nutrition (Core)",
+  "cards": [
+    { "q": "Macronutrients 3 types", "a": "Carbohydrates, proteins, fats" },
+    { "q": "Micronutrients examples", "a": "Vitamins and minerals (e.g., Vit C, iron)" },
+    { "q": "Basal metabolic rate (BMR) is", "a": "Energy needed at rest for basic functions" },
+    { "q": "BMI stands for", "a": "Body Mass Index (kg/m^2)" },
+    { "q": "Dietary fiber benefits", "a": "Digestive health, satiety, cholesterol control" },
+    { "q": "Complete protein definition", "a": "Contains all essential amino acids" },
+    { "q": "Unsaturated vs saturated fats", "a": "Unsaturated typically liquid; saturated typically solid at room temp" },
+    { "q": "Hydration guideline (general)", "a": "Adjust to thirst, activity, climate; water is primary" },
+    { "q": "Added sugars recommendation", "a": "Limit; focus on whole foods" },
+    { "q": "Food label: %DV meaning", "a": "Percent daily value for a nutrient" },
+    { "q": "Energy density vs nutrient density", "a": "Energy dense: many kcal; nutrient dense: vitamins/minerals per kcal" },
+    { "q": "Simple vs complex carbs", "a": "Simple: quick absorption; complex: slower, fiber-rich" },
+    { "q": "Safe food temperature rule", "a": "Keep hot foods hot, cold foods cold; avoid danger zone" },
+    { "q": "Portion vs serving size", "a": "Portion is what you eat; serving is reference amount" },
+    { "q": "Physical activity guideline (adults)", "a": "Aim ~150 min moderate or 75 min vigorous weekly + strength work" },
+    { "q": "Sleep target for most adults", "a": "7-9 hours per night" },
+    { "q": "Allergy vs intolerance", "a": "Allergy is immune response; intolerance is non-immune (e.g., lactose)" },
+    { "q": "Iron deficiency sign example", "a": "Fatigue (due to reduced oxygen transport)" },
+    { "q": "Vitamin D main sources", "a": "Sun exposure, fortified foods, fatty fish" },
+    { "q": "Mindful eating means", "a": "Attentive, non-distracted, hunger/fullness cues" }
+  ]
+}

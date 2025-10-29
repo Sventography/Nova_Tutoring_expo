@@ -1,0 +1,6 @@
+const { getDefaultConfig } = require("expo/metro-config");
+
+const config = getDefaultConfig(__dirname);
+
+// No special resolver hacks needed; babel module-resolver handles aliases.
+module.exports = config;

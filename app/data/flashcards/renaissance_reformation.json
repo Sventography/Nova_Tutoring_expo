@@ -1,0 +1,25 @@
+{
+  "topic": "Renaissance & Reformation",
+  "cards": [
+    { "q": "Renaissance meaning", "a": "Rebirth of classical learning" },
+    { "q": "Humanism", "a": "Focus on human potential/achievements" },
+    { "q": "Key artists", "a": "Da Vinci, Michelangelo, Raphael" },
+    { "q": "Printing press inventor", "a": "Johannes Gutenberg (1450s)" },
+    { "q": "Machiavelli’s work", "a": "The Prince (1513)" },
+    { "q": "Martin Luther’s act", "a": "95 Theses (1517)" },
+    { "q": "Indulgence", "a": "Pardon reducing punishment for sin" },
+    { "q": "Protestant Reformation result", "a": "New denominations" },
+    { "q": "John Calvin doctrine", "a": "Predestination" },
+    { "q": "Henry VIII reason", "a": "Broke with Rome for annulment" },
+    { "q": "Counter-Reformation body", "a": "Council of Trent" },
+    { "q": "Jesuits role", "a": "Education, missionary work" },
+    { "q": "Spanish Inquisition", "a": "Church court against heresy" },
+    { "q": "Elizabeth I settlement", "a": "Compromise Anglican church" },
+    { "q": "Shakespeare era", "a": "Elizabethan theatre" },
+    { "q": "Scientific Revolution link", "a": "Copernicus, Galileo challenged tradition" },
+    { "q": "Art technique", "a": "Perspective for depth" },
+    { "q": "Patrons", "a": "Medici family of Florence" },
+    { "q": "Erasmus writing", "a": "In Praise of Folly" },
+    { "q": "Peace of Augsburg 1555", "a": "Princes choose Lutheran or Catholic" }
+  ]
+}

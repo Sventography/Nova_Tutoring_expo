@@ -1,0 +1,25 @@
+{
+  "topic": "Spanish I (Beginner)",
+  "cards": [
+    { "q": "Hola / Adiós", "a": "Hello / Goodbye" },
+    { "q": "Por favor / Gracias / De nada", "a": "Please / Thank you / You're welcome" },
+    { "q": "Sí / No", "a": "Yes / No" },
+    { "q": "¿Cómo te llamas?", "a": "What is your name?" },
+    { "q": "Números 1–10", "a": "Uno, dos, tres, cuatro, cinco, seis, siete, ocho, nueve, diez" },
+    { "q": "Días (Lun–Dom)", "a": "Lunes, martes, miércoles, jueves, viernes, sábado, domingo" },
+    { "q": "Ser (yo/tú/él)", "a": "Soy, eres, es" },
+    { "q": "Estar (yo/tú/él)", "a": "Estoy, estás, está" },
+    { "q": "Tener (yo/tú/él)", "a": "Tengo, tienes, tiene" },
+    { "q": "Interrogativos", "a": "Qué, quién, cuándo, dónde, por qué, cómo" },
+    { "q": "Familia", "a": "Madre, padre, hermano/a, hijo/a" },
+    { "q": "Colores", "a": "Rojo, azul, verde, amarillo, negro" },
+    { "q": "Comida básica", "a": "Pan, agua, fruta, arroz" },
+    { "q": "Clase", "a": "Libro, lápiz, cuaderno, mochila" },
+    { "q": "Regulares -ar (presente)", "a": "o, as, a, amos, áis, an" },
+    { "q": "Género y número", "a": "El/la; plural -s/-es; adjetivo concuerda" },
+    { "q": "Orden básico", "a": "Sujeto–verbo–objeto" },
+    { "q": "Usted/Ustedes", "a": "Formas de cortesía" },
+    { "q": "¿Qué hora es?", "a": "Es la una / Son las dos..." },
+    { "q": "Me gusta / No me gusta", "a": "I like / I don’t like" }
+  ]
+}

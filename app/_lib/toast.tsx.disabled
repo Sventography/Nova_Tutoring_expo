@@ -1,0 +1,8 @@
+import React from "react";
+export type ToastOpts = { title?: string; message?: string; type?: "success"|"error"|"info"; durationMs?: number };
+export function useAchievementToast() {
+  function show(_opts: ToastOpts = {}) { /* no-op shim */ }
+  const Toast: React.FC = () => null;
+  return { show, Toast };
+}
+export default { useAchievementToast };

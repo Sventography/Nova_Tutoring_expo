@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "Nova Tutoring",
+    "slug": "nova-tutoring",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./app/assets/icon.png",
+    "scheme": "nova",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./app/assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#000000"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./app/assets/adaptive-icon.png",
+        "backgroundColor": "#000000"
+      }
+    },
+    "web": {
+      "favicon": "./app/assets/favicon.png"
+    },
+    "platforms": ["ios", "android"],
+    "extra": {
+      "router": {
+        "origin": false
+      }
+    }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "topic": "Japanese I",
+  "cards": [
+    { "q": "3 writing systems", "a": "Hiragana, Katakana, Kanji" },
+    { "q": "Basic greetings", "a": "Konnichiwa, Ohayou, Konbanwa" },
+    { "q": "Goodbye phrases", "a": "Sayonara, Ja mata" },
+    { "q": "Thank you", "a": "Arigatou (gozaimasu)" },
+    { "q": "Yes / No", "a": "Hai / Iie" },
+    { "q": "Please", "a": "Onegaishimasu / Kudasai" },
+    { "q": "Counting 1-5", "a": "ichi, ni, san, shi/yon, go" },
+    { "q": "Family words", "a": "otousan, okaasan, oniisan, oneesan" },
+    { "q": "Self introduction phrase", "a": "Watashi wa [name] desu" },
+    { "q": "Basic particles", "a": "wa (topic), ga (subject), o (object)" },
+    { "q": "Question particle", "a": "ka" },
+    { "q": "Demonstratives", "a": "kore, sore, are" },
+    { "q": "Where is ... ?", "a": "... wa doko desu ka" },
+    { "q": "This is delicious", "a": "Oishii desu" },
+    { "q": "Numbers 6-10", "a": "roku, shichi/nana, hachi, kyuu, juu" },
+    { "q": "Colors example", "a": "aka red, ao blue, shiro white" },
+    { "q": "Time question", "a": "Nanji desu ka?" },
+    { "q": "Days of week start", "a": "Getsuyoubi (Monday)" },
+    { "q": "Verb desu negative", "a": "ja arimasen" },
+    { "q": "Verb desu past", "a": "deshita" }
+  ]
+}

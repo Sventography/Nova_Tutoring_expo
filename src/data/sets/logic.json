@@ -1,0 +1,22 @@
+[
+  ["Proposition", "Statement that is true or false."],
+  ["Argument", "Set of premises supporting a conclusion."],
+  ["Validity", "If premises true, conclusion must be true."],
+  ["Soundness", "Valid argument with true premises."],
+  ["Deduction", "From general rules to specific conclusion."],
+  ["Induction", "From specific cases to general rule."],
+  ["Abduction", "Inference to best explanation."],
+  ["Modus Ponens", "If P→Q, P, therefore Q."],
+  ["Modus Tollens", "If P→Q, ¬Q, therefore ¬P."],
+  ["Fallacy", "Error in reasoning."],
+  ["Straw Man", "Misrepresenting an argument to refute it."],
+  ["Ad Hominem", "Attacking person, not argument."],
+  ["Appeal to Authority", "Relying on authority over evidence."],
+  ["False Dilemma", "Only two options presented."],
+  ["Slippery Slope", "Assuming one step leads to extremes."],
+  ["Circular Reasoning", "Premise assumes the conclusion."],
+  ["Equivocation", "Switching meanings of a key term."],
+  ["Contradiction", "Statement and its negation both held."],
+  ["Truth Table", "Evaluates logical expression by cases."],
+  ["Quantifiers", "∀ for all, ∃ there exists."]
+]

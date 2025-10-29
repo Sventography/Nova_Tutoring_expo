@@ -1,0 +1,5740 @@
+{
+  "topics": [
+    {
+      "title": "Japanese Basics",
+      "cards": [
+        {
+          "q": "Hello",
+          "a": "こんにちは (Konnichiwa)"
+        },
+        {
+          "q": "Thank you",
+          "a": "ありがとう (Arigatou)"
+        },
+        {
+          "q": "Yes",
+          "a": "はい (Hai)"
+        },
+        {
+          "q": "No",
+          "a": "いいえ (Iie)"
+        },
+        {
+          "q": "Good morning",
+          "a": "おはよう (Ohayou)"
+        },
+        {
+          "q": "Good evening",
+          "a": "こんばんは (Konbanwa)"
+        },
+        {
+          "q": "Good night",
+          "a": "おやすみ (Oyasumi)"
+        },
+        {
+          "q": "Excuse me",
+          "a": "すみません (Sumimasen)"
+        },
+        {
+          "q": "I’m sorry",
+          "a": "ごめんなさい (Gomen nasai)"
+        },
+        {
+          "q": "Please",
+          "a": "お願いします (Onegai shimasu)"
+        },
+        {
+          "q": "Water",
+          "a": "水 (Mizu)"
+        },
+        {
+          "q": "Bathroom?",
+          "a": "トイレはどこですか (Toire wa doko desu ka)"
+        },
+        {
+          "q": "How much?",
+          "a": "いくらですか (Ikura desu ka)"
+        },
+        {
+          "q": "I don’t understand",
+          "a": "わかりません (Wakarimasen)"
+        },
+        {
+          "q": "Do you speak English?",
+          "a": "英語を話せますか (Eigo o hanasemasu ka)"
+        },
+        {
+          "q": "Train station",
+          "a": "駅 (Eki)"
+        },
+        {
+          "q": "Ticket",
+          "a": "切符 (Kippu)"
+        },
+        {
+          "q": "Left",
+          "a": "左 (Hidari)"
+        },
+        {
+          "q": "Right",
+          "a": "右 (Migi)"
+        },
+        {
+          "q": "Straight",
+          "a": "まっすぐ (Massugu)"
+        }
+      ]
+    },
+    {
+      "title": "Algebra Basics",
+      "cards": [
+        {
+          "q": "Solve 2x+6=14",
+          "a": "x=4"
+        },
+        {
+          "q": "Slope-intercept form",
+          "a": "y=mx+b"
+        },
+        {
+          "q": "Point-slope form",
+          "a": "y−y₁=m(x−x₁)"
+        },
+        {
+          "q": "Standard form (line)",
+          "a": "Ax+By=C"
+        },
+        {
+          "q": "Parallel lines slope",
+          "a": "Equal slopes"
+        },
+        {
+          "q": "Perpendicular slopes",
+          "a": "m₁·m₂=−1"
+        },
+        {
+          "q": "Quadratic formula",
+          "a": "x=(-b±√(b²−4ac))/(2a)"
+        },
+        {
+          "q": "Discriminant meaning",
+          "a": "b²−4ac tells root nature"
+        },
+        {
+          "q": "Complete the square goal",
+          "a": "Vertex form and roots"
+        },
+        {
+          "q": "Vertex of y=ax²+bx+c",
+          "a": "(-b/2a, f(-b/2a))"
+        },
+        {
+          "q": "Factor x²−9",
+          "a": "(x−3)(x+3)"
+        },
+        {
+          "q": "FOIL expands",
+          "a": "(a+b)(c+d)=ac+ad+bc+bd"
+        },
+        {
+          "q": "Geometric sequence aₙ",
+          "a": "a₁r^(n−1)"
+        },
+        {
+          "q": "Arithmetic sequence aₙ",
+          "a": "a₁+(n−1)d"
+        },
+        {
+          "q": "Log base change",
+          "a": "log_a b=log b/log a"
+        },
+        {
+          "q": "Exponent rule a^m·a^n",
+          "a": "a^(m+n)"
+        },
+        {
+          "q": "Exponent rule (a^m)^n",
+          "a": "a^(mn)"
+        },
+        {
+          "q": "Solve 3(x−2)=9",
+          "a": "x=5"
+        },
+        {
+          "q": "System solution meaning",
+          "a": "Intersection of equations"
+        },
+        {
+          "q": "Rational expression simplify",
+          "a": "Divide out common factors"
+        }
+      ]
+    },
+    {
+      "title": "Geometry Basics",
+      "cards": [
+        {
+          "q": "Sum of triangle angles",
+          "a": "180°"
+        },
+        {
+          "q": "Pythagorean theorem",
+          "a": "a²+b²=c²"
+        },
+        {
+          "q": "Circle circumference",
+          "a": "2πr"
+        },
+        {
+          "q": "Circle area",
+          "a": "πr²"
+        },
+        {
+          "q": "Area of triangle",
+          "a": "(1/2)bh"
+        },
+        {
+          "q": "Volume of cylinder",
+          "a": "πr²h"
+        },
+        {
+          "q": "Volume of sphere",
+          "a": "(4/3)πr³"
+        },
+        {
+          "q": "Distance formula",
+          "a": "√[(x₂−x₁)²+(y₂−y₁)²]"
+        },
+        {
+          "q": "Midpoint formula",
+          "a": "((x₁+x₂)/2,(y₁+y₂)/2)"
+        },
+        {
+          "q": "Similar figures",
+          "a": "Equal angles, proportional sides"
+        },
+        {
+          "q": "Congruent figures",
+          "a": "All corresponding parts equal"
+        },
+        {
+          "q": "Right triangle sinθ",
+          "a": "opp/hyp"
+        },
+        {
+          "q": "cosθ",
+          "a": "adj/hyp"
+        },
+        {
+          "q": "tanθ",
+          "a": "opp/adj"
+        },
+        {
+          "q": "Interior sum polygon n",
+          "a": "(n−2)·180°"
+        },
+        {
+          "q": "Regular polygon one angle",
+          "a": "((n−2)·180°)/n"
+        },
+        {
+          "q": "Heron’s formula",
+          "a": "√(s(s−a)(s−b)(s−c))"
+        },
+        {
+          "q": "Tangent to circle",
+          "a": "Perpendicular to radius at point"
+        },
+        {
+          "q": "Arc length",
+          "a": "(θ/360°)·2πr"
+        },
+        {
+          "q": "Sector area",
+          "a": "(θ/360°)·πr²"
+        }
+      ]
+    },
+    {
+      "title": "JavaScript Basics",
+      "cards": [
+        {
+          "q": "Strict equality operator",
+          "a": "==="
+        },
+        {
+          "q": "Declare constant",
+          "a": "const"
+        },
+        {
+          "q": "Array add end",
+          "a": "push"
+        },
+        {
+          "q": "Array remove end",
+          "a": "pop"
+        },
+        {
+          "q": "Arrow function syntax",
+          "a": "() => {}"
+        },
+        {
+          "q": "Promise states",
+          "a": "pending/fulfilled/rejected"
+        },
+        {
+          "q": "async/await purpose",
+          "a": "Handle promises sequentially"
+        },
+        {
+          "q": "map vs forEach",
+          "a": "map returns new array"
+        },
+        {
+          "q": "filter purpose",
+          "a": "Keep items meeting condition"
+        },
+        {
+          "q": "reduce purpose",
+          "a": "Accumulate to single value"
+        },
+        {
+          "q": "let vs var",
+          "a": "let is block-scoped"
+        },
+        {
+          "q": "NaN check",
+          "a": "Number.isNaN(x)"
+        },
+        {
+          "q": "JSON parse",
+          "a": "JSON.parse"
+        },
+        {
+          "q": "JSON stringify",
+          "a": "JSON.stringify"
+        },
+        {
+          "q": "Template literal",
+          "a": "`Hello ${name}`"
+        },
+        {
+          "q": "Spread array",
+          "a": "[...arr]"
+        },
+        {
+          "q": "Destructure object",
+          "a": "const {a}=obj"
+        },
+        {
+          "q": "Nullish coalescing",
+          "a": "x ?? y"
+        },
+        {
+          "q": "Optional chaining",
+          "a": "obj?.a?.b"
+        },
+        {
+          "q": "Event loop",
+          "a": "Handles call stack and task queues"
+        }
+      ]
+    },
+    {
+      "title": "Python Basics",
+      "cards": [
+        {
+          "q": "List literal",
+          "a": "[1,2,3]"
+        },
+        {
+          "q": "Dict literal",
+          "a": "{'a':1}"
+        },
+        {
+          "q": "Set literal",
+          "a": "{1,2,3}"
+        },
+        {
+          "q": "Tuple literal",
+          "a": "(1,2)"
+        },
+        {
+          "q": "List comprehension",
+          "a": "[x*x for x in a]"
+        },
+        {
+          "q": "Function def",
+          "a": "def f():"
+        },
+        {
+          "q": "Virtual env",
+          "a": "python -m venv venv"
+        },
+        {
+          "q": "Package manager",
+          "a": "pip"
+        },
+        {
+          "q": "f-string",
+          "a": "f\"{x}\""
+        },
+        {
+          "q": "None",
+          "a": "Null value"
+        },
+        {
+          "q": "Slice 'hello'[1:4]",
+          "a": "'ell'"
+        },
+        {
+          "q": "dict get default",
+          "a": "d.get('k',0)"
+        },
+        {
+          "q": "Context manager",
+          "a": "with open(...) as f:"
+        },
+        {
+          "q": "Generator keyword",
+          "a": "yield"
+        },
+        {
+          "q": "Set property",
+          "a": "Unique elements"
+        },
+        {
+          "q": "Mutable vs immutable",
+          "a": "list mutable, tuple immutable"
+        },
+        {
+          "q": "PEP8",
+          "a": "Python style guide"
+        },
+        {
+          "q": "venv activate",
+          "a": "source venv/bin/activate"
+        }
+      ]
+    },
+    {
+      "title": "World Capitals",
+      "cards": [
+        {
+          "q": "Japan",
+          "a": "Tokyo"
+        },
+        {
+          "q": "France",
+          "a": "Paris"
+        },
+        {
+          "q": "Germany",
+          "a": "Berlin"
+        },
+        {
+          "q": "Italy",
+          "a": "Rome"
+        },
+        {
+          "q": "Spain",
+          "a": "Madrid"
+        },
+        {
+          "q": "Canada",
+          "a": "Ottawa"
+        },
+        {
+          "q": "Brazil",
+          "a": "Brasília"
+        },
+        {
+          "q": "Australia",
+          "a": "Canberra"
+        },
+        {
+          "q": "Egypt",
+          "a": "Cairo"
+        },
+        {
+          "q": "Kenya",
+          "a": "Nairobi"
+        },
+        {
+          "q": "India",
+          "a": "New Delhi"
+        },
+        {
+          "q": "China",
+          "a": "Beijing"
+        },
+        {
+          "q": "South Korea",
+          "a": "Seoul"
+        },
+        {
+          "q": "Mexico",
+          "a": "Mexico City"
+        },
+        {
+          "q": "United Kingdom",
+          "a": "London"
+        },
+        {
+          "q": "Turkey",
+          "a": "Ankara"
+        },
+        {
+          "q": "Argentina",
+          "a": "Buenos Aires"
+        },
+        {
+          "q": "Sweden",
+          "a": "Stockholm"
+        },
+        {
+          "q": "Norway",
+          "a": "Oslo"
+        },
+        {
+          "q": "Netherlands",
+          "a": "Amsterdam"
+        }
+      ]
+    },
+    {
+      "title": "Biology Basics",
+      "cards": [
+        {
+          "q": "Powerhouse of the cell",
+          "a": "Mitochondria"
+        },
+        {
+          "q": "Genetic material",
+          "a": "DNA"
+        },
+        {
+          "q": "DNA shape",
+          "a": "Double helix"
+        },
+        {
+          "q": "Protein factory",
+          "a": "Ribosome"
+        },
+        {
+          "q": "Photosynthesis site",
+          "a": "Chloroplast"
+        },
+        {
+          "q": "Osmosis",
+          "a": "Diffusion of water across membrane"
+        },
+        {
+          "q": "Diffusion",
+          "a": "Movement from high to low concentration"
+        },
+        {
+          "q": "Enzyme function",
+          "a": "Lower activation energy"
+        },
+        {
+          "q": "ATP role",
+          "a": "Cellular energy currency"
+        },
+        {
+          "q": "Mitosis purpose",
+          "a": "Growth/repair, identical cells"
+        },
+        {
+          "q": "Meiosis purpose",
+          "a": "Gamete production, half chromosomes"
+        },
+        {
+          "q": "Homeostasis",
+          "a": "Stable internal conditions"
+        },
+        {
+          "q": "Prokaryote vs eukaryote",
+          "a": "No nucleus vs nucleus"
+        },
+        {
+          "q": "Gene",
+          "a": "DNA segment coding a trait"
+        },
+        {
+          "q": "Allele",
+          "a": "Variant form of a gene"
+        },
+        {
+          "q": "Phenotype",
+          "a": "Observable traits"
+        },
+        {
+          "q": "Genotype",
+          "a": "Genetic makeup"
+        },
+        {
+          "q": "Transcription",
+          "a": "DNA→mRNA"
+        },
+        {
+          "q": "Translation",
+          "a": "mRNA→Protein"
+        },
+        {
+          "q": "Natural selection",
+          "a": "Differential survival/reproduction"
+        }
+      ]
+    },
+    {
+      "title": "Chemistry Fundamentals",
+      "cards": [
+        {
+          "q": "Atomic number",
+          "a": "Number of protons"
+        },
+        {
+          "q": "Mass number",
+          "a": "Protons+neutrons"
+        },
+        {
+          "q": "Isotope",
+          "a": "Same element, different neutrons"
+        },
+        {
+          "q": "Ion",
+          "a": "Charged atom/molecule"
+        },
+        {
+          "q": "Ionic bond",
+          "a": "Electron transfer"
+        },
+        {
+          "q": "Covalent bond",
+          "a": "Electron sharing"
+        },
+        {
+          "q": "Polar bond",
+          "a": "Unequal sharing of electrons"
+        },
+        {
+          "q": "Mole",
+          "a": "6.022×10²³ entities"
+        },
+        {
+          "q": "Molarity",
+          "a": "mol solute/L solution"
+        },
+        {
+          "q": "Limiting reagent",
+          "a": "Consumed first; limits product"
+        },
+        {
+          "q": "Endothermic",
+          "a": "Absorbs heat"
+        },
+        {
+          "q": "Exothermic",
+          "a": "Releases heat"
+        },
+        {
+          "q": "Le Châtelier principle",
+          "a": "System shifts to oppose change"
+        },
+        {
+          "q": "Oxidation",
+          "a": "Loss of electrons"
+        },
+        {
+          "q": "Reduction",
+          "a": "Gain of electrons"
+        },
+        {
+          "q": "Redox reaction",
+          "a": "Oxidation and reduction together"
+        },
+        {
+          "q": "Ideal gas equation",
+          "a": "PV=nRT"
+        }
+      ]
+    },
+    {
+      "title": "Physics Essentials",
+      "cards": [
+        {
+          "q": "Newton’s 1st law",
+          "a": "Inertia"
+        },
+        {
+          "q": "Newton’s 2nd law",
+          "a": "F=ma"
+        },
+        {
+          "q": "Newton’s 3rd law",
+          "a": "Equal and opposite reaction"
+        },
+        {
+          "q": "Work",
+          "a": "W=F·d"
+        },
+        {
+          "q": "Power",
+          "a": "P=W/t"
+        },
+        {
+          "q": "Kinetic energy",
+          "a": "(1/2)mv²"
+        },
+        {
+          "q": "Potential energy",
+          "a": "mgh"
+        },
+        {
+          "q": "Momentum",
+          "a": "p=mv"
+        },
+        {
+          "q": "Impulse",
+          "a": "Δp=FΔt"
+        },
+        {
+          "q": "Conservation of energy",
+          "a": "Total energy constant"
+        },
+        {
+          "q": "Ohm’s law",
+          "a": "V=IR"
+        },
+        {
+          "q": "Series vs parallel R",
+          "a": "Series add, parallel inverse sum"
+        },
+        {
+          "q": "Wave speed",
+          "a": "v=fλ"
+        },
+        {
+          "q": "Frequency unit",
+          "a": "Hertz"
+        },
+        {
+          "q": "Snell’s law",
+          "a": "n₁sinθ₁=n₂sinθ₂"
+        },
+        {
+          "q": "Doppler effect",
+          "a": "Apparent frequency shift"
+        },
+        {
+          "q": "Centripetal force",
+          "a": "mv²/r"
+        },
+        {
+          "q": "Terminal velocity",
+          "a": "Balanced drag and weight"
+        },
+        {
+          "q": "Projectile peak vy",
+          "a": "0 at top"
+        },
+        {
+          "q": "Power unit",
+          "a": "Watt"
+        }
+      ]
+    },
+    {
+      "title": "Data Structures",
+      "cards": [
+        {
+          "q": "Array",
+          "a": "Contiguous memory; O(1) access"
+        },
+        {
+          "q": "Linked list",
+          "a": "Nodes with next pointers; O(1) insert at head"
+        },
+        {
+          "q": "Stack",
+          "a": "LIFO push/pop O(1)"
+        },
+        {
+          "q": "Queue",
+          "a": "FIFO enqueue/dequeue O(1)"
+        },
+        {
+          "q": "Hash table",
+          "a": "Average O(1) lookup/insert"
+        },
+        {
+          "q": "Binary tree",
+          "a": "Nodes with ≤2 children"
+        },
+        {
+          "q": "BST",
+          "a": "Left<root<right ordering"
+        },
+        {
+          "q": "Heap",
+          "a": "Max/min at root, partial order"
+        },
+        {
+          "q": "Graph",
+          "a": "Vertices and edges"
+        },
+        {
+          "q": "Trie",
+          "a": "Prefix tree for strings"
+        },
+        {
+          "q": "Set",
+          "a": "Unique elements"
+        },
+        {
+          "q": "Map",
+          "a": "Key→value association"
+        },
+        {
+          "q": "Priority queue",
+          "a": "Removes highest priority first"
+        },
+        {
+          "q": "Deque",
+          "a": "Double-ended queue"
+        },
+        {
+          "q": "Union-Find",
+          "a": "Disjoint set with union/find"
+        },
+        {
+          "q": "Balanced trees",
+          "a": "AVL, Red-Black maintain O(log n)"
+        },
+        {
+          "q": "B-tree",
+          "a": "Disk-friendly balanced tree"
+        },
+        {
+          "q": "Skip list",
+          "a": "Layered linked lists for O(log n)"
+        },
+        {
+          "q": "LRU cache",
+          "a": "Recency-based eviction"
+        },
+        {
+          "q": "Segment tree",
+          "a": "Range query/update structure"
+        }
+      ]
+    },
+    {
+      "title": "Algorithms",
+      "cards": [
+        {
+          "q": "Big-O of binary search",
+          "a": "O(log n)"
+        },
+        {
+          "q": "Merge sort complexity",
+          "a": "O(n log n)"
+        },
+        {
+          "q": "Quick sort average",
+          "a": "O(n log n)"
+        },
+        {
+          "q": "Quick sort worst",
+          "a": "O(n^2)"
+        },
+        {
+          "q": "Dijkstra constraint",
+          "a": "Nonnegative edges"
+        },
+        {
+          "q": "A* advantage",
+          "a": "Heuristic guides search"
+        },
+        {
+          "q": "Topological sort",
+          "a": "Linearize DAG order"
+        },
+        {
+          "q": "Kruskal",
+          "a": "Greedy MST using DSU"
+        },
+        {
+          "q": "Prim",
+          "a": "Grow MST from a start node"
+        },
+        {
+          "q": "Dynamic programming",
+          "a": "Optimal substructure and overlapping subproblems"
+        },
+        {
+          "q": "Greedy",
+          "a": "Local optimum aiming for global"
+        },
+        {
+          "q": "Backtracking",
+          "a": "Search with undo when invalid"
+        },
+        {
+          "q": "KMP",
+          "a": "Linear-time substring search"
+        },
+        {
+          "q": "Sliding window",
+          "a": "Two pointers over ranges"
+        },
+        {
+          "q": "Divide and conquer",
+          "a": "Split, solve, combine"
+        },
+        {
+          "q": "Kadane",
+          "a": "Max subarray sum in O(n)"
+        },
+        {
+          "q": "Bellman-Ford",
+          "a": "Handles negative edges"
+        },
+        {
+          "q": "Floyd–Warshall",
+          "a": "All-pairs shortest paths"
+        }
+      ]
+    },
+    {
+      "title": "Operating Systems",
+      "cards": [
+        {
+          "q": "Monolithic kernel",
+          "a": "All services in kernel"
+        },
+        {
+          "q": "Microkernel",
+          "a": "Minimal kernel, user services"
+        },
+        {
+          "q": "Preemptive scheduling",
+          "a": "Kernel interrupts tasks"
+        },
+        {
+          "q": "Round-robin",
+          "a": "Time-slice per task"
+        },
+        {
+          "q": "Priority inversion",
+          "a": "Low blocks high"
+        },
+        {
+          "q": "Futex",
+          "a": "Fast user-space mutex"
+        },
+        {
+          "q": "NUMA",
+          "a": "Non-uniform memory access"
+        },
+        {
+          "q": "Copy-on-write fork",
+          "a": "Pages shared until write"
+        },
+        {
+          "q": "Huge pages",
+          "a": "Reduce TLB misses"
+        },
+        {
+          "q": "Dirty page",
+          "a": "Modified, needs writeback"
+        },
+        {
+          "q": "Dirty bit",
+          "a": "Marks modified page"
+        },
+        {
+          "q": "Page fault",
+          "a": "Access unmapped page"
+        },
+        {
+          "q": "Thrashing",
+          "a": "Excessive paging"
+        },
+        {
+          "q": "I/O scheduler",
+          "a": "Order disk requests"
+        },
+        {
+          "q": "Ephemeral port",
+          "a": "Temporary client port"
+        },
+        {
+          "q": "cgroups",
+          "a": "Resource control"
+        },
+        {
+          "q": "namespaces",
+          "a": "Resource isolation"
+        },
+        {
+          "q": "seccomp",
+          "a": "Syscall filtering"
+        },
+        {
+          "q": "strace",
+          "a": "Syscall tracer"
+        },
+        {
+          "q": "ulimit",
+          "a": "Per-process resource limits"
+        }
+      ]
+    },
+    {
+      "title": "Networking",
+      "cards": [
+        {
+          "q": "OSI layers",
+          "a": "Physical, Data Link, Network, Transport, Session, Presentation, Application"
+        },
+        {
+          "q": "TCP vs UDP",
+          "a": "Reliable stream vs best-effort datagrams"
+        },
+        {
+          "q": "TCP handshake",
+          "a": "SYN → SYN-ACK → ACK"
+        },
+        {
+          "q": "TLS",
+          "a": "Encrypts transport channel; provides confidentiality and integrity"
+        },
+        {
+          "q": "DNS",
+          "a": "Resolves names to IP addresses"
+        },
+        {
+          "q": "CDN",
+          "a": "Edge cache to reduce latency and origin load"
+        },
+        {
+          "q": "NAT",
+          "a": "Map private addresses to public address"
+        },
+        {
+          "q": "Subnet mask",
+          "a": "Defines network/host bits of an address"
+        },
+        {
+          "q": "Routing vs switching",
+          "a": "Between networks vs within a LAN"
+        },
+        {
+          "q": "BGP",
+          "a": "Inter-domain routing protocol on the Internet"
+        },
+        {
+          "q": "HTTP/1.1 vs HTTP/2",
+          "a": "Keep-alive vs multiplexed streams over one connection"
+        },
+        {
+          "q": "HTTP/3",
+          "a": "Runs over QUIC/UDP with multiplexing and TLS by default"
+        },
+        {
+          "q": "Latency vs throughput",
+          "a": "Delay vs data volume per unit time"
+        },
+        {
+          "q": "MTU",
+          "a": "Maximum transmission unit for a link"
+        },
+        {
+          "q": "Packet loss",
+          "a": "Triggers retransmission and reduces throughput"
+        },
+        {
+          "q": "WebSocket",
+          "a": "Full-duplex TCP-based persistent connection"
+        },
+        {
+          "q": "HSTS",
+          "a": "Forces HTTPS on a domain"
+        },
+        {
+          "q": "CORS",
+          "a": "Controls cross-origin resource access from browsers"
+        },
+        {
+          "q": "Keep-alive",
+          "a": "Reuses TCP connection for multiple requests"
+        }
+      ]
+    },
+    {
+      "title": "Databases",
+      "cards": [
+        {
+          "q": "Relational vs NoSQL",
+          "a": "Tables with schema vs key-value/document/column/graph"
+        },
+        {
+          "q": "ACID",
+          "a": "Atomicity, Consistency, Isolation, Durability"
+        },
+        {
+          "q": "Primary key",
+          "a": "Unique identifier for a row"
+        },
+        {
+          "q": "Foreign key",
+          "a": "References primary key in another table"
+        },
+        {
+          "q": "Index purpose",
+          "a": "Accelerate lookups by key/column"
+        },
+        {
+          "q": "B-tree index",
+          "a": "Balanced tree enabling range scans"
+        },
+        {
+          "q": "Hash index",
+          "a": "O(1) equality lookups; poor for ranges"
+        },
+        {
+          "q": "Normalization",
+          "a": "Reduce redundancy and anomalies"
+        },
+        {
+          "q": "Transaction",
+          "a": "Group of operations that commit or rollback together"
+        },
+        {
+          "q": "Isolation levels",
+          "a": "Read uncommitted, read committed, repeatable read, serializable"
+        },
+        {
+          "q": "Deadlock",
+          "a": "Transactions wait on each other in a cycle"
+        },
+        {
+          "q": "MVCC",
+          "a": "Readers don’t block writers via versions"
+        },
+        {
+          "q": "Sharding",
+          "a": "Horizontal partitioning across nodes"
+        },
+        {
+          "q": "Replication",
+          "a": "Copy data to secondaries for HA/reads"
+        },
+        {
+          "q": "CAP theorem",
+          "a": "Consistency, Availability, Partition tolerance; pick two in failure"
+        },
+        {
+          "q": "Eventual consistency",
+          "a": "Replicas converge over time"
+        },
+        {
+          "q": "Query plan",
+          "a": "Execution strategy chosen by optimizer"
+        },
+        {
+          "q": "OLTP vs OLAP",
+          "a": "Transactional workloads vs analytical queries"
+        },
+        {
+          "q": "Star schema",
+          "a": "Fact table with dimension tables"
+        },
+        {
+          "q": "CDC",
+          "a": "Change data capture stream of mutations"
+        }
+      ]
+    },
+    {
+      "title": "Web Development",
+      "cards": [
+        {
+          "q": "Semantic HTML",
+          "a": "Meaningful elements like <article> <nav> <main>"
+        },
+        {
+          "q": "Flexbox",
+          "a": "1D layout along main/cross axes"
+        },
+        {
+          "q": "CSS Grid",
+          "a": "2D layout with rows and columns"
+        },
+        {
+          "q": "Responsive units",
+          "a": "%, rem, vw, vh, minmax"
+        },
+        {
+          "q": "Accessibility",
+          "a": "Labels, roles, focus order, contrast"
+        },
+        {
+          "q": "DOM",
+          "a": "In-memory tree representation of the document"
+        },
+        {
+          "q": "SPA vs MPA",
+          "a": "Client-side routing vs server-rendered pages"
+        },
+        {
+          "q": "SSR vs CSR",
+          "a": "Server renders HTML vs browser renders"
+        },
+        {
+          "q": "Hydration",
+          "a": "Attach event handlers to SSR HTML"
+        },
+        {
+          "q": "Bundlers",
+          "a": "Vite, Webpack, esbuild, Parcel"
+        },
+        {
+          "q": "Transpilers",
+          "a": "Babel, SWC"
+        },
+        {
+          "q": "Cookies vs localStorage",
+          "a": "Cookies sent to server; localStorage stays client"
+        },
+        {
+          "q": "SameSite",
+          "a": "Restrict cross-site cookie sending"
+        },
+        {
+          "q": "CSP",
+          "a": "Content-Security-Policy to mitigate XSS"
+        },
+        {
+          "q": "Service worker",
+          "a": "Background script for caching/offline"
+        },
+        {
+          "q": "PWA",
+          "a": "Installable app-like web experience"
+        },
+        {
+          "q": "Debounce vs throttle",
+          "a": "Delay after quiet period vs limit frequency"
+        },
+        {
+          "q": "Fetch",
+          "a": "Promise-based HTTP API"
+        },
+        {
+          "q": "HTTP 201",
+          "a": "Created"
+        },
+        {
+          "q": "ARIA role",
+          "a": "role='button' to expose semantics"
+        }
+      ]
+    },
+    {
+      "title": "Mobile Development",
+      "cards": [
+        {
+          "q": "Native vs cross-platform",
+          "a": "Platform SDKs vs shared codebase"
+        },
+        {
+          "q": "React Native bridge",
+          "a": "Binds JS to native modules"
+        },
+        {
+          "q": "Expo managed",
+          "a": "Build without native Xcode/Gradle config"
+        },
+        {
+          "q": "Navigation",
+          "a": "@react-navigation/native stacks/tabs/drawers"
+        },
+        {
+          "q": "State management",
+          "a": "Redux, Zustand, Recoil"
+        },
+        {
+          "q": "Gesture handling",
+          "a": "react-native-gesture-handler"
+        },
+        {
+          "q": "Animations",
+          "a": "react-native-reanimated"
+        },
+        {
+          "q": "Offline storage",
+          "a": "AsyncStorage and SQLite"
+        },
+        {
+          "q": "Push notifications",
+          "a": "APNs/FCM integration"
+        },
+        {
+          "q": "Deep linking",
+          "a": "Open screens via URL scheme"
+        },
+        {
+          "q": "App signing",
+          "a": "Keystore/Certificates for release builds"
+        },
+        {
+          "q": "Permissions",
+          "a": "Runtime prompts for camera/location/etc"
+        },
+        {
+          "q": "Profiling",
+          "a": "Flipper/Perf monitors"
+        },
+        {
+          "q": "Bundle size control",
+          "a": "Code split, image optimization"
+        },
+        {
+          "q": "OTA updates",
+          "a": "EAS Updates deliver JS bundle"
+        },
+        {
+          "q": "EAS build",
+          "a": "Cloud CI for iOS/Android"
+        },
+        {
+          "q": "Universal links",
+          "a": "HTTP links to specific screens"
+        },
+        {
+          "q": "Sensors",
+          "a": "Accelerometer, GPS, camera"
+        },
+        {
+          "q": "Layout system",
+          "a": "Flexbox-based measure/layout"
+        },
+        {
+          "q": "Accessibility",
+          "a": "Accessible components and labels"
+        }
+      ]
+    },
+    {
+      "title": "Cybersecurity",
+      "cards": [
+        {
+          "q": "CIA triad",
+          "a": "Confidentiality, Integrity, Availability"
+        },
+        {
+          "q": "Hashing vs encryption",
+          "a": "One-way vs reversible with key"
+        },
+        {
+          "q": "Symmetric vs asymmetric",
+          "a": "Same key vs key pair"
+        },
+        {
+          "q": "XSS",
+          "a": "Inject and execute scripts in client"
+        },
+        {
+          "q": "CSRF",
+          "a": "Trick browser into sending unwanted requests"
+        },
+        {
+          "q": "SQLi",
+          "a": "Inject SQL via unsanitized inputs"
+        },
+        {
+          "q": "Clickjacking",
+          "a": "Hidden frame overlays stealing clicks"
+        },
+        {
+          "q": "Password hashing",
+          "a": "BCrypt, Argon2 with salt"
+        },
+        {
+          "q": "Salt purpose",
+          "a": "Defeat rainbow tables and collisions"
+        },
+        {
+          "q": "MFA",
+          "a": "Multiple factors increase security"
+        },
+        {
+          "q": "Zero trust",
+          "a": "Never trust, always verify"
+        },
+        {
+          "q": "Least privilege",
+          "a": "Grant minimum required access"
+        },
+        {
+          "q": "RBAC",
+          "a": "Role-based permission model"
+        },
+        {
+          "q": "Secret management",
+          "a": "Vault/KMS instead of env files"
+        },
+        {
+          "q": "Key rotation",
+          "a": "Regularly replace and revoke keys"
+        },
+        {
+          "q": "Pen testing",
+          "a": "Authorized simulated attacks"
+        },
+        {
+          "q": "Threat modeling",
+          "a": "Identify assets, threats, mitigations"
+        },
+        {
+          "q": "Security headers",
+          "a": "CSP, HSTS, X-Frame-Options"
+        },
+        {
+          "q": "SSRF",
+          "a": "Server-side request forgery to internal services"
+        },
+        {
+          "q": "RCE",
+          "a": "Remote code execution vulnerability"
+        }
+      ]
+    },
+    {
+      "title": "APIs & Microservices",
+      "cards": [
+        {
+          "q": "What is REST?",
+          "a": "Representational State Transfer; stateless, resource-based APIs over HTTP"
+        },
+        {
+          "q": "HTTP GET vs POST",
+          "a": "GET retrieves; POST creates or processes with a body"
+        },
+        {
+          "q": "Idempotent methods",
+          "a": "GET, PUT, DELETE are idempotent; POST is not"
+        },
+        {
+          "q": "2xx vs 4xx vs 5xx",
+          "a": "Success vs client error vs server error"
+        },
+        {
+          "q": "Pagination purpose",
+          "a": "Limit result size; navigate via page/limit or cursors"
+        },
+        {
+          "q": "Rate limiting",
+          "a": "Protects services by capping request rates"
+        },
+        {
+          "q": "Auth vs AuthZ",
+          "a": "Authentication proves identity; Authorization grants permissions"
+        },
+        {
+          "q": "OAuth 2.0",
+          "a": "Delegated auth via flows like Auth Code"
+        },
+        {
+          "q": "JWT",
+          "a": "Signed token carrying claims, used for stateless auth"
+        },
+        {
+          "q": "API versioning",
+          "a": "Prefix (v1) or media-type; avoid breaking changes"
+        },
+        {
+          "q": "Webhooks",
+          "a": "Server-to-server callbacks on events"
+        },
+        {
+          "q": "gRPC",
+          "a": "Binary RPC over HTTP/2 with protobuf"
+        },
+        {
+          "q": "Service discovery",
+          "a": "Locate service instances dynamically"
+        },
+        {
+          "q": "Circuit breaker",
+          "a": "Fail fast on repeated errors to avoid cascades"
+        },
+        {
+          "q": "API gateway",
+          "a": "Central entry, routing, auth, throttling"
+        },
+        {
+          "q": "Request tracing",
+          "a": "Propagate trace/span IDs across services"
+        },
+        {
+          "q": "Health checks",
+          "a": "/health or /ready endpoints for liveness/readiness"
+        },
+        {
+          "q": "12-factor app",
+          "a": "Best practices for cloud-native apps"
+        },
+        {
+          "q": "Blue/green deploys",
+          "a": "Two prod envs; switch traffic when ready"
+        },
+        {
+          "q": "SLA vs SLO vs SLI",
+          "a": "Commitment vs objective vs measurement"
+        }
+      ]
+    },
+    {
+      "title": "Computer Science",
+      "cards": [
+        {
+          "q": "Binary vs decimal",
+          "a": "Base-2 vs base-10 number systems"
+        },
+        {
+          "q": "Bit vs byte",
+          "a": "1 bit = 0/1; 1 byte = 8 bits"
+        },
+        {
+          "q": "Compiler vs interpreter",
+          "a": "Translate ahead vs execute line-by-line"
+        },
+        {
+          "q": "Time complexity",
+          "a": "Asymptotic cost, Big-O notation"
+        },
+        {
+          "q": "Recursion",
+          "a": "Function calling itself with base case"
+        },
+        {
+          "q": "Stack vs heap",
+          "a": "Call frames vs dynamic memory"
+        },
+        {
+          "q": "Process vs thread",
+          "a": "Own address space vs shared within process"
+        },
+        {
+          "q": "Garbage collection",
+          "a": "Automatic reclaiming of unused memory"
+        },
+        {
+          "q": "Pointer",
+          "a": "Stores memory address"
+        },
+        {
+          "q": "Immutable data",
+          "a": "Cannot change after creation"
+        },
+        {
+          "q": "Functional programming",
+          "a": "Pure functions, immutability"
+        },
+        {
+          "q": "OOP pillars",
+          "a": "Encapsulation, inheritance, polymorphism, abstraction"
+        },
+        {
+          "q": "REST vs RPC",
+          "a": "Resource vs action oriented"
+        },
+        {
+          "q": "Idempotency key",
+          "a": "Client token to de-dupe retries"
+        },
+        {
+          "q": "Race condition",
+          "a": "Outcome depends on timing interleavings"
+        },
+        {
+          "q": "Deadlock",
+          "a": "Mutual waiting preventing progress"
+        },
+        {
+          "q": "Hash function",
+          "a": "Deterministic mapping to fixed-size value"
+        },
+        {
+          "q": "Event loop",
+          "a": "Queues and dispatches async tasks"
+        },
+        {
+          "q": "Serialization",
+          "a": "Convert object to transferable format"
+        },
+        {
+          "q": "Endianness",
+          "a": "Byte order: little vs big"
+        }
+      ]
+    },
+    {
+      "title": "Cloud Computing",
+      "cards": [
+        {
+          "q": "IaaS",
+          "a": "Virtualized servers/network/storage"
+        },
+        {
+          "q": "PaaS",
+          "a": "Managed runtimes/databases"
+        },
+        {
+          "q": "SaaS",
+          "a": "Hosted full applications"
+        },
+        {
+          "q": "Region vs AZ",
+          "a": "Geography vs isolated datacenters"
+        },
+        {
+          "q": "VPC",
+          "a": "Isolated virtual network"
+        },
+        {
+          "q": "Load balancer",
+          "a": "Distributes traffic across instances"
+        },
+        {
+          "q": "Auto scaling",
+          "a": "Adjust instance count to demand"
+        },
+        {
+          "q": "Serverless",
+          "a": "Managed compute per request"
+        },
+        {
+          "q": "Cold start",
+          "a": "First invocation latency"
+        },
+        {
+          "q": "IAM",
+          "a": "Identity and access policies"
+        },
+        {
+          "q": "Spot instances",
+          "a": "Cheap preemptible compute"
+        },
+        {
+          "q": "IaC",
+          "a": "Declarative infra code (Terraform)"
+        },
+        {
+          "q": "State locking",
+          "a": "Prevent concurrent TF state edits"
+        },
+        {
+          "q": "Cost controls",
+          "a": "Budgets, rightsizing, shutdown idle"
+        },
+        {
+          "q": "Reserved instances",
+          "a": "Discount with commitment"
+        },
+        {
+          "q": "Multi-cloud",
+          "a": "Run across providers"
+        },
+        {
+          "q": "Monitoring",
+          "a": "Metrics, logs, tracing"
+        },
+        {
+          "q": "Object storage",
+          "a": "Durable bucket storage"
+        },
+        {
+          "q": "Egress cost",
+          "a": "Charges for data leaving provider"
+        },
+        {
+          "q": "KMS",
+          "a": "Managed encryption keys"
+        }
+      ]
+    },
+    {
+      "title": "DevOps",
+      "cards": [
+        {
+          "q": "CI",
+          "a": "Automated integration and tests on commits"
+        },
+        {
+          "q": "CD",
+          "a": "Continuous delivery/deployment to environments"
+        },
+        {
+          "q": "Pipeline stages",
+          "a": "Build, test, scan, package, deploy"
+        },
+        {
+          "q": "GitFlow",
+          "a": "Develop/feature/release/hotfix branches"
+        },
+        {
+          "q": "Trunk-based",
+          "a": "Short-lived branches, frequent merges"
+        },
+        {
+          "q": "Feature flags",
+          "a": "Toggle behavior without redeploy"
+        },
+        {
+          "q": "Artifacts",
+          "a": "Versioned build outputs in registry"
+        },
+        {
+          "q": "Docker layers",
+          "a": "Layered filesystem for caching"
+        },
+        {
+          "q": "Kubernetes pods",
+          "a": "One or more containers sharing network/volumes"
+        },
+        {
+          "q": "Service vs deployment",
+          "a": "Stable IP vs replica controller"
+        },
+        {
+          "q": "Ingress",
+          "a": "HTTP routing into cluster"
+        },
+        {
+          "q": "Helm",
+          "a": "Templated K8s release packaging"
+        },
+        {
+          "q": "Blue/green",
+          "a": "Two prod envs; flip traffic"
+        },
+        {
+          "q": "Canary",
+          "a": "Gradual rollout to subset of users"
+        },
+        {
+          "q": "Observability",
+          "a": "Logs, metrics, traces for insight"
+        },
+        {
+          "q": "Runbooks",
+          "a": "Operational step-by-steps"
+        },
+        {
+          "q": "SLOs/SLIs",
+          "a": "Targets and measurements of reliability"
+        },
+        {
+          "q": "Postmortem",
+          "a": "Blameless incident analysis"
+        },
+        {
+          "q": "ChatOps",
+          "a": "Ops via chat integrations"
+        },
+        {
+          "q": "Secrets",
+          "a": "Manage via Vault/KMS"
+        }
+      ]
+    },
+    {
+      "title": "AI & Machine Learning",
+      "cards": [
+        {
+          "q": "Supervised learning",
+          "a": "Train on labeled inputs and targets"
+        },
+        {
+          "q": "Unsupervised learning",
+          "a": "Discover structure without labels"
+        },
+        {
+          "q": "Validation set",
+          "a": "Tune hyperparameters"
+        },
+        {
+          "q": "Test set",
+          "a": "Final evaluation of generalization"
+        },
+        {
+          "q": "Overfitting",
+          "a": "Memorize training noise; poor generalization"
+        },
+        {
+          "q": "Regularization",
+          "a": "Penalize complexity (L1/L2, dropout)"
+        },
+        {
+          "q": "Gradient descent",
+          "a": "Update params by loss gradient"
+        },
+        {
+          "q": "Learning rate",
+          "a": "Step size of updates"
+        },
+        {
+          "q": "Loss function",
+          "a": "Quantifies error (MSE, cross-entropy)"
+        },
+        {
+          "q": "Precision",
+          "a": "TP/(TP+FP)"
+        },
+        {
+          "q": "Recall",
+          "a": "TP/(TP+FN)"
+        },
+        {
+          "q": "ROC AUC",
+          "a": "Ranking quality across thresholds"
+        },
+        {
+          "q": "Feature scaling",
+          "a": "Standardize/normalize features"
+        },
+        {
+          "q": "One-hot encoding",
+          "a": "Binary vector per category"
+        },
+        {
+          "q": "Cross-validation",
+          "a": "K-fold resampling method"
+        },
+        {
+          "q": "Bias-variance",
+          "a": "Underfit vs overfit trade-off"
+        },
+        {
+          "q": "Confusion matrix",
+          "a": "TP FP FN TN table"
+        },
+        {
+          "q": "Ensemble",
+          "a": "Combine models (bagging/boosting)"
+        },
+        {
+          "q": "Activation examples",
+          "a": "ReLU, sigmoid, tanh"
+        },
+        {
+          "q": "Embeddings",
+          "a": "Dense vector representations"
+        }
+      ]
+    },
+    {
+      "title": "Statistics",
+      "cards": [
+        {
+          "q": "Population",
+          "a": "Entire group of interest"
+        },
+        {
+          "q": "Mean",
+          "a": "Arithmetic average"
+        },
+        {
+          "q": "Median",
+          "a": "Middle value"
+        },
+        {
+          "q": "Mode",
+          "a": "Most frequent value"
+        },
+        {
+          "q": "Variance",
+          "a": "Average squared deviation"
+        },
+        {
+          "q": "Standard deviation",
+          "a": "Square root of variance"
+        },
+        {
+          "q": "Z-score",
+          "a": "Standardized value"
+        },
+        {
+          "q": "Confidence interval",
+          "a": "Range likely containing parameter"
+        },
+        {
+          "q": "p-value",
+          "a": "Probability of data if H0 true"
+        },
+        {
+          "q": "Type I error",
+          "a": "False positive"
+        },
+        {
+          "q": "Type II error",
+          "a": "False negative"
+        },
+        {
+          "q": "t-test",
+          "a": "Compare two means"
+        },
+        {
+          "q": "ANOVA",
+          "a": "Compare multiple means"
+        },
+        {
+          "q": "Correlation",
+          "a": "Strength of linear relation"
+        },
+        {
+          "q": "Regression",
+          "a": "Model relationship between variables"
+        },
+        {
+          "q": "Bayes’ theorem",
+          "a": "P(A|B)=P(B|A)P(A)/P(B)"
+        },
+        {
+          "q": "Nonparametric tests",
+          "a": "Do not assume distribution"
+        }
+      ]
+    },
+    {
+      "title": "Software Design",
+      "cards": [
+        {
+          "q": "SOLID",
+          "a": "SRP,OCP,LSP,ISP,DIP"
+        },
+        {
+          "q": "KISS",
+          "a": "Prefer simple solutions"
+        },
+        {
+          "q": "DRY",
+          "a": "Avoid duplication of logic"
+        },
+        {
+          "q": "YAGNI",
+          "a": "Do not build until needed"
+        },
+        {
+          "q": "Cohesion",
+          "a": "How focused module responsibilities are"
+        },
+        {
+          "q": "Coupling",
+          "a": "Interdependence between modules"
+        },
+        {
+          "q": "Factory",
+          "a": "Create objects via interface"
+        },
+        {
+          "q": "Singleton",
+          "a": "Single instance; careful with globals"
+        },
+        {
+          "q": "Strategy",
+          "a": "Swap algorithms via interface"
+        },
+        {
+          "q": "Observer",
+          "a": "Publish/subscribe notifications"
+        },
+        {
+          "q": "Decorator",
+          "a": "Wrap to add behavior"
+        },
+        {
+          "q": "Adapter",
+          "a": "Translate one interface to another"
+        },
+        {
+          "q": "Facade",
+          "a": "Simplified interface to subsystem"
+        },
+        {
+          "q": "Repository",
+          "a": "Abstraction over data layer"
+        },
+        {
+          "q": "CQRS",
+          "a": "Separate read and write models"
+        },
+        {
+          "q": "Event sourcing",
+          "a": "State from event log"
+        },
+        {
+          "q": "Hexagonal",
+          "a": "Ports/adapters isolate domain"
+        },
+        {
+          "q": "Clean architecture",
+          "a": "Entities/use cases/adapters"
+        },
+        {
+          "q": "DDD",
+          "a": "Model core domain with ubiquitous language"
+        },
+        {
+          "q": "Anti-corruption layer",
+          "a": "Protect domain from legacy model"
+        }
+      ]
+    },
+    {
+      "title": "Algebra II",
+      "cards": [
+        {
+          "q": "Solve 5x−3=2x+12",
+          "a": "x=5"
+        },
+        {
+          "q": "Vertex of y=2(x−3)^2+4",
+          "a": "(3,4)"
+        },
+        {
+          "q": "Roots of x^2−9x+20=0",
+          "a": "x=4,5"
+        },
+        {
+          "q": "Sum of roots ax^2+bx+c",
+          "a": "−b/a"
+        },
+        {
+          "q": "Product of roots ax^2+bx+c",
+          "a": "c/a"
+        },
+        {
+          "q": "Complete square: x^2+6x",
+          "a": "(x+3)^2−9"
+        },
+        {
+          "q": "Factor x^2−2x−8",
+          "a": "(x−4)(x+2)"
+        },
+        {
+          "q": "Domain of 1/(x−2)",
+          "a": "x≠2"
+        },
+        {
+          "q": "Solve |2x−1|=5",
+          "a": "x=3 or x=−2"
+        },
+        {
+          "q": "Solve 3^x=27",
+          "a": "x=3"
+        },
+        {
+          "q": "Log rule log(a^b)",
+          "a": "b·log a"
+        },
+        {
+          "q": "Solve 2^x=5",
+          "a": "x=log_2 5"
+        },
+        {
+          "q": "Inequality 2x+1>7",
+          "a": "x>3"
+        },
+        {
+          "q": "Asymptote y= (2x+1)/(x−3)",
+          "a": "x=3"
+        },
+        {
+          "q": "Geometric mean of 4,9",
+          "a": "6"
+        },
+        {
+          "q": "Arithmetic mean of 2,10",
+          "a": "6"
+        },
+        {
+          "q": "Sequence a_n=3n+1",
+          "a": "Linear, d=3"
+        },
+        {
+          "q": "Sequence a_n=2·5^{n}",
+          "a": "Geometric, r=5"
+        },
+        {
+          "q": "Solve system x+y=7,x−y=1",
+          "a": "x=4,y=3"
+        },
+        {
+          "q": "Binomial coeff C(6,2)",
+          "a": "15"
+        }
+      ]
+    },
+    {
+      "title": "Geometry Advanced",
+      "cards": [
+        {
+          "q": "Exterior angle of triangle",
+          "a": "= sum of two remote interiors"
+        },
+        {
+          "q": "Area of trapezoid",
+          "a": "(b1+b2)h/2"
+        },
+        {
+          "q": "Area of regular hexagon (side s)",
+          "a": "(3√3/2)s^2"
+        },
+        {
+          "q": "Diagonal of cube (edge a)",
+          "a": "a√3"
+        },
+        {
+          "q": "Area of equilateral (side s)",
+          "a": "(√3/4)s^2"
+        },
+        {
+          "q": "Apothem meaning",
+          "a": "Inradius of regular polygon"
+        },
+        {
+          "q": "Chord longest where",
+          "a": "Through center (diameter)"
+        },
+        {
+          "q": "Arc length (θ radians)",
+          "a": "θr"
+        },
+        {
+          "q": "Sector area (θ radians)",
+          "a": "(1/2)r^2θ"
+        },
+        {
+          "q": "Inscribed angle",
+          "a": "Half intercepted arc"
+        },
+        {
+          "q": "Tangent–radius angle",
+          "a": "90°"
+        },
+        {
+          "q": "Similar triangles ratio",
+          "a": "Sides proportional"
+        },
+        {
+          "q": "Heron’s s",
+          "a": "(a+b+c)/2"
+        },
+        {
+          "q": "Circumference to diameter",
+          "a": "π"
+        },
+        {
+          "q": "Volume of cone",
+          "a": "(1/3)πr^2h"
+        },
+        {
+          "q": "Surface area sphere",
+          "a": "4πr^2"
+        },
+        {
+          "q": "45–45–90 triangle sides",
+          "a": "x,x,x√2"
+        },
+        {
+          "q": "30–60–90 sides",
+          "a": "x,x√3,2x"
+        },
+        {
+          "q": "Parallel lines alt. interior",
+          "a": "Congruent"
+        },
+        {
+          "q": "Median of triangle count",
+          "a": "3"
+        }
+      ]
+    },
+    {
+      "title": "Calculus I",
+      "cards": [
+        {
+          "q": "Derivative of x^n",
+          "a": "nx^{n−1}"
+        },
+        {
+          "q": "d/dx(sin x)",
+          "a": "cos x"
+        },
+        {
+          "q": "d/dx(cos x)",
+          "a": "−sin x"
+        },
+        {
+          "q": "d/dx(e^x)",
+          "a": "e^x"
+        },
+        {
+          "q": "d/dx(ln x)",
+          "a": "1/x"
+        },
+        {
+          "q": "Product rule",
+          "a": "(fg)'=f'g+fg'"
+        },
+        {
+          "q": "Quotient rule",
+          "a": "(f/g)'=(f'g−fg')/g^2"
+        },
+        {
+          "q": "Chain rule",
+          "a": "(f∘g)'=f'(g)g'"
+        },
+        {
+          "q": "∫ x^n dx",
+          "a": "x^{n+1}/(n+1)+C (n≠−1)"
+        },
+        {
+          "q": "∫ 1/x dx",
+          "a": "ln|x|+C"
+        },
+        {
+          "q": "∫ cos x dx",
+          "a": "sin x+C"
+        },
+        {
+          "q": "∫ sin x dx",
+          "a": "−cos x+C"
+        },
+        {
+          "q": "Critical point",
+          "a": "f'(x)=0 or undefined"
+        },
+        {
+          "q": "Local max test",
+          "a": "f' changes +→−"
+        },
+        {
+          "q": "Local min test",
+          "a": "f' changes −→+"
+        },
+        {
+          "q": "Concave up",
+          "a": "f''>0"
+        },
+        {
+          "q": "Inflection point",
+          "a": "f'' changes sign"
+        },
+        {
+          "q": "Mean Value Theorem",
+          "a": "f'(c)=(f(b)−f(a))/(b−a)"
+        },
+        {
+          "q": "L'Hôpital uses",
+          "a": "0/0 or ∞/∞"
+        },
+        {
+          "q": "Area under curve",
+          "a": "Definite integral"
+        }
+      ]
+    },
+    {
+      "title": "Calculus II",
+      "cards": [
+        {
+          "q": "∫ e^{ax} dx",
+          "a": "(1/a)e^{ax}+C"
+        },
+        {
+          "q": "∫ 1/(x^2+1) dx",
+          "a": "arctan x + C"
+        },
+        {
+          "q": "∫ 1/√(1−x^2) dx",
+          "a": "arcsin x + C"
+        },
+        {
+          "q": "Integration by parts",
+          "a": "∫udv=uv−∫vdu"
+        },
+        {
+          "q": "u-substitution",
+          "a": "Let u=g(x) to simplify"
+        },
+        {
+          "q": "Geometric series sum",
+          "a": "a/(1−r), |r|<1"
+        },
+        {
+          "q": "Converges: p-series ∑1/n^p",
+          "a": "p>1"
+        },
+        {
+          "q": "Diverges: harmonic ∑1/n",
+          "a": "Yes"
+        },
+        {
+          "q": "Ratio test",
+          "a": "L=lim|a_{n+1}/a_n|"
+        },
+        {
+          "q": "If L<1 (ratio test)",
+          "a": "Converges"
+        },
+        {
+          "q": "If L>1 (ratio test)",
+          "a": "Diverges"
+        },
+        {
+          "q": "Alternating test needs",
+          "a": "Decreasing terms →0"
+        },
+        {
+          "q": "Taylor series e^x",
+          "a": "∑ x^n/n!"
+        },
+        {
+          "q": "Taylor series sin x",
+          "a": "∑ (−1)^n x^{2n+1}/(2n+1)!"
+        },
+        {
+          "q": "Arc length",
+          "a": "∫√(1+(y')^2) dx"
+        },
+        {
+          "q": "Surface of revolution",
+          "a": "2π∫ y√(1+(y')^2) dx"
+        },
+        {
+          "q": "Improper integral",
+          "a": "Infinite bound or unbounded integrand"
+        },
+        {
+          "q": "Partial fractions",
+          "a": "Decompose rational function"
+        },
+        {
+          "q": "Center of mass 1D",
+          "a": "(∫xρ dx)/(∫ρ dx)"
+        },
+        {
+          "q": "Work by variable force",
+          "a": "∫F(x) dx"
+        }
+      ]
+    },
+    {
+      "title": "Statistics II",
+      "cards": [
+        {
+          "q": "Bernoulli mean",
+          "a": "p"
+        },
+        {
+          "q": "Bernoulli variance",
+          "a": "p(1−p)"
+        },
+        {
+          "q": "Binomial mean",
+          "a": "np"
+        },
+        {
+          "q": "Binomial variance",
+          "a": "np(1−p)"
+        },
+        {
+          "q": "Poisson mean",
+          "a": "λ"
+        },
+        {
+          "q": "Poisson variance",
+          "a": "λ"
+        },
+        {
+          "q": "Normal 68–95–99.7",
+          "a": "σ,2σ,3σ"
+        },
+        {
+          "q": "Z to probability",
+          "a": "Φ(z)"
+        },
+        {
+          "q": "t-distribution use",
+          "a": "Unknown σ, small n"
+        },
+        {
+          "q": "CLT core idea",
+          "a": "Sample mean ≈ Normal"
+        },
+        {
+          "q": "CI for mean (known σ)",
+          "a": "x̄±z*σ/√n"
+        },
+        {
+          "q": "CI for mean (unknown σ)",
+          "a": "x̄±t*s/√n"
+        },
+        {
+          "q": "Type I error",
+          "a": "False positive"
+        },
+        {
+          "q": "Type II error",
+          "a": "False negative"
+        },
+        {
+          "q": "Power",
+          "a": "1−β"
+        },
+        {
+          "q": "p-value meaning",
+          "a": "P(data|H0 true)"
+        },
+        {
+          "q": "Chi-square test",
+          "a": "Categorical independence"
+        },
+        {
+          "q": "Correlation r range",
+          "a": "−1 to 1"
+        },
+        {
+          "q": "Regression slope meaning",
+          "a": "Δy per unit x"
+        },
+        {
+          "q": "Homoscedasticity",
+          "a": "Constant variance of errors"
+        }
+      ]
+    },
+    {
+      "title": "Physics: Mechanics",
+      "cards": [
+        {
+          "q": "Displacement",
+          "a": "Δx"
+        },
+        {
+          "q": "Velocity",
+          "a": "dx/dt"
+        },
+        {
+          "q": "Acceleration",
+          "a": "dv/dt"
+        },
+        {
+          "q": "Newton’s 2nd",
+          "a": "F=ma"
+        },
+        {
+          "q": "Weight",
+          "a": "mg"
+        },
+        {
+          "q": "Friction kinetic",
+          "a": "μ_k N"
+        },
+        {
+          "q": "Work",
+          "a": "F·d cosθ"
+        },
+        {
+          "q": "Power",
+          "a": "dW/dt"
+        },
+        {
+          "q": "Momentum",
+          "a": "mv"
+        },
+        {
+          "q": "Impulse",
+          "a": "FΔt=Δp"
+        },
+        {
+          "q": "Elastic collision",
+          "a": "KE conserved"
+        },
+        {
+          "q": "Inelastic collision",
+          "a": "KE not conserved"
+        },
+        {
+          "q": "Centripetal accel",
+          "a": "v^2/r"
+        },
+        {
+          "q": "Period of circle",
+          "a": "T=2πr/v"
+        },
+        {
+          "q": "Hooke’s law",
+          "a": "F=−kx"
+        },
+        {
+          "q": "SHO period",
+          "a": "T=2π√(m/k)"
+        },
+        {
+          "q": "Grav potential near Earth",
+          "a": "mgh"
+        },
+        {
+          "q": "Projectile vy at top",
+          "a": "0"
+        },
+        {
+          "q": "Torque",
+          "a": "r×F"
+        },
+        {
+          "q": "Rotational KE",
+          "a": "(1/2)Iω^2"
+        }
+      ]
+    },
+    {
+      "title": "Physics: E&M",
+      "cards": [
+        {
+          "q": "Coulomb’s law",
+          "a": "F=k q1 q2 / r^2"
+        },
+        {
+          "q": "Electric field",
+          "a": "F/q"
+        },
+        {
+          "q": "Potential difference",
+          "a": "Work per charge"
+        },
+        {
+          "q": "Capacitance",
+          "a": "C=Q/V"
+        },
+        {
+          "q": "RC time constant",
+          "a": "τ=RC"
+        },
+        {
+          "q": "Magnetic force",
+          "a": "q v B sinθ"
+        },
+        {
+          "q": "Right-hand rule",
+          "a": "v×B direction"
+        },
+        {
+          "q": "Faraday’s law",
+          "a": "EMF=−dΦ/dt"
+        },
+        {
+          "q": "Ohm’s law",
+          "a": "V=IR"
+        },
+        {
+          "q": "Resistors series",
+          "a": "Add"
+        },
+        {
+          "q": "Resistors parallel",
+          "a": "Reciprocal add"
+        },
+        {
+          "q": "Power electric",
+          "a": "P=VI"
+        },
+        {
+          "q": "Kirchhoff current",
+          "a": "ΣI_in=ΣI_out"
+        },
+        {
+          "q": "Kirchhoff loop",
+          "a": "ΣΔV=0"
+        },
+        {
+          "q": "Drift velocity",
+          "a": "Avg carrier speed"
+        },
+        {
+          "q": "Dielectric effect",
+          "a": "Increases capacitance"
+        },
+        {
+          "q": "Solenoid field",
+          "a": "μ0 n I"
+        },
+        {
+          "q": "RL time constant",
+          "a": "L/R"
+        },
+        {
+          "q": "AC RMS voltage",
+          "a": "V/√2"
+        },
+        {
+          "q": "Transformer ideal",
+          "a": "V2/V1 = N2/N1"
+        }
+      ]
+    },
+    {
+      "title": "Organic Chemistry",
+      "cards": [
+        {
+          "q": "Alkane formula",
+          "a": "C_nH_{2n+2}"
+        },
+        {
+          "q": "Alkene formula",
+          "a": "C_nH_{2n}"
+        },
+        {
+          "q": "Alkyne formula",
+          "a": "C_nH_{2n−2}"
+        },
+        {
+          "q": "Aromatic ring",
+          "a": "Benzene core"
+        },
+        {
+          "q": "Isomers",
+          "a": "Same formula, diff arrangement"
+        },
+        {
+          "q": "Enantiomers",
+          "a": "Non-superimposable mirror images"
+        },
+        {
+          "q": "SN1 rate",
+          "a": "k[substrate]"
+        },
+        {
+          "q": "SN2 rate",
+          "a": "k[substrate][nucleophile]"
+        },
+        {
+          "q": "Markovnikov rule",
+          "a": "H adds to most H-rich carbon"
+        },
+        {
+          "q": "Zaitsev rule",
+          "a": "Most substituted alkene favored"
+        },
+        {
+          "q": "E1 vs E2",
+          "a": "Unimolecular vs bimolecular elimination"
+        },
+        {
+          "q": "Hydrogenation",
+          "a": "Add H2 across double bond"
+        },
+        {
+          "q": "Oxidation of alcohol 1°",
+          "a": "To aldehyde→acid"
+        },
+        {
+          "q": "Reduction of carbonyl",
+          "a": "To alcohol"
+        },
+        {
+          "q": "Protecting group use",
+          "a": "Temporary masking of reactivity"
+        },
+        {
+          "q": "Tautomerization",
+          "a": "Keto–enol interconversion"
+        },
+        {
+          "q": "Stereocenter",
+          "a": "Carbon with four different groups"
+        },
+        {
+          "q": "R/S configuration",
+          "a": "Cahn–Ingold–Prelog rules"
+        },
+        {
+          "q": "IR C=O stretch",
+          "a": "~1700 cm⁻¹"
+        },
+        {
+          "q": "NMR TMS",
+          "a": "Reference at 0 ppm"
+        }
+      ]
+    },
+    {
+      "title": "Human Anatomy",
+      "cards": [
+        {
+          "q": "Heart chambers",
+          "a": "2 atria, 2 ventricles"
+        },
+        {
+          "q": "Gas exchange site",
+          "a": "Alveoli"
+        },
+        {
+          "q": "Kidney unit",
+          "a": "Nephron"
+        },
+        {
+          "q": "Neurotransmitter gap",
+          "a": "Synapse"
+        },
+        {
+          "q": "Largest organ",
+          "a": "Skin"
+        },
+        {
+          "q": "Liver function",
+          "a": "Detox, metabolism, bile"
+        },
+        {
+          "q": "Pancreas role",
+          "a": "Insulin, enzymes"
+        },
+        {
+          "q": "Small intestine parts",
+          "a": "Duodenum, jejunum, ileum"
+        },
+        {
+          "q": "Bone cell builder",
+          "a": "Osteoblast"
+        },
+        {
+          "q": "Bone cell breaker",
+          "a": "Osteoclast"
+        },
+        {
+          "q": "Muscle types",
+          "a": "Skeletal, smooth, cardiac"
+        },
+        {
+          "q": "SA node",
+          "a": "Pacemaker"
+        },
+        {
+          "q": "Hemoglobin job",
+          "a": "Carry O2"
+        },
+        {
+          "q": "WBC role",
+          "a": "Immunity"
+        },
+        {
+          "q": "Platelet role",
+          "a": "Clotting"
+        },
+        {
+          "q": "Anterior vs posterior",
+          "a": "Front vs back"
+        },
+        {
+          "q": "Medial vs lateral",
+          "a": "Toward midline vs away"
+        },
+        {
+          "q": "Proximal vs distal",
+          "a": "Near trunk vs far"
+        },
+        {
+          "q": "CNS vs PNS",
+          "a": "Brain/spinal vs nerves"
+        },
+        {
+          "q": "Endocrine glands",
+          "a": "Thyroid, adrenal, pituitary"
+        }
+      ]
+    },
+    {
+      "title": "Microbiology",
+      "cards": [
+        {
+          "q": "Prokaryote",
+          "a": "No nucleus"
+        },
+        {
+          "q": "Gram-positive wall",
+          "a": "Thick peptidoglycan"
+        },
+        {
+          "q": "Gram-negative wall",
+          "a": "Thin peptidoglycan + outer membrane"
+        },
+        {
+          "q": "Flagella use",
+          "a": "Motility"
+        },
+        {
+          "q": "Endospore",
+          "a": "Dormant, resistant cell"
+        },
+        {
+          "q": "Binary fission",
+          "a": "Asexual division"
+        },
+        {
+          "q": "Plasmid",
+          "a": "Small circular DNA"
+        },
+        {
+          "q": "Conjugation",
+          "a": "DNA transfer via pilus"
+        },
+        {
+          "q": "Transformation",
+          "a": "Uptake of naked DNA"
+        },
+        {
+          "q": "Transduction",
+          "a": "Phage-mediated DNA transfer"
+        },
+        {
+          "q": "Antibiotic target",
+          "a": "Cell wall, ribosome, DNA gyrase"
+        },
+        {
+          "q": "Biofilm",
+          "a": "Surface-attached community"
+        },
+        {
+          "q": "Quorum sensing",
+          "a": "Density-dependent signaling"
+        },
+        {
+          "q": "Sterilization",
+          "a": "Eliminate all microbes"
+        },
+        {
+          "q": "Disinfection",
+          "a": "Reduce pathogens"
+        },
+        {
+          "q": "Aseptic technique",
+          "a": "Prevent contamination"
+        },
+        {
+          "q": "Normal flora",
+          "a": "Commensal microbes"
+        },
+        {
+          "q": "Pathogenicity",
+          "a": "Ability to cause disease"
+        },
+        {
+          "q": "Virulence factor",
+          "a": "Enhances pathogenicity"
+        },
+        {
+          "q": "Bacteriophage",
+          "a": "Virus infecting bacteria"
+        }
+      ]
+    },
+    {
+      "title": "Computer Networks",
+      "cards": [
+        {
+          "q": "IPv4 length",
+          "a": "32 bits"
+        },
+        {
+          "q": "IPv6 length",
+          "a": "128 bits"
+        },
+        {
+          "q": "ARP",
+          "a": "IP↔MAC resolution"
+        },
+        {
+          "q": "DHCP",
+          "a": "Dynamic IP assignment"
+        },
+        {
+          "q": "DNS A record",
+          "a": "IPv4 address"
+        },
+        {
+          "q": "DNS AAAA record",
+          "a": "IPv6 address"
+        },
+        {
+          "q": "TCP port HTTP",
+          "a": "80"
+        },
+        {
+          "q": "HTTPS port",
+          "a": "443"
+        },
+        {
+          "q": "SSH port",
+          "a": "22"
+        },
+        {
+          "q": "SMTP port",
+          "a": "25"
+        },
+        {
+          "q": "IMAP port",
+          "a": "143"
+        },
+        {
+          "q": "CIDR /24 hosts",
+          "a": "256 addresses (254 usable)"
+        },
+        {
+          "q": "Subnetting purpose",
+          "a": "Segment networks"
+        },
+        {
+          "q": "QoS",
+          "a": "Traffic prioritization"
+        },
+        {
+          "q": "NTP",
+          "a": "Clock sync"
+        },
+        {
+          "q": "Traceroute shows",
+          "a": "Hops and latency"
+        },
+        {
+          "q": "TTL",
+          "a": "Hop limit"
+        },
+        {
+          "q": "Anycast",
+          "a": "Same IP at many edges"
+        },
+        {
+          "q": "MSS",
+          "a": "Max TCP segment size"
+        },
+        {
+          "q": "Window size",
+          "a": "Flow control"
+        }
+      ]
+    },
+    {
+      "title": "Databases: SQL",
+      "cards": [
+        {
+          "q": "SELECT all columns",
+          "a": "SELECT * FROM t;"
+        },
+        {
+          "q": "WHERE clause",
+          "a": "Filter rows"
+        },
+        {
+          "q": "ORDER BY x DESC",
+          "a": "Sort descending by x"
+        },
+        {
+          "q": "JOIN default",
+          "a": "INNER JOIN"
+        },
+        {
+          "q": "LEFT JOIN",
+          "a": "All left rows, matching right"
+        },
+        {
+          "q": "GROUP BY",
+          "a": "Aggregate groups"
+        },
+        {
+          "q": "HAVING",
+          "a": "Filter aggregated groups"
+        },
+        {
+          "q": "COUNT(*)",
+          "a": "Row count"
+        },
+        {
+          "q": "AVG(col)",
+          "a": "Mean of col"
+        },
+        {
+          "q": "MAX/MIN",
+          "a": "Extrema"
+        },
+        {
+          "q": "PRIMARY KEY",
+          "a": "Unique identifier"
+        },
+        {
+          "q": "FOREIGN KEY",
+          "a": "References other table"
+        },
+        {
+          "q": "UNIQUE",
+          "a": "No duplicate values"
+        },
+        {
+          "q": "INDEX",
+          "a": "Speed reads by column"
+        },
+        {
+          "q": "TRANSACTION",
+          "a": "BEGIN...COMMIT/ROLLBACK"
+        },
+        {
+          "q": "IS NULL",
+          "a": "Null check"
+        },
+        {
+          "q": "LIKE 'A%'",
+          "a": "Starts with A"
+        },
+        {
+          "q": "IN (..)",
+          "a": "Membership test"
+        },
+        {
+          "q": "UNION vs UNION ALL",
+          "a": "Distinct vs allow duplicates"
+        },
+        {
+          "q": "EXPLAIN",
+          "a": "Show query plan"
+        }
+      ]
+    },
+    {
+      "title": "Web Dev: HTML/CSS",
+      "cards": [
+        {
+          "q": "<main> role",
+          "a": "Primary content"
+        },
+        {
+          "q": "<nav>",
+          "a": "Site navigation"
+        },
+        {
+          "q": "Alt text use",
+          "a": "Describe images"
+        },
+        {
+          "q": "Flex main axis",
+          "a": "Row/column"
+        },
+        {
+          "q": "Grid tracks",
+          "a": "Rows and columns"
+        },
+        {
+          "q": "Position: sticky",
+          "a": "Sticks within container"
+        },
+        {
+          "q": "z-index works on",
+          "a": "Positioned elements"
+        },
+        {
+          "q": "rem unit base",
+          "a": "Root font size"
+        },
+        {
+          "q": "Media query",
+          "a": "@media (max-width:...)"
+        },
+        {
+          "q": "ARIA label",
+          "a": "aria-label"
+        },
+        {
+          "q": "Contrast ratio aim",
+          "a": "≥ 4.5:1"
+        },
+        {
+          "q": "Focus ring",
+          "a": "Visible keyboard focus"
+        },
+        {
+          "q": "Semantic form",
+          "a": "<label for=...>"
+        },
+        {
+          "q": "SVG scalable",
+          "a": "Vector graphics"
+        },
+        {
+          "q": "Responsive img",
+          "a": "srcset/sizes"
+        },
+        {
+          "q": "Preload",
+          "a": "<link rel=preload>"
+        },
+        {
+          "q": "Defer script",
+          "a": "<script defer>"
+        },
+        {
+          "q": "CSS variable",
+          "a": "--name: value"
+        },
+        {
+          "q": "Transition",
+          "a": "property duration easing"
+        },
+        {
+          "q": "Transform",
+          "a": "translate/scale/rotate"
+        }
+      ]
+    },
+    {
+      "title": "JavaScript Advanced",
+      "cards": [
+        {
+          "q": "Closure",
+          "a": "Function with captured scope"
+        },
+        {
+          "q": "Hoisting",
+          "a": "Declarations moved to top"
+        },
+        {
+          "q": "This in arrow fn",
+          "a": "Lexically bound"
+        },
+        {
+          "q": "Event loop queues",
+          "a": "Macro/microtasks"
+        },
+        {
+          "q": "Promise.resolve( )",
+          "a": "Create settled promise"
+        },
+        {
+          "q": "async returns",
+          "a": "Promise"
+        },
+        {
+          "q": "await waits",
+          "a": "Promise resolution"
+        },
+        {
+          "q": "Deep copy tool",
+          "a": "structuredClone"
+        },
+        {
+          "q": "Map vs Object",
+          "a": "Any keys vs string/symbol keys"
+        },
+        {
+          "q": "Set vs Array",
+          "a": "Unique elements"
+        },
+        {
+          "q": "WeakMap use",
+          "a": "Keys GC-friendly"
+        },
+        {
+          "q": "Prototype chain",
+          "a": "Inheritance path"
+        },
+        {
+          "q": "Class fields",
+          "a": "Public/private properties"
+        },
+        {
+          "q": "Import syntax",
+          "a": "import x from 'm'"
+        },
+        {
+          "q": "Dynamic import",
+          "a": "import('m')"
+        },
+        {
+          "q": "Debounce",
+          "a": "Delay until idle"
+        },
+        {
+          "q": "Throttle",
+          "a": "Limit calls per interval"
+        },
+        {
+          "q": "Intl API",
+          "a": "Formatting dates/numbers"
+        },
+        {
+          "q": "Web Worker",
+          "a": "Background thread"
+        },
+        {
+          "q": "LocalStorage limit",
+          "a": "~5–10 MB"
+        }
+      ]
+    },
+    {
+      "title": "Python Advanced",
+      "cards": [
+        {
+          "q": "List vs tuple",
+          "a": "Mutable vs immutable"
+        },
+        {
+          "q": "Dict order",
+          "a": "Insertion-ordered (3.7+)"
+        },
+        {
+          "q": "GIL",
+          "a": "One bytecode thread at a time"
+        },
+        {
+          "q": "Async keywords",
+          "a": "async/await"
+        },
+        {
+          "q": "Contextlib",
+          "a": "Context managers"
+        },
+        {
+          "q": "Dataclasses",
+          "a": "Auto __init__/repr"
+        },
+        {
+          "q": "Type hints",
+          "a": "from typing import ..."
+        },
+        {
+          "q": "Generators",
+          "a": "yield produce iterables"
+        },
+        {
+          "q": "itertools",
+          "a": "Efficient iterator tools"
+        },
+        {
+          "q": "functools.lru_cache",
+          "a": "Memoization"
+        },
+        {
+          "q": "pathlib.Path",
+          "a": "OO filesystem paths"
+        },
+        {
+          "q": "venv",
+          "a": "Isolated environment"
+        },
+        {
+          "q": "pip freeze",
+          "a": "List deps"
+        },
+        {
+          "q": "poetry",
+          "a": "Package/dependency tool"
+        },
+        {
+          "q": "pydantic",
+          "a": "Data validation"
+        },
+        {
+          "q": "pytest",
+          "a": "Testing framework"
+        },
+        {
+          "q": "logging levels",
+          "a": "DEBUG..CRITICAL"
+        },
+        {
+          "q": "multiprocessing",
+          "a": "Bypass GIL with processes"
+        },
+        {
+          "q": "subprocess.run",
+          "a": "Spawn processes"
+        },
+        {
+          "q": "sqlite3",
+          "a": "Built-in DB"
+        }
+      ]
+    },
+    {
+      "title": "Data Structures Advanced",
+      "cards": [
+        {
+          "q": "Red-Black property",
+          "a": "Balanced by color rules"
+        },
+        {
+          "q": "AVL balance factor",
+          "a": "−1,0,1"
+        },
+        {
+          "q": "B+ tree",
+          "a": "All keys in leaves"
+        },
+        {
+          "q": "Skip list",
+          "a": "Layered probabilistic lists"
+        },
+        {
+          "q": "Treap",
+          "a": "BST + heap priority"
+        },
+        {
+          "q": "Splay tree",
+          "a": "Move accessed to root"
+        },
+        {
+          "q": "K-d tree",
+          "a": "k-dimensional splits"
+        },
+        {
+          "q": "Quadtree",
+          "a": "2D space partition"
+        },
+        {
+          "q": "Bloom filter",
+          "a": "Probabilistic membership"
+        },
+        {
+          "q": "Cuckoo hash",
+          "a": "Two tables rehashing"
+        },
+        {
+          "q": "Trie compression",
+          "a": "Radix tree"
+        },
+        {
+          "q": "Disjoint-set ops",
+          "a": "Find/Union"
+        },
+        {
+          "q": "Union by rank",
+          "a": "Attach smaller tree"
+        },
+        {
+          "q": "Path compression",
+          "a": "Flatten structure"
+        },
+        {
+          "q": "Segment tree lazy",
+          "a": "Deferred updates"
+        },
+        {
+          "q": "Fenwick tree",
+          "a": "Binary indexed tree"
+        },
+        {
+          "q": "LRU via",
+          "a": "Map + doubly list"
+        },
+        {
+          "q": "LFU cache",
+          "a": "Least frequently used"
+        },
+        {
+          "q": "ROPE",
+          "a": "Efficient string edits"
+        },
+        {
+          "q": "Suffix array",
+          "a": "Sorted suffix indices"
+        }
+      ]
+    },
+    {
+      "title": "Algorithms Patterns",
+      "cards": [
+        {
+          "q": "Two-pointer",
+          "a": "Scan from both ends"
+        },
+        {
+          "q": "Sliding window",
+          "a": "Maintain range state"
+        },
+        {
+          "q": "Binary search",
+          "a": "Halve search space"
+        },
+        {
+          "q": "Divide and conquer",
+          "a": "Split and combine"
+        },
+        {
+          "q": "Greedy",
+          "a": "Local optimal choice"
+        },
+        {
+          "q": "Dynamic programming",
+          "a": "Memoize subproblems"
+        },
+        {
+          "q": "Backtracking",
+          "a": "Try/undo choices"
+        },
+        {
+          "q": "Sweep line",
+          "a": "Process events in order"
+        },
+        {
+          "q": "Union-find",
+          "a": "Merge connectivity"
+        },
+        {
+          "q": "Meet-in-the-middle",
+          "a": "Split search to halves"
+        },
+        {
+          "q": "Graph coloring",
+          "a": "Assign colors to vertices"
+        },
+        {
+          "q": "Topological order",
+          "a": "Linearize DAG"
+        },
+        {
+          "q": "Dijkstra",
+          "a": "SP with nonnegative edges"
+        },
+        {
+          "q": "Bellman-Ford",
+          "a": "SP with negatives"
+        },
+        {
+          "q": "Kruskal",
+          "a": "MST by light edges"
+        },
+        {
+          "q": "Prim",
+          "a": "MST by growth"
+        },
+        {
+          "q": "KMP",
+          "a": "Linear pattern match"
+        },
+        {
+          "q": "Trie-based search",
+          "a": "Prefix queries"
+        },
+        {
+          "q": "Branch and bound",
+          "a": "Prune by bounds"
+        },
+        {
+          "q": "Simulated annealing",
+          "a": "Probabilistic optimization"
+        }
+      ]
+    },
+    {
+      "title": "Cloud: AWS Focus",
+      "cards": [
+        {
+          "q": "EC2",
+          "a": "Virtual servers"
+        },
+        {
+          "q": "S3",
+          "a": "Object storage"
+        },
+        {
+          "q": "RDS",
+          "a": "Managed relational DB"
+        },
+        {
+          "q": "DynamoDB",
+          "a": "NoSQL key-value"
+        },
+        {
+          "q": "Lambda",
+          "a": "Serverless compute"
+        },
+        {
+          "q": "API Gateway",
+          "a": "Front door for APIs"
+        },
+        {
+          "q": "ECS/EKS",
+          "a": "Container orchestration"
+        },
+        {
+          "q": "CloudFront",
+          "a": "CDN"
+        },
+        {
+          "q": "VPC",
+          "a": "Virtual network"
+        },
+        {
+          "q": "Route 53",
+          "a": "DNS"
+        },
+        {
+          "q": "ELB/ALB/NLB",
+          "a": "Load balancers"
+        },
+        {
+          "q": "IAM",
+          "a": "Access control"
+        },
+        {
+          "q": "KMS",
+          "a": "Key management"
+        },
+        {
+          "q": "CloudWatch",
+          "a": "Logs/metrics/alarms"
+        },
+        {
+          "q": "CloudTrail",
+          "a": "API audit logs"
+        },
+        {
+          "q": "SQS",
+          "a": "Message queue"
+        },
+        {
+          "q": "SNS",
+          "a": "Pub/Sub"
+        },
+        {
+          "q": "Glue",
+          "a": "ETL service"
+        },
+        {
+          "q": "Athena",
+          "a": "Query S3 with SQL"
+        },
+        {
+          "q": "Redshift",
+          "a": "Data warehouse"
+        }
+      ]
+    },
+    {
+      "title": "Japanese Travel II",
+      "cards": [
+        {
+          "q": "Where is the station?",
+          "a": "駅はどこですか (Eki wa doko desu ka)"
+        },
+        {
+          "q": "One ticket to Tokyo",
+          "a": "東京まで一枚お願いします (Tōkyō made ichimai onegai shimasu)"
+        },
+        {
+          "q": "Platform number?",
+          "a": "何番線ですか (Nan-bansen desu ka)"
+        },
+        {
+          "q": "Does this stop here?",
+          "a": "ここに止まりますか (Koko ni tomarimasu ka)"
+        },
+        {
+          "q": "How long?",
+          "a": "どのくらいかかりますか (Dono kurai kakarimasu ka)"
+        },
+        {
+          "q": "I’m lost",
+          "a": "道に迷いました (Michi ni mayoimashita)"
+        },
+        {
+          "q": "Help please",
+          "a": "助けてください (Tasukete kudasai)"
+        },
+        {
+          "q": "I have a reservation",
+          "a": "予約があります (Yoyaku ga arimasu)"
+        },
+        {
+          "q": "Two people",
+          "a": "二人です (Futari desu)"
+        },
+        {
+          "q": "Check, please",
+          "a": "お会計お願いします (Okaikei onegai shimasu)"
+        },
+        {
+          "q": "No plastic bag",
+          "a": "袋はいりません (Fukuro wa irimasen)"
+        },
+        {
+          "q": "I’m allergic to",
+          "a": "〜にアレルギーがあります (〜ni arerugī ga arimasu)"
+        },
+        {
+          "q": "Spicy?",
+          "a": "辛いですか (Karai desu ka)"
+        },
+        {
+          "q": "Water please",
+          "a": "お水をください (Omizu o kudasai)"
+        },
+        {
+          "q": "Bathroom",
+          "a": "お手洗い (Otearai)"
+        },
+        {
+          "q": "Good value",
+          "a": "お買い得 (Okaidoku)"
+        },
+        {
+          "q": "Beautiful",
+          "a": "きれい (Kirei)"
+        },
+        {
+          "q": "Delicious",
+          "a": "おいしい (Oishii)"
+        },
+        {
+          "q": "Cheap",
+          "a": "安い (Yasui)"
+        },
+        {
+          "q": "Expensive",
+          "a": "高い (Takai)"
+        }
+      ]
+    },
+    {
+      "title": "US History I",
+      "cards": [
+        {
+          "q": "Year of Declaration of Independence",
+          "a": "1776"
+        },
+        {
+          "q": "Author of Declaration",
+          "a": "Thomas Jefferson"
+        },
+        {
+          "q": "First US President",
+          "a": "George Washington"
+        },
+        {
+          "q": "Civil War years",
+          "a": "1861–1865"
+        },
+        {
+          "q": "Emancipation Proclamation year",
+          "a": "1863"
+        },
+        {
+          "q": "Louisiana Purchase year",
+          "a": "1803"
+        },
+        {
+          "q": "Great Depression began",
+          "a": "1929"
+        },
+        {
+          "q": "New Deal president",
+          "a": "Franklin D. Roosevelt"
+        },
+        {
+          "q": "Bill of Rights count",
+          "a": "10 amendments"
+        },
+        {
+          "q": "Women’s suffrage amendment",
+          "a": "19th Amendment"
+        },
+        {
+          "q": "Abolished slavery amendment",
+          "a": "13th Amendment"
+        },
+        {
+          "q": "Cold War opponents",
+          "a": "USA and USSR"
+        },
+        {
+          "q": "Watergate president",
+          "a": "Richard Nixon"
+        },
+        {
+          "q": "Civil Rights Act year",
+          "a": "1964"
+        },
+        {
+          "q": "Brown v. Board decision",
+          "a": "Desegregated schools"
+        },
+        {
+          "q": "Monroe Doctrine aim",
+          "a": "Oppose European interference"
+        },
+        {
+          "q": "Transcontinental railroad completed",
+          "a": "1869"
+        },
+        {
+          "q": "Pearl Harbor date",
+          "a": "Dec 7, 1941"
+        },
+        {
+          "q": "Marshall Plan purpose",
+          "a": "European recovery aid"
+        },
+        {
+          "q": "Boston Tea Party protest of",
+          "a": "Taxation without representation"
+        }
+      ]
+    },
+    {
+      "title": "World History I",
+      "cards": [
+        {
+          "q": "Ancient Egyptian river",
+          "a": "Nile"
+        },
+        {
+          "q": "Birthplace of democracy",
+          "a": "Athens"
+        },
+        {
+          "q": "Rome fell in West",
+          "a": "476 CE"
+        },
+        {
+          "q": "Silk Road connected",
+          "a": "China and Mediterranean"
+        },
+        {
+          "q": "Genghis Khan led",
+          "a": "Mongol Empire"
+        },
+        {
+          "q": "Renaissance city",
+          "a": "Florence"
+        },
+        {
+          "q": "95 Theses author",
+          "a": "Martin Luther"
+        },
+        {
+          "q": "Age of Exploration motive",
+          "a": "Trade routes and wealth"
+        },
+        {
+          "q": "French Revolution year",
+          "a": "1789"
+        },
+        {
+          "q": "Industrial Revolution start",
+          "a": "Britain"
+        },
+        {
+          "q": "Ottoman capital",
+          "a": "Constantinople/Istanbul"
+        },
+        {
+          "q": "Meiji Restoration country",
+          "a": "Japan"
+        },
+        {
+          "q": "Cold War ended",
+          "a": "1991"
+        },
+        {
+          "q": "Magna Carta year",
+          "a": "1215"
+        },
+        {
+          "q": "Printing press inventor",
+          "a": "Johannes Gutenberg"
+        },
+        {
+          "q": "Black Death century",
+          "a": "14th"
+        },
+        {
+          "q": "Mughal architecture icon",
+          "a": "Taj Mahal"
+        },
+        {
+          "q": "Byzantine holy church",
+          "a": "Hagia Sophia"
+        },
+        {
+          "q": "Zulu leader",
+          "a": "Shaka"
+        },
+        {
+          "q": "Great Wall purpose",
+          "a": "Defense against invasions"
+        }
+      ]
+    },
+    {
+      "title": "Economics Basics",
+      "cards": [
+        {
+          "q": "Opportunity cost",
+          "a": "Next best alternative forgone"
+        },
+        {
+          "q": "Supply law",
+          "a": "Price up → quantity supplied up"
+        },
+        {
+          "q": "Demand law",
+          "a": "Price up → quantity demanded down"
+        },
+        {
+          "q": "Elastic demand",
+          "a": "Sensitive to price changes"
+        },
+        {
+          "q": "GDP meaning",
+          "a": "Value of goods/services produced"
+        },
+        {
+          "q": "Inflation",
+          "a": "General rise in prices"
+        },
+        {
+          "q": "CPI measures",
+          "a": "Consumer price changes"
+        },
+        {
+          "q": "Fiscal policy",
+          "a": "Government spending/taxes"
+        },
+        {
+          "q": "Monetary policy",
+          "a": "Central bank money/interest"
+        },
+        {
+          "q": "Unemployment types",
+          "a": "Frictional, structural, cyclical"
+        },
+        {
+          "q": "Comparative advantage",
+          "a": "Lower opportunity cost"
+        },
+        {
+          "q": "Market equilibrium",
+          "a": "Supply equals demand"
+        },
+        {
+          "q": "Price ceiling effect",
+          "a": "Shortage risk"
+        },
+        {
+          "q": "Price floor effect",
+          "a": "Surplus risk"
+        },
+        {
+          "q": "Marginal cost",
+          "a": "Cost of one more unit"
+        },
+        {
+          "q": "Diminishing returns",
+          "a": "Extra input yields less output"
+        },
+        {
+          "q": "Public goods trait",
+          "a": "Non-rival, non-excludable"
+        },
+        {
+          "q": "Externality example",
+          "a": "Pollution"
+        },
+        {
+          "q": "Utility",
+          "a": "Satisfaction from consumption"
+        },
+        {
+          "q": "Gini coefficient",
+          "a": "Income inequality measure"
+        }
+      ]
+    },
+    {
+      "title": "Finance Basics",
+      "cards": [
+        {
+          "q": "NPV",
+          "a": "Present value of cash flows minus cost"
+        },
+        {
+          "q": "IRR",
+          "a": "Discount rate with NPV=0"
+        },
+        {
+          "q": "Payback period",
+          "a": "Time to recover investment"
+        },
+        {
+          "q": "Diversification goal",
+          "a": "Reduce risk"
+        },
+        {
+          "q": "ETF",
+          "a": "Exchange-traded fund"
+        },
+        {
+          "q": "Beta measures",
+          "a": "Market risk sensitivity"
+        },
+        {
+          "q": "P/E ratio",
+          "a": "Price per share / earnings per share"
+        },
+        {
+          "q": "Dividend yield",
+          "a": "Dividend/price"
+        },
+        {
+          "q": "Bond coupon",
+          "a": "Periodic interest payment"
+        },
+        {
+          "q": "Yield to maturity",
+          "a": "Total return if held to maturity"
+        },
+        {
+          "q": "Credit risk",
+          "a": "Default risk"
+        },
+        {
+          "q": "Liquidity",
+          "a": "Ease of converting to cash"
+        },
+        {
+          "q": "Compound interest",
+          "a": "Interest on interest"
+        },
+        {
+          "q": "Time value of money",
+          "a": "Money now > money later"
+        },
+        {
+          "q": "DCF",
+          "a": "Discounted cash flow method"
+        },
+        {
+          "q": "Market capitalization",
+          "a": "Price × shares"
+        },
+        {
+          "q": "Alpha",
+          "a": "Excess return over benchmark"
+        },
+        {
+          "q": "Sharpe ratio",
+          "a": "Return minus risk-free over volatility"
+        },
+        {
+          "q": "Hedge",
+          "a": "Offset risk position"
+        },
+        {
+          "q": "Stop-loss order",
+          "a": "Auto-sell at set price"
+        }
+      ]
+    },
+    {
+      "title": "Astronomy",
+      "cards": [
+        {
+          "q": "Nearest star to Earth",
+          "a": "Sun"
+        },
+        {
+          "q": "Galaxy we live in",
+          "a": "Milky Way"
+        },
+        {
+          "q": "Red planet",
+          "a": "Mars"
+        },
+        {
+          "q": "Hottest planet",
+          "a": "Venus"
+        },
+        {
+          "q": "Largest planet",
+          "a": "Jupiter"
+        },
+        {
+          "q": "Dwarf planet in Kuiper Belt",
+          "a": "Pluto"
+        },
+        {
+          "q": "Light-year",
+          "a": "Distance light travels in a year"
+        },
+        {
+          "q": "Supernova",
+          "a": "Exploding star"
+        },
+        {
+          "q": "Black hole feature",
+          "a": "Escape velocity exceeds light"
+        },
+        {
+          "q": "Exoplanet",
+          "a": "Planet outside solar system"
+        },
+        {
+          "q": "Spectroscopy use",
+          "a": "Analyze composition via light"
+        },
+        {
+          "q": "H-R diagram plots",
+          "a": "Luminosity vs temperature"
+        },
+        {
+          "q": "Nebula",
+          "a": "Cloud of gas and dust"
+        },
+        {
+          "q": "Tides caused by",
+          "a": "Moon and Sun gravity"
+        },
+        {
+          "q": "Earth’s axial tilt",
+          "a": "~23.5°"
+        },
+        {
+          "q": "Aurora cause",
+          "a": "Solar wind + magnetosphere"
+        },
+        {
+          "q": "Eclipse types",
+          "a": "Solar and lunar"
+        },
+        {
+          "q": "Cosmic microwave background",
+          "a": "Relic radiation from Big Bang"
+        },
+        {
+          "q": "Dark matter evidence",
+          "a": "Galaxy rotation curves"
+        },
+        {
+          "q": "Hubble’s law",
+          "a": "Recession speed ∝ distance"
+        }
+      ]
+    },
+    {
+      "title": "Earth Science",
+      "cards": [
+        {
+          "q": "Rock cycle types",
+          "a": "Igneous, sedimentary, metamorphic"
+        },
+        {
+          "q": "Plate tectonics move at",
+          "a": "cm per year"
+        },
+        {
+          "q": "Richter scale measures",
+          "a": "Earthquake magnitude"
+        },
+        {
+          "q": "Epicenter",
+          "a": "Point on surface above focus"
+        },
+        {
+          "q": "Weathering vs erosion",
+          "a": "Breakdown vs transport"
+        },
+        {
+          "q": "Greenhouse gases",
+          "a": "CO2, CH4, N2O"
+        },
+        {
+          "q": "Ozone layer location",
+          "a": "Stratosphere"
+        },
+        {
+          "q": "Water table",
+          "a": "Top of saturated zone"
+        },
+        {
+          "q": "El Niño",
+          "a": "Warming of Pacific waters"
+        },
+        {
+          "q": "Hurricane energy source",
+          "a": "Warm ocean water"
+        },
+        {
+          "q": "Mineral hardness scale",
+          "a": "Mohs scale"
+        },
+        {
+          "q": "Soil horizons",
+          "a": "O, A, B, C"
+        },
+        {
+          "q": "Fossil fuels",
+          "a": "Coal, oil, natural gas"
+        },
+        {
+          "q": "Karst forms from",
+          "a": "Dissolution of limestone"
+        },
+        {
+          "q": "Desertification",
+          "a": "Land becomes desert-like"
+        },
+        {
+          "q": "Tsunami cause",
+          "a": "Seafloor displacement"
+        },
+        {
+          "q": "Volcano types",
+          "a": "Shield, composite, cinder cone"
+        },
+        {
+          "q": "Glaciers shape",
+          "a": "U-shaped valleys"
+        },
+        {
+          "q": "River meander",
+          "a": "Curving channel bends"
+        },
+        {
+          "q": "Isostasy",
+          "a": "Crust floats on mantle"
+        }
+      ]
+    },
+    {
+      "title": "Anatomy II",
+      "cards": [
+        {
+          "q": "Brain lobes",
+          "a": "Frontal, parietal, temporal, occipital"
+        },
+        {
+          "q": "Cerebellum role",
+          "a": "Coordination and balance"
+        },
+        {
+          "q": "Hypothalamus role",
+          "a": "Homeostasis, hormones"
+        },
+        {
+          "q": "Cranial nerves count",
+          "a": "12 pairs"
+        },
+        {
+          "q": "Alimentary canal start",
+          "a": "Mouth"
+        },
+        {
+          "q": "Bile made by",
+          "a": "Liver"
+        },
+        {
+          "q": "Insulin made by",
+          "a": "Pancreas"
+        },
+        {
+          "q": "Alveoli function",
+          "a": "Gas exchange"
+        },
+        {
+          "q": " SA node location",
+          "a": "Right atrium"
+        },
+        {
+          "q": "Cornea function",
+          "a": "Refracts light"
+        },
+        {
+          "q": "Rod cells",
+          "a": "Low-light vision"
+        },
+        {
+          "q": "Nephron loop name",
+          "a": "Loop of Henle"
+        },
+        {
+          "q": "Glomerulus",
+          "a": "Capillary tuft filtering blood"
+        },
+        {
+          "q": "Axon",
+          "a": "Carries nerve impulse away"
+        },
+        {
+          "q": "Myelin",
+          "a": "Insulation of axons"
+        },
+        {
+          "q": "Synovial fluid",
+          "a": "Lubricates joints"
+        },
+        {
+          "q": "Lymph nodes",
+          "a": "Filter lymph"
+        },
+        {
+          "q": "Spleen role",
+          "a": "Immune and blood filter"
+        },
+        {
+          "q": "Thyroid hormone",
+          "a": "Thyroxine (T4)"
+        },
+        {
+          "q": "Adrenal medulla hormone",
+          "a": "Adrenaline"
+        }
+      ]
+    },
+    {
+      "title": "Physiology",
+      "cards": [
+        {
+          "q": "Homeostasis",
+          "a": "Maintain internal constancy"
+        },
+        {
+          "q": "Cardiac output",
+          "a": "Heart rate × stroke volume"
+        },
+        {
+          "q": "Tidal volume",
+          "a": "Air per normal breath"
+        },
+        {
+          "q": "Hemoglobin binds",
+          "a": "Oxygen"
+        },
+        {
+          "q": "Bohr effect",
+          "a": "CO2/H+ reduce O2 affinity"
+        },
+        {
+          "q": "Action potential ion",
+          "a": "Na+ influx then K+ efflux"
+        },
+        {
+          "q": "Synapse transmitter",
+          "a": "Chemical or electrical"
+        },
+        {
+          "q": "Insulin effect",
+          "a": "Lower blood glucose"
+        },
+        {
+          "q": "Glucagon effect",
+          "a": "Raise blood glucose"
+        },
+        {
+          "q": "Basal metabolic rate",
+          "a": "Energy at rest"
+        },
+        {
+          "q": "Kidney filtration site",
+          "a": "Glomerulus"
+        },
+        {
+          "q": "ADH effect",
+          "a": "Increase water reabsorption"
+        },
+        {
+          "q": "Muscle energy immediate",
+          "a": "ATP and creatine phosphate"
+        },
+        {
+          "q": "Lactate forms when",
+          "a": "Anaerobic glycolysis"
+        },
+        {
+          "q": "Baroreceptors sense",
+          "a": "Blood pressure"
+        },
+        {
+          "q": "Pulmonary circulation",
+          "a": "Heart→lungs→heart"
+        },
+        {
+          "q": "SA node role",
+          "a": "Pacemaker"
+        },
+        {
+          "q": "Peristalsis",
+          "a": "Wave-like gut motion"
+        },
+        {
+          "q": "Reflex arc",
+          "a": "Sensory→interneuron→motor"
+        },
+        {
+          "q": "Fever mediator",
+          "a": "Pyrogens reset set point"
+        }
+      ]
+    },
+    {
+      "title": "Genetics",
+      "cards": [
+        {
+          "q": "Chromosome count human",
+          "a": "46"
+        },
+        {
+          "q": "Allele",
+          "a": "Variant of a gene"
+        },
+        {
+          "q": "Genotype",
+          "a": "Genetic makeup"
+        },
+        {
+          "q": "Phenotype",
+          "a": "Observable traits"
+        },
+        {
+          "q": "Dominant allele",
+          "a": "Expressed with one copy"
+        },
+        {
+          "q": "Recessive allele",
+          "a": "Needs two copies"
+        },
+        {
+          "q": "Codominance example",
+          "a": "AB blood type"
+        },
+        {
+          "q": "Incomplete dominance",
+          "a": "Blended phenotype"
+        },
+        {
+          "q": "Punnett square",
+          "a": "Predicts crosses"
+        },
+        {
+          "q": "Mendel’s law of segregation",
+          "a": "Alleles separate into gametes"
+        },
+        {
+          "q": "Independent assortment",
+          "a": "Genes sort independently"
+        },
+        {
+          "q": "Crossing over",
+          "a": "Exchange in meiosis I"
+        },
+        {
+          "q": "Mutation",
+          "a": "Change in DNA sequence"
+        },
+        {
+          "q": "Point mutation",
+          "a": "Single base change"
+        },
+        {
+          "q": "Frameshift",
+          "a": "Insertion/deletion not multiple of 3"
+        },
+        {
+          "q": "Homozygous",
+          "a": "Same alleles"
+        },
+        {
+          "q": "Heterozygous",
+          "a": "Different alleles"
+        },
+        {
+          "q": "X-linked inheritance",
+          "a": "Gene on X chromosome"
+        },
+        {
+          "q": "Mitochondrial DNA",
+          "a": "Maternal inheritance"
+        },
+        {
+          "q": "Genome",
+          "a": "All genetic material"
+        }
+      ]
+    },
+    {
+      "title": "Programming: TypeScript",
+      "cards": [
+        {
+          "q": "Type annotation syntax",
+          "a": "const x: number"
+        },
+        {
+          "q": "Interface keyword",
+          "a": "interface"
+        },
+        {
+          "q": "Union type",
+          "a": "string | number"
+        },
+        {
+          "q": "Generics",
+          "a": "function f<T>(x:T)"
+        },
+        {
+          "q": "Enum",
+          "a": "enum Color {Red}"
+        },
+        {
+          "q": "Type alias",
+          "a": "type ID = string"
+        },
+        {
+          "q": "Readonly",
+          "a": "readonly prop"
+        },
+        {
+          "q": "Partial utility",
+          "a": "Partial<T>"
+        },
+        {
+          "q": "Pick utility",
+          "a": "Pick<T,K>"
+        },
+        {
+          "q": "Record utility",
+          "a": "Record<K,T>"
+        },
+        {
+          "q": "NonNullable",
+          "a": "Exclude null and undefined"
+        },
+        {
+          "q": "Unknown vs any",
+          "a": "Unknown needs narrowing"
+        },
+        {
+          "q": "Narrowing example",
+          "a": "if (typeof x==='string')"
+        },
+        {
+          "q": "Never type",
+          "a": "No values"
+        },
+        {
+          "q": "Optional property",
+          "a": "prop?: T"
+        },
+        {
+          "q": "Assertion",
+          "a": "value as Type"
+        },
+        {
+          "q": "Module import",
+          "a": "import x from 'm'"
+        },
+        {
+          "q": "Strict mode flag",
+          "a": "strict: true"
+        },
+        {
+          "q": "tsconfig purpose",
+          "a": "Compiler options"
+        },
+        {
+          "q": "Declare global",
+          "a": "declare global { }"
+        }
+      ]
+    },
+    {
+      "title": "Programming: React",
+      "cards": [
+        {
+          "q": "Component type",
+          "a": "Function components"
+        },
+        {
+          "q": "JSX",
+          "a": "Syntax to describe UI"
+        },
+        {
+          "q": "State hook",
+          "a": "useState"
+        },
+        {
+          "q": "Effect hook",
+          "a": "useEffect"
+        },
+        {
+          "q": "Memoization",
+          "a": "React.memo/useMemo"
+        },
+        {
+          "q": "Context API",
+          "a": "useContext"
+        },
+        {
+          "q": "Ref hook",
+          "a": "useRef"
+        },
+        {
+          "q": "Key purpose",
+          "a": "Identify list items"
+        },
+        {
+          "q": "Controlled input",
+          "a": "Value from state"
+        },
+        {
+          "q": "Prop drilling",
+          "a": "Passing props through many levels"
+        },
+        {
+          "q": "Suspense",
+          "a": "Await async UI"
+        },
+        {
+          "q": "Error boundary",
+          "a": "Catches render errors"
+        },
+        {
+          "q": "SSR",
+          "a": "Server-side rendering"
+        },
+        {
+          "q": "Hydration",
+          "a": "Attach events to SSR HTML"
+        },
+        {
+          "q": "Reconciliation",
+          "a": "Diffing virtual DOM"
+        },
+        {
+          "q": "Portal",
+          "a": "Render into different DOM node"
+        },
+        {
+          "q": "Fragment",
+          "a": "<>...</>"
+        },
+        {
+          "q": "StrictMode",
+          "a": "Extra checks in dev"
+        },
+        {
+          "q": "Concurrent features",
+          "a": "Responsive rendering"
+        },
+        {
+          "q": "useReducer",
+          "a": "State reducer pattern"
+        }
+      ]
+    },
+    {
+      "title": "Programming: SQL Advanced",
+      "cards": [
+        {
+          "q": "Window function",
+          "a": "OVER clause operations"
+        },
+        {
+          "q": "ROW_NUMBER",
+          "a": "Sequential rank per partition"
+        },
+        {
+          "q": "CTE",
+          "a": "WITH clause"
+        },
+        {
+          "q": "Recursive CTE",
+          "a": "WITH RECURSIVE"
+        },
+        {
+          "q": "Index-only scan",
+          "a": "Uses index without table"
+        },
+        {
+          "q": "Covering index",
+          "a": "Contains all needed columns"
+        },
+        {
+          "q": "Query hint",
+          "a": "Optimizer directive"
+        },
+        {
+          "q": "EXPLAIN ANALYZE",
+          "a": "Execute and show plan"
+        },
+        {
+          "q": "Materialized view",
+          "a": "Stored result of query"
+        },
+        {
+          "q": "Partitioning",
+          "a": "Split table by key/range"
+        },
+        {
+          "q": "Foreign key cascade",
+          "a": "Auto update/delete related rows"
+        },
+        {
+          "q": "Isolation serializable",
+          "a": "Full ACID isolation"
+        },
+        {
+          "q": "Deadlock detection",
+          "a": "Abort one transaction"
+        },
+        {
+          "q": "Lock escalation",
+          "a": "Row to table lock"
+        },
+        {
+          "q": "Bitmap index",
+          "a": "Efficient boolean combos"
+        },
+        {
+          "q": "Full-text search",
+          "a": "Token-based search"
+        },
+        {
+          "q": "UPSERT",
+          "a": "INSERT ... ON CONFLICT"
+        },
+        {
+          "q": "MERGE",
+          "a": "Conditional insert/update"
+        },
+        {
+          "q": "Lateral join",
+          "a": "Join with subquery uses left row"
+        },
+        {
+          "q": "UNNEST",
+          "a": "Expand array to rows"
+        }
+      ]
+    },
+    {
+      "title": "Networking Security",
+      "cards": [
+        {
+          "q": "Firewall",
+          "a": "Filters traffic by rules"
+        },
+        {
+          "q": "IDS/IPS",
+          "a": "Detect/prevent intrusions"
+        },
+        {
+          "q": "VPN",
+          "a": "Encrypted tunnel"
+        },
+        {
+          "q": "TLS",
+          "a": "Transport security"
+        },
+        {
+          "q": "Certificate authority",
+          "a": "Issues digital certs"
+        },
+        {
+          "q": "HSTS",
+          "a": "Force HTTPS"
+        },
+        {
+          "q": "CORS policy",
+          "a": "Cross-origin rules"
+        },
+        {
+          "q": "CSRF token",
+          "a": "Prevents forged requests"
+        },
+        {
+          "q": "XSS",
+          "a": "Inject scripts into pages"
+        },
+        {
+          "q": "SQL injection",
+          "a": "Manipulate DB via input"
+        },
+        {
+          "q": "SSRF",
+          "a": "Server makes internal requests"
+        },
+        {
+          "q": "WAF",
+          "a": "Web application firewall"
+        },
+        {
+          "q": "Rate limiting",
+          "a": "Throttle requests"
+        },
+        {
+          "q": "Brute force",
+          "a": "Many guesses attack"
+        },
+        {
+          "q": "Salting passwords",
+          "a": "Add randomness before hashing"
+        },
+        {
+          "q": "PBKDF2/BCrypt/Argon2",
+          "a": "Key-stretching hashes"
+        },
+        {
+          "q": "Zero trust",
+          "a": "Verify every request"
+        },
+        {
+          "q": "Principle of least privilege",
+          "a": "Minimal access"
+        },
+        {
+          "q": "Secrets rotation",
+          "a": "Regularly replace keys"
+        },
+        {
+          "q": "Audit logging",
+          "a": "Track security events"
+        }
+      ]
+    },
+    {
+      "title": "Linux CLI",
+      "cards": [
+        {
+          "q": "List files",
+          "a": "ls"
+        },
+        {
+          "q": "Change directory",
+          "a": "cd"
+        },
+        {
+          "q": "Print working dir",
+          "a": "pwd"
+        },
+        {
+          "q": "Copy file",
+          "a": "cp"
+        },
+        {
+          "q": "Move/rename",
+          "a": "mv"
+        },
+        {
+          "q": "Remove file",
+          "a": "rm"
+        },
+        {
+          "q": "Search text",
+          "a": "grep"
+        },
+        {
+          "q": "Find files",
+          "a": "find"
+        },
+        {
+          "q": "Show processes",
+          "a": "ps"
+        },
+        {
+          "q": "Kill by PID",
+          "a": "kill"
+        },
+        {
+          "q": "Permissions view",
+          "a": "ls -l"
+        },
+        {
+          "q": "Change mode",
+          "a": "chmod"
+        },
+        {
+          "q": "Change owner",
+          "a": "chown"
+        },
+        {
+          "q": "Archive tar",
+          "a": "tar -czf"
+        },
+        {
+          "q": "Stream pager",
+          "a": "less"
+        },
+        {
+          "q": "Link hard/soft",
+          "a": "ln, ln -s"
+        },
+        {
+          "q": "Env vars",
+          "a": "export NAME=VAL"
+        },
+        {
+          "q": "Shell config",
+          "a": "~/.bashrc"
+        },
+        {
+          "q": "Package install Debian",
+          "a": "apt install"
+        },
+        {
+          "q": "Elevate command",
+          "a": "sudo"
+        }
+      ]
+    },
+    {
+      "title": "Git & GitHub",
+      "cards": [
+        {
+          "q": "Init repo",
+          "a": "git init"
+        },
+        {
+          "q": "Stage files",
+          "a": "git add"
+        },
+        {
+          "q": "Commit",
+          "a": "git commit -m"
+        },
+        {
+          "q": "Branch create",
+          "a": "git checkout -b"
+        },
+        {
+          "q": "Merge",
+          "a": "git merge"
+        },
+        {
+          "q": "Rebase",
+          "a": "git rebase"
+        },
+        {
+          "q": "Stash",
+          "a": "git stash"
+        },
+        {
+          "q": "Log",
+          "a": "git log"
+        },
+        {
+          "q": "Diff",
+          "a": "git diff"
+        },
+        {
+          "q": "Remote add",
+          "a": "git remote add"
+        },
+        {
+          "q": "Push",
+          "a": "git push"
+        },
+        {
+          "q": "Pull",
+          "a": "git pull"
+        },
+        {
+          "q": "Clone",
+          "a": "git clone"
+        },
+        {
+          "q": "Tag",
+          "a": "git tag"
+        },
+        {
+          "q": "Squash merge",
+          "a": "Combine commits"
+        },
+        {
+          "q": "Pull request",
+          "a": "Propose changes"
+        },
+        {
+          "q": "Issue",
+          "a": "Track tasks/bugs"
+        },
+        {
+          "q": "Actions",
+          "a": "CI/CD on GitHub"
+        },
+        {
+          "q": "Release",
+          "a": "Versioned build"
+        },
+        {
+          "q": "Semantic versioning",
+          "a": "MAJOR.MINOR.PATCH"
+        }
+      ]
+    },
+    {
+      "title": "Regex",
+      "cards": [
+        {
+          "q": "Dot .",
+          "a": "Any char except newline"
+        },
+        {
+          "q": "Star *",
+          "a": "Zero or more"
+        },
+        {
+          "q": "Plus +",
+          "a": "One or more"
+        },
+        {
+          "q": "Question ?",
+          "a": "Optional"
+        },
+        {
+          "q": "Character class",
+          "a": "[abc]"
+        },
+        {
+          "q": "Negated class",
+          "a": "[^abc]"
+        },
+        {
+          "q": "Anchors",
+          "a": "^ start, $ end"
+        },
+        {
+          "q": "Grouping",
+          "a": "( )"
+        },
+        {
+          "q": "Alternation",
+          "a": "a|b"
+        },
+        {
+          "q": "Backreference",
+          "a": "\\1"
+        },
+        {
+          "q": "Word boundary",
+          "a": "\\b"
+        },
+        {
+          "q": "Digit class",
+          "a": "\\d"
+        },
+        {
+          "q": "Whitespace",
+          "a": "\\s"
+        },
+        {
+          "q": "Greedy vs lazy",
+          "a": ".* vs .*?"
+        },
+        {
+          "q": "Lookahead",
+          "a": "(?=...)"
+        },
+        {
+          "q": "Negative lookahead",
+          "a": "(?!...)"
+        },
+        {
+          "q": "Lookbehind",
+          "a": "(?<=...)"
+        },
+        {
+          "q": "Escape",
+          "a": "\\."
+        },
+        {
+          "q": "Flags",
+          "a": "i g m s u y"
+        },
+        {
+          "q": "Replace capture",
+          "a": "$1 in replacement"
+        }
+      ]
+    },
+    {
+      "title": "Design UX",
+      "cards": [
+        {
+          "q": "Heuristic: visibility",
+          "a": "Show system status"
+        },
+        {
+          "q": "Match real world",
+          "a": "Use familiar concepts"
+        },
+        {
+          "q": "User control",
+          "a": "Support undo/redo"
+        },
+        {
+          "q": "Consistency",
+          "a": "Same patterns across app"
+        },
+        {
+          "q": "Error prevention",
+          "a": "Constrain invalid actions"
+        },
+        {
+          "q": "Recognition over recall",
+          "a": "Visible choices"
+        },
+        {
+          "q": "Flexibility",
+          "a": "Shortcuts for experts"
+        },
+        {
+          "q": "Aesthetic minimalism",
+          "a": "Remove clutter"
+        },
+        {
+          "q": "Help users recover",
+          "a": "Clear errors"
+        },
+        {
+          "q": "Help documentation",
+          "a": "Findable guidance"
+        },
+        {
+          "q": "Fitts’s Law",
+          "a": "Target size vs distance"
+        },
+        {
+          "q": "Hick’s Law",
+          "a": "More choices = slower"
+        },
+        {
+          "q": "Gestalt proximity",
+          "a": "Group nearby elements"
+        },
+        {
+          "q": "Contrast",
+          "a": "Improve readability"
+        },
+        {
+          "q": "Typography",
+          "a": "Hierarchy and scale"
+        },
+        {
+          "q": "Affordance",
+          "a": "Appearance suggests use"
+        },
+        {
+          "q": "Feedback",
+          "a": "Immediate response"
+        },
+        {
+          "q": "Progressive disclosure",
+          "a": "Reveal complexity gradually"
+        },
+        {
+          "q": "Accessibility contrast",
+          "a": "At least 4.5:1"
+        },
+        {
+          "q": "Mobile touch target",
+          "a": "~44px recommended"
+        }
+      ]
+    },
+    {
+      "title": "Project Management",
+      "cards": [
+        {
+          "q": "Scope",
+          "a": "Work to deliver product"
+        },
+        {
+          "q": "Stakeholder",
+          "a": "Affected by project"
+        },
+        {
+          "q": "WBS",
+          "a": "Work breakdown structure"
+        },
+        {
+          "q": "Critical path",
+          "a": "Longest path of tasks"
+        },
+        {
+          "q": "Gantt chart",
+          "a": "Timeline bar chart"
+        },
+        {
+          "q": "Risk register",
+          "a": "List of risks and plans"
+        },
+        {
+          "q": "Dependency",
+          "a": "Task needs another"
+        },
+        {
+          "q": "Agile sprint",
+          "a": "Time-boxed iteration"
+        },
+        {
+          "q": "User story",
+          "a": "Feature from user view"
+        },
+        {
+          "q": "Acceptance criteria",
+          "a": "Conditions of satisfaction"
+        },
+        {
+          "q": "Burndown chart",
+          "a": "Work remaining over time"
+        },
+        {
+          "q": "Velocity",
+          "a": "Work per sprint"
+        },
+        {
+          "q": "Retrospective",
+          "a": "Inspect and adapt"
+        },
+        {
+          "q": "Kanban WIP limit",
+          "a": "Cap concurrent work"
+        },
+        {
+          "q": "RACI",
+          "a": "Roles: responsible etc"
+        },
+        {
+          "q": "Change control",
+          "a": "Approve changes"
+        },
+        {
+          "q": "Baseline",
+          "a": "Approved plan"
+        },
+        {
+          "q": "Earned value",
+          "a": "Cost/schedule performance"
+        },
+        {
+          "q": "CPR metric",
+          "a": "Cost performance ratio"
+        },
+        {
+          "q": "Buffer",
+          "a": "Contingency time or cost"
+        }
+      ]
+    },
+    {
+      "title": "Psychology Basics",
+      "cards": [
+        {
+          "q": "Classical conditioning",
+          "a": "Learning via association"
+        },
+        {
+          "q": "Operant conditioning",
+          "a": "Learning via consequences"
+        },
+        {
+          "q": "Positive reinforcement",
+          "a": "Add reward to increase behavior"
+        },
+        {
+          "q": "Negative reinforcement",
+          "a": "Remove aversive to increase behavior"
+        },
+        {
+          "q": "Punishment",
+          "a": "Decrease behavior"
+        },
+        {
+          "q": "Working memory",
+          "a": "Short-term processing"
+        },
+        {
+          "q": "Long-term memory",
+          "a": "Enduring storage"
+        },
+        {
+          "q": "Big Five traits",
+          "a": "OCEAN"
+        },
+        {
+          "q": "Cognitive dissonance",
+          "a": "Inconsistency discomfort"
+        },
+        {
+          "q": "Heuristic",
+          "a": "Mental shortcut"
+        },
+        {
+          "q": "Bias confirmation",
+          "a": "Favoring confirming info"
+        },
+        {
+          "q": "Placebo effect",
+          "a": "Benefit from expectation"
+        },
+        {
+          "q": "Attachment styles",
+          "a": "Secure, anxious, avoidant"
+        },
+        {
+          "q": "Piaget stages",
+          "a": "Sensorimotor→formal operations"
+        },
+        {
+          "q": "Maslow pyramid top",
+          "a": "Self-actualization"
+        },
+        {
+          "q": "Classical vs operant",
+          "a": "Association vs consequences"
+        },
+        {
+          "q": "Schemas",
+          "a": "Mental frameworks"
+        },
+        {
+          "q": "Motivation intrinsic",
+          "a": "Internal satisfaction"
+        },
+        {
+          "q": "Emotion James-Lange",
+          "a": "Physiology before emotion"
+        },
+        {
+          "q": "Social facilitation",
+          "a": "Better with audience"
+        }
+      ]
+    },
+    {
+      "title": "Art History",
+      "cards": [
+        {
+          "q": "Mona Lisa painter",
+          "a": "Leonardo da Vinci"
+        },
+        {
+          "q": "Sistine Chapel ceiling",
+          "a": "Michelangelo"
+        },
+        {
+          "q": "Starry Night artist",
+          "a": "Vincent van Gogh"
+        },
+        {
+          "q": "Guernica artist",
+          "a": "Pablo Picasso"
+        },
+        {
+          "q": "The Persistence of Memory",
+          "a": "Salvador Dalí"
+        },
+        {
+          "q": "Impressionism origin",
+          "a": "19th-century France"
+        },
+        {
+          "q": "The Scream artist",
+          "a": "Edvard Munch"
+        },
+        {
+          "q": "Girl with a Pearl Earring",
+          "a": "Johannes Vermeer"
+        },
+        {
+          "q": "American Gothic",
+          "a": "Grant Wood"
+        },
+        {
+          "q": "The Birth of Venus",
+          "a": "Sandro Botticelli"
+        },
+        {
+          "q": "The Night Watch",
+          "a": "Rembrandt"
+        },
+        {
+          "q": "Pointillism pioneer",
+          "a": "Georges Seurat"
+        },
+        {
+          "q": "Cubism founders",
+          "a": "Picasso and Braque"
+        },
+        {
+          "q": "Surrealism focus",
+          "a": "Dreamlike imagery"
+        },
+        {
+          "q": "Baroque trait",
+          "a": "Dramatic light and movement"
+        },
+        {
+          "q": "Renaissance trait",
+          "a": "Humanism and realism"
+        },
+        {
+          "q": "Dada",
+          "a": "Anti-art movement"
+        },
+        {
+          "q": "Fauvism",
+          "a": "Bold color, simplified form"
+        },
+        {
+          "q": "Pop Art icon",
+          "a": "Andy Warhol"
+        },
+        {
+          "q": "Abstract Expressionism",
+          "a": "Jackson Pollock"
+        }
+      ]
+    },
+    {
+      "title": "World Literature",
+      "cards": [
+        {
+          "q": "Author of The Odyssey",
+          "a": "Homer"
+        },
+        {
+          "q": "Author of One Hundred Years of Solitude",
+          "a": "Gabriel García Márquez"
+        },
+        {
+          "q": "Author of Crime and Punishment",
+          "a": "Fyodor Dostoevsky"
+        },
+        {
+          "q": "Author of The Divine Comedy",
+          "a": "Dante Alighieri"
+        },
+        {
+          "q": "Author of Don Quixote",
+          "a": "Miguel de Cervantes"
+        },
+        {
+          "q": "Author of The Metamorphosis",
+          "a": "Franz Kafka"
+        },
+        {
+          "q": "Author of The Trial",
+          "a": "Franz Kafka"
+        },
+        {
+          "q": "Author of The Stranger",
+          "a": "Albert Camus"
+        },
+        {
+          "q": "Author of Faust",
+          "a": "Johann Wolfgang von Goethe"
+        },
+        {
+          "q": "Author of The Name of the Rose",
+          "a": "Umberto Eco"
+        },
+        {
+          "q": "Author of Things Fall Apart",
+          "a": "Chinua Achebe"
+        },
+        {
+          "q": "Author of The Tale of Genji",
+          "a": "Murasaki Shikibu"
+        },
+        {
+          "q": "Author of The Kite Runner",
+          "a": "Khaled Hosseini"
+        },
+        {
+          "q": "Author of In Search of Lost Time",
+          "a": "Marcel Proust"
+        },
+        {
+          "q": "Author of The Brothers Karamazov",
+          "a": "Fyodor Dostoevsky"
+        },
+        {
+          "q": "Author of War and Peace",
+          "a": "Leo Tolstoy"
+        },
+        {
+          "q": "Author of The Old Man and the Sea",
+          "a": "Ernest Hemingway"
+        },
+        {
+          "q": "Author of The Master and Margarita",
+          "a": "Mikhail Bulgakov"
+        },
+        {
+          "q": "Author of Madame Bovary",
+          "a": "Gustave Flaubert"
+        },
+        {
+          "q": "Author of The Little Prince",
+          "a": "Antoine de Saint-Exupéry"
+        }
+      ]
+    },
+    {
+      "title": "Environmental Science",
+      "cards": [
+        {
+          "q": "Greenhouse gas with highest concentration",
+          "a": "Carbon dioxide"
+        },
+        {
+          "q": "Main cause of ozone depletion",
+          "a": "Chlorofluorocarbons"
+        },
+        {
+          "q": "Process converting nitrogen gas to ammonia",
+          "a": "Nitrogen fixation"
+        },
+        {
+          "q": "Trophic level of herbivores",
+          "a": "Primary consumers"
+        },
+        {
+          "q": "Biomagnification definition",
+          "a": "Increase of toxin concentration up food chain"
+        },
+        {
+          "q": "Eutrophication cause",
+          "a": "Nutrient runoff"
+        },
+        {
+          "q": "Sustainable yield meaning",
+          "a": "Harvest without depleting resource"
+        },
+        {
+          "q": "Carbon sink example",
+          "a": "Forests"
+        },
+        {
+          "q": "Biodiversity hotspot trait",
+          "a": "High endemism and threat"
+        },
+        {
+          "q": "Primary succession starts on",
+          "a": "Bare rock"
+        },
+        {
+          "q": "Keystone species effect",
+          "a": "Disproportionate ecosystem impact"
+        },
+        {
+          "q": "Photovoltaic converts",
+          "a": "Light to electricity"
+        },
+        {
+          "q": "PM2.5 refers to",
+          "a": "Fine particulate matter"
+        },
+        {
+          "q": "LEED relates to",
+          "a": "Green building certification"
+        },
+        {
+          "q": "Carrying capacity",
+          "a": "Max population environment supports"
+        },
+        {
+          "q": "Waste management hierarchy",
+          "a": "Reduce reuse recycle recover dispose"
+        },
+        {
+          "q": "Climate vs weather",
+          "a": "Long-term patterns vs short-term conditions"
+        },
+        {
+          "q": "Kyoto Protocol focus",
+          "a": "Greenhouse gas reduction"
+        },
+        {
+          "q": "Paris Agreement aim",
+          "a": "Limit warming to 1.5–2°C"
+        },
+        {
+          "q": "Life-cycle assessment",
+          "a": "Cradle-to-grave impact analysis"
+        }
+      ]
+    },
+    {
+      "title": "Music Theory",
+      "cards": [
+        {
+          "q": "Major scale step pattern",
+          "a": "W W H W W W H"
+        },
+        {
+          "q": "Perfect fifth interval",
+          "a": "7 semitones"
+        },
+        {
+          "q": "Minor third interval",
+          "a": "3 semitones"
+        },
+        {
+          "q": "Triad tones",
+          "a": "Root third fifth"
+        },
+        {
+          "q": "Dominant chord in C major",
+          "a": "G7"
+        },
+        {
+          "q": "Relative minor of C major",
+          "a": "A minor"
+        },
+        {
+          "q": "Key signature with 1 sharp",
+          "a": "G major"
+        },
+        {
+          "q": "Circle of fifths purpose",
+          "a": "Key relationships"
+        },
+        {
+          "q": "Tempo marking adagio",
+          "a": "Slow"
+        },
+        {
+          "q": "Tempo marking allegro",
+          "a": "Fast"
+        },
+        {
+          "q": "Time signature 3/4",
+          "a": "Three quarter-note beats"
+        },
+        {
+          "q": "Syncopation meaning",
+          "a": "Accents off the beat"
+        },
+        {
+          "q": "Cadence V–I",
+          "a": "Authentic cadence"
+        },
+        {
+          "q": "Diatonic means",
+          "a": "Within the key"
+        },
+        {
+          "q": "Chromatic scale",
+          "a": "All 12 semitones"
+        },
+        {
+          "q": "Interval inversion of 3rd",
+          "a": "6th"
+        },
+        {
+          "q": "Tonic function",
+          "a": "Home chord"
+        },
+        {
+          "q": "Subdominant in C",
+          "a": "F"
+        },
+        {
+          "q": "Leading tone in C",
+          "a": "B"
+        },
+        {
+          "q": "Mode Dorian start",
+          "a": "Second degree of major scale"
+        }
+      ]
+    },
+    {
+      "title": "Business Management",
+      "cards": [
+        {
+          "q": "SWOT stands for",
+          "a": "Strengths Weaknesses Opportunities Threats"
+        },
+        {
+          "q": "SMART goals",
+          "a": "Specific Measurable Achievable Relevant Time-bound"
+        },
+        {
+          "q": "KPIs are",
+          "a": "Key performance indicators"
+        },
+        {
+          "q": "Lean focuses on",
+          "a": "Eliminating waste"
+        },
+        {
+          "q": "Six Sigma goal",
+          "a": "Reduce defects and variation"
+        },
+        {
+          "q": "Break-even point",
+          "a": "Revenue equals total costs"
+        },
+        {
+          "q": "Stakeholder definition",
+          "a": "Anyone affected by outcomes"
+        },
+        {
+          "q": "Change management purpose",
+          "a": "Guide organizational transitions"
+        },
+        {
+          "q": "OKR stands for",
+          "a": "Objectives and Key Results"
+        },
+        {
+          "q": "Porter’s Five Forces",
+          "a": "Industry competitive analysis"
+        },
+        {
+          "q": "Agile emphasizes",
+          "a": "Iterative delivery and feedback"
+        },
+        {
+          "q": "Waterfall is",
+          "a": "Sequential project phases"
+        },
+        {
+          "q": "Balanced scorecard",
+          "a": "Multi-perspective performance tool"
+        },
+        {
+          "q": "Cash flow statement shows",
+          "a": "Cash in and out"
+        },
+        {
+          "q": "Net profit formula",
+          "a": "Revenue − expenses"
+        },
+        {
+          "q": "Liquidity ratio example",
+          "a": "Current ratio"
+        },
+        {
+          "q": "Market segmentation",
+          "a": "Divide customers into groups"
+        },
+        {
+          "q": "USP meaning",
+          "a": "Unique selling proposition"
+        },
+        {
+          "q": "Benchmarking",
+          "a": "Compare to best-in-class"
+        },
+        {
+          "q": "Churn rate",
+          "a": "Customer attrition rate"
+        }
+      ]
+    },
+    {
+      "title": "Japanese Kanji I",
+      "cards": [
+        {
+          "q": "日 meaning/reading",
+          "a": "Sun; にち・ひ"
+        },
+        {
+          "q": "月 meaning/reading",
+          "a": "Moon; げつ・つき"
+        },
+        {
+          "q": "火 meaning/reading",
+          "a": "Fire; か・ひ"
+        },
+        {
+          "q": "水 meaning/reading",
+          "a": "Water; すい・みず"
+        },
+        {
+          "q": "木 meaning/reading",
+          "a": "Tree; もく・き"
+        },
+        {
+          "q": "金 meaning/reading",
+          "a": "Gold; きん・かね"
+        },
+        {
+          "q": "土 meaning/reading",
+          "a": "Earth; ど・つち"
+        },
+        {
+          "q": "山 meaning/reading",
+          "a": "Mountain; さん・やま"
+        },
+        {
+          "q": "川 meaning/reading",
+          "a": "River; かわ"
+        },
+        {
+          "q": "田 meaning/reading",
+          "a": "Rice field; た・だ"
+        },
+        {
+          "q": "人 meaning/reading",
+          "a": "Person; にん・ひと"
+        },
+        {
+          "q": "口 meaning/reading",
+          "a": "Mouth; くち"
+        },
+        {
+          "q": "目 meaning/reading",
+          "a": "Eye; め"
+        },
+        {
+          "q": "耳 meaning/reading",
+          "a": "Ear; みみ"
+        },
+        {
+          "q": "手 meaning/reading",
+          "a": "Hand; て"
+        },
+        {
+          "q": "足 meaning/reading",
+          "a": "Foot; あし"
+        },
+        {
+          "q": "力 meaning/reading",
+          "a": "Power; ちから"
+        },
+        {
+          "q": "女 meaning/reading",
+          "a": "Woman; おんな"
+        },
+        {
+          "q": "男 meaning/reading",
+          "a": "Man; おとこ"
+        },
+        {
+          "q": "子 meaning/reading",
+          "a": "Child; こ"
+        }
+      ]
+    }
+  ]
+}

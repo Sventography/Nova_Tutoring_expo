@@ -1,0 +1,19 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "strict": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["app/*"],
+      "@components/*": ["app/components/*"],
+      "@context/*": ["app/context/*"],
+      "@lib/*": ["app/lib/*"],
+      "@screens/*": ["app/_screens/*"],
+      "@utils/*": ["app/_utils/*"],
+      "@stripe/stripe-react-native": ["stubs/stripe-react-native.web"]
+    },
+    "skipLibCheck": true
+  },
+  "include": ["**/*.ts", "**/*.tsx"]
+}

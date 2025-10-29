@@ -1,0 +1,25 @@
+{
+  "topic": "AP Calculus AB Essentials",
+  "cards": [
+    { "q": "Limit definition (intuitive)", "a": "Value f(x) approaches as x approaches a" },
+    { "q": "Continuity at a point", "a": "Limit exists, equals function value, and defined at point" },
+    { "q": "Derivative limit definition", "a": "f'(x) = lim h->0 (f(x+h)-f(x))/h" },
+    { "q": "Power rule", "a": "d/dx x^n = n x^(n-1)" },
+    { "q": "Product rule", "a": "(fg)' = f'g + fg'" },
+    { "q": "Quotient rule", "a": "(f/g)' = (f'g - fg')/g^2" },
+    { "q": "Chain rule", "a": "d/dx f(g(x)) = f'(g(x)) g'(x)" },
+    { "q": "Derivative of sin and cos", "a": "d/dx sin x = cos x; d/dx cos x = -sin x" },
+    { "q": "Derivative of e^x and ln x", "a": "d/dx e^x = e^x; d/dx ln x = 1/x" },
+    { "q": "Critical points", "a": "Where f' = 0 or undefined" },
+    { "q": "First derivative test", "a": "Sign change of f' shows local min or max" },
+    { "q": "Concavity test", "a": "f'' > 0 concave up; f'' < 0 concave down" },
+    { "q": "Inflection point", "a": "Concavity changes sign" },
+    { "q": "Mean Value Theorem", "a": "There exists c with f'(c) = (f(b)-f(a))/(b-a)" },
+    { "q": "Fundamental Theorem of Calculus", "a": "Integral and derivative are inverse; area via antiderivative" },
+    { "q": "Basic integrals", "a": "int x^n dx = x^(n+1)/(n+1) + C (n != -1); int 1/x dx = ln|x| + C" },
+    { "q": "u substitution", "a": "Let u = g(x) to simplify integral" },
+    { "q": "Riemann sums", "a": "Approximate area via sum of rectangles" },
+    { "q": "Related rates", "a": "Differentiate with respect to time" },
+    { "q": "Optimization steps", "a": "Model, derivative, critical points, endpoints, interpret" }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "topic": "Latin III",
+  "cards": [
+    { "q": "Subjunctive sequence of tenses", "a": "Primary: present/perf; Secondary: imperf/pluperf" },
+    { "q": "Indirect command signals", "a": "ut/ne with verbs of asking, urging, commanding" },
+    { "q": "Indirect question signals", "a": "interrogatives + subjunctive (quid, cur, quo modo)" },
+    { "q": "Purpose clause", "a": "ut/ne + subjunctive (so that, in order that)" },
+    { "q": "Result clause", "a": "tam, ita, tantus + ut + subjunctive" },
+    { "q": "Fear clause", "a": "vereor + ne/ut + subjunctive (ne = that)" },
+    { "q": "Gerund vs gerundive", "a": "Gerund verbal noun; gerundive verbal adj necessity" },
+    { "q": "Ablative absolute use", "a": "Circumstance set off from main clause" },
+    { "q": "Periphrastic active", "a": "future participle + esse (about to...)" },
+    { "q": "Periphrastic passive", "a": "gerundive + esse (must be...)" },
+    { "q": "Participle tenses", "a": "Present active, perfect passive, future active" },
+    { "q": "Deponent verbs", "a": "Passive forms, active meanings (eg sequor)" },
+    { "q": "Supine cases", "a": "Accusative of purpose; ablative with respect" },
+    { "q": "UT with indicative vs subjunctive", "a": "Indicative as when; subjunctive as so that/that" },
+    { "q": "Relative clause of characteristic", "a": "Subjunctive after qui, quae, quod" },
+    { "q": "Conditions more vivid vs less vivid", "a": "Future more vivid vs present/imperfect subjunctive" },
+    { "q": "Dative of agent", "a": "Passive periphrastic with agent in dative" },
+    { "q": "Double dative", "a": "Dative of purpose + reference" },
+    { "q": "Poetry scansion basics", "a": "Long vs short syllables; elision; meter" },
+    { "q": "Indirect statement", "a": "Accusative subject + infinitive after head verbs" }
+  ]
+}

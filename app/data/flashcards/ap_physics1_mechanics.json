@@ -1,0 +1,25 @@
+{
+  "topic": "AP Physics I (Mechanics)",
+  "cards": [
+    { "q": "Displacement vs distance", "a": "Displacement is vector change in position; distance is scalar path length" },
+    { "q": "Average velocity formula", "a": "v_avg = delta x / delta t" },
+    { "q": "Kinematics eqn (no x)", "a": "v = v0 + a t" },
+    { "q": "Kinematics eqn (no v)", "a": "x = x0 + v0 t + 0.5 a t^2" },
+    { "q": "Kinematics eqn (no t)", "a": "v^2 = v0^2 + 2 a (x - x0)" },
+    { "q": "Projectile horizontal range (level to level)", "a": "R = v0^2 sin(2 theta) / g" },
+    { "q": "Newton's 2nd law", "a": "Sum F = m a" },
+    { "q": "Static vs kinetic friction", "a": "f_s <= mu_s N; f_k = mu_k N" },
+    { "q": "Free body diagram purpose", "a": "Identify all forces on object to apply Newton's laws" },
+    { "q": "Work definition", "a": "W = F dot d = F d cos theta" },
+    { "q": "Kinetic energy", "a": "K = 1/2 m v^2" },
+    { "q": "Work energy theorem", "a": "Net work equals change in kinetic energy" },
+    { "q": "Power formulas", "a": "P = W/t = F v (parallel component)" },
+    { "q": "Momentum and impulse", "a": "p = m v; Impulse J = delta p = F_avg delta t" },
+    { "q": "Elastic vs inelastic collision", "a": "Elastic conserves KE and momentum; inelastic conserves momentum only" },
+    { "q": "Centripetal acceleration", "a": "a_c = v^2 / r toward center" },
+    { "q": "Universal gravitation", "a": "F = G m1 m2 / r^2" },
+    { "q": "Torque definition", "a": "tau = r F sin phi about pivot" },
+    { "q": "Rotational analogs", "a": "Sum tau = I alpha; K_rot = 1/2 I omega^2" },
+    { "q": "Simple harmonic motion spring", "a": "omega = sqrt(k/m); T = 2 pi sqrt(m/k)" }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "app/*"
+      ],
+      "@lib/*": [
+        "app/_lib/*"
+      ],
+      "@components/*": [
+        "components/*"
+      ],
+      "@assets/*": [
+        "app/assets/*"
+      ]
+    },
+    "jsx": "react-jsx",
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": false,
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "target": "es2017",
+    "lib": [
+      "esnext"
+    ],
+    "types": [
+      "react",
+      "react-native",
+      "expo-router"
+    ]
+  },
+  "extends": "expo/tsconfig.base"
+}

@@ -1,0 +1,82 @@
+[
+  {
+    "question": "Wave speed formula",
+    "answer": "v = fλ"
+  },
+  {
+    "question": "Constructive interference phase",
+    "answer": "In phase (0 or 2π)"
+  },
+  {
+    "question": "Destructive interference phase",
+    "answer": "Out of phase (π)"
+  },
+  {
+    "question": "Snell’s law",
+    "answer": "n1 sin θ1 = n2 sin θ2"
+  },
+  {
+    "question": "Index of refraction n equals",
+    "answer": "c/v"
+  },
+  {
+    "question": "Total internal reflection requires",
+    "answer": "Light from higher to lower n with θ>θc"
+  },
+  {
+    "question": "Diffraction increases when",
+    "answer": "Wavelength comparable to aperture"
+  },
+  {
+    "question": "Young’s double-slit bright fringe condition",
+    "answer": "d sin θ = mλ"
+  },
+  {
+    "question": "Thin-film interference cause",
+    "answer": "Path difference and phase shifts"
+  },
+  {
+    "question": "Mirror equation",
+    "answer": "1/f = 1/do + 1/di"
+  },
+  {
+    "question": "Lensmaker’s sign convention",
+    "answer": "Converging f>0, diverging f<0"
+  },
+  {
+    "question": "Polarization filters affect",
+    "answer": "Transmitted intensity and orientation"
+  },
+  {
+    "question": "Sound intensity level unit",
+    "answer": "Decibel (dB)"
+  },
+  {
+    "question": "Doppler effect for source approaching",
+    "answer": "Observed frequency increases"
+  },
+  {
+    "question": "Standing wave node/antinode",
+    "answer": "Node minimal displacement, antinode maximal"
+  },
+  {
+    "question": "Huygens’ principle states",
+    "answer": "Every point on a wavefront acts as a source"
+  },
+  {
+    "question": "Rayleigh criterion for resolution",
+    "answer": "θ_min ≈ 1.22 λ/D"
+  },
+  {
+    "question": "Chromatic aberration due to",
+    "answer": "Dispersion in lenses"
+  },
+  {
+    "question": "Brewster’s angle gives",
+    "answer": "Reflected light fully polarized"
+  },
+  {
+    "question": "Laser light properties",
+    "answer": "Monochromatic, coherent, collimated"
+  }
+]

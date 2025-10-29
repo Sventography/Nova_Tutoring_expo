@@ -1,0 +1,25 @@
+{
+  "topic": "Algebra II",
+  "cards": [
+    { "q": "Quadratic formula", "a": "x = [-b +- sqrt(b^2 - 4ac)] / (2a)" },
+    { "q": "Discriminant meaning", "a": "b^2 - 4ac > 0 two reals; =0 one real; <0 complex pair" },
+    { "q": "Complete the square purpose", "a": "Rewrite ax^2+bx+c to vertex form a(x-h)^2 + k" },
+    { "q": "Complex i definition", "a": "i^2 = -1; sqrt(-1) = i" },
+    { "q": "Function composition example", "a": "(f o g)(x) = f(g(x))" },
+    { "q": "Inverse function test", "a": "Function must be one-to-one; pass horizontal line test" },
+    { "q": "Exponential rules", "a": "a^m a^n = a^(m+n); (a^m)^n = a^(mn)" },
+    { "q": "Log rules", "a": "log(ab)=log a + log b; log(a^k)=k log a; change base" },
+    { "q": "Solve exponential a^x = b", "a": "x = log b / log a" },
+    { "q": "Arithmetic sequence nth term", "a": "a_n = a1 + (n-1)d" },
+    { "q": "Geometric series sum (finite)", "a": "S_n = a1(1 - r^n)/(1 - r), r != 1" },
+    { "q": "Binomial theorem term", "a": "C(n,k) a^(n-k) b^k" },
+    { "q": "Polynomial synthetic division use", "a": "Divide by (x - c) and get remainder f(c)" },
+    { "q": "Rational function vertical asymptote", "a": "Where denominator = 0 (and not canceled)" },
+    { "q": "Horizontal asymptote rule", "a": "Compare degrees: n<d -> y=0; n=d -> ratio of leads; n>d -> none" },
+    { "q": "Conic: circle standard form", "a": "(x - h)^2 + (y - k)^2 = r^2" },
+    { "q": "Conic: parabola focus/dir", "a": "y - k = a(x - h)^2; opens up/down if a>0/<0" },
+    { "q": "Matrices: 2x2 inverse condition", "a": "ad - bc != 0; A^-1 = (1/det) [d -b; -c a]" },
+    { "q": "Solve 3x3 systems method", "a": "Row reduction (Gaussian elimination)" },
+    { "q": "Transformations", "a": "y = a f(b(x - h)) + k stretches by a,b; shifts h,k" }
+  ]
+}

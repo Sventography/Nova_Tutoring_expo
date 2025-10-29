@@ -1,0 +1,82 @@
+[
+  {
+    "question": "Atomic number equals",
+    "answer": "Number of protons"
+  },
+  {
+    "question": "Mass number equals",
+    "answer": "Protons + neutrons"
+  },
+  {
+    "question": "Isotopes differ in",
+    "answer": "Number of neutrons"
+  },
+  {
+    "question": "Octet rule describes",
+    "answer": "Atoms tend to have 8 valence electrons"
+  },
+  {
+    "question": "Ionic bond is between",
+    "answer": "Metal and nonmetal"
+  },
+  {
+    "question": "Covalent bond shares",
+    "answer": "Electron pairs between nonmetals"
+  },
+  {
+    "question": "1 mole equals",
+    "answer": "6.022×10^23 particles"
+  },
+  {
+    "question": "Molarity definition",
+    "answer": "M = moles solute / liters solution"
+  },
+  {
+    "question": "Ideal Gas Law",
+    "answer": "PV = nRT"
+  },
+  {
+    "question": "Avogadro’s law (same T,P)",
+    "answer": "Equal volumes → equal moles of gas"
+  },
+  {
+    "question": "Strong acids example",
+    "answer": "HCl, HNO3, H2SO4"
+  },
+  {
+    "question": "pH definition",
+    "answer": "pH = −log[H+]"
+  },
+  {
+    "question": "Le Châtelier’s principle",
+    "answer": "System shifts to oppose a change"
+  },
+  {
+    "question": "Endothermic process has ΔH",
+    "answer": "ΔH > 0"
+  },
+  {
+    "question": "Rate increases with",
+    "answer": "Higher concentration, temperature, catalysts"
+  },
+  {
+    "question": "Oxidation is",
+    "answer": "Loss of electrons"
+  },
+  {
+    "question": "Reduction is",
+    "answer": "Gain of electrons"
+  },
+  {
+    "question": "Electron configuration of Na",
+    "answer": "1s2 2s2 2p6 3s1"
+  },
+  {
+    "question": "Lewis structure of H2O lone pairs on O",
+    "answer": "2 lone pairs"
+  },
+  {
+    "question": "Intermolecular force in HF strongest common type",
+    "answer": "Hydrogen bonding"
+  }
+]

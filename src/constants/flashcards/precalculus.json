@@ -1,0 +1,82 @@
+[
+  {
+    "question": "Composition (f∘g)(x)",
+    "answer": "f(g(x))"
+  },
+  {
+    "question": "Inverse function condition",
+    "answer": "f(f^{-1}(x))=x and one-to-one"
+  },
+  {
+    "question": "Log rule: log_a(xy)",
+    "answer": "log_a x + log_a y"
+  },
+  {
+    "question": "Log rule: log_a(x^k)",
+    "answer": "k·log_a x"
+  },
+  {
+    "question": "Change of base log_b x",
+    "answer": "ln x / ln b"
+  },
+  {
+    "question": "Domain of ln x",
+    "answer": "x > 0"
+  },
+  {
+    "question": "Amplitude of y = A sin(bx)",
+    "answer": "|A|"
+  },
+  {
+    "question": "Period of y = sin(bx)",
+    "answer": "2π/|b|"
+  },
+  {
+    "question": "Even/odd: cos x, sin x",
+    "answer": "cos even, sin odd"
+  },
+  {
+    "question": "Asymptotes of y = (x+1)/(x−2)",
+    "answer": "Vertical x=2, horizontal y=1"
+  },
+  {
+    "question": "Binomial Theorem expansion uses",
+    "answer": "C(n,k) coefficients"
+  },
+  {
+    "question": "Sum of geometric series a1,r, n terms",
+    "answer": "S_n = a1(1−r^n)/(1−r), r≠1"
+  },
+  {
+    "question": "Polar to rectangular: (r,θ)",
+    "answer": "x = r cos θ, y = r sin θ"
+  },
+  {
+    "question": "Rectangular to polar: (x,y)",
+    "answer": "r=√(x^2+y^2), θ=atan2(y,x)"
+  },
+  {
+    "question": "Identity: sin^2 x + cos^2 x",
+    "answer": "1"
+  },
+  {
+    "question": "Identity: 1 + tan^2 x",
+    "answer": "sec^2 x"
+  },
+  {
+    "question": "End behavior of degree-n polynomial leading coeff a_n>0 and n even",
+    "answer": "Up on both ends"
+  },
+  {
+    "question": "Conic: (x−h)^2/a^2 + (y−k)^2/b^2 = 1",
+    "answer": "Ellipse"
+  },
+  {
+    "question": "Rational function hole occurs when",
+    "answer": "Common factor cancels in numerator/denominator"
+  },
+  {
+    "question": "Arithmetic series sum S_n",
+    "answer": "n(a1+an)/2"
+  }
+]

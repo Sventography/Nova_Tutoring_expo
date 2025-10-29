@@ -1,0 +1,23 @@
+const fs = require('fs');
+const pkgPath = './package.json';
+const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+
+pkg.scripts = {
+  "start": "expo start",
+  "android": "expo run:android",
+  "ios": "expo run:ios",
+  "web": "expo start --web",
+  "doctor": "expo-doctor",
+  "dev:server": "cd server && (source ../.venv/bin/activate && python3 server.py)",
+  "dev:ngrok": "ngrok http 5050",
+  "dev:url": "curl -s http://127.0.0.1:4040/api/tunnels | grep -o 'https://[a-zA-Z0-9.-]*\\.ngrok-free\\.app' | head -n1",
+  "dev:env": "URL=$(npm run -s dev:url) && printf 'EXPO_PUBLIC_API_URL=%s\\n' \"$URL\" > .env.development && echo $URL",
+  "dev:health": "URL=$(npm run -s dev:url) && curl -sS \"$URL/api/health\" && echo",
+  "dev:open": "URL=$(npm run -s dev:url) && open -a Safari \"$URL/api/health\"",
+  "dev:kill": "pkill -f 'ngrok http' 2>/dev/null || true && pkill -f server.py 2>/dev/null || true && lsof -ti :5050 | xargs kill -9 2>/dev/null || true && killall node 2>/dev/null || true",
+  "dev:clean": "rm -rf .expo && watchman watch-del-all 2>/dev/null || true",
+  "dev:full": "bash scripts/dev.sh"
+};
+
+fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2));
+console.log('✅ Fixed package.json scripts!');

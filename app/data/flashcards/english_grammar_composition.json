@@ -1,0 +1,25 @@
+{
+  "topic": "English Grammar & Composition",
+  "cards": [
+    { "q": "8 parts of speech", "a": "Noun, pronoun, verb, adjective, adverb, preposition, conjunction, interjection" },
+    { "q": "Independent clause", "a": "Subject + predicate; complete thought" },
+    { "q": "Dependent clause", "a": "Cannot stand alone; needs main clause" },
+    { "q": "Simple vs compound", "a": "One independent clause vs two+ joined by conjunction/semicolon" },
+    { "q": "Complex sentence", "a": "One independent + at least one dependent clause" },
+    { "q": "Comma splice fix", "a": "Add conjunction, semicolon, or split into sentences" },
+    { "q": "Subject–verb agreement rule", "a": "Singular subject → singular verb; plural → plural" },
+    { "q": "Parallelism", "a": "Consistent grammatical form in a series" },
+    { "q": "Active vs passive voice", "a": "Subject acts vs subject is acted upon" },
+    { "q": "Thesis statement", "a": "Clear, arguable claim guiding the essay" },
+    { "q": "Topic sentence", "a": "States main idea of a paragraph" },
+    { "q": "Evidence integration", "a": "Introduce, cite, explain (ICE)" },
+    { "q": "MLA vs APA", "a": "Humanities vs social sciences citation styles" },
+    { "q": "Transitions role", "a": "Link ideas and improve coherence" },
+    { "q": "Diction & tone", "a": "Word choice & attitude suited to audience" },
+    { "q": "Run-on sentence", "a": "Two clauses joined improperly" },
+    { "q": "Semi-colon use", "a": "Join related independent clauses" },
+    { "q": "Concision strategy", "a": "Remove wordiness & redundancies" },
+    { "q": "Revision vs editing", "a": "Ideas/structure vs grammar/mechanics" },
+    { "q": "Plagiarism", "a": "Using others’ work without attribution" }
+  ]
+}

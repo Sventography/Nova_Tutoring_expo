@@ -1,0 +1,25 @@
+{
+  "topic": "World History: Ancient Civilizations",
+  "cards": [
+    { "q": "Neolithic Revolution", "a": "Shift to agriculture and settlement" },
+    { "q": "Mesopotamia rivers", "a": "Tigris and Euphrates" },
+    { "q": "Code of Hammurabi", "a": "Early written law; Babylon" },
+    { "q": "Egypt river & writing", "a": "Nile; hieroglyphics" },
+    { "q": "Indus Valley cities", "a": "Harappa and Mohenjo-Daro" },
+    { "q": "Shang dynasty advance", "a": "Bronze casting; oracle bones" },
+    { "q": "Mandate of Heaven", "a": "Zhou legitimacy doctrine" },
+    { "q": "Phoenician contribution", "a": "Alphabet; maritime trade" },
+    { "q": "Hebrew monotheism", "a": "Judaism; covenant tradition" },
+    { "q": "Greek polis examples", "a": "Athens (democracy), Sparta (military)" },
+    { "q": "Alexander the Great", "a": "Spread Hellenistic culture" },
+    { "q": "Roman Republic hallmark", "a": "Senate, consuls, rule of law" },
+    { "q": "Pax Romana", "a": "200 years of relative peace" },
+    { "q": "Maurya/Gupta India", "a": "Ashoka; classical advancements" },
+    { "q": "Qin dynasty feats", "a": "Legalism; Great Wall start" },
+    { "q": "Han dynasty legacy", "a": "Civil service; Silk Road" },
+    { "q": "Mesoamerican civilization", "a": "Olmec; later Maya astronomy/calendar" },
+    { "q": "Andean civilization", "a": "Chavín; later Inca roads/quipu" },
+    { "q": "Classical trade routes", "a": "Silk Roads, Indian Ocean, Trans-Saharan" },
+    { "q": "Fall of empires factor", "a": "Overexpansion, invasions, internal strife" }
+  ]
+}

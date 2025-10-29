@@ -1,0 +1,4 @@
+html.use-custom-cursor,
+html.use-custom-cursor * {
+  cursor: var(--app-cursor, auto) !important;
+}

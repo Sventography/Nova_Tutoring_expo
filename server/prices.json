@@ -1,0 +1,157 @@
+{
+  "nova_plushie_pajamas": {
+    "priceId": "price_1SIvOY9kSZMTPLPIsyRaKjhX",
+    "productId": "prod_TFQFvhM9kmYlQt",
+    "quantity": 1
+  },
+  "theme_dark_nova": {
+    "priceId": "price_1SHqp89kSZMTPLPIDCWXlIoR",
+    "productId": "prod_TEJSSAWhQVWjMy",
+    "quantity": 1
+  },
+  "theme_mint_breeze": {
+    "priceId": "price_1SHqp69kSZMTPLPIlhQI07VV",
+    "quantity": 1,
+    "productId": "prod_TEJRAKUFgXjmpM"
+  },
+  "theme_pink_dawn": {
+    "priceId": "price_1SHqoT9kSZMTPLPIQjXFLBVM",
+    "productId": "prod_TEJRPU7nXAN1eJ",
+    "quantity": 1
+  },
+  "theme_starry_night": {
+    "priceId": "price_1SHqmW9kSZMTPLPIKKbYQszh",
+    "productId": "prod_TEJPC8HIdX4MFP",
+    "quantity": 1
+  },
+  "theme_neon_nova": {
+    "priceId": "price_1SHqlH9kSZMTPLPIbTlvHB3l",
+    "productId": "prod_TEJOLtH9hWcwqU",
+    "quantity": 1
+  },
+  "5_000_coins": {
+    "priceId": "price_1SHqkl9kSZMTPLPIcPYQzmwQ",
+    "productId": "prod_TEJNONMFOilNln",
+    "quantity": 1
+  },
+  "1_000_coins": {
+    "priceId": "price_1SHqjt9kSZMTPLPI1qgNfOfo",
+    "productId": "prod_TEJMNCYpZmWd4G",
+    "quantity": 1
+  },
+  "neon_starter_bundle": {
+    "priceId": "price_1SHqiM9kSZMTPLPIqOGd69gy",
+    "productId": "prod_TEJLpEhIzTFX69",
+    "quantity": 1
+  },
+  "nova_plushie_purple": {
+    "priceId": "price_1SHqdf9kSZMTPLPIrS1gw3bR",
+    "productId": "prod_TEJGuE1QYi7lpF",
+    "quantity": 1
+  },
+  "nova_plushie_devil": {
+    "priceId": "price_1SHqcX9kSZMTPLPIgF5BTYy8",
+    "productId": "prod_TEJFaqzUqA8g36",
+    "quantity": 1
+  },
+  "bunny_plushie_book": {
+    "priceId": "price_1SHqbh9kSZMTPLPIARdOY7Xt",
+    "productId": "prod_TEJEQuKVJFpMQ9",
+    "quantity": 1
+  },
+  "bunny_plushie_white": {
+    "priceId": "price_1SHqaS9kSZMTPLPIBaN09rlo",
+    "productId": "prod_TEJCsJyyB6GDOQ",
+    "quantity": 1
+  },
+  "cursor_orb": {
+    "priceId": "price_1SHqR69kSZMTPLPIu81X6EvJ",
+    "productId": "prod_TEJ3nQpbnxBc8v",
+    "quantity": 1
+  },
+  "cursor_glow": {
+    "priceId": "price_1SHqR39kSZMTPLPI2ovgr9RQ",
+    "productId": "prod_TEJ3Zx5MWLv9tV",
+    "quantity": 1
+  },
+  "cursor_star": {
+    "priceId": "price_1SHqMp9kSZMTPLPIgogKH1jk",
+    "productId": "prod_TEIyhPxZRyjm15",
+    "quantity": 1
+  },
+  "theme_star": {
+    "priceId": "price_1SHqIK9kSZMTPLPI5s5sg3D3",
+    "productId": "prod_TEIuLi7S5r8YKb",
+    "quantity": 1
+  },
+  "theme_silver_frost": {
+    "priceId": "price_1SHqGx9kSZMTPLPI5ZTu0ORc",
+    "productId": "prod_TEIs23HG5KHFCp",
+    "quantity": 1
+  },
+  "theme_emerald_wave": {
+    "priceId": "price_1SHqF39kSZMTPLPILhUHm30i",
+    "productId": "prod_TEIqazLNftnz4j",
+    "quantity": 1
+  },
+  "theme_crimson_dream": {
+    "priceId": "price_1SHqEH9kSZMTPLPIkCNkWtbk",
+    "productId": "prod_TEIpv64N52FpdT",
+    "quantity": 1
+  },
+  "theme_black_gold": {
+    "priceId": "price_1SHqDC9kSZMTPLPISNEbT4B2",
+    "productId": "prod_TEIokf5jy2rFFd",
+    "quantity": 1
+  },
+  "theme_neon_purple": {
+    "priceId": "price_1SHqCS9kSZMTPLPIvZllwUP2",
+    "productId": "prod_TEIoLX524g5bUk",
+    "quantity": 1
+  },
+  "stationery_set": {
+    "priceId": "price_1SHqAy9kSZMTPLPIboZCYFqg",
+    "productId": "prod_TEImuiJcIEerXG",
+    "quantity": 1
+  },
+  "hat": {
+    "priceId": "price_1SHq9f9kSZMTPLPIYctp8gfV",
+    "productId": "prod_TEIl17OQhITvGP",
+    "quantity": 1
+  },
+  "phone_case": {
+    "priceId": "price_1SIwjS9kSZMTPLPIkuWwEvBh",
+    "productId": "prod_TEIj5rSF62hp5b",
+    "quantity": 1
+  },
+  "nova_keychain": {
+    "priceId": "price_1SHq6D9kSZMTPLPI63zQXTQA",
+    "productId": "prod_TEIhSDjINHWg7U",
+    "quantity": 1
+  },
+  "star_pjs": {
+    "priceId": "price_1SHq4x9kSZMTPLPIv26unoP0",
+    "productId": "prod_TEIgC6JmU2ALTh",
+    "quantity": 1
+  },
+  "sweat_bottoms": {
+    "priceId": "price_1SHq3R9kSZMTPLPIpzcgjzcg",
+    "productId": "prod_TEIeuYnCTjKtqU",
+    "quantity": 1
+  },
+  "nova_hoodie": {
+    "priceId": "price_1SHq0Y9kSZMTPLPI8SXbd2Ts",
+    "productId": "prod_TEIbGbdViXLjnW",
+    "quantity": 1
+  },
+  "nova_beanie": {
+    "priceId": "price_1SHpyG9kSZMTPLPIPVdulc7u",
+    "productId": "prod_TEIZRXrtjvfBo9",
+    "quantity": 1
+  },
+  "star_plushie": {
+    "priceId": "price_1SHpvz9kSZMTPLPI62jAW96L",
+    "productId": "prod_TEIXJLlS8YHGPQ",
+    "quantity": 1
+  }
+}

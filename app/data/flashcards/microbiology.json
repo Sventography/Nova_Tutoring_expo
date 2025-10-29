@@ -1,0 +1,25 @@
+{
+  "topic": "Microbiology",
+  "cards": [
+    { "q": "Prokaryote vs eukaryote", "a": "No nucleus vs nucleus/organelles" },
+    { "q": "Gram-positive trait", "a": "Thick peptidoglycan; purple stain" },
+    { "q": "Gram-negative trait", "a": "Thin peptidoglycan; LPS outer membrane" },
+    { "q": "Bacterial shapes", "a": "Coccus, bacillus, spirillum" },
+    { "q": "Binary fission", "a": "Asexual bacterial reproduction" },
+    { "q": "Horizontal gene transfer", "a": "Transformation, transduction, conjugation" },
+    { "q": "Virus definition", "a": "Obligate intracellular parasite" },
+    { "q": "Lytic vs lysogenic", "a": "Immediate replication vs dormancy" },
+    { "q": "Prion", "a": "Infectious misfolded protein" },
+    { "q": "Fungi trait", "a": "Eukaryotic, chitin cell walls" },
+    { "q": "Antibiotic targets", "a": "Cell wall, ribosomes, DNA gyrase" },
+    { "q": "Antibiotic resistance", "a": "Genes for efflux, enzymes, altered targets" },
+    { "q": "Sterilization vs disinfection", "a": "All microbes killed vs reduced" },
+    { "q": "Aseptic technique", "a": "Prevent contamination" },
+    { "q": "Growth phases", "a": "Lag, log, stationary, death" },
+    { "q": "Selective vs differential media", "a": "Inhibit/allow vs show differences" },
+    { "q": "Normal microbiota role", "a": "Protective colonization, metabolism" },
+    { "q": "Pathogenicity factors", "a": "Adhesins, toxins, capsules" },
+    { "q": "Koch's postulates", "a": "Link microbe to disease" },
+    { "q": "Vaccination purpose", "a": "Induce adaptive immunity" }
+  ]
+}

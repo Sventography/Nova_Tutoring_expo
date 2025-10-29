@@ -1,0 +1,22 @@
+[
+  ["Pitch", "Highness or lowness of a sound."],
+  ["Rhythm", "Pattern of sounds and silences."],
+  ["Tempo", "Speed of the music."],
+  ["Dynamics", "Loudness or softness (p, f, crescendo)."],
+  ["Melody", "Main tune or musical line."],
+  ["Harmony", "Chords supporting the melody."],
+  ["Scale", "Ordered sequence of notes."],
+  ["Key", "Tonality centered around a tonic."],
+  ["Chord Progression", "Sequence of chords over time."],
+  ["Meter", "Beats grouped (e.g., 4/4, 3/4)."],
+  ["Form", "Overall structure (ABA, sonata)."],
+  ["Timbre", "Tone color of an instrument/voice."],
+  ["Texture", "Monophonic, homophonic, polyphonic."],
+  ["Interval", "Distance between two pitches."],
+  ["Arpeggio", "Notes of a chord played separately."],
+  ["Cadence", "Ending of a musical phrase."],
+  ["Syncopation", "Accent off the main beats."],
+  ["Ostinato", "Repeated musical pattern."],
+  ["Improvisation", "Spontaneous musical creation."],
+  ["Notation", "Written system to record music."]
+]

@@ -1,0 +1,25 @@
+{
+  "topic": "Anthropology",
+  "cards": [
+    { "q": "Four fields of anthropology", "a": "Cultural, linguistic, biological, archaeology" },
+    { "q": "Culture definition", "a": "Learned and shared beliefs and behaviors" },
+    { "q": "Ethnography", "a": "In depth study of a culture via fieldwork" },
+    { "q": "Participant observation", "a": "Researcher participates and observes daily life" },
+    { "q": "Cultural relativism", "a": "Interpret behavior within its cultural context" },
+    { "q": "Holism", "a": "Study entire human condition across time and space" },
+    { "q": "Enculturation", "a": "Process of learning culture" },
+    { "q": "Kinship systems", "a": "Rules defining family relations" },
+    { "q": "Modes of subsistence", "a": "Foraging, horticulture, pastoralism, agriculture, industry" },
+    { "q": "Ritual", "a": "Formal, repetitive social practice" },
+    { "q": "Myth", "a": "Narrative conveying cultural truths" },
+    { "q": "Language and Sapir Whorf", "a": "Language influences thought" },
+    { "q": "Archaeology method", "a": "Excavation and material culture analysis" },
+    { "q": "Stratigraphy", "a": "Layering used to interpret time sequence" },
+    { "q": "Human evolution evidence", "a": "Fossils, genetics, comparative anatomy" },
+    { "q": "Bipedalism benefits", "a": "Energy efficiency, tool use, vision" },
+    { "q": "Race as social construct", "a": "Biological variation is clinal, categories are social" },
+    { "q": "Applied anthropology", "a": "Use of methods to solve real problems" },
+    { "q": "Ethics in fieldwork", "a": "Do no harm; informed consent" },
+    { "q": "Globalization effects", "a": "Cultural change, hybridity, inequality" }
+  ]
+}
