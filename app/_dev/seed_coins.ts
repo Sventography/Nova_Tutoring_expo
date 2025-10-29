@@ -7,7 +7,7 @@ const COINS = 250000; // ← set your test coins here
     await AsyncStorage.setItem("@nova/coins", String(COINS));
     await AsyncStorage.setItem("@nova/dev_coinseed_at", String(Date.now()));
     // eslint-disable-next-line no-console
-    console.log("✅ Dev coin seed set to", COINS);
+    console.log("✅ Dev coin seed (DISABLED) set to", COINS);
   } catch (e) {
     // eslint-disable-next-line no-console
     console.log("seed_coins error:", e);

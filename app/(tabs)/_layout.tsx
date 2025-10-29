@@ -15,7 +15,6 @@ import ScrollableTabBar from "../components/ScrollableTabBar";
 import HeaderBar from "../components/HeaderBar";
 import StarTrailOverlay from "../components/StarTrailOverlay";
 import FxOverlay from "../components/FxOverlay";
-import { FxProvider } from "../context/FxProvider";
 import { AchieveEmitter } from "../context/AchievementsContext";
 import { CollectionsProvider } from "../context/CollectionsContext";
 
@@ -62,9 +61,7 @@ export default function TabsLayout() {
   return (
     <ThemeProvider>
       <CursorProvider>
-        <ToastHost />
-        <FxProvider>
-          <CollectionsProvider>
+        <ToastHost /><CollectionsProvider>
             <HeaderBar />
             <AchievementsCoinsBridge />
             <AchievementsAutoTracker />
@@ -203,9 +200,7 @@ export default function TabsLayout() {
 
             {celebrate && <CelebrateToast message={celebrate} onClose={() => setCelebrate(null)} />}
             <FxOverlay />
-          </CollectionsProvider>
-        </FxProvider>
-        <CursorOverlay />
+          </CollectionsProvider><CursorOverlay />
       </CursorProvider>
     </ThemeProvider>
   );

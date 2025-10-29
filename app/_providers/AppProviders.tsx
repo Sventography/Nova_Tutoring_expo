@@ -17,6 +17,7 @@ const pick = (m: any, ...keys: string[]): FCWC =>
 import * as ThemeMod        from "../context/ThemeContext";
 import * as FxMod           from "../context/FxProvider";
 import * as CoinsMod        from "../context/CoinsContext";
+import * as StreakMod       from "../context/StreakContext";
 import * as WalletMod       from "../context/WalletContext";
 import * as NotifMod        from "../context/NotifContext";
 import * as ToastMod        from "../context/ToastContext";
@@ -33,6 +34,7 @@ import * as QuizMod         from "../context/QuizContext";
 const ThemeProvider        = pick(ThemeMod,        "ThemeProvider");
 const FxProvider           = pick(FxMod,           "FxProvider");
 const CoinsProvider        = pick(CoinsMod,        "CoinsProvider");
+const StreakProvider       = pick(StreakMod,       "StreakProvider");
 const WalletProvider       = pick(WalletMod,       "WalletProvider");
 const NotifProvider        = pick(NotifMod,        "NotifProvider");
 const ToastProvider        = pick(ToastMod,        "ToastProvider");
