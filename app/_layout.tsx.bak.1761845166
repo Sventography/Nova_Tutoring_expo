@@ -1,27 +1,28 @@
-// app/_layout.tsx
 import React from "react";
 import "./_dev/seed_coins";
 
 import { Slot } from "expo-router";
 import AppProviders from "./AppProviders";
-import { StreakProvider } from "./context/StreakContext";
 import ThemeOverlay from "./components/ThemeOverlay";
-
-import { FxProvider } from "./context/FxProvider"; // ✅ root-level FX context
+import FxOverlay from "./components/FxOverlay";
+import FxOverlay from "./components/FxOverlay";
+import ThemeOverlay from "./components/ThemeOverlay";import ThemeOverlay from "./components/ThemeOverlay";
+import { StreakProvider } from "../app/context/StreakContext";
 
 export default function RootLayout() {
   return (
     <StreakProvider>
       <AppProviders>
-        <FxProvider>
-          <ThemeOverlay />
-          <Slot />
-        </FxProvider>
+        
+      
+    
+  <ThemeOverlay />
+  <FxOverlay />
+  <Slot />
       </AppProviders>
     </StreakProvider>
   );
 }
-
 if (__DEV__) {
   import("@react-native-async-storage/async-storage").then(AS => {
     AS.default.setItem("@nova/coins.v1", "999999").then(() =>

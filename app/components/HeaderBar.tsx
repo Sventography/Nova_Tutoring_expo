@@ -16,7 +16,7 @@ export default function HeaderBar() {
   const router = useRouter();
 
   const { enabled: fxOn, toggle: toggleFx } = useFx();
-  const { user } = (useUser() || {}) as any;
+const { user } = (useUser() || {}) as any;
   const { coins = 0 } = (useCoins() || {}) as any;
   const { loaded, count, todayChecked, markToday } = (useStreak() || {}) as any;
 
@@ -97,7 +97,7 @@ export default function HeaderBar() {
 
       {/* Right: FX, Share, Donate */}
       <View style={S.right}>
-        <Pressable onPress={toggleFx} hitSlop={8} style={S.iconBtn}>
+        <Pressable onPress={() => { console.log("FX clicked from HeaderBar"); toggleFx(); }} hitSlop={8} style={S.iconBtn}>
           <Ionicons name={fxOn ? "sparkles" : "sparkles-outline"} size={18} color={fxOn ? "#5cfcc8" : "#8ecae6"} />
         </Pressable>
 

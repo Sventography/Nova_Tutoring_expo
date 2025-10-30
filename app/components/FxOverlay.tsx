@@ -1,112 +1,195 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Animated, Dimensions, Easing, StyleSheet, Text, View } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+// app/components/FxOverlay.tsx
+import React, { useEffect, useMemo, useRef } from "react";
+import { View, StyleSheet, Animated, Easing, useWindowDimensions, Platform, Text } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { useFx } from "../context/FxProvider";
 
-const { width: W, height: H } = Dimensions.get("window");
-const pick = <T,>(arr: T[]) => arr[(Math.random() * arr.length) | 0];
-const ri = (a:number,b:number) => Math.floor(a + Math.random() * (b - a + 1));
-type Palette = { glyphs: string[]; colors: string[]; size:[number,number] };
-const RAIN: Palette = { glyphs:["•"], colors:["#01e5ff","#76f0ff"], size:[6,10] };
-const PALETTES: Record<string, Palette> = {
-  "theme:neon": RAIN,
-  "theme:starry":    { glyphs:["★","✦","☽"], colors:["#ffd966","#ffefa1","#cde2ff"], size:[12,18] },
-  "theme:pink":      { glyphs:["❤","✦","◆"], colors:["#ffeef9","#ffd6ef","#fff2fb"], size:[12,18] },
-  "theme:dark":      { glyphs:["✦","◆","✶"], colors:["#b8dfff","#e8f4ff","#d6e9ff"], size:[10,16] },
-  "theme:mint":      { glyphs:["✳","●","✦"], colors:["#e9fff8","#d6ffef","#f2fffb"], size:[10,16] },
-  "theme:glitter":   { glyphs:["✦","◆","★"], colors:["#f5eaff","#ffe9ff","#fff4ff"], size:[10,18] },
-  "theme:blackgold": { glyphs:["◆","✦","★"], colors:["#ffe9a8","#fff2c9","#fff9dd"], size:[12,18] },
-  "theme:neonpurple":{ glyphs:["✦","◆","★"], colors:["#faeaff","#f3d6ff","#fff2ff"], size:[10,18] },
-  "theme:silver":    { glyphs:["✶","✦","◆"], colors:["#f0f6fa","#e5f0f6","#ffffff"], size:[10,16] },
-  "theme:emerald":   { glyphs:["◆","✦","●"], colors:["#eafff5","#d4ffef","#ffffff"], size:[10,16] },
-  "theme:crimson":   { glyphs:["❤","✦","◆"], colors:["#ffe9ee","#ffd3dd","#fff0f3"], size:[12,18] },
-};
-const MAX = 36, SPAWN_MS = 180, FALL_MIN = 3500, FALL_MAX = 6500;
-type Drop = { id:number; x:number; size:number; lifeMs:number; glyph:string; color:string; drift:number; };
-let NEXT = 1;
+// Try to read theme tokens safely (works even if useTheme throws during early mount)
+let useThemeSafe: any = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  useThemeSafe = require("../context/ThemeContext").useTheme;
+} catch { /* noop */ }
+
+type DropCfg = { left: number; len: number; thick: number; delay: number; speed: number };
 
 export default function FxOverlay() {
-  const [storeId, setStoreId] = useState<string>("theme:neon");
+  const { enabled } = useFx();
+  const dims = useWindowDimensions();
 
-  // poll AsyncStorage (storage-first)
+  // Theme-aware accent (fallback to neon cyan)
+  const themeCtx = useThemeSafe ? (() => { try { return useThemeSafe(); } catch { return null; } })() : null;
+  const accent: string = themeCtx?.tokens?.accent || "#00e5ff";
+  const overlayTint = "rgba(0,229,255,0.06)";
+
+  // Generate a deterministic batch of drops so layout changes don't respawn constantly
+  const DROPS = useMemo<DropCfg[]>(() => {
+    const count =
+      Platform.OS === "web" ? 48 :
+      dims.width > 800 ? 40 :
+      26;
+
+    const arr: DropCfg[] = [];
+    for (let i = 0; i < count; i++) {
+      const left = Math.random() * dims.width;
+      const len = 18 + Math.random() * 42;       // px length of a streak
+      const thick = Math.random() < 0.15 ? 2.5 : 1.5; // occasional thicker streaks
+      const delay = Math.random() * 1600;        // stagger starts
+      const speed = 1100 + Math.random() * 1600; // ms for a full fall
+      arr.push({ left, len, thick, delay, speed });
+    }
+    return arr;
+    // re-generate only if width changes a lot
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [Math.round(dims.width/64)]);
+
   useEffect(() => {
-    let live = true;
-    const tick = async () => {
-      try {
-        const raw = (await AsyncStorage.getItem("@nova/themeId")) || "theme:neon";
-        if (live) setStoreId(prev => prev === raw ? prev : raw);
-      } catch {}
-    };
-    tick();
-    const t = setInterval(tick, 800);
-    return () => { live = false; clearInterval(t); };
-  }, []);
-
-  const themeId = storeId ?? "theme:neon";
-  useEffect(() => { try { console.log("[FxOverlay] using=", themeId); } catch {} }, [themeId]);
-
-  const palette = useMemo<Palette>(() => PALETTES[themeId] ?? RAIN, [themeId]);
-
-  const [drops, setDrops] = useState<Drop[]>([]);
-  const anims = useRef<Record<number, { y: Animated.Value; r: Animated.Value; a: Animated.Value }>>({});
-
-  // spawn loop — restarts on palette change
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setDrops(prev => {
-        const next = prev.length >= MAX ? prev.slice(1) : prev.slice();
-        next.push({
-          id: NEXT++,
-          x: Math.random() * W,
-          size: ri(palette.size[0], palette.size[1]),
-          lifeMs: ri(FALL_MIN, FALL_MAX),
-          glyph: pick(palette.glyphs),
-          color: pick(palette.colors),
-          drift: (Math.random() * 1.4 - 0.7) * 40,
-        });
-        return next;
-      });
-    }, SPAWN_MS);
-    return () => clearInterval(timer);
-  }, [palette]);
-
-  // animate new drops
-  useEffect(() => {
-    drops.forEach(d => {
-      if (anims.current[d.id]) return;
-      const y = new Animated.Value(-40);
-      const r = new Animated.Value(0);
-      const a = new Animated.Value(0);
-      Animated.parallel([
-        Animated.timing(y, { toValue: H + 40, duration: d.lifeMs, easing: Easing.out(Easing.quad), useNativeDriver: true }),
-        Animated.sequence([
-          Animated.timing(a, { toValue: 1, duration: 300, useNativeDriver: true }),
-          Animated.timing(a, { toValue: 0.9, duration: d.lifeMs - 600, useNativeDriver: true }),
-          Animated.timing(a, { toValue: 0, duration: 300, useNativeDriver: true }),
-        ]),
-        Animated.loop(Animated.timing(r, { toValue: 1, duration: 2200 + Math.random() * 1200, easing: Easing.linear, useNativeDriver: true })),
-      ]).start();
-      anims.current[d.id] = { y, r, a };
-    });
-  }, [drops]);
+    if (__DEV__) console.log("[FxOverlay] enabled =", enabled);
+  }, [enabled]);
 
   return (
-    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-      {/* Big center label so it’s obvious */}
-      <View style={{ position:"absolute", top: H/2 - 40, left: 0, right: 0, alignItems:"center" }}>
-        <Text style={{ color:"#ffffff", fontWeight:"900", fontSize: 18 }}>
-          THEME → {themeId}
-        </Text>
-      </View>
-      {drops.map(d => {
-        const anim = anims.current[d.id];
-        if (!anim) return null;
-        const rotate = anim.r.interpolate({ inputRange:[0,1], outputRange:["0deg","360deg"] });
-        return (
-          <Animated.View key={d.id} style={{ position:"absolute", left:d.x, transform:[{ translateY: anim.y }, { translateX: d.drift }, { rotate }], opacity: anim.a }}>
-            <Text style={{ fontSize: d.size, color: d.color, textShadowColor:"rgba(0,0,0,0.25)", textShadowRadius: 6 }}>{d.glyph}</Text>
-          </Animated.View>
-        );
-      })}
+    <View pointerEvents="none" style={[S.wrap, { opacity: enabled ? 1 : 0 }]}>
+      {/* scanline + vignette like before */}
+      <LinearGradient
+        colors={["rgba(0,0,0,0.0)", "rgba(0,0,0,0.08)", "rgba(0,0,0,0.0)"]}
+        start={{x:0,y:0}} end={{x:0,y:1}}
+        style={S.scan}
+      />
+      <LinearGradient
+        colors={[`${accent}18`, `${accent}08`, "rgba(0,0,0,0)"]}
+        start={{x:0.5,y:0}} end={{x:0.5,y:1}}
+        style={S.vignette}
+      />
+      {/* neon rain */}
+      <NeonRain
+        width={dims.width}
+        height={dims.height}
+        drops={DROPS}
+        color={accent}
+        glowTint={overlayTint}
+        enabled={enabled}
+      />
+      {/* soft vertical sweep */}
+      <View style={[S.sweep, { backgroundColor: overlayTint }]} />
     </View>
   );
 }
+
+function NeonRain({
+  width,
+  height,
+  drops,
+  color,
+  glowTint,
+  enabled
+}: {
+  width: number;
+  height: number;
+  drops: DropCfg[];
+  color: string;
+  glowTint: string;
+  enabled: boolean;
+}) {
+  // Keep animations running; opacity of the whole overlay is toggled for instant feel
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      {drops.map((d, i) => (
+        <RainDrop key={i} cfg={d} h={height} color={color} glowTint={glowTint} paused={!enabled} />
+      ))}
+    </View>
+  );
+}
+
+function RainDrop({ cfg, h, color, glowTint, paused }: { cfg: DropCfg; h: number; color: string; glowTint: string; paused: boolean; }) {
+  const t = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loop = () => {
+      // restart from slightly above the screen, fall to bottom + a bit
+      t.setValue(0);
+      const duration = cfg.speed;
+      const anim = Animated.timing(t, {
+        toValue: 1,
+        duration,
+        delay: cfg.delay,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      });
+      anim.start(({ finished }) => {
+        if (mounted && finished) {
+          // small random delay between loops for variety
+          cfg.delay = Math.random() * 1000;
+          loop();
+        }
+      });
+    };
+
+    // Keep the timeline running, but if paused we just don't render (parent opacity) — smooth resume
+    loop();
+
+    return () => {
+      mounted = false;
+      t.stopAnimation();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // y from [-cfg.len, h+cfg.len]
+  const translateY = t.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-cfg.len, h + cfg.len],
+  });
+  const opacity = t.interpolate({
+    inputRange: [0.0, 0.05, 0.9, 1],
+    outputRange: [0, 1, 1, 0],
+  });
+
+  // Optionally, vary hue/alpha slightly per streak
+  const bodyColor = color;
+  const glow = glowTint;
+
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[
+        S.dropWrap,
+        {
+          transform: [{ translateY }],
+          left: cfg.left,
+          opacity: paused ? 0 : opacity,
+        },
+      ]}
+    >
+      {/* outer glow */}
+      <View
+        style={{
+          position: "absolute",
+          top: -cfg.len * 0.15,
+          left: -cfg.thick * 2,
+          right: -cfg.thick * 2,
+          bottom: -cfg.len * 0.15,
+          backgroundColor: glow,
+          borderRadius: cfg.thick * 3,
+          opacity: 0.35,
+        }}
+      />
+      {/* bright core streak */}
+      <LinearGradient
+        colors={[`${bodyColor}`, `${bodyColor}aa`, `${bodyColor}00`]}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+        style={{ width: cfg.thick, height: cfg.len, borderRadius: cfg.thick }}
+      />
+    </Animated.View>
+  );
+}
+
+const S = StyleSheet.create({
+  wrap: { position: "absolute", left: 0, right: 0, top: 0, bottom: 0, zIndex: 9998 },
+  scan: { ...StyleSheet.absoluteFillObject },
+  vignette: { ...StyleSheet.absoluteFillObject },
+  sweep: { position: "absolute", top: 0, bottom: 0, width: 160 },
+  dropWrap: { position: "absolute", top: 0 },
+});

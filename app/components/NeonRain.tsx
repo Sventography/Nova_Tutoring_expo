@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { Animated, Dimensions, StyleSheet, View } from "react-native";
-import { useFx } from "../context/FxContext";
+import { useFx } from "../context/FxProvider";
 
 const { width, height } = Dimensions.get("window");
 const COLORS = ["#00e5ff", "#cf66ff", "#ff6b6b", "#94d2bd"];

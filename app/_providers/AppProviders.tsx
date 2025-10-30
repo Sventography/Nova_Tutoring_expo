@@ -16,6 +16,7 @@ const pick = (m: any, ...keys: string[]): FCWC =>
 // just tweak the import path, not the rest of this file.
 import * as ThemeMod        from "../context/ThemeContext";
 import * as FxMod           from "../context/FxProvider";
+import RootOverlays from "../components/RootOverlays";
 import * as CoinsMod        from "../context/CoinsContext";
 import * as StreakMod       from "../context/StreakContext";
 import * as WalletMod       from "../context/WalletContext";

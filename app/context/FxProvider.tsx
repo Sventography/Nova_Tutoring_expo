@@ -1,25 +1,35 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import React, { createContext, useCallback, useContext, useMemo, useState, useEffect } from "react";
 
-type Ctx = { enabled: boolean; toggle: () => void; setEnabled: (v: boolean) => void };
-const C = createContext<Ctx | null>(null);
-const KEY = "@fx/enabled";
+type FxCtx = {
+  enabled: boolean;
+  setEnabled: (v: boolean) => void;
+  toggle: () => void;
+};
 
-export function useFx() {
-  return (useContext(C) as Ctx) || { enabled: false, toggle: () => {}, setEnabled: () => {} };
-}
+const C = createContext<FxCtx | null>(null);
 
 export function FxProvider({ children }: { children: React.ReactNode }) {
-  const [enabled, setEnabled] = useState(false);
-  useEffect(() => {
-    (async () => {
-      try { const v = await AsyncStorage.getItem(KEY); if (v != null) setEnabled(v === "1"); } catch {}
-    })();
+  const [enabled, setEnabled] = useState(true);
+
+  const toggle = useCallback(() => {
+    setEnabled(v => {
+      const next = !v;
+      if (__DEV__) console.log("[FxProvider] toggle →", next);
+      return next;
+    });
   }, []);
+
   useEffect(() => {
-    (async () => { try { await AsyncStorage.setItem(KEY, enabled ? "1" : "0"); } catch {} })();
-  }, [enabled]);
-  const toggle = useCallback(() => setEnabled(v => !v), []);
-  const value = useMemo(() => ({ enabled, toggle, setEnabled }), [enabled, toggle]);
+    if (__DEV__) console.log("[FxProvider] mounted, enabled =", enabled);
+  }, []);
+
+  const value = useMemo(() => ({ enabled, setEnabled, toggle }), [enabled, toggle]);
+
   return <C.Provider value={value}>{children}</C.Provider>;
+}
+
+export function useFx() {
+  const v = useContext(C);
+  if (!v) throw new Error("useFx must be used inside <FxProvider>");
+  return v;
 }

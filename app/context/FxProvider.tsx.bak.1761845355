@@ -1,0 +1,13 @@
+import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+type FxCtx = { enabled: boolean; toggle: () => void };
+const C = createContext<FxCtx>({ enabled: false, toggle: () => {} });
+const KEY = "@nova/fx-enabled";
+export function FxProvider({ children }: { children: React.ReactNode }) {
+  const [enabled, setEnabled] = useState(false);
+  useEffect(() => { (async () => { try { const v = await AsyncStorage.getItem(KEY); if (v != null) setEnabled(v === "true"); } catch {} })(); }, []);
+  useEffect(() => { (async () => { try { await AsyncStorage.setItem(KEY, enabled ? "true" : "false"); } catch {} })(); }, [enabled]);
+  const toggle = useCallback(() => setEnabled(v => !v), []);
+  return <C.Provider value={{ enabled, toggle }}>{children}</C.Provider>;
+}
+export function useFx(){ return useContext(C); }
