@@ -1,0 +1,15 @@
+#!/bin/zsh
+msg="${1:-checkpoint}"
+ts=$(date +%Y%m%d-%H%M%S)
+branch="save/${msg// /-}-${ts}"
+echo "💾 Creating $branch ..."
+
+# stage & commit
+git add -A
+git commit -m "checkpoint: ${msg}" || echo "(nothing new to commit)"
+
+# create branch and push
+git switch -c "$branch" || git switch "$branch"
+git push -u origin HEAD:"refs/heads/$branch" --force-with-lease
+
+echo "✅ Saved checkpoint $branch to GitHub"
