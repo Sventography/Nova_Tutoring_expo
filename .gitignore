@@ -39,3 +39,5 @@ dev_script_dump.txt
 credentials.json
 token.json
 dev_script_dump.txt
+.env.local.bak
+*.bak
