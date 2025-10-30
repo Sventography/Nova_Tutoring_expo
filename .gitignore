@@ -26,3 +26,10 @@ android/app/build/
 *.tgz
 .archive/
 backup.bundle
+credentials.json
+token.json
+dev_script_dump.txt
+.env
+.env.*
+*.pem
+*.p12
