@@ -33,3 +33,9 @@ dev_script_dump.txt
 .env.*
 *.pem
 *.p12
+.env
+.env.local
+.env.*
+credentials.json
+token.json
+dev_script_dump.txt
