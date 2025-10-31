@@ -45,7 +45,7 @@ export default function AchievementsScreen() {
   }, [unlocked]);
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#000" }}>
+    <View style={{ flex: 1, backgroundColor:"transparent" }}>
       <ConfettiCannon ref={confettiRef} autoStart={false} fadeOut count={80} origin={{ x: 0, y: 0 }} />
       <SectionList
         sections={sections}

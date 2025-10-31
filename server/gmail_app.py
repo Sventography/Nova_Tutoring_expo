@@ -15,7 +15,7 @@ def home():
     return "Nova Tutoring Gmail API is running ✨"
 
 @app.route("/health")
-def health():
+def api_health():
     return jsonify({"ok": True})
 
 @app.route("/send_certificate", methods=["POST"])

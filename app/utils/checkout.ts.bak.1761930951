@@ -1,0 +1,145 @@
+// app/utils/checkout.ts
+import { Platform, Linking } from "react-native";
+
+type Payload = {
+  // Either send a Stripe Price ID...
+  priceId?: string;
+  // ...or a raw amount (in cents) + currency
+  amount?: number;
+  currency?: string;
+
+  quantity?: number;
+  sku?: string; // kept for compatibility, ignored by server unless you handle it
+  meta?: Record<string, any>;
+
+  success_url?: string;
+  cancel_url?: string;
+};
+
+function stripTrailingSlashes(s: string) {
+  return s.replace(/\/+$/g, "");
+}
+
+function getBackend(): string {
+  // 1) Prefer explicit env (Expo injects EXPO_PUBLIC_* at build time)
+  const env = (process?.env?.EXPO_PUBLIC_BACKEND_URL as string) || "";
+  if (env) return stripTrailingSlashes(env);
+
+  // 2) Dev heuristics (works for most setups)
+  // Android emulator maps host loopback to 10.0.2.2
+  const isAndroidNative = Platform.OS === "android";
+  // iOS simulator & Web can hit host loopback directly
+  const loopback = isAndroidNative ? "10.0.2.2" : "127.0.0.1";
+
+  // Prefer the port we proved works first (8799), then 8787.
+  // If you move your server, just set EXPO_PUBLIC_BACKEND_URL to override.
+  const candidates = [`http://${loopback}:8799`, `http://${loopback}:8787`];
+
+  // Return the first; we’ll keep multiple path fallbacks below.
+  return candidates[0];
+}
+
+function getSuccessCancelDefaults() {
+  // Works on web; for native this just provides a harmless string.
+  const origin =
+    (typeof window !== "undefined" && window.location?.origin) ||
+    "http://localhost:8081";
+
+  return {
+    success_url: `${origin}/?purchase=success`,
+    cancel_url: `${origin}/?purchase=cancel`,
+  };
+}
+
+async function postJSON(url: string, body: any) {
+  console.log("[checkout] POST", url, body);
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    // Keep payload minimal; the server decides between priceId vs amount
+    body: JSON.stringify(body),
+  });
+
+  const text = await res.text().catch(() => "");
+  let json: any = null;
+  try {
+    json = text ? JSON.parse(text) : null;
+  } catch (_) {
+    // non-JSON error page, keep text
+  }
+
+  console.log("[checkout] status", res.status, json || text);
+  return { ok: res.ok, status: res.status, json, text };
+}
+
+export async function startCheckout(input: Payload) {
+  const BACKEND = getBackend();
+  const { success_url, cancel_url } = {
+    ...getSuccessCancelDefaults(),
+    ...("success_url" in input ? { success_url: input.success_url } : {}),
+    ...("cancel_url" in input ? { cancel_url: input.cancel_url } : {}),
+  };
+
+  // Build the minimal payload the server expects
+  const payload: Record<string, any> = {
+    quantity: input.quantity ?? 1,
+    success_url,
+    cancel_url,
+    meta: input.meta,
+  };
+
+  if (input.priceId) {
+    payload.priceId = input.priceId;
+  } else if (typeof input.amount === "number") {
+    payload.amount = input.amount;
+    payload.currency = (input.currency || "usd").toLowerCase();
+    if (!Number.isFinite(payload.amount) || payload.amount <= 0) {
+      throw new Error("Amount must be a positive integer (cents).");
+    }
+  } else {
+    throw new Error("Provide either priceId or amount.");
+  }
+
+  // Try common route patterns
+  const bases = [BACKEND]; // could add more bases if you want to probe multiple hosts
+  const paths = ["/checkout/start", "/api/checkout/start"];
+
+  let lastErr: any = null;
+
+  for (const base of bases) {
+    for (const path of paths) {
+      const url = `${stripTrailingSlashes(base)}${path}`;
+      try {
+        const { ok, json, text } = await postJSON(url, payload);
+        if (!ok) throw new Error(text || `bad status ${url}`);
+
+        const checkoutUrl: string | undefined = json?.url || json?.checkout_url;
+        const sessionId: string | undefined = json?.id || json?.sessionId;
+
+        if (checkoutUrl) {
+          if (Platform.OS === "web") {
+            window.location.assign(checkoutUrl);
+          } else {
+            await Linking.openURL(checkoutUrl);
+          }
+          return;
+        }
+
+        if (Platform.OS === "web" && sessionId) {
+          const { getStripe } = await import("./stripe");
+          const stripe = await getStripe();
+          if (!stripe) throw new Error("Stripe.js unavailable on web.");
+          await stripe.redirectToCheckout({ sessionId });
+          return;
+        }
+
+        lastErr = new Error("No url or sessionId returned by server.");
+      } catch (e) {
+        lastErr = e;
+        // continue to next candidate
+      }
+    }
+  }
+
+  throw lastErr || new Error("All checkout endpoints failed.");
+}

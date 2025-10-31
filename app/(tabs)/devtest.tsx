@@ -148,7 +148,7 @@ export default function DevTest() {
 }
 
 export const S = StyleSheet.create({
-  wrap: { padding: 16, gap: 14, backgroundColor: "#000" },
+  wrap: { padding: 16, gap: 14, backgroundColor:"transparent" },
   h1: { color: "#00E5FF", fontWeight: "800", fontSize: 22 },
   card: { backgroundColor: "#0A0F14", borderRadius: 16, padding: 14, borderWidth: 1.5, borderColor: "#123" },
   label: { color: "#9fe", marginBottom: 8, fontWeight: "700" },

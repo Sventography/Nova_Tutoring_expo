@@ -1,0 +1,278 @@
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import {
+  View, Text, FlatList, Pressable, TextInput, TouchableWithoutFeedback,
+  Keyboard, Platform, StyleSheet, Animated,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import HeaderBar from "../components/HeaderBar";
+
+/* ===== data (generated) ===== */
+let TOPIC_INDEX: Array<{ id: string; title: string; group: string; count: number }> = [];
+let DATA_MAP: Record<string, any> = {};
+try {
+  TOPIC_INDEX = require("../_data/flashcard_index.json");
+  DATA_MAP = require("../_data/flashcards_data.json");
+  console.log("[Flashcards] topics:", TOPIC_INDEX.length, " mapKeys:", Object.keys(DATA_MAP).length);
+} catch (e) {
+  console.warn("[Flashcards] Failed to load data JSON from ../_data/*", e);
+}
+
+/* ===== tiny glow wrapper ===== */
+function LinearGlow({ borderColor, children, style }: any) {
+  return (
+    <View
+      style={[
+        {
+          borderColor, borderWidth: 1.2, borderRadius: 16,
+          shadowColor: borderColor, shadowOpacity: 0.8, shadowRadius: 12,
+          shadowOffset: { width: 0, height: 0 }, elevation: 6,
+        },
+        style,
+      ]}
+    >
+      {children}
+    </View>
+  );
+}
+
+/* ===== group colors ===== */
+const COLORS: Record<string, string> = {
+  AP: "#86ffb6", CS: "#6ee7ff", English: "#ff66c7", Languages: "#9f7aff",
+  Math: "#86ffb6", Other: "#ffb86b", Science: "#6ee7ff", default: "#00e5ff",
+};
+
+/* ===== collections ===== */
+const COLLECTION_KEY = "nova.collections.v1";
+async function saveCardToCollections(entry: { topicId: string; topicTitle: string; q: string; a: string }) {
+  try {
+    const raw = await AsyncStorage.getItem(COLLECTION_KEY);
+    const list = raw ? JSON.parse(raw) : [];
+    list.push({ ...entry, savedAt: Date.now() });
+    await AsyncStorage.setItem(COLLECTION_KEY, JSON.stringify(list));
+  } catch {}
+}
+
+/* ===== helpers ===== */
+type Card = { q?: string; a?: string; prompt?: string; answer?: string; term?: string; definition?: string };
+type Topic = { id: string; title: string; group: string; count: number };
+function normalize(card: Card) {
+  const q = card.q ?? card.prompt ?? card.term ?? "";
+  const a = card.a ?? card.answer ?? card.definition ?? "";
+  return { q: String(q), a: String(a) };
+}
+
+/* =======================================================
+   Screen
+   ======================================================= */
+export default function Flashcards() {
+  const insets = useSafeAreaInsets();
+
+  const [searchOpen, setSearchOpen] = useState(true);
+  const [query, setQuery] = useState("");
+  const [topic, setTopic] = useState<Topic | null>(null);
+
+  const [cards, setCards] = useState<Array<{ q: string; a: string }>>([]);
+  const [i, setI] = useState(0);
+  const [revealed, setRevealed] = useState(false);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return TOPIC_INDEX;
+    return TOPIC_INDEX.filter((t) =>
+      t.title.toLowerCase().includes(q) || t.group.toLowerCase().includes(q)
+    );
+  }, [query]);
+
+  // 👉 Handle both data shapes: array OR { cards: [...] }
+  useEffect(() => {
+    if (!topic) return;
+    const byId = (DATA_MAP as any)?.[topic.id];
+    const byTitle = (DATA_MAP as any)?.[topic.title];
+    const pick = (v: any) =>
+      Array.isArray(v) ? v :
+      (v && Array.isArray(v.cards)) ? v.cards :
+      [];
+    const raw: Card[] = pick(byId).length ? pick(byId) : pick(byTitle);
+    const list = raw.map(normalize).filter(({ q, a }) => q && a);
+    console.log("[Flashcards] picked:", topic.id, "/", topic.title, "cards:", list.length);
+    setCards(list);
+    setI(0);
+    setRevealed(false);
+  }, [topic]);
+
+  const pulse = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!revealed) return;
+    pulse.setValue(0);
+    Animated.timing(pulse, { toValue: 1, duration: 250, useNativeDriver: true }).start();
+  }, [revealed]);
+
+  const current = cards[i];
+  const borderColor = COLORS[topic?.group ?? "default"] ?? COLORS.default;
+
+  const resetToSearch = () => {
+    setSearchOpen(true);
+    setTopic(null);
+    setCards([]);
+    setI(0);
+    setRevealed(false);
+  };
+  const pickTopic = (t: Topic) => { setTopic(t); setSearchOpen(false); setQuery(""); };
+  const nextCard = () => { if (!cards.length) return; setI((n) => (n + 1) % cards.length); setRevealed(false); };
+  const addCurrentToCollection = async () => {
+    if (!topic || !current) return;
+    await saveCardToCollections({ topicId: topic.id, topicTitle: topic.title, q: current.q, a: current.a });
+  };
+
+  return (
+    <View style={[sx.screen, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 8 }]}>
+      {/* Global header (avatar/username, coin pill, donate) */}
+      <HeaderBar username="Nova Student" />
+
+      {/* page header */}
+      <View style={sx.header}>
+        <Text style={sx.title}>Flashcards</Text>
+        <Pressable onPress={resetToSearch} hitSlop={10} style={sx.searchChip}>
+          <Text style={sx.searchChipText}>{topic ? topic.title : "Pick a topic"}</Text>
+        </Pressable>
+      </View>
+
+      {/* searchable topic menu (overlay panel) */}
+      {searchOpen && (
+        <TouchableWithoutFeedback onPress={() => { Keyboard.dismiss(); setSearchOpen(false); }}>
+          <View style={sx.overlay}>
+            <TouchableWithoutFeedback>
+              <View style={sx.panel}>
+                <View style={sx.searchRow}>
+                  <TextInput
+                    placeholder="Search topics..."
+                    placeholderTextColor="#99d6ff"
+                    value={query}
+                    onChangeText={setQuery}
+                    autoFocus
+                    style={sx.searchInput}
+                  />
+                  <Pressable onPress={() => { setQuery(""); setSearchOpen(false); }} hitSlop={12} style={sx.xBtn}>
+                    <Text style={sx.xText}>×</Text>
+                  </Pressable>
+                </View>
+
+                {TOPIC_INDEX.length === 0 ? (
+                  <View style={{ padding: 16 }}>
+                    <Text style={{ color: "#ff9aa2", fontWeight: "700" }}>
+                      Could not load ../_data/flashcard_index.json
+                    </Text>
+                    <Text style={{ color: "#bdf8ff", marginTop: 6 }}>
+                      Check file path and generator output.
+                    </Text>
+                  </View>
+                ) : (
+                  <FlatList
+                    data={filtered}
+                    keyExtractor={(t) => t.id}
+                    initialNumToRender={20}
+                    renderItem={({ item }) => (
+                      <Pressable onPress={() => pickTopic(item)} style={sx.topicRow}>
+                        <Text numberOfLines={1} style={sx.topicTitle}>{item.title}</Text>
+                        <Text style={[sx.topicGroup, { color: COLORS[item.group] ?? COLORS.default }]}>
+                          {item.group}
+                        </Text>
+                        <Text style={sx.topicCount}>{item.count}</Text>
+                      </Pressable>
+                    )}
+                    ItemSeparatorComponent={() => <View style={sx.sep} />}
+                  />
+                )}
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      )}
+
+      {/* card area */}
+      {!!topic && !searchOpen && (
+        <View style={sx.cardWrap}>
+          <LinearGlow borderColor={borderColor} style={sx.cardGlow}>
+            <View style={sx.cardHeader}>
+              <Text style={sx.cardLabel}>Question</Text>
+              <Pressable onPress={addCurrentToCollection} hitSlop={10}>
+                <Text style={sx.plus}>＋</Text>
+              </Pressable>
+            </View>
+
+            <View style={sx.cardBody}>
+              <Text style={sx.qText}>{current?.q ?? "—"}</Text>
+              {revealed && (
+                <Animated.View
+                  style={{
+                    marginTop: 14,
+                    transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.98, 1] }) }],
+                  }}
+                >
+                  <Text style={sx.aText}>{current?.a ?? ""}</Text>
+                </Animated.View>
+              )}
+            </View>
+
+            <View style={sx.btnRow}>
+              <Pressable style={[sx.btn, sx.btnGhost]} onPress={() => setRevealed((r) => !r)}>
+                <Text style={sx.btnText}>{revealed ? "Hide" : "Reveal"}</Text>
+              </Pressable>
+              <Pressable style={[sx.btn, sx.btnSolid]} onPress={nextCard}>
+                <Text style={sx.btnText}>Next</Text>
+              </Pressable>
+            </View>
+          </LinearGlow>
+
+          <Text style={sx.progress}>
+            {cards.length ? `${i + 1} / ${cards.length}` : "0 / 0"}
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
+/* ===== styles ===== */
+const sx = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: "#0a0f14", paddingHorizontal: 14 },
+
+  header: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
+  title: { fontSize: 28, fontWeight: "800", color: "#eaffff", letterSpacing: 0.25 },
+  searchChip: {
+    marginLeft: 12, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1,
+    borderColor: "rgba(0,229,255,0.7)", backgroundColor: "rgba(0,229,255,0.08)",
+  },
+  searchChipText: { color: "#bdf8ff", fontWeight: "600" },
+
+  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.45)", paddingHorizontal: 12 },
+  panel: { marginTop: 8, maxHeight: "60%", borderRadius: 16, borderWidth: 1.2, borderColor: "#00e5ff", backgroundColor: "#081118", overflow: "hidden" },
+  searchRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: "rgba(255,255,255,0.12)" },
+  searchInput: { flex: 1, color: "#eaffff", fontSize: 16, paddingVertical: Platform.select({ ios: 8, android: 6 }), paddingRight: 8 },
+  xBtn: { width: 28, height: 28, alignItems: "center", justifyContent: "center", borderRadius: 14, borderWidth: 1, borderColor: "rgba(255,255,255,0.25)" },
+  xText: { color: "#eaffff", fontSize: 18, lineHeight: 20 },
+
+  topicRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 12 },
+  topicTitle: { flex: 1, color: "#eaffff", fontSize: 16, fontWeight: "600" },
+  topicGroup: { marginRight: 10, fontWeight: "700" },
+  topicCount: { color: "#9bd7ff", width: 40, textAlign: "right" },
+  sep: { height: StyleSheet.hairlineWidth, backgroundColor: "rgba(255,255,255,0.08)" },
+
+  cardWrap: { flex: 1, marginTop: 8 },
+  cardGlow: { padding: 16 },
+  cardHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
+  cardLabel: { color: "#bdf8ff", fontWeight: "800", letterSpacing: 0.3 },
+  plus: { color: "#eaffff", fontSize: 22, lineHeight: 22, paddingHorizontal: 2 },
+
+  cardBody: { minHeight: 160, justifyContent: "center" },
+  qText: { color: "#eaffff", fontSize: 20, fontWeight: "700" },
+  aText: { color: "#86ffb6", fontSize: 18, fontWeight: "700" },
+
+  btnRow: { flexDirection: "row", gap: 10, marginTop: 14 },
+  btn: { flex: 1, paddingVertical: 12, borderRadius: 12, alignItems: "center", borderWidth: 1.2 },
+  btnGhost: { backgroundColor: "rgba(255,255,255,0.06)", borderColor: "rgba(255,255,255,0.18)" },
+  btnSolid: { backgroundColor: "#00e5ff", borderColor: "rgba(255,255,255,0.18)" },
+  btnText: { color: "#06141c", fontWeight: "800" },
+  progress: { marginTop: 10, textAlign: "center", color: "#9bd7ff", fontWeight: "700" },
+});

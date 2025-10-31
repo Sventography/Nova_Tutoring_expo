@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import "../_dev/seed_coins";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Tabs } from "expo-router";
+import { useTheme } from "../context/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 
@@ -22,6 +23,7 @@ import "../utils/achievements-smoketest";
 import AchievementsAutoTracker from "../context/AchievementsAutoTracker";
 import AchievementsCoinsBridge from "../context/AchievementsCoinsBridge";
 import FxOverlay from "../components/FxOverlay"; // ✅ neon rain overlay
+import GlobalTextDefaults from "../components/GlobalTextDefaults";
 
 function CelebrateToast({ message, onClose }: { message: string; onClose: () => void }) {
   return (
@@ -56,6 +58,7 @@ export default function TabsLayout() {
 
   return (
     <ThemeProvider>
+      <GlobalTextDefaults />
       <CursorProvider>
         <ToastHost />
         <CollectionsProvider>
@@ -73,7 +76,7 @@ export default function TabsLayout() {
                 tabBarInactiveTintColor: "rgba(0,229,255,0.7)",
                 tabBarStyle: {
                   height: 68,
-                  backgroundColor: "#000000",
+                  backgroundColor:"transparent",
                   borderTopWidth: 0,
                   elevation: 0,
                   shadowOpacity: 0,

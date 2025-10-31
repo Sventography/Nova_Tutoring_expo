@@ -15,4 +15,4 @@ export default function DevTestQuizWire(){
     </View>
   );
 }
-const S=StyleSheet.create({wrap:{flex:1,backgroundColor:"#000",padding:16,gap:12},h1:{color:"#00E5FF",fontWeight:"800",fontSize:22},btn:{padding:12,borderRadius:12,borderWidth:1.5,borderColor:"#00E5FF",backgroundColor:"rgba(0,229,255,0.12)",alignItems:"center"},bt:{color:"#e6f7ff",fontWeight:"800"}});
+const S=StyleSheet.create({wrap:{flex:1,backgroundColor:"transparent",padding:16,gap:12},h1:{color:"#00E5FF",fontWeight:"800",fontSize:22},btn:{padding:12,borderRadius:12,borderWidth:1.5,borderColor:"#00E5FF",backgroundColor:"rgba(0,229,255,0.12)",alignItems:"center"},bt:{color:"#e6f7ff",fontWeight:"800"}});

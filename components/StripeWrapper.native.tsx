@@ -1,27 +1,14 @@
-import * as React from "react";
-import { Platform } from "react-native";
-import { StripeProvider } from "@stripe/stripe-react-native";
+import React from "react";
+import { View } from "react-native";
 
 /**
- * Native wrapper: uses the real Stripe SDK (iOS/Android).
- * Requires:
- *   EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY
- *   EXPO_PUBLIC_APPLE_MERCHANT_ID  (for Apple Pay)
- * in your .env (Expo reads EXPO_PUBLIC_* at build time).
+ * Native wrapper: We rely on server-hosted Checkout links.
+ * If a publishable key exists, great; if not, we still render children safely.
  */
-export default function StripeWrapper({ children }: { children: React.ReactNode }) {
-  const publishableKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY as string | undefined;
-  if (!publishableKey) {
-    console.warn("Missing EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY");
+export default function StripeWrapper({ children }: { children?: React.ReactNode }) {
+  const pk = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY as string | undefined;
+  if (!pk) {
+    console.warn("Missing EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY on native. Using URL Checkout flow.");
   }
-
-  return (
-    <StripeProvider
-      publishableKey={publishableKey ?? ""}
-      merchantIdentifier={process.env.EXPO_PUBLIC_APPLE_MERCHANT_ID}
-      urlScheme={Platform.select({ ios: "nova", android: "nova" })}
-    >
-      {children}
-    </StripeProvider>
-  );
+  return <View style={{ flex: 1 }}>{children}</View>;
 }

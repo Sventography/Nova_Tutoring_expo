@@ -1,0 +1,15 @@
+import { loadStripe } from "@stripe/stripe-js";
+
+const stripePromise = loadStripe(process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+
+export async function goToCheckout(priceId: string, quantity = 1) {
+  const stripe = await stripePromise;
+  const res = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/create-checkout-session`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ priceId, quantity }),
+  });
+  if (!res.ok) throw new Error("Checkout session failed");
+  const { sessionId } = await res.json();
+  await stripe!.redirectToCheckout({ sessionId });
+}

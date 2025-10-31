@@ -8,6 +8,8 @@ export default {
       EXPO_PUBLIC_BACKEND_URL: process.env.EXPO_PUBLIC_BACKEND_URL,
       EXPO_PUBLIC_BACKEND_URL_VERCEL: process.env.EXPO_PUBLIC_BACKEND_URL_VERCEL,
       EXPO_PUBLIC_OPENAI_API_KEY: process.env.EXPO_PUBLIC_OPENAI_API_KEY,
+      EXPO_PUBLIC_STRIPE_PK: process.env.EXPO_PUBLIC_STRIPE_PK,
+      EXPO_PUBLIC_STRIPE_PK: process.env.EXPO_PUBLIC_STRIPE_PK,
     },
     plugins: [
     "expo-mail-composer",

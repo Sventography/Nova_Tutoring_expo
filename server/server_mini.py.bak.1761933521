@@ -1,0 +1,43 @@
+import os, argparse
+from flask import Flask, request, jsonify, make_response
+from flask_cors import CORS
+
+app = Flask(__name__)
+
+# Allow Expo web dev origins
+ALLOWED_ORIGINS = ["http://localhost:8081", "http://127.0.0.1:8081"]
+CORS(app, resources={r"/*": {"origins": ALLOWED_ORIGINS}}, supports_credentials=False)
+
+@app.after_request
+def add_cors(resp):
+    origin = request.headers.get("Origin")
+    if origin in ALLOWED_ORIGINS:
+        resp.headers["Access-Control-Allow-Origin"] = origin
+        resp.headers["Vary"] = "Origin"
+    resp.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+    resp.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    return resp
+
+@app.route("/health", methods=["GET"])
+def health():
+    return jsonify({"ok": True, "service": "server_mini", "port": int(os.environ.get("PORT", 8787))})
+
+# accept multiple route shapes used by the app
+@app.route("/checkout/start", methods=["OPTIONS", "POST"])
+@app.route("/api/checkout/start", methods=["OPTIONS", "POST"])
+@app.route("/payments/checkout/start", methods=["OPTIONS", "POST"])
+def checkout_start():
+    if request.method == "OPTIONS":
+        return make_response(("", 200))
+    data = request.get_json(silent=True) or {}
+    # TODO: create real Stripe session here; for now return a placeholder URL
+    return jsonify({
+        "url": "https://checkout.stripe.com/c/test_session_example",
+        "echo": data
+    })
+
+if __name__ == "__main__":
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--port", type=int, default=int(os.environ.get("PORT", 8787)))
+    args = ap.parse_args()
+    app.run(host="127.0.0.1", port=args.port, debug=True)

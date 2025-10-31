@@ -79,7 +79,7 @@ export default function TabsLayout() {
                 tabBarInactiveTintColor: "rgba(0,229,255,0.7)",
                 tabBarStyle: {
                   height: 68,
-                  backgroundColor: "#000000",
+                  backgroundColor:"transparent",
                   borderTopWidth: 0,
                   elevation: 0,
                   shadowOpacity: 0,

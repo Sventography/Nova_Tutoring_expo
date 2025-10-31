@@ -1,15 +1,14 @@
-import { loadStripe } from "@stripe/stripe-js";
+import { startCheckout } from "@/utils/checkout";
 
-const stripePromise = loadStripe(process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
-
-export async function goToCheckout(priceId: string, quantity = 1) {
-  const stripe = await stripePromise;
-  const res = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/create-checkout-session`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ priceId, quantity }),
-  });
-  if (!res.ok) throw new Error("Checkout session failed");
-  const { sessionId } = await res.json();
-  await stripe!.redirectToCheckout({ sessionId });
+/** Call this from your "$" (cash) purchase buttons. */
+export async function buyWithCash(opts: { priceId?: string; sku?: string; quantity?: number }) {
+  const origin = (typeof window !== "undefined" && window.location?.origin) || "http://localhost:8081";
+  const payload = {
+    priceId: opts.priceId,
+    sku: opts.sku,
+    quantity: opts.quantity ?? 1,
+    success_url: `${origin}/?purchase=success`,
+    cancel_url:  `${origin}/?purchase=cancel`,
+  };
+  return startCheckout(payload);
 }

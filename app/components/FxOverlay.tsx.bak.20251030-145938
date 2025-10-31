@@ -1,0 +1,182 @@
+import React, { useEffect, useMemo, useRef } from "react";
+import { View, StyleSheet, Animated, Easing, useWindowDimensions, Platform, Text } from "react-native";
+import { useFx } from "../context/FxProvider";
+
+let useThemeSafe: any = null;
+try { useThemeSafe = require("../context/ThemeContext").useTheme; } catch {}
+
+type Mode = "neon"|"stars"|"petals"|"snow"|"sparks"|"bubbles";
+type Drop = { left: number; size: number; speed: number; delay: number; rot?: number; sway?: number };
+
+export default function FxOverlay() {
+  const { enabled } = useFx();
+  const dims = useWindowDimensions();
+
+  const themeCtx = useThemeSafe ? (() => { try { return useThemeSafe(); } catch { return null; } })() : null;
+  const themeId: string = themeCtx?.id || themeCtx?.themeId || "";
+  const tokens = themeCtx?.tokens || {};
+  const accent = tokens.accent || "#00e5ff";
+  const isDark = !!tokens?.isDark || /black|midnight|dark|night/i.test(themeId);
+
+  const mode: Mode =
+    /starry/i.test(themeId) ? "stars" :
+    /pink|rose|blush/i.test(themeId) ? "petals" :
+    /silver|frost|ice|snow/i.test(themeId) ? "snow" :
+    /black.?gold/i.test(themeId) ? "sparks" :
+    /mint|emerald|teal/i.test(themeId) ? "bubbles" :
+    "neon";
+
+  const color =
+    mode === "sparks" ? "#ffd166" :
+    mode === "snow"   ? (isDark ? "#f6fbff" : "#bcd7ff") :
+    mode === "petals" ? "#ff6fb6" :
+    mode === "bubbles"? "#7ce8d5" :
+    mode === "stars"  ? "#a2c8ff" :
+    accent;
+
+  const config = useMemo(() => {
+    const base = Platform.OS === "web" ? 56 : (dims.width > 800 ? 44 : 30);
+    switch (mode) {
+      case "stars":   return { count: base - 8,  minSpeed: 2600, maxSpeed: 3800, rot: true,  sway: 8,  sizeMin: 10, sizeMax: 24,  fadeSoft: true };
+      case "petals":  return { count: base - 6,  minSpeed: 2800, maxSpeed: 4200, rot: true,  sway: 16, sizeMin: 12, sizeMax: 28,  fadeSoft: true };
+      case "snow":    return { count: base + 6,  minSpeed: 3600, maxSpeed: 5200, rot: false, sway: 12, sizeMin: 6,  sizeMax: 14,  fadeSoft: true };
+      case "sparks":  return { count: base - 10, minSpeed: 1400, maxSpeed: 2200, rot: true,  sway: 3,  sizeMin: 10, sizeMax: 18,  fadeSoft: false };
+      case "bubbles": return { count: base - 4,  minSpeed: 3000, maxSpeed: 4600, rot: false, sway: 10, sizeMin: 10, sizeMax: 18,  fadeSoft: true };
+      default:        return { count: base,      minSpeed: 1800, maxSpeed: 2600, rot: false, sway: 0,  sizeMin: 16, sizeMax: 32,  fadeSoft: false };
+    }
+  }, [mode, dims.width]);
+
+  const DROPS = useMemo<Drop[]>(() => {
+    const arr: Drop[] = [];
+    for (let i = 0; i < config.count; i++) {
+      const left = Math.random() * dims.width;
+      const size = config.sizeMin + Math.random() * (config.sizeMax - config.sizeMin);
+      const speed = config.minSpeed + Math.random() * (config.maxSpeed - config.minSpeed);
+      const delay = Math.random() * 1200;
+      const rot = config.rot ? Math.random() * 360 : 0;
+      const sway = config.sway ? (Math.random() * config.sway) * (Math.random() < 0.5 ? -1 : 1) : 0;
+      arr.push({ left, size, speed, delay, rot, sway });
+    }
+    return arr;
+  }, [Math.round(dims.width/64), config.count, config.sizeMin, config.sizeMax, config.minSpeed, config.maxSpeed, config.rot, config.sway]);
+
+  useEffect(() => { if (__DEV__) console.log("[FxOverlay] enabled =", enabled, "mode =", mode); }, [enabled, mode]);
+
+  return (
+    <View pointerEvents="none" style={[S.wrap, { opacity: enabled ? 1 : 0 }]}>
+      <Field height={dims.height} drops={DROPS} color={color} mode={mode} fadeSoft={config.fadeSoft} />
+    </View>
+  );
+}
+
+function Field({ height, drops, color, mode, fadeSoft }: { height: number; drops: Drop[]; color: string; mode: Mode; fadeSoft: boolean }) {
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      {drops.map((d, i) => (
+        <Faller key={i} cfg={d} h={height} color={color} mode={mode} fadeSoft={fadeSoft} />
+      ))}
+    </View>
+  );
+}
+
+function Faller({ cfg, h, color, mode, fadeSoft }: { cfg: Drop; h: number; color: string; mode: Mode; fadeSoft: boolean }) {
+  const t = useRef(new Animated.Value(0)).current;
+  const swayT = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    let mounted = true;
+
+    const fall = () => {
+      t.setValue(0);
+      Animated.timing(t, {
+        toValue: 1,
+        duration: cfg.speed,
+        delay: cfg.delay,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }).start(({ finished }) => {
+        if (mounted && finished) {
+          cfg.delay = Math.random() * 900;
+          fall();
+        }
+      });
+    };
+
+    const swayLoop = () => {
+      if (!cfg.sway) return;
+      swayT.setValue(0);
+      Animated.timing(swayT, {
+        toValue: 1,
+        duration: 1200 + Math.random() * 1200,
+        easing: Easing.inOut(Easing.sin),
+        useNativeDriver: true,
+      }).start(() => mounted && swayLoop());
+    };
+
+    fall();
+    swayLoop();
+    return () => { mounted = false; t.stopAnimation(); swayT.stopAnimation(); };
+  }, []);
+
+  const translateY = t.interpolate({ inputRange: [0, 1], outputRange: [-cfg.size, h + cfg.size] });
+  const translateX = swayT.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, cfg.sway || 0, 0] });
+
+  const opacity = fadeSoft
+    ? t.interpolate({ inputRange: [0.0, 0.08, 0.92, 1], outputRange: [0, 1, 1, 0] })
+    : t.interpolate({ inputRange: [0.0, 0.04, 0.96, 1], outputRange: [0, 1, 1, 0] });
+
+  const rotDeg = (cfg.rot || 0) + "deg";
+
+  if (mode === "neon") {
+    const len = cfg.size + 20;
+    return (
+      <Animated.View pointerEvents="none" style={[S.item, { left: cfg.left, opacity, transform: [{ translateY }, { translateX }] }]}>
+        <View style={{ width: 2, height: len, borderRadius: 2, backgroundColor: color, shadowColor: color, shadowOpacity: 0.45, shadowRadius: 8 }} />
+      </Animated.View>
+    );
+  }
+
+  if (mode === "stars") {
+    return (
+      <Animated.View pointerEvents="none" style={[S.item, { left: cfg.left, opacity, transform: [{ translateY }, { translateX }, { rotate: rotDeg }] }]}>
+        <Text style={{ color, fontSize: 10 + cfg.size * 0.25, textShadowColor: color, textShadowRadius: 6 }}>✦</Text>
+      </Animated.View>
+    );
+  }
+
+  if (mode === "petals") {
+    return (
+      <Animated.View pointerEvents="none" style={[S.item, { left: cfg.left, opacity, transform: [{ translateY }, { translateX }, { rotate: rotDeg }] }]}>
+        <Text style={{ color, fontSize: 12 + cfg.size * 0.22 }}>❀</Text>
+      </Animated.View>
+    );
+  }
+
+  if (mode === "snow") {
+    return (
+      <Animated.View pointerEvents="none" style={[S.item, { left: cfg.left, opacity, transform: [{ translateY }, { translateX }] }]}>
+        <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: color }} />
+      </Animated.View>
+    );
+  }
+
+  if (mode === "bubbles") {
+    const r = 3 + cfg.size * 0.12;
+    return (
+      <Animated.View pointerEvents="none" style={[S.item, { left: cfg.left, opacity, transform: [{ translateY }, { translateX }] }]}>
+        <View style={{ width: r * 2, height: r * 2, borderRadius: r, borderWidth: 1.5, borderColor: color, backgroundColor: "transparent" }} />
+      </Animated.View>
+    );
+  }
+
+  return (
+    <Animated.View pointerEvents="none" style={[S.item, { left: cfg.left, opacity, transform: [{ translateY }, { translateX }, { rotate: rotDeg }] }]}>
+      <Text style={{ color, fontSize: 10 + cfg.size * 0.2 }}>✧</Text>
+    </Animated.View>
+  );
+}
+
+const S = StyleSheet.create({
+  wrap: { position: "absolute", left: 0, right: 0, top: 0, bottom: 0, zIndex: 9998 },
+  item: { position: "absolute", top: 0 },
+});

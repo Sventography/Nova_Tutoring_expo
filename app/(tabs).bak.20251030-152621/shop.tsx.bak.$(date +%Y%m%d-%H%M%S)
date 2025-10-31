@@ -1,0 +1,187 @@
+import { useRouter } from "expo-router";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { View, Text, ScrollView, Pressable, Linking as RNLinking, Platform, Image, LayoutAnimation } from "react-native";
+import QuickEquip, { EquipItem } from "../components/QuickEquip";
+import usePurchasesMap from "../utils/usePurchasesMap";
+import { useEquipped } from "../utils/useEquipped";
+
+import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import InsufficientCoinsModal from "../../components/InsufficientCoinsModal";
+import { catalog, CATEGORY_BORDER, dollarsToCoins, altImages, type Category } from "../_lib/catalog";
+import { useTheme } from "../context/ThemeContext";
+import * as Linking from "expo-linking";
+
+import { getSizesFor } from "../constants/sizes";
+import SizeSelector from "../components/SizeSelector";
+import useSelectedSizes from "../utils/useSelectedSizes";
+
+type PurchaseMap = Record<string, true>;
+type Order = { id: string; sku: string; title: string; status: "paid" | "fulfilled" | "shipped"; createdAt: number };
+
+const COINS_KEY = "@nova/coins.v1";
+const PURCHASES_KEY = "@nova/purchases";
+const CURSOR_KEY = "@nova/cursor";
+const ORDERS_KEY = "@nova/orders";
+
+function getServerBase(): string {
+  const envBase = (process.env.EXPO_PUBLIC_BACKEND_URL as string | undefined) || "";
+  const fallback = "http://127.0.0.1:8787";
+  const base = (envBase && envBase.trim()) ? envBase.trim() : fallback;
+  return String(base).replace(/\/+$/, "");
+}
+
+async function loadCoins(): Promise<number> { const v = await AsyncStorage.getItem(COINS_KEY); return v ? parseInt(v, 10) : 0; }
+async function saveCoins(n: number) { await AsyncStorage.setItem(COINS_KEY, String(n)); }
+async function loadPurchases(): Promise<PurchaseMap> { const v = await AsyncStorage.getItem(PURCHASES_KEY); return v ? JSON.parse(v) : {}; }
+async function savePurchases(m: PurchaseMap) { await AsyncStorage.setItem(PURCHASES_KEY, JSON.stringify(m)); }
+async function loadCursor(): Promise<string | null> { return (<>
+await AsyncStorage.getItem(CURSOR_KEY)) || null; }
+async function saveCursor(key: string) { await AsyncStorage.setItem(CURSOR_KEY, key</>
+); }
+async function loadOrders(): Promise<Order[]> { const raw = (await AsyncStorage.getItem(ORDERS_KEY)) || "[]"; try { return JSON.parse(raw) as Order[]; } catch { return []; } }
+async function saveOrders(list: Order[]) { await AsyncStorage.setItem(ORDERS_KEY, JSON.stringify(list)); }
+
+async function startCheckoutRequest(opts: { priceId?: string; amount?: number; currency?: string; success_url?: string; cancel_url?: string }) {
+  const base = getServerBase();
+  const res = await fetch(base + "/checkout/start", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(opts),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error || "checkout failed");
+  const url = json.url as string;
+  if (Platform.OS === "web") window.location.assign(url);
+  else RNLinking.openURL(url);
+  return url;
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <View style={{ marginBottom: 24 }}>
+      <Text style={{ color:"#cfeaf0", fontSize:16, fontWeight:"800", marginBottom:10 }}>{title}</Text>
+      <View style={{ flexDirection:"row", flexWrap:"wrap", justifyContent:"space-between", rowGap:12 }}>
+        {children}
+      </View>
+    </View>
+  );
+}
+
+function Card({ children, color }: { children: React.ReactNode; color: string }) {
+  return (
+    <View style={{
+      width: "48%",
+      borderRadius: 14,
+      padding: 12,
+      borderWidth: 1,
+      borderColor: color,
+      backgroundColor: "rgba(255,255,255,0.03)"
+    }}>
+      {children}
+    </View>
+  );
+}
+
+export default function Shop() {const [purchases, setPurchases] = useState<PurchaseMap>({});
+  const { themeId, cursorId, equipTheme: _equipThemeHook, equipCursor: _equipCursorHook } = useEquipped();
+const THEMES_QUIK: EquipItem[] = [
+  { id: "theme:dark_theme", name: "Dark Theme", kind: "theme", thumb: require("../assets/shop/dark_theme.png"), owned: !!purchases["theme:dark_theme"], equipped: themeId==="theme:dark_theme" },
+  { id: "theme:glitter_theme", name: "Glitter", kind: "theme", thumb: require("../assets/shop/glitter_theme.png"), owned: !!purchases["theme:glitter_theme"], equipped: themeId==="theme:glitter_theme" },
+  { id: "theme:mint_theme", name: "Mint Theme", kind: "theme", thumb: require("../assets/shop/mint_theme.png"), owned: !!purchases["theme:mint_theme"], equipped: themeId==="theme:mint_theme" },
+  { id: "theme:neon_theme", name: "Neon Theme", kind: "theme", thumb: require("../assets/shop/neon_theme.png"), owned: !!purchases["theme:neon_theme"], equipped: themeId==="theme:neon_theme" },
+  { id: "theme:pink_theme", name: "Pink Theme", kind: "theme", thumb: require("../assets/shop/pink_theme.png"), owned: !!purchases["theme:pink_theme"], equipped: themeId==="theme:pink_theme" },
+  { id: "theme:star_theme", name: "Starry Night", kind: "theme", thumb: require("../assets/shop/star_theme.png"), owned: !!purchases["theme:star_theme"], equipped: themeId==="theme:star_theme" },
+  { id: "theme:black_gold", name: "Black & Gold", kind: "theme", thumb: require("../assets/shop/theme_black_gold.png"), owned: !!purchases["theme:black_gold"], equipped: themeId==="theme:black_gold" },
+  { id: "theme:crimson_dream", name: "Crimson Dream", kind: "theme", thumb: require("../assets/shop/theme_crimson_dream.png"), owned: !!purchases["theme:crimson_dream"], equipped: themeId==="theme:crimson_dream" },
+  { id: "theme:emerald_wave", name: "Emerald Wave", kind: "theme", thumb: require("../assets/shop/theme_emerald_wave.png"), owned: !!purchases["theme:emerald_wave"], equipped: themeId==="theme:emerald_wave" },
+  { id: "theme:neon_purple", name: "Neon Purple", kind: "theme", thumb: require("../assets/shop/theme_neon_purple.png"), owned: !!purchases["theme:neon_purple"], equipped: themeId==="theme:neon_purple" },
+  { id: "theme:silver_frost", name: "Silver Frost", kind: "theme", thumb: require("../assets/shop/theme_silver_frost.png"), owned: !!purchases["theme:silver_frost"], equipped: themeId==="theme:silver_frost" }
+];
+
+  const CURSORS_QUIK: EquipItem[] = [
+  { id: "cursor:glow", name: "Glow Cursor", kind: "cursor", thumb: require("../assets/shop/glow_cursor.png"), owned: !!purchases["cursor:glow"], equipped: cursorId==="cursor:glow" },
+  { id: "cursor:orb", name: "Orb Cursor", kind: "cursor", thumb: require("../assets/shop/orb_cursor.png"), owned: !!purchases["cursor:orb"], equipped: cursorId==="cursor:orb" },
+  { id: "cursor:star_trail", name: "Star Trail", kind: "cursor", thumb: require("../assets/shop/star_trail_cursor.png"), owned: !!purchases["cursor:star_trail"], equipped: cursorId==="cursor:star_trail" }
+];
+
+  function handleEquip(id: string, kind: "theme" | "cursor") {
+  if (kind === "theme") _equipThemeHook(id);
+  else _equipCursorHook(id);
+}
+  function handleBuy(id: string) {
+    // wire to your Stripe flow if you want
+  }
+const router = useRouter();
+  const [coins, setCoins] = useState(0);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [currentCursor, setCurrentCursor] = useState<string | null>(null);
+  const [flipped, setFlipped] = useState<Record<string, boolean>>({});
+  const [need, setNeed] = useState<number>(0);
+  const [showInsufficient, setShowInsufficient] = useState(false);
+  const scrollRef = useRef<ScrollView>
+<View style={{marginBottom:16}}>
+<QuickEquip title="Themes" items={THEMES_QUIK} onEquip={handleEquip} onBuy={handleBuy} />
+
+  
+  <QuickEquip title="Cursors" items={CURSORS_QUIK} onEquip={handleEquip} onBuy={handleBuy} />
+<Section title="Plushies">
+          {groups.plushies.map((it) => renderItem(it, CATEGORY_BORDER.plushies))}
+        </Section>
+
+        <Section title="Clothing">
+          {groups.clothing.map((it) => renderItem(it, CATEGORY_BORDER.clothing))}
+        </Section>
+
+        <Section title="Tangibles">
+          {groups.tangibles.map((it) => renderItem(it, CATEGORY_BORDER.tangibles))}
+        </Section>
+
+        <Section title="Cursors">
+          {groups.cursor.map((it) => renderItem(it, CATEGORY_BORDER.cursor, "cursor"))}
+        </Section>
+
+        <Section title="Themes">
+          {groups.theme.map((it) => renderItem(it, CATEGORY_BORDER.theme, "theme"))}
+        </Section>
+
+        <Section title="Bundles">
+          {groups.bundle.map((it) => renderItem(it, CATEGORY_BORDER.bundle))}
+        </Section>
+
+        <Section title="Coin Packs">
+          {groups.coin_pack.map((it) => renderItem(it, CATEGORY_BORDER.coin_pack))}
+        </Section>
+
+        {orders.length > 0 && (
+          <View style={{ marginTop: 24 }}>
+            <Text style={{ color:"#cfeaf0", fontSize:16, fontWeight:"800", marginBottom:10 }}>Orders</Text>
+            {orders.map(o => (
+              <View key={o.id} style={{
+                borderWidth:1, borderColor:"#2a3d45", borderRadius:12, padding:12, marginBottom:8,
+                backgroundColor:"rgba(255,255,255,0.03)"
+              }}>
+                <Text style={{ color:"#eaf7fb", fontWeight:"700" }}>{o.title}</Text>
+                <Text style={{ color:"#9fb7bd", fontSize:12, marginTop:16 }}>
+                  {new Date(o.createdAt).toLocaleString()}  ·  {o.status.toUpperCase()}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
+</ScrollView>
+
+      <InsufficientCoinsModal
+        visible={showInsufficient}
+        needed={need}
+        onClose={() => setShowInsufficient(false)}
+        onBuyCoins={() => {
+          setShowInsufficient(false);
+          setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
+        }}
+      />
+    </LinearGradient>
+  );
+}

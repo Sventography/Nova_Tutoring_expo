@@ -49,7 +49,7 @@ export default function CertificatesScreen() {
     if (!el) throw new Error("element not found: " + id);
     const { default: html2canvas } = await import("html2canvas");
     const canvas = await html2canvas(el as HTMLElement, {
-      backgroundColor: "#000000",
+      backgroundColor:"transparent",
       scale: 2,
       useCORS: true,
     });
@@ -174,7 +174,7 @@ export default function CertificatesScreen() {
 }
 
 const s = StyleSheet.create({
-  container: { padding: 16, backgroundColor: "black" },
+  container: { padding: 16, backgroundColor:"transparent" },
   title: { color: "#00e5ff", fontSize: 26, fontWeight: "900", marginBottom: 8, textAlign: "center" },
   note: { backgroundColor: "#061826", borderColor: "#00e5ff", borderWidth: 1, borderRadius: 10, padding: 10, marginBottom: 12 },
   noteText: { color: "#bfefff", textAlign: "center" },

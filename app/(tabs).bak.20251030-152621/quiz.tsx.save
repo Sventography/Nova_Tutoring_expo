@@ -1,0 +1,127 @@
+import React, { useState, useMemo, useRef } from "react";import React 
+from "react"; import { View, Text, Pressable, StyleSheet, ScrollView, 
+Animated } from "react-native"; import { Link, useLocalSearchParams } 
+from "expo-router"; import * as Haptics from "expo-haptics"; import { 
+useUser } from "../context/UserContext"; import { useCoins } from 
+"../context/CoinsContext"; import topics from 
+"../_data/flashcard_index.json"; import { colorForGroup } from 
+"../constants/group_colors"; import { View, Text, Pressable, 
+StyleSheet } from "react-native"; import CertificateView from 
+"../components/CertificateView"; import { generateCertificateFromRef } 
+from "../utils/certificates"; import { useLocalSearchParams } from 
+"expo-router"; console.log("[Quiz] CertificateView import is", typeof 
+CertificateView); console.log("[Quiz] CertificateView type =", typeof 
+CertificateView); export default function Quiz() { import * as Haptics 
+from "expo-haptics";  const { topic } = useLocalSearchParams<{ topic?: 
+string }>(); import { useUser } from "../context/UserContext";  const 
+user = useUser(); import { useCoins } from "../context/CoinsContext";  
+const addCoins = useCoins(); import flashcards from 
+"../_data/flashcard_index.json"; import { generateCertificateFromRef } 
+from "../utils/certificates";  // just a placeholder import 
+CertificateView from "../components/CertificateView";  return (
+    <ScrollView style={{ flex: 1, backgroundColor: "#000" }}> export 
+default function Quiz() { <Text style={{ color: "#fff", fontSize: 20 
+}}>Quiz: {topic}</Text>
+  const { topic } = useLocalSearchParams<{ topic?: string }>();  
+<CertificateView username={user?.name ?? "Guest"} topic={topic ?? 
+"??"} date={new Date().toLocaleDateString()} />
+  const { user } = useUser();  </ScrollView> ); const { addCoins } = 
+  useCoins();} const [idx, setIdx] = useState(0); const [score, 
+  setScore] = useState(0); const [started, setStarted] = 
+  useState(false); const [finished, setFinished] = useState(false); 
+  const certRef = useRef<View>(null); // prepare 20 shuffled questions 
+  const list = useMemo(() => {
+    if (!topic) return []; const qs = flashcards[topic] || []; return 
+    [...qs].sort(() => 0.5 - Math.random()).slice(0, 20);
+  }, [topic]); function handleAnswer(correct: boolean) {
+    if (correct) {
+      setScore(s => s + 1); 
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } if (idx + 1 < list.length) {
+      setIdx(i => i + 1);
+    } else {
+      finishQuiz(correct);
+    }
+  } function finishQuiz(lastCorrect = false) {
+    const finalScore = score + (lastCorrect ? 1 : 0); 
+    setScore(finalScore); setFinished(true); addCoins(finalScore * 5); 
+    // reward coins (5 per correct)
+  } if (!topic) {
+    return <View style={S.center}><Text>No topic 
+selected.</Text></View>;
+  } if (!started) {
+    return (
+      <View style={S.center}>
+        <Text style={S.title}>{topic} Quiz</Text> <Pressable 
+        style={S.button} onPress={() => setStarted(true)}>
+          <Text style={S.buttonText}>Start Quiz</Text>
+        </Pressable>
+      </View>
+    );
+  } if (finished) {
+    const passed = score / list.length >= 0.8; return (
+      <View style={S.center}>
+        <Text style={S.result}>You scored {score} / 
+{list.length}</Text>
+        {passed ? (
+          <>
+            <Text style={S.pass}>🎉 Congratulations! You 
+passed!</Text>
+            <Pressable
+              style={S.button} onPress={() =>
+                generateCertificateFromRef(certRef, {
+                  username: user?.name ?? "Guest", topic,
+                })
+              }
+            >
+              <Text style={S.buttonText}>Claim Certificate</Text>
+            </Pressable> <CertificateView
+              ref={certRef} username={user?.name ?? "Guest"} 
+              topic={topic} date={new Date().toLocaleDateString()}
+            />
+          </>
+        ) : (
+          <Text style={S.fail}>Score at least 80% to earn a 
+certificate.</Text>
+        )} <Pressable style={S.button} onPress={() => {
+          setIdx(0); setScore(0); setStarted(false); 
+setFinished(false);
+        }}>
+          <Text style={S.buttonText}>Retry</Text>
+        </Pressable>
+      </View>
+    );
+  } const q = list[idx]; return (
+    <View style={S.container}>
+      <Text style={S.qnum}>Question {idx + 1} / {list.length}</Text> 
+      <Text style={S.question}>{q.q}</Text> {q.options.map((opt: 
+      string, i: number) => (
+        <Pressable key={i} style={S.option} onPress={() => 
+handleAnswer(opt === q.answer)}>
+          <Text style={S.optionText}>{opt}</Text>
+        </Pressable>
+      ))} <Pressable style={S.finishBtn} onPress={() => 
+      finishQuiz(false)}>
+        <Text style={S.buttonText}>Finish Early</Text>
+      </Pressable>
+    </View>
+  ); } export const S = StyleSheet.create({ container: { flex: 1, padding: 
+  20, justifyContent: "center" }, center: { flex: 1, justifyContent: 
+  "center", alignItems: "center", padding: 20 }, title: { fontSize: 
+  24, fontWeight: "700", marginBottom: 20 }, qnum: { fontSize: 16, 
+  marginBottom: 8 }, question: { fontSize: 20, fontWeight: "600", 
+  marginBottom: 20 }, option: {
+    backgroundColor: "#222", padding: 12, borderRadius: 8, 
+    marginVertical: 6,
+  }, optionText: { color: "#fff", fontSize: 16 }, result: { fontSize: 
+  22, fontWeight: "700", marginBottom: 20 }, pass: { fontSize: 18, 
+  color: "lime", marginBottom: 20 }, fail: { fontSize: 18, color: 
+  "red", marginBottom: 20 }, button: {
+    backgroundColor: "#0af", padding: 12, borderRadius: 8, marginTop: 
+    20,
+  }, finishBtn: {
+    backgroundColor: "#444", padding: 12, borderRadius: 8, marginTop: 
+    20,
+  }, buttonText: { color: "#fff", fontWeight: "600", textAlign: 
+  "center" },
+});

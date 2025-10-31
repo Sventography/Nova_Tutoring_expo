@@ -29,3 +29,23 @@ if (__DEV__) {
     );
   });
 }
+
+// --- DEV ONLY: Stripe env probe ---
+import StripeProbe from "./_dev/StripeProbe";
+
+// --- DEV ONLY: catch bad relative checkout calls ---
+if (typeof globalThis !== "undefined" && !(globalThis as any).__FETCH_PATCHED__) {
+  const _fetch = globalThis.fetch?.bind(globalThis);
+  (globalThis as any).__FETCH_PATCHED__ = true;
+  if (_fetch) {
+    globalThis.fetch = async (input: any, init?: any) => {
+      const url = typeof input === "string" ? input : (input?.url ?? "");
+      if (/^\/(api\/)?checkout\/start/.test(url)) {
+        console.error("[DEV] Relative fetch detected:", url, init);
+      }
+      return _fetch(input, init);
+    };
+  }
+}
+
+// inside your RootLayout component's JSX, add <StripeProbe /> near the top-level:

@@ -1,0 +1,16 @@
+import { loadStripe, Stripe } from "@/utils/stripe";
+const pk = (process.env.EXPO_PUBLIC_STRIPE_PK || "").trim();
+
+/** Only attempt to load Stripe when the key exists. */
+export const stripePromise: Promise<Stripe | null> | null = pk ? loadStripe(pk) : null;
+
+export async function getStripeSafely(): Promise<Stripe> {
+  if (!pk) throw new Error("Stripe unavailable: missing EXPO_PUBLIC_STRIPE_PK");
+  const s = await (stripePromise as Promise<Stripe>);
+  if (!s) throw new Error("Stripe failed to initialize");
+  return s;
+}
+
+export function hasStripeKey(): boolean {
+  return !!pk;
+}
