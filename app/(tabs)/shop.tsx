@@ -6,7 +6,6 @@ import {
   ScrollView,
   Pressable,
   Linking as RNLinking,
-  Platform,
   Image,
   LayoutAnimation,
   Animated,
@@ -20,30 +19,53 @@ import * as Linking from "expo-linking";
 import DevThemeSwitcher from "../components/DevThemeSwitcher";
 import ThemeProbe from "../components/ThemeProbe";
 
-import { useTheme, getTokensSnapshot } from "../context/ThemeContext";
+import { useTheme } from "../context/ThemeContext";
 import { useCursor } from "../context/CursorContext";
 
-import { catalog, CATEGORY_BORDER, dollarsToCoins, altImages, type Category } from "../_lib/catalog";
+import {
+  catalog,
+  CATEGORY_BORDER,
+  dollarsToCoins,
+  altImages,
+  type Category,
+} from "../_lib/catalog";
 import { getSizesFor } from "../constants/sizes";
 import useSelectedSizes from "../utils/useSelectedSizes";
 
 import * as QuickRowNS from "../components/QuickRow";
-const QuickRow = (QuickRowNS as any).default ?? (QuickRowNS as any).QuickRow;
+const QuickRow =
+  (QuickRowNS as any).default ?? (QuickRowNS as any).QuickRow;
 
 import * as SizeSelectorNS from "../components/SizeSelector";
-const SizeSelector = (SizeSelectorNS as any).default ?? (SizeSelectorNS as any).SizeSelector;
+const SizeSelector =
+  (SizeSelectorNS as any).default ?? (SizeSelectorNS as any).SizeSelector;
 
 import * as InsufficientCoinsModalNS from "../components/InsufficientCoinsModal";
 const InsufficientCoinsModal =
-  (InsufficientCoinsModalNS as any).default ?? (InsufficientCoinsModalNS as any).InsufficientCoinsModal;
+  (InsufficientCoinsModalNS as any).default ??
+  (InsufficientCoinsModalNS as any).InsufficientCoinsModal;
 
-// Unified checkout helper
+// $ checkout (stripe/USD)
 import { startCheckout } from "../utils/checkout";
+// 🪙 coin checkout (route to shipping form)
+import { startCoinCheckout } from "../utils/coinCheckout";
 
 /* ----------------------------- Local typings ------------------------------ */
-type QuickItem = { id: string; name: string; kind: "theme" | "cursor"; owned: boolean; equipped: boolean };
+type QuickItem = {
+  id: string;
+  name: string;
+  kind: "theme" | "cursor";
+  owned: boolean;
+  equipped: boolean;
+};
 type PurchaseMap = Record<string, true>;
-type Order = { id: string; sku: string; title: string; status: "paid" | "fulfilled" | "shipped"; createdAt: number };
+type Order = {
+  id: string;
+  sku: string;
+  title: string;
+  status: "paid" | "fulfilled" | "shipped";
+  createdAt: number;
+};
 
 const COINS_KEY = "@nova/coins.v1";
 const PURCHASES_KEY = "@nova/purchases";
@@ -51,24 +73,31 @@ const CURSOR_KEY = "@nova/cursor";
 const THEME_KEY = "@nova/themeId";
 const ORDERS_KEY = "@nova/orders";
 
+const REQUIRES_SHIPPING = new Set<Category>([
+  "plushies",
+  "clothing",
+  "tangibles",
+]); // route coins → /checkout/coin
+
 /* ------------------------------- Utilities -------------------------------- */
 
-// Canonicalize shop IDs to a single form (handles hyphen/underscore variants)
 function canonId(id: string | null | undefined): string {
   if (!id) return "";
   let v = String(id).trim();
   if (!v.includes(":")) {
-    if (v.startsWith("cursor_") || v.startsWith("cursor")) v = "cursor:" + v.replace(/^cursor[_:]?/, "");
-    else if (v.startsWith("theme_") || v.startsWith("theme")) v = "theme:" + v.replace(/^theme[_:]?/, "");
+    if (v.startsWith("cursor_") || v.startsWith("cursor"))
+      v = "cursor:" + v.replace(/^cursor[_:]?/, "");
+    else if (v.startsWith("theme_") || v.startsWith("theme"))
+      v = "theme:" + v.replace(/^theme[_:]?/, "");
   }
   v = v.replace(/-/g, "_");
-  if (v === "cursor:startrail" || v === "cursor_startrail") v = "cursor:star_trail";
+  if (v === "cursor:startrail" || v === "cursor_startrail")
+    v = "cursor:star_trail";
   if (v === "theme:black-gold") v = "theme:blackgold";
   if (v === "theme:neon-purple") v = "theme:neonpurple";
   return v;
 }
 
-// analytics shim
 const track = (event: string, props?: Record<string, any>) => {
   try {
     (globalThis as any).novaTrack?.(event, props ?? {});
@@ -94,13 +123,17 @@ async function loadCursor(): Promise<string | null> {
   return (await AsyncStorage.getItem(CURSOR_KEY)) || null;
 }
 async function saveCursor(key: string | null) {
-  key ? await AsyncStorage.setItem(CURSOR_KEY, key) : await AsyncStorage.removeItem(CURSOR_KEY);
+  key
+    ? await AsyncStorage.setItem(CURSOR_KEY, key)
+    : await AsyncStorage.removeItem(CURSOR_KEY);
 }
 async function loadTheme(): Promise<string | null> {
   return (await AsyncStorage.getItem(THEME_KEY)) || null;
 }
 async function saveTheme(id: string | null) {
-  id ? await AsyncStorage.setItem(THEME_KEY, id) : await AsyncStorage.removeItem(THEME_KEY);
+  id
+    ? await AsyncStorage.setItem(THEME_KEY, id)
+    : await AsyncStorage.removeItem(THEME_KEY);
 }
 async function loadOrders(): Promise<Order[]> {
   const raw = (await AsyncStorage.getItem(ORDERS_KEY)) || "[]";
@@ -114,7 +147,6 @@ async function saveOrders(list: Order[]) {
   await AsyncStorage.setItem(ORDERS_KEY, JSON.stringify(list));
 }
 
-// normalize legacy keys like "cursor_orb" -> "cursor:orb", "theme_neon" -> "theme:neon"
 function normalizePurchases(obj: Record<string, any>): PurchaseMap {
   const out: Record<string, true> = {};
   const remap = (k: string) => {
@@ -126,8 +158,7 @@ function normalizePurchases(obj: Record<string, any>): PurchaseMap {
   return out;
 }
 
-/* ----------------- Unified checkout wrapper used by $$ buttons ------------- */
-// Keeps existing call sites intact: startCheckoutRequest(...) simply delegates to startCheckout(...)
+/* ----------------- Stripe wrapper for $$ buttons -------------------------- */
 async function startCheckoutRequest(opts: {
   priceId?: string;
   amount?: number;
@@ -138,7 +169,9 @@ async function startCheckoutRequest(opts: {
   meta?: any;
 }) {
   const origin =
-    (typeof window !== "undefined" && (window as any).location?.origin) || "http://localhost:8081";
+    (typeof window !== "undefined" &&
+      (window as any).location?.origin) ||
+    "http://localhost:8081";
 
   const payload: any = {
     quantity: opts?.quantity ?? 1,
@@ -170,7 +203,14 @@ function Section({
   const { tokens } = useTheme();
   return (
     <View style={{ marginBottom: 24 }}>
-      <View style={{ position: "relative", alignSelf: "flex-start", borderRadius: 10, overflow: "visible" }}>
+      <View
+        style={{
+          position: "relative",
+          alignSelf: "flex-start",
+          borderRadius: 10,
+          overflow: "visible",
+        }}
+      >
         {pulseAnim ? (
           <Animated.View
             pointerEvents="none"
@@ -181,14 +221,33 @@ function Section({
               top: -4,
               bottom: -4,
               borderRadius: 12,
-              opacity: pulseAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 1] }),
+              opacity: pulseAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, 1],
+              }),
               backgroundColor: "rgba(0,229,255,0.15)",
             }}
           />
         ) : null}
-        <Text style={{ color: tokens.text as any, fontSize: 16, fontWeight: "800", marginBottom: 10 }}>{title}</Text>
+        <Text
+          style={{
+            color: tokens.text as any,
+            fontSize: 16,
+            fontWeight: "800",
+            marginBottom: 10,
+          }}
+        >
+          {title}
+        </Text>
       </View>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 12 }}>
+      <View
+        style={{
+          flexDirection: "row",
+          flexWrap: "wrap",
+          justifyContent: "space-between",
+          rowGap: 12,
+        }}
+      >
         {children}
       </View>
     </View>
@@ -223,7 +282,9 @@ export default function Shop() {
       return null as any;
     }
   })();
-  const setCursorById = cursorApi?.setCursorById as undefined | ((id: string | null) => void);
+  const setCursorById = cursorApi?.setCursorById as
+    | undefined
+    | ((id: string | null) => void);
 
   const [coins, setCoins] = useState(0);
   const [purchases, setPurchases] = useState<PurchaseMap>({});
@@ -236,11 +297,9 @@ export default function Shop() {
   const scrollRef = useRef<ScrollView | null>(null);
   const sizeCtl = useSelectedSizes();
 
-  // anchors to scroll to Themes/Cursors sections
   const themeSectionY = useRef<number>(0);
   const cursorSectionY = useRef<number>(0);
 
-  // pulse animators for section headers
   const themePulse = useRef(new Animated.Value(0)).current;
   const cursorPulse = useRef(new Animated.Value(0)).current;
 
@@ -261,12 +320,11 @@ export default function Shop() {
     if (meta?.section) runPulse(meta.section);
   };
 
-  // time-on-screen tracking
-  const mountTs = useRef<number>(Date.now());
   useEffect(() => {
-    track("shop_view", { ts: mountTs.current });
+    const mountTs = Date.now();
+    track("shop_view", { ts: mountTs });
     return () => {
-      const durMs = Date.now() - mountTs.current;
+      const durMs = Date.now() - mountTs;
       track("shop_unview", { duration_ms: durMs });
     };
   }, []);
@@ -274,9 +332,14 @@ export default function Shop() {
   /* --------------------------- Initial data load -------------------------- */
   useEffect(() => {
     (async () => {
-      const [c, pRaw, cur, th, ord] = await Promise.all([loadCoins(), loadPurchases(), loadCursor(), loadTheme(), loadOrders()]);
+      const [c, pRaw, cur, th, ord] = await Promise.all([
+        loadCoins(),
+        loadPurchases(),
+        loadCursor(),
+        loadTheme(),
+        loadOrders(),
+      ]);
 
-      // normalize legacy keys so “Unlock” flips to “Equip”
       const p = normalizePurchases(pRaw);
       if (JSON.stringify(p) !== JSON.stringify(pRaw)) {
         await savePurchases(p);
@@ -288,7 +351,6 @@ export default function Shop() {
       setEquippedTheme(th);
       setOrders(ord);
 
-      // hydrate providers so visuals apply after refresh
       const mappedCursor = toCursorCtxId(cur);
       if (typeof setCursorById === "function") setCursorById(mappedCursor);
       const mappedTheme = toThemeCtxId(th);
@@ -304,7 +366,6 @@ export default function Shop() {
     })();
   }, []);
 
-  // keep providers in sync if equipped ids change at runtime
   useEffect(() => {
     const mapped = toCursorCtxId(equippedCursor);
     if (typeof setCursorById === "function") setCursorById(mapped);
@@ -334,7 +395,6 @@ export default function Shop() {
           track("shop_purchase_complete", { sku: it.id, category: it.category, mode: "stripe" });
           return next;
         });
-        // Equip newly purchased items right away
         if (it.category === "theme") equipThemeImmediate(it.id, { source: "deeplink" });
         if (it.category === "cursor") void equipCursorImmediate(it.id, { source: "deeplink" });
       } else if (it.category === "coin_pack") {
@@ -375,7 +435,7 @@ export default function Shop() {
     return () => clearInterval(t);
   }, []);
 
-  /* -------------------------- Equip helpers (now) ------------------------- */
+  /* -------------------------- Equip helpers ------------------------------- */
   function toCursorCtxId(shopId: string | null) {
     if (!shopId) return null;
     const map: Record<string, string> = {
@@ -415,7 +475,6 @@ export default function Shop() {
     });
   }
 
-  /** Equip/unequip using SHOP IDs for local state, mapped IDs for providers */
   function equipThemeImmediate(shopThemeId: string, meta?: Record<string, any>) {
     setEquippedTheme(shopThemeId);
     saveTheme(shopThemeId);
@@ -448,7 +507,7 @@ export default function Shop() {
     track("shop_unequip", { kind: "cursor", id: prev });
   }
 
-  /* ----------------------------- Quick menus (top) -------------------------- */
+  /* ----------------------------- Quick menus ------------------------------ */
   const THEMES_MENU: QuickItem[] = useMemo(() => {
     const p = purchases;
     const eq = equippedTheme;
@@ -479,22 +538,35 @@ export default function Shop() {
 
   function quickEquip(id: string, kind: "theme" | "cursor") {
     const isCurrentlyEq = kind === "theme" ? equippedTheme === id : equippedCursor === id;
-    track("shop_quick_action", { action: isCurrentlyEq ? "unequip" : "equip", id, kind, source: "quick_row" });
+    track("shop_quick_action", {
+      action: isCurrentlyEq ? "unequip" : "equip",
+      id,
+      kind,
+      source: "quick_row",
+    });
     if (kind === "theme") {
-      isCurrentlyEq ? unequipThemeImmediate({ source: "quick_row" }) : equipThemeImmediate(id, { source: "quick_row" });
+      isCurrentlyEq
+        ? unequipThemeImmediate({ source: "quick_row" })
+        : equipThemeImmediate(id, { source: "quick_row" });
     } else {
-      isCurrentlyEq ? void unequipCursorImmediate({ source: "quick_row" }) : void equipCursorImmediate(id, { source: "quick_row" });
+      isCurrentlyEq
+        ? void unequipCursorImmediate({ source: "quick_row" })
+        : void equipCursorImmediate(id, { source: "quick_row" });
     }
   }
 
-  // “Unlock” now navigates to the correct section or triggers purchase
   function quickBuy(id: string) {
     const kindGuess: "theme" | "cursor" | "other" = id.startsWith("theme:")
       ? "theme"
       : id.startsWith("cursor:")
       ? "cursor"
       : "other";
-    track("shop_quick_action", { action: "unlock_click", id, kind: kindGuess, source: "quick_row" });
+    track("shop_quick_action", {
+      action: "unlock_click",
+      id,
+      kind: kindGuess,
+      source: "quick_row",
+    });
     if (kindGuess === "theme") {
       scrollTo(themeSectionY.current, { section: "themes" });
       return;
@@ -503,11 +575,16 @@ export default function Shop() {
       scrollTo(cursorSectionY.current, { section: "cursors" });
       return;
     }
-    const item = catalog.find((x) => x.id === id);
-    if (item?.priceUSD) {
-      const amount = Math.round((item.priceUSD ?? 1) * 100);
+    const it = catalog.find((x) => x.id === id);
+    if (it?.priceUSD) {
+      const amount = Math.round((it.priceUSD ?? 1) * 100);
       const success = Linking.createURL("/", { queryParams: { sku: id } });
-      void startCheckoutRequest({ amount, currency: "usd", success_url: success, cancel_url: success });
+      void startCheckoutRequest({
+        amount,
+        currency: "usd",
+        success_url: success,
+        cancel_url: success,
+      });
       return;
     }
     setNeed(1000);
@@ -532,13 +609,49 @@ export default function Shop() {
   }, []);
 
   /* ---------------------------- Purchase flows ---------------------------- */
+
+  // 🪙 Coins path:
+  // - Digital (themes/cursors) → instant unlock (local)
+  // - Physical (plushies/clothing/tangibles) → navigate to /checkout/coin (shipping form) and pass size
   function buyWithCoins(it: any, meta?: { size?: string }) {
     const price = it.priceCoins ?? 0;
     if (!price) return;
+
+    // Route to shipping form for physical items (+ size)
+    if (REQUIRES_SHIPPING.has(it.category)) {
+      const sizeKey =
+        it.stripeProductId ||
+        it.productId ||
+        (it.stripe && it.stripe.productId) ||
+        it.id;
+      const chosen = meta?.size || (getSizesFor(sizeKey)[0] ?? null);
+      track("shop_coin_checkout_start", {
+        sku: it.id,
+        category: it.category,
+        price,
+        size: chosen || null,
+      });
+
+      startCoinCheckout({
+        id: it.id,
+        title: it.title,
+        priceCoins: price,
+        imageUrl: undefined,
+        category: it.category,
+        size: chosen, // <— NEW
+      });
+      return;
+    }
+
+    // Instant unlock for digital goods
     if (coins < price) {
       setNeed(price - coins);
       setShowInsufficient(true);
-      track("shop_modal_insufficient_shown", { needed: price - coins, sku: it.id, via: "coins" });
+      track("shop_modal_insufficient_shown", {
+        needed: price - coins,
+        sku: it.id,
+        via: "coins",
+      });
       return;
     }
     const nextCoins = coins - price;
@@ -549,18 +662,32 @@ export default function Shop() {
     saveCoins(nextCoins);
     setPurchases(nextPurch);
     savePurchases(nextPurch);
-    markOwned(it.id); // ensure UI flips immediately
-    track("shop_purchase_complete", { sku: it.id, category: it.category, mode: "coins", price });
+    markOwned(it.id);
+    track("shop_purchase_complete", {
+      sku: it.id,
+      category: it.category,
+      mode: "coins",
+      price,
+    });
 
-    if (it.category === "theme") equipThemeImmediate(it.id, { source: "coins_purchase" });
-    if (it.category === "cursor") void equipCursorImmediate(it.id, { source: "coins_purchase" });
+    if (it.category === "theme")
+      equipThemeImmediate(it.id, { source: "coins_purchase" });
+    if (it.category === "cursor")
+      void equipCursorImmediate(it.id, { source: "coins_purchase" });
   }
 
   async function moneyBuy(it: any, meta?: { size?: string }) {
     const amount = Math.round((it.priceUSD ?? 1) * 100);
-    const success = Linking.createURL("/", { queryParams: { sku: it.id, size: meta?.size || "" } });
+    const success = Linking.createURL("/", {
+      queryParams: { sku: it.id, size: meta?.size || "" },
+    });
     track("shop_money_buy", { sku: it.id, amount_cents: amount, meta });
-    await startCheckoutRequest({ amount, currency: "usd", success_url: success, cancel_url: success });
+    await startCheckoutRequest({
+      amount,
+      currency: "usd",
+      success_url: success,
+      cancel_url: success,
+    });
     // optimistic unlock; deeplink will also mark
     markOwned(it.id);
   }
@@ -581,12 +708,22 @@ export default function Shop() {
     const showAlt = flipped[it.id] && it.altImageKey && altImages[it.altImageKey];
     const src = showAlt ? altImages[it.altImageKey!] : it.image;
 
-    const sizeKey = it.stripeProductId || it.productId || (it.stripe && it.stripe.productId) || it.id;
+    const sizeKey =
+      it.stripeProductId ||
+      it.productId ||
+      (it.stripe && it.stripe.productId) ||
+      it.id;
     let sizes = getSizesFor(sizeKey);
-    if (!sizes.length && it.category === "clothing") sizes = ["S", "M", "L", "XL"];
+    if (!sizes.length && it.category === "clothing")
+      sizes = ["S", "M", "L", "XL"];
     const selected = sizes.length ? (sizeCtl.get(sizeKey) || sizes[0]) : null;
 
-    const equipped = equipable === "theme" ? equippedTheme === it.id : equipable === "cursor" ? equippedCursor === it.id : false;
+    const equipped =
+      equipable === "theme"
+        ? equippedTheme === it.id
+        : equipable === "cursor"
+        ? equippedCursor === it.id
+        : false;
 
     return (
       <Card key={it.id} color={color}>
@@ -611,15 +748,35 @@ export default function Shop() {
               marginBottom: 8,
             }}
           >
-            <Image source={src} style={{ width: "100%", height: "100%" }} resizeMode="contain" />
+            <Image
+              source={src}
+              style={{ width: "100%", height: "100%" }}
+              resizeMode="contain"
+            />
           </Pressable>
         ) : null}
 
-        <Text style={{ color: tokens.text as any, fontSize: 14, fontWeight: "700", textAlign: "center" }}>{it.title}</Text>
+        <Text
+          style={{
+            color: tokens.text as any,
+            fontSize: 14,
+            fontWeight: "700",
+            textAlign: "center",
+          }}
+        >
+          {it.title}
+        </Text>
 
         {it.desc ? (
           <Text
-            style={{ color: tokens.text as any, fontSize: 12, lineHeight: 16, textAlign: "center", marginTop: 16, paddingHorizontal: 8 }}
+            style={{
+              color: tokens.text as any,
+              fontSize: 12,
+              lineHeight: 16,
+              textAlign: "center",
+              marginTop: 16,
+              paddingHorizontal: 8,
+            }}
             numberOfLines={3}
           >
             {it.desc}
@@ -628,7 +785,9 @@ export default function Shop() {
 
         {sizes.length > 0 ? (
           <View style={{ marginTop: 10 }}>
-            <Text style={{ color: tokens.text as any, fontSize: 12, marginBottom: 6 }}>Size</Text>
+            <Text style={{ color: tokens.text as any, fontSize: 12, marginBottom: 6 }}>
+              Size
+            </Text>
             <SizeSelector
               sizes={sizes}
               value={selected}
@@ -645,20 +804,34 @@ export default function Shop() {
         {equipable === "theme" ? (
           owned ? (
             <Pressable
-              onPress={() => (equipped ? unequipThemeImmediate({ source: "card_button" }) : equipTheme(it))}
+              onPress={() =>
+                equipped
+                  ? unequipThemeImmediate({ source: "card_button" })
+                  : equipTheme(it)
+              }
               style={({ pressed }) => ({
                 alignItems: "center",
                 paddingVertical: 10,
                 borderRadius: 10,
                 borderWidth: 1,
                 borderColor: tokens.border as any,
-                backgroundColor: pressed ? "rgba(92,252,200,0.15)" : "rgba(92,252,200,0.08)",
+                backgroundColor: pressed
+                  ? "rgba(92,252,200,0.15)"
+                  : "rgba(92,252,200,0.08)",
               })}
             >
-              <Text style={{ color: tokens.text as any, fontWeight: "800" }}>{equipped ? "Equipped ✓" : "Equip"}</Text>
+              <Text style={{ color: tokens.text as any, fontWeight: "800" }}>
+                {equipped ? "Equipped ✓" : "Equip"}
+              </Text>
             </Pressable>
           ) : (
-            <View style={{ flexDirection: "row", justifyContent: "space-between", columnGap: 8 }}>
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                columnGap: 8,
+              }}
+            >
               <Pressable
                 onPress={() => buyWithCoins(it)}
                 style={({ pressed }) => ({
@@ -672,7 +845,9 @@ export default function Shop() {
                   opacity: pressed ? 0.9 : 1,
                 })}
               >
-                <Text style={{ color: color, fontWeight: "800" }}>{(it.priceCoins ?? 0).toLocaleString()} coins</Text>
+                <Text style={{ color: color, fontWeight: "800" }}>
+                  {(it.priceCoins ?? 0).toLocaleString()} coins
+                </Text>
               </Pressable>
               <Pressable
                 onPress={() => moneyBuy(it)}
@@ -687,27 +862,43 @@ export default function Shop() {
                   opacity: pressed ? 0.9 : 1,
                 })}
               >
-                <Text style={{ color: color, fontWeight: "800" }}>${it.priceUSD?.toFixed(0)}</Text>
+                <Text style={{ color: color, fontWeight: "800" }}>
+                  ${it.priceUSD?.toFixed(0)}
+                </Text>
               </Pressable>
             </View>
           )
         ) : equipable === "cursor" ? (
           owned ? (
             <Pressable
-              onPress={() => (equipped ? unequipCursorImmediate({ source: "card_button" }) : equipCursor(it))}
+              onPress={() =>
+                equipped
+                  ? unequipCursorImmediate({ source: "card_button" })
+                  : equipCursor(it)
+              }
               style={({ pressed }) => ({
                 alignItems: "center",
                 paddingVertical: 10,
                 borderRadius: 10,
                 borderWidth: 1,
                 borderColor: tokens.border as any,
-                backgroundColor: pressed ? "rgba(92,252,200,0.15)" : "rgba(92,252,200,0.08)",
+                backgroundColor: pressed
+                  ? "rgba(92,252,200,0.15)"
+                  : "rgba(92,252,200,0.08)",
               })}
             >
-              <Text style={{ color: tokens.text as any, fontWeight: "800" }}>{equipped ? "Equipped ✓" : "Equip"}</Text>
+              <Text style={{ color: tokens.text as any, fontWeight: "800" }}>
+                {equipped ? "Equipped ✓" : "Equip"}
+              </Text>
             </Pressable>
           ) : (
-            <View style={{ flexDirection: "row", justifyContent: "space-between", columnGap: 8 }}>
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                columnGap: 8,
+              }}
+            >
               <Pressable
                 onPress={() => buyWithCoins(it)}
                 style={({ pressed }) => ({
@@ -721,7 +912,9 @@ export default function Shop() {
                   opacity: pressed ? 0.9 : 1,
                 })}
               >
-                <Text style={{ color: color, fontWeight: "800" }}>{(it.priceCoins ?? 0).toLocaleString()} coins</Text>
+                <Text style={{ color: color, fontWeight: "800" }}>
+                  {(it.priceCoins ?? 0).toLocaleString()} coins
+                </Text>
               </Pressable>
               <Pressable
                 onPress={() => moneyBuy(it)}
@@ -736,7 +929,9 @@ export default function Shop() {
                   opacity: pressed ? 0.9 : 1,
                 })}
               >
-                <Text style={{ color: color, fontWeight: "800" }}>${it.priceUSD?.toFixed(0)}</Text>
+                <Text style={{ color: color, fontWeight: "800" }}>
+                  ${it.priceUSD?.toFixed(0)}
+                </Text>
               </Pressable>
             </View>
           )
@@ -749,18 +944,32 @@ export default function Shop() {
               borderRadius: 10,
               borderWidth: 1,
               borderColor: color,
-              backgroundColor: pressed ? "rgba(245,158,11,0.15)" : "rgba(245,158,11,0.08)",
+              backgroundColor: pressed
+                ? "rgba(245,158,11,0.15)"
+                : "rgba(245,158,11,0.08)",
             })}
           >
-            <Text style={{ color: color, fontWeight: "800" }}>${it.priceUSD?.toFixed(0)}</Text>
+            <Text style={{ color: color, fontWeight: "800" }}>
+              ${it.priceUSD?.toFixed(0)}
+            </Text>
           </Pressable>
         ) : (
-          <View style={{ flexDirection: "row", justifyContent: "space-between", columnGap: 8 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              columnGap: 8,
+            }}
+          >
             <Pressable
               onPress={() => {
-                const chosen = sizeCtl.get(sizeKey);
-                const meta = sizes.length > 0 && chosen ? { size: chosen } : undefined;
-                buyWithCoins(it, meta);
+                const sizeKey =
+                  it.stripeProductId ||
+                  it.productId ||
+                  (it.stripe && it.stripe.productId) ||
+                  it.id;
+                const chosen = sizeCtl.get(sizeKey) || (getSizesFor(sizeKey)[0] ?? null);
+                buyWithCoins(it, { size: chosen }); // <— routes to /checkout/coin for physicals
               }}
               style={({ pressed }) => ({
                 flex: 1,
@@ -773,13 +982,19 @@ export default function Shop() {
                 opacity: pressed ? 0.9 : 1,
               })}
             >
-              <Text style={{ color: color, fontWeight: "800" }}>{(it.priceCoins ?? 0).toLocaleString()} coins</Text>
+              <Text style={{ color: color, fontWeight: "800" }}>
+                {(it.priceCoins ?? 0).toLocaleString()} coins
+              </Text>
             </Pressable>
             <Pressable
               onPress={() => {
-                const chosen = sizeCtl.get(sizeKey);
-                const meta = sizes.length > 0 && chosen ? { size: chosen } : undefined;
-                moneyBuy(it, meta);
+                const sizeKey =
+                  it.stripeProductId ||
+                  it.productId ||
+                  (it.stripe && it.stripe.productId) ||
+                  it.id;
+                const chosen = sizeCtl.get(sizeKey) || (getSizesFor(sizeKey)[0] ?? null);
+                moneyBuy(it, { size: chosen });
               }}
               style={({ pressed }) => ({
                 flex: 1,
@@ -792,7 +1007,9 @@ export default function Shop() {
                 opacity: pressed ? 0.9 : 1,
               })}
             >
-              <Text style={{ color: color, fontWeight: "800" }}>${it.priceUSD?.toFixed(0)}</Text>
+              <Text style={{ color: color, fontWeight: "800" }}>
+                ${it.priceUSD?.toFixed(0)}
+              </Text>
             </Pressable>
           </View>
         )}
@@ -806,20 +1023,27 @@ export default function Shop() {
       <ScrollView
         ref={scrollRef}
         style={{ flex: 1, backgroundColor: "transparent" }}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 16, paddingTop: 0, marginTop: 16 }}
+        contentContainerStyle={{
+          paddingHorizontal: 16,
+          paddingBottom: 16,
+          paddingTop: 0,
+          marginTop: 16,
+        }}
       >
         <View
           data-shop-top-header
           style={{
             flexDirection: "row",
             alignItems: "center",
-            justifyContent: "space-between",
+            justifyContent: "space_between",
             paddingHorizontal: 16,
             paddingTop: 8,
             marginBottom: 12,
           }}
         >
-          <Text style={{ color: tokens.text as any, fontSize: 24, fontWeight: "800" }}>Shop</Text>
+          <Text style={{ color: tokens.text as any, fontSize: 24, fontWeight: "800" }}>
+            Shop
+          </Text>
           <View
             style={{
               flexDirection: "row",
@@ -843,33 +1067,60 @@ export default function Shop() {
           <QuickRow title="Cursors" items={CURSORS_MENU} onEquip={quickEquip} onBuy={quickBuy} />
         </View>
 
-        <Section title="Plushies">{groups.plushies.map((it) => renderItem(it, CATEGORY_BORDER.plushies))}</Section>
+        <Section title="Plushies">
+          {groups.plushies.map((it) =>
+            renderItem(it, CATEGORY_BORDER.plushies)
+          )}
+        </Section>
 
-        <Section title="Clothing">{groups.clothing.map((it) => renderItem(it, CATEGORY_BORDER.clothing))}</Section>
+        <Section title="Clothing">
+          {groups.clothing.map((it) =>
+            renderItem(it, CATEGORY_BORDER.clothing)
+          )}
+        </Section>
 
-        <Section title="Tangibles">{groups.tangibles.map((it) => renderItem(it, CATEGORY_BORDER.tangibles))}</Section>
+        <Section title="Tangibles">
+          {groups.tangibles.map((it) =>
+            renderItem(it, CATEGORY_BORDER.tangibles)
+          )}
+        </Section>
 
-        {/* anchor for Cursors section */}
         <View onLayout={(e) => (cursorSectionY.current = e.nativeEvent.layout.y)} />
         <Section title="Cursors" pulseAnim={cursorPulse}>
-          {groups.cursor.map((it) => renderItem(it, CATEGORY_BORDER.cursor, "cursor"))}
+          {groups.cursor.map((it) =>
+            renderItem(it, CATEGORY_BORDER.cursor, "cursor")
+          )}
         </Section>
 
-        {/* anchor for Themes section */}
         <View onLayout={(e) => (themeSectionY.current = e.nativeEvent.layout.y)} />
         <Section title="Themes" pulseAnim={themePulse}>
-          {groups.theme.map((it) => renderItem(it, CATEGORY_BORDER.theme, "theme"))}
+          {groups.theme.map((it) =>
+            renderItem(it, CATEGORY_BORDER.theme, "theme")
+          )}
         </Section>
 
-        <Section title="Bundles">{groups.bundle.map((it) => renderItem(it, CATEGORY_BORDER.bundle))}</Section>
+        <Section title="Bundles">
+          {groups.bundle.map((it) =>
+            renderItem(it, CATEGORY_BORDER.bundle)
+          )}
+        </Section>
 
         <Section title="Coin Packs">
-          {groups.coin_pack.map((it) => renderItem(it, CATEGORY_BORDER.coin_pack))}
+          {groups.coin_pack.map((it) =>
+            renderItem(it, CATEGORY_BORDER.coin_pack)
+          )}
         </Section>
 
         {orders.length > 0 && (
           <View style={{ marginTop: 24 }}>
-            <Text style={{ color: tokens.text as any, fontSize: 16, fontWeight: "800", marginBottom: 10 }}>
+            <Text
+              style={{
+                color: tokens.text as any,
+                fontSize: 16,
+                fontWeight: "800",
+                marginBottom: 10,
+              }}
+            >
               Orders
             </Text>
             {orders.map((o) => (
@@ -884,7 +1135,9 @@ export default function Shop() {
                   backgroundColor: "rgba(255,255,255,0.03)",
                 }}
               >
-                <Text style={{ color: tokens.text as any, fontWeight: "700" }}>{o.title}</Text>
+                <Text style={{ color: tokens.text as any, fontWeight: "700" }}>
+                  {o.title}
+                </Text>
                 <Text style={{ color: tokens.text as any, fontSize: 12, marginTop: 16 }}>
                   {new Date(o.createdAt).toLocaleString()} · {o.status.toUpperCase()}
                 </Text>

@@ -5,7 +5,6 @@ import { Platform, Linking as RNLinking } from "react-native";
 export type CheckoutPayload = {
   sku?: string;
   priceId?: string;
-  productId?: string;
   amount?: number;            // cents
   currency?: string;          // "usd"
   quantity?: number;
@@ -107,17 +106,12 @@ export async function startCheckout(input: CheckoutPayload): Promise<CheckoutRes
   const payload: Record<string, any> = {
     sku: input.sku,
     priceId: input.priceId,
-    productId: input.productId,
     amount: typeof input.amount === "number" ? input.amount : undefined,
     currency: (input.currency || "usd").toLowerCase(),
     quantity: input.quantity ?? 1,
     success_url: input.success_url,
     cancel_url: input.cancel_url,
     meta: input.meta,
-    title: (input as any).title,
-    image: (input as any).image,
-    images: (input as any).images,
-    description: (input as any).description,
   };
 
   // Try common route variants (top to bottom)

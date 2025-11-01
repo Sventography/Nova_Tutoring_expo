@@ -13,7 +13,10 @@ export default function HeaderBar() {
   const { user } = useUser();
   const coinsCtx = (() => { try { return useCoins(); } catch { return {} as any; } })() as any;
   
-    const coins = useWallet((s) => s.coins); 
+    const coinsFromStore = useWallet((s) => s.coins);
+    // keep compatibility with any legacy coins context if it still exists in this component
+    const coinsCtx: any = (typeof useContext === "function" && (global as any).__coinsCtx) ? (global as any).__coinsCtx : undefined;
+    const coins = Number(coinsFromStore ?? coinsCtx?.coins ?? coinsCtx?.balance ?? 0);
   
 
   const displayName = (user?.username ?? (user as any)?.name ?? "Nova Student") as string;

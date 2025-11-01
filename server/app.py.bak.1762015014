@@ -18,22 +18,6 @@ from typing import Dict, Any
 # -----------------------------------------------------------------------------
 load_dotenv(find_dotenv(usecwd=True)) or load_dotenv()
 app = Flask(__name__)
-
-# ---- Idempotent blueprint registration ----
-try:
-    from admin_routes import admin_bp as _admin_bp
-    if 'admin_bp' not in app.blueprints:
-        app.register_blueprint(_admin_bp)
-except Exception as e:
-    print('[admin_bp] register skip/error:', e)
-
-try:
-    from admin_debug import admin_debug as _admin_debug
-    if 'admin_debug' not in app.blueprints:
-        app.register_blueprint(_admin_debug)
-except Exception as e:
-    print('[admin_debug] register skip/error:', e)
-# -------------------------------------------
 # Allow local web dev; add other origins as needed
 CORS(
     app,
@@ -72,7 +56,6 @@ SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-change-me")
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "")
 ADMIN_KEY = os.getenv("ADMIN_KEY", "")
 ORDERS_LOG_PATH = Path(__file__).parent.joinpath("orders.log")
-os.environ['ORDERS_LOG_PATH'] = str(ORDERS_LOG_PATH)
 serializer = URLSafeTimedSerializer(SECRET_KEY)
 
 def make_token(user_id: int) -> str:
@@ -439,7 +422,7 @@ if __name__ == "__main__":
     print("SECRET_KEY present:", bool(SECRET_KEY))
     host = os.getenv("FLASK_RUN_HOST", "127.0.0.1")
     port = int(os.getenv("FLASK_RUN_PORT", "8788"))  # default 8788 to match frontend
-    app.run(host=host, port=port, debug=True, use_reloader=False)
+    app.run(host=host, port=port, debug=True)
 
 
 # ----------------------------------------------------------------------------- 

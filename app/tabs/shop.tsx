@@ -1,6 +1,8 @@
 console.log("SHOP PROBE: app/tabs/shop.tsx");
 // app/tabs/shop.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { startCoinCheckout } from "@/utils/coinCheckout";
+import { startCashCheckoutForItem } from "@/app/_lib/checkoutHelpers";
 import {
   View,
   Text,
