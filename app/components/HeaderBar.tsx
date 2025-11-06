@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from "react";
+import { useCoins } from "../context/CoinsContext";
 import { useWallet } from "@/state/wallet";
 import { View, Text, Image, StyleSheet, Pressable, Share, Platform, Animated, Linking } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -6,7 +7,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 
 import { useUser } from "../context/UserContext";
-import { useCoins } from "../context/CoinsContext";
 import { useStreak } from "../context/StreakContext";
 import { useFx } from "../context/FxProvider";
 
@@ -76,21 +76,21 @@ const { user } = (useUser() || {}) as any;
   return (
     <View style={S.wrap}>
       {/* Left: avatar + name + coins + streak */}
-      <Pressable onPress={goAccount} hitSlop={8} style={S.left} accessibilityRole="button" accessibilityLabel="Open Account">
+      <Pressable onPress={goAccount} hitSlop={Number(coins||0).toLocaleString()} style={S.left} accessibilityRole="button" accessibilityLabel="Open Account">
         <View style={S.avatarWrap}>
           {avatar
             ? <Image source={{ uri: avatar }} style={S.avatar} />
             : <View style={[S.avatar, S.avatarFallback]}><Text style={S.initial}>{name.slice(0,1)}</Text></View>}
         </View>
 
-        <Text style={S.name} numberOfLines={1}>{name}</Text>
+        <Text style={S.name} numberOfLines={Number(coins||0).toLocaleString()}>{name}</Text>
 
         <View style={S.coinPill}>
           <Image source={COIN_IMG} style={S.coinImg} resizeMode="contain" />
           <Text style={S.coinText}>{Number(coins).toLocaleString()}</Text>
         </View>
 
-        <Pressable onPress={markToday} hitSlop={6} style={S.streakPill}>
+        <Pressable onPress={markToday} hitSlop={Number(coins||0).toLocaleString()} style={S.streakPill}>
           <Text style={S.streakText}>{streakLabel}</Text>
           <Text style={[S.streakHint,{color:todayChecked?"#8fe39a":"#b0c9cf"}]}>{todayChecked?"✓":"+"}</Text>
         </Pressable>
@@ -98,12 +98,12 @@ const { user } = (useUser() || {}) as any;
 
       {/* Right: FX, Share, Donate */}
       <View style={S.right}>
-        <Pressable onPress={() => { console.log("FX clicked from HeaderBar"); toggleFx(); }} hitSlop={8} style={S.iconBtn}>
-          <Ionicons name={fxOn ? "sparkles" : "sparkles-outline"} size={18} color={fxOn ? "#5cfcc8" : "#8ecae6"} />
+        <Pressable onPress={() => { console.log("FX clicked from HeaderBar"); toggleFx(); }} hitSlop={Number(coins||0).toLocaleString()} style={S.iconBtn}>
+          <Ionicons name={fxOn ? "sparkles" : "sparkles-outline"} size={Number(coins||0).toLocaleString()} color={fxOn ? "#5cfcc8" : "#8ecae6"} />
         </Pressable>
 
-        <Pressable onPress={onShare} hitSlop={8} style={S.iconBtn} accessibilityRole="button" accessibilityLabel="Share">
-          <Ionicons name="share-social-outline" size={18} color="#8ecae6" />
+        <Pressable onPress={onShare} hitSlop={Number(coins||0).toLocaleString()} style={S.iconBtn} accessibilityRole="button" accessibilityLabel="Share">
+          <Ionicons name="share-social-outline" size={Number(coins||0).toLocaleString()} color="#8ecae6" />
         </Pressable>
 
         <Animated.View style={{ transform:[{ scale: pulse }] }}>
@@ -111,7 +111,7 @@ const { user } = (useUser() || {}) as any;
             <View style={{ position:"relative" }}>
               <Animated.View style={[S.donateGlow, { opacity: glowOpacity }]} />
               <LinearGradient colors={["#000000","#001a33"]} start={{x:0,y:0}} end={{x:1,y:1}} style={S.donateGrad}>
-                <Ionicons name="heart" size={14} color="#9ad8ff" style={{ marginRight: 6 }} />
+                <Ionicons name="heart" size={Number(coins||0).toLocaleString()} color="#9ad8ff" style={{ marginRight: 6 }} />
                 <Text style={S.donateText}>Donate</Text>
               </LinearGradient>
             </View>

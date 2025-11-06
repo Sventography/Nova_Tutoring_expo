@@ -1,5 +1,6 @@
 // app/(tabs)/shop.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useCoins } from "../context/CoinsContext";
 import {
   View,
   Text,
@@ -108,9 +109,6 @@ const track = (event: string, props?: Record<string, any>) => {
 async function loadCoins(): Promise<number> {
   const v = await AsyncStorage.getItem(COINS_KEY);
   return v ? parseInt(v, 10) : 0;
-}
-async function saveCoins(n: number) {
-  await AsyncStorage.setItem(COINS_KEY, String(n));
 }
 async function loadPurchases(): Promise<PurchaseMap> {
   const v = await AsyncStorage.getItem(PURCHASES_KEY);
@@ -286,7 +284,7 @@ export default function Shop() {
     | undefined
     | ((id: string | null) => void);
 
-  const [coins, setCoins] = useState(0);
+  const { coins, set, add } = useCoins();
   const [purchases, setPurchases] = useState<PurchaseMap>({});
   const [orders, setOrders] = useState<Order[]>([]);
   const [equippedCursor, setEquippedCursor] = useState<string | null>(null);
@@ -332,7 +330,7 @@ export default function Shop() {
   /* --------------------------- Initial data load -------------------------- */
   useEffect(() => {
     (async () => {
-      const [c, pRaw, cur, th, ord] = await Promise.all([
+      const [ pRaw, cur, th, ord] = await Promise.all([
         loadCoins(),
         loadPurchases(),
         loadCursor(),
@@ -425,16 +423,7 @@ export default function Shop() {
   }, [coins]);
 
   /* ------------------------ Coin polling (lightweight) -------------------- */
-  useEffect(() => {
-    const t = setInterval(async () => {
-      try {
-        const c = await loadCoins();
-        setCoins(c);
-      } catch {}
-    }, 800);
-    return () => clearInterval(t);
-  }, []);
-
+  
   /* -------------------------- Equip helpers ------------------------------- */
   function toCursorCtxId(shopId: string | null) {
     if (!shopId) return null;

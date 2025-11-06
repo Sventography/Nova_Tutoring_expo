@@ -15,7 +15,6 @@ import StarTrailOverlay from "../components/StarTrailOverlay";
 import { AchieveEmitter } from "../context/AchievementsContext";
 import { CollectionsProvider } from "../context/CollectionsContext";
 import "../utils/_streak-autoboot";
-import "../utils/coins-autoboot";
 import "../utils/streak-achievements-autoboot";
 import ToastHost from "../components/ToastHost";
 import "../utils/dev-expose";
