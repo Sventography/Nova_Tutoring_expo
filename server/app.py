@@ -1,5 +1,5 @@
-# server/app.py
 from __future__ import annotations
+from coins_orders import coins_bp
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv, find_dotenv
@@ -12,12 +12,14 @@ from passlib.hash import bcrypt
 from sqlalchemy import Column, Integer, String, DateTime, create_engine, select
 from sqlalchemy.orm import declarative_base, sessionmaker
 from typing import Dict, Any
+from openai import OpenAI
 
 # -----------------------------------------------------------------------------
 # Boot + CORS
 # -----------------------------------------------------------------------------
 load_dotenv(find_dotenv(usecwd=True)) or load_dotenv()
 app = Flask(__name__)
+app.register_blueprint(coins_bp)
 
 # ---- Idempotent blueprint registration ----
 try:
@@ -33,6 +35,7 @@ try:
         app.register_blueprint(_admin_debug)
 except Exception as e:
     print('[admin_debug] register skip/error:', e)
+
 # -------------------------------------------
 # Allow local web dev; add other origins as needed
 CORS(
@@ -193,8 +196,8 @@ def request_reset():
         base = os.getenv("APP_BASE_URL", "http://localhost:3000")
         link = f"{base}/reset?token={token}"
         subject = "Nova password reset"
-        body = f"Hi,\n\nUse this link to reset your Nova password:\n{link}\n\nThis link expires in 1 hour."
-        sent = send_email(u.email, subject, body)
+        body_text = f"Hi,\n\nUse this link to reset your Nova password:\n{link}\n\nThis link expires in 1 hour."
+        sent = send_email(u.email, subject, body_text)
         return ok({"sent": bool(sent)})
 
 @app.post("/auth/reset")
@@ -236,7 +239,6 @@ def me():
 # -----------------------------------------------------------------------------
 # OpenAI passthrough (unchanged)
 # -----------------------------------------------------------------------------
-from openai import OpenAI
 client = None
 api_key = os.getenv("OPENAI_API_KEY")
 if api_key:
@@ -431,18 +433,6 @@ def orders_coin_confirm():
     })
 
 # -----------------------------------------------------------------------------
-# Main
-# -----------------------------------------------------------------------------
-if __name__ == "__main__":
-    print("DB:", DB_PATH.resolve())
-    print("OPENAI_API_KEY loaded:", bool(os.getenv("OPENAI_API_KEY")))
-    print("SECRET_KEY present:", bool(SECRET_KEY))
-    host = os.getenv("FLASK_RUN_HOST", "127.0.0.1")
-    port = int(os.getenv("FLASK_RUN_PORT", "8788"))  # default 8788 to match frontend
-    app.run(host=host, port=port, debug=True, use_reloader=False)
-
-
-# ----------------------------------------------------------------------------- 
 # Order helpers (email + log)
 # -----------------------------------------------------------------------------
 def _format_order_email(order: dict) -> tuple[str, str]:
@@ -485,8 +475,7 @@ def _log_order_jsonl(order: dict):
     except Exception as e:
         print('Order log error:', e)
 
-
-# ----------------------------------------------------------------------------- 
+# -----------------------------------------------------------------------------
 # Admin routes for viewing orders
 # -----------------------------------------------------------------------------
 @app.get('/admin/orders')
@@ -523,3 +512,14 @@ def admin_orders_log():
         return bad(f'log read error: {e}', 500)
     end = offset + limit
     return ok({'orders': items[offset:end], 'total': len(items), 'offset': offset, 'limit': limit})
+
+# -----------------------------------------------------------------------------
+# Main
+# -----------------------------------------------------------------------------
+if __name__ == "__main__":
+    print("DB:", DB_PATH.resolve())
+    print("OPENAI_API_KEY loaded:", bool(os.getenv("OPENAI_API_KEY")))
+    print("SECRET_KEY present:", bool(SECRET_KEY))
+    host = os.getenv("FLASK_RUN_HOST", "127.0.0.1")
+    port = int(os.getenv("FLASK_RUN_PORT", "8788"))  # default 8788 to match frontend
+    app.run(host=host, port=port, debug=True, use_reloader=False)
