@@ -1,6 +1,6 @@
 // app/(tabs)/shop.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useCoins } from "../context/CoinsContext";
+import { useCoins } from "../context/CoinsContext"; // adjust if needed
 import {
   View,
   Text,
@@ -109,6 +109,9 @@ const track = (event: string, props?: Record<string, any>) => {
 async function loadCoins(): Promise<number> {
   const v = await AsyncStorage.getItem(COINS_KEY);
   return v ? parseInt(v, 10) : 0;
+}
+async function saveCoins(n: number) {
+  await AsyncStorage.setItem(COINS_KEY, String(n));
 }
 async function loadPurchases(): Promise<PurchaseMap> {
   const v = await AsyncStorage.getItem(PURCHASES_KEY);
@@ -271,8 +274,10 @@ function Card({ children, color }: { children: React.ReactNode; color: string })
 
 /* --------------------------------- Screen -------------------------------- */
 export default function Shop() {
+  const { coins, setCoins, add, spend } = useCoins(); // ⬅️ use setCoins
   const { tokens, setThemeById } = useTheme();
   const router = useRouter();
+
   const cursorApi = (() => {
     try {
       return useCursor();
@@ -284,7 +289,6 @@ export default function Shop() {
     | undefined
     | ((id: string | null) => void);
 
-  const { coins, set, add } = useCoins();
   const [purchases, setPurchases] = useState<PurchaseMap>({});
   const [orders, setOrders] = useState<Order[]>([]);
   const [equippedCursor, setEquippedCursor] = useState<string | null>(null);
@@ -330,7 +334,7 @@ export default function Shop() {
   /* --------------------------- Initial data load -------------------------- */
   useEffect(() => {
     (async () => {
-      const [ pRaw, cur, th, ord] = await Promise.all([
+      const [c, pRaw, cur, th, ord] = await Promise.all([
         loadCoins(),
         loadPurchases(),
         loadCursor(),
@@ -376,7 +380,7 @@ export default function Shop() {
 
   /* --------------------------- Deep link handling ------------------------- */
   useEffect(() => {
-    const onUrl = (event: { url: string }) => {
+    const onUrl = async (event: { url: string }) => {
       const { queryParams, path } = Linking.parse(event.url);
       const sku = (queryParams?.sku as string) || "";
       track("shop_return_deeplink", { url: event.url, path, sku });
@@ -396,11 +400,11 @@ export default function Shop() {
         if (it.category === "theme") equipThemeImmediate(it.id, { source: "deeplink" });
         if (it.category === "cursor") void equipCursorImmediate(it.id, { source: "deeplink" });
       } else if (it.category === "coin_pack") {
-        const add = dollarsToCoins(it.priceUSD ?? 0);
-        const nextCoins = coins + add;
+        const addAmt = dollarsToCoins(it.priceUSD ?? 0);
+        const nextCoins = (coins ?? 0) + addAmt;
         setCoins(nextCoins);
-        saveCoins(nextCoins);
-        track("shop_coins_added", { amount: add, via: "stripe", sku: it.id });
+        await saveCoins(nextCoins);
+        track("shop_coins_added", { amount: addAmt, via: "stripe", sku: it.id });
       } else {
         const order: Order = {
           id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -417,13 +421,12 @@ export default function Shop() {
         });
       }
     };
+
     const sub = RNLinking.addEventListener("url", onUrl);
     Linking.getInitialURL().then((url) => url && onUrl({ url }));
     return () => sub.remove();
   }, [coins]);
 
-  /* ------------------------ Coin polling (lightweight) -------------------- */
-  
   /* -------------------------- Equip helpers ------------------------------- */
   function toCursorCtxId(shopId: string | null) {
     if (!shopId) return null;
@@ -627,7 +630,7 @@ export default function Shop() {
         priceCoins: price,
         imageUrl: undefined,
         category: it.category,
-        size: chosen, // <— NEW
+        size: chosen, // <— routes coins → shipping form
       });
       return;
     }
@@ -747,7 +750,7 @@ export default function Shop() {
 
         <Text
           style={{
-            color: tokens.text as any,
+            color: (useTheme().tokens.text as any),
             fontSize: 14,
             fontWeight: "700",
             textAlign: "center",
@@ -759,7 +762,7 @@ export default function Shop() {
         {it.desc ? (
           <Text
             style={{
-              color: tokens.text as any,
+              color: (useTheme().tokens.text as any),
               fontSize: 12,
               lineHeight: 16,
               textAlign: "center",
@@ -774,7 +777,7 @@ export default function Shop() {
 
         {sizes.length > 0 ? (
           <View style={{ marginTop: 10 }}>
-            <Text style={{ color: tokens.text as any, fontSize: 12, marginBottom: 6 }}>
+            <Text style={{ color: (useTheme().tokens.text as any), fontSize: 12, marginBottom: 6 }}>
               Size
             </Text>
             <SizeSelector
@@ -803,13 +806,13 @@ export default function Shop() {
                 paddingVertical: 10,
                 borderRadius: 10,
                 borderWidth: 1,
-                borderColor: tokens.border as any,
+                borderColor: (useTheme().tokens.border as any),
                 backgroundColor: pressed
                   ? "rgba(92,252,200,0.15)"
                   : "rgba(92,252,200,0.08)",
               })}
             >
-              <Text style={{ color: tokens.text as any, fontWeight: "800" }}>
+              <Text style={{ color: (useTheme().tokens.text as any), fontWeight: "800" }}>
                 {equipped ? "Equipped ✓" : "Equip"}
               </Text>
             </Pressable>
@@ -870,13 +873,13 @@ export default function Shop() {
                 paddingVertical: 10,
                 borderRadius: 10,
                 borderWidth: 1,
-                borderColor: tokens.border as any,
+                borderColor: (useTheme().tokens.border as any),
                 backgroundColor: pressed
                   ? "rgba(92,252,200,0.15)"
                   : "rgba(92,252,200,0.08)",
               })}
             >
-              <Text style={{ color: tokens.text as any, fontWeight: "800" }}>
+              <Text style={{ color: (useTheme().tokens.text as any), fontWeight: "800" }}>
                 {equipped ? "Equipped ✓" : "Equip"}
               </Text>
             </Pressable>
@@ -1024,13 +1027,13 @@ export default function Shop() {
           style={{
             flexDirection: "row",
             alignItems: "center",
-            justifyContent: "space_between",
+            justifyContent: "space-between",
             paddingHorizontal: 16,
             paddingTop: 8,
             marginBottom: 12,
           }}
         >
-          <Text style={{ color: tokens.text as any, fontSize: 24, fontWeight: "800" }}>
+          <Text style={{ color: (useTheme().tokens.text as any), fontSize: 24, fontWeight: "800" }}>
             Shop
           </Text>
           <View
@@ -1041,11 +1044,11 @@ export default function Shop() {
               paddingVertical: 6,
               borderRadius: 999,
               borderWidth: 1,
-              borderColor: tokens.border as any,
+              borderColor: (useTheme().tokens.border as any),
               backgroundColor: "rgba(0,229,255,0.1)",
             }}
           >
-            <Text style={{ color: tokens.text as any, fontSize: 14, fontWeight: "700" }}>
+            <Text style={{ color: (useTheme().tokens.text as any), fontSize: 14, fontWeight: "700" }}>
               {(coins ?? 0).toLocaleString()} coins
             </Text>
           </View>
@@ -1104,7 +1107,7 @@ export default function Shop() {
           <View style={{ marginTop: 24 }}>
             <Text
               style={{
-                color: tokens.text as any,
+                color: (useTheme().tokens.text as any),
                 fontSize: 16,
                 fontWeight: "800",
                 marginBottom: 10,
@@ -1117,17 +1120,17 @@ export default function Shop() {
                 key={o.id}
                 style={{
                   borderWidth: 1,
-                  borderColor: tokens.border as any,
+                  borderColor: (useTheme().tokens.border as any),
                   borderRadius: 12,
                   padding: 12,
                   marginBottom: 8,
                   backgroundColor: "rgba(255,255,255,0.03)",
                 }}
               >
-                <Text style={{ color: tokens.text as any, fontWeight: "700" }}>
+                <Text style={{ color: (useTheme().tokens.text as any), fontWeight: "700" }}>
                   {o.title}
                 </Text>
-                <Text style={{ color: tokens.text as any, fontSize: 12, marginTop: 16 }}>
+                <Text style={{ color: (useTheme().tokens.text as any), fontSize: 12, marginTop: 16 }}>
                   {new Date(o.createdAt).toLocaleString()} · {o.status.toUpperCase()}
                 </Text>
               </View>
