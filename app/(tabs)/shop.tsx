@@ -10,6 +10,7 @@ import {
   Image,
   LayoutAnimation,
   Animated,
+  Modal,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -272,6 +273,119 @@ function Card({ children, color }: { children: React.ReactNode; color: string })
   );
 }
 
+/* ------------------------ Neon Order Success Modal ------------------------ */
+function OrderSuccessModal({
+  visible,
+  title,
+  onClose,
+}: {
+  visible: boolean;
+  title?: string | null;
+  onClose: () => void;
+}) {
+  const { tokens } = useTheme();
+  const glow = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!visible) return;
+    glow.setValue(0);
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(glow, { toValue: 1, duration: 900, useNativeDriver: false }),
+        Animated.timing(glow, { toValue: 0, duration: 900, useNativeDriver: false }),
+      ])
+    ).start();
+  }, [visible, glow]);
+
+  const shadowOpacity = glow.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.35, 0.85],
+  });
+
+  return (
+    <Modal visible={visible} transparent animationType="fade">
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: "rgba(0,0,0,0.55)",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 24,
+        }}
+      >
+        <Animated.View
+          style={{
+            width: "100%",
+            maxWidth: 420,
+            borderRadius: 18,
+            overflow: "hidden",
+            shadowColor: "#00E5FF",
+            shadowOpacity: shadowOpacity as any,
+            shadowRadius: 24,
+            shadowOffset: { width: 0, height: 0 },
+          }}
+        >
+          <LinearGradient
+            colors={["#00111E", "#001D33"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{ padding: 18, borderRadius: 18, borderWidth: 1, borderColor: "#00E5FF66" }}
+          >
+            <View
+              style={{
+                borderRadius: 14,
+                padding: 16,
+                borderWidth: 1,
+                borderColor: "#00E5FF99",
+                backgroundColor: "rgba(0,229,255,0.08)",
+              }}
+            >
+              <Text
+                style={{
+                  color: "#9ff",
+                  fontSize: 20,
+                  fontWeight: "900",
+                  textAlign: "center",
+                  marginBottom: 8,
+                }}
+              >
+                Order Placed ✓
+              </Text>
+              <Text
+                style={{
+                  color: tokens.text as any,
+                  fontSize: 14,
+                  textAlign: "center",
+                  opacity: 0.9,
+                  marginBottom: 16,
+                }}
+              >
+                {title ? `“${title}” is confirmed. A confirmation was sent to your email.` : "Your order is confirmed. A confirmation was sent to your email."}
+              </Text>
+              <Pressable
+                onPress={onClose}
+                style={({ pressed }) => ({
+                  alignSelf: "center",
+                  minWidth: 160,
+                  alignItems: "center",
+                  paddingVertical: 12,
+                  paddingHorizontal: 16,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor: "#00E5FF",
+                  backgroundColor: pressed ? "rgba(0,229,255,0.25)" : "rgba(0,229,255,0.15)",
+                })}
+              >
+                <Text style={{ color: "#CFFFFF", fontWeight: "900" }}>Continue</Text>
+              </Pressable>
+            </View>
+          </LinearGradient>
+        </Animated.View>
+      </View>
+    </Modal>
+  );
+}
+
 /* --------------------------------- Screen -------------------------------- */
 export default function Shop() {
   const { coins, setCoins, add, spend } = useCoins(); // ⬅️ use setCoins
@@ -296,6 +410,9 @@ export default function Shop() {
   const [flipped, setFlipped] = useState<Record<string, boolean>>({});
   const [need, setNeed] = useState<number>(0);
   const [showInsufficient, setShowInsufficient] = useState(false);
+  const [showOrderSuccess, setShowOrderSuccess] = useState(false);
+  const [lastOrderTitle, setLastOrderTitle] = useState<string | null>(null);
+
   const scrollRef = useRef<ScrollView | null>(null);
   const sizeCtl = useSelectedSizes();
 
@@ -304,6 +421,27 @@ export default function Shop() {
 
   const themePulse = useRef(new Animated.Value(0)).current;
   const cursorPulse = useRef(new Animated.Value(0)).current;
+
+  /* ---------- DEV: Hidden 5-tap top-up on the "Shop" title ---------- */
+  const tapCounter = useRef(0);
+  const tapWindowMs = 1500;
+  const lastTapAt = useRef(0);
+  function secretTopUp() {
+    const now = Date.now();
+    if (now - lastTapAt.current > tapWindowMs) tapCounter.current = 0;
+    tapCounter.current += 1;
+    lastTapAt.current = now;
+    if (tapCounter.current >= 5) {
+      tapCounter.current = 0;
+      const bonus = 250_000; // quarter-million coins
+      const next = (coins ?? 0) + bonus;
+      setCoins(next);
+      saveCoins(next);
+      track("dev_secret_top_up", { bonus, next });
+      console.log(`[dev] Added ${bonus} coins, new total ${next.toLocaleString()}`);
+    }
+  }
+  /* ------------------------------------------------------------------- */
 
   const runPulse = (which: "themes" | "cursors") => {
     const anim = which === "themes" ? themePulse : cursorPulse;
@@ -419,6 +557,10 @@ export default function Shop() {
           track("shop_order_created", { sku: it.id, title: it.title });
           return next;
         });
+
+        // ✨ Show order success modal
+        setLastOrderTitle(it.title);
+        setShowOrderSuccess(true);
       }
     };
 
@@ -680,7 +822,7 @@ export default function Shop() {
       success_url: success,
       cancel_url: success,
     });
-    // optimistic unlock; deeplink will also mark
+    // optimistic unlock for digital; physicals will be marked via deeplink handler above
     markOwned(it.id);
   }
 
@@ -750,7 +892,7 @@ export default function Shop() {
 
         <Text
           style={{
-            color: (useTheme().tokens.text as any),
+            color: tokens.text as any,
             fontSize: 14,
             fontWeight: "700",
             textAlign: "center",
@@ -762,7 +904,7 @@ export default function Shop() {
         {it.desc ? (
           <Text
             style={{
-              color: (useTheme().tokens.text as any),
+              color: tokens.text as any,
               fontSize: 12,
               lineHeight: 16,
               textAlign: "center",
@@ -777,7 +919,7 @@ export default function Shop() {
 
         {sizes.length > 0 ? (
           <View style={{ marginTop: 10 }}>
-            <Text style={{ color: (useTheme().tokens.text as any), fontSize: 12, marginBottom: 6 }}>
+            <Text style={{ color: tokens.text as any, fontSize: 12, marginBottom: 6 }}>
               Size
             </Text>
             <SizeSelector
@@ -806,13 +948,13 @@ export default function Shop() {
                 paddingVertical: 10,
                 borderRadius: 10,
                 borderWidth: 1,
-                borderColor: (useTheme().tokens.border as any),
+                borderColor: tokens.border as any,
                 backgroundColor: pressed
                   ? "rgba(92,252,200,0.15)"
                   : "rgba(92,252,200,0.08)",
               })}
             >
-              <Text style={{ color: (useTheme().tokens.text as any), fontWeight: "800" }}>
+              <Text style={{ color: tokens.text as any, fontWeight: "800" }}>
                 {equipped ? "Equipped ✓" : "Equip"}
               </Text>
             </Pressable>
@@ -873,13 +1015,13 @@ export default function Shop() {
                 paddingVertical: 10,
                 borderRadius: 10,
                 borderWidth: 1,
-                borderColor: (useTheme().tokens.border as any),
+                borderColor: tokens.border as any,
                 backgroundColor: pressed
                   ? "rgba(92,252,200,0.15)"
                   : "rgba(92,252,200,0.08)",
               })}
             >
-              <Text style={{ color: (useTheme().tokens.text as any), fontWeight: "800" }}>
+              <Text style={{ color: tokens.text as any, fontWeight: "800" }}>
                 {equipped ? "Equipped ✓" : "Equip"}
               </Text>
             </Pressable>
@@ -1033,7 +1175,10 @@ export default function Shop() {
             marginBottom: 12,
           }}
         >
-          <Text style={{ color: (useTheme().tokens.text as any), fontSize: 24, fontWeight: "800" }}>
+          <Text
+            onPress={secretTopUp} // ⬅️ 5 taps within ~1.5s adds 250k coins (dev)
+            style={{ color: tokens.text as any, fontSize: 24, fontWeight: "800" }}
+          >
             Shop
           </Text>
           <View
@@ -1044,11 +1189,11 @@ export default function Shop() {
               paddingVertical: 6,
               borderRadius: 999,
               borderWidth: 1,
-              borderColor: (useTheme().tokens.border as any),
+              borderColor: tokens.border as any,
               backgroundColor: "rgba(0,229,255,0.1)",
             }}
           >
-            <Text style={{ color: (useTheme().tokens.text as any), fontSize: 14, fontWeight: "700" }}>
+            <Text style={{ color: tokens.text as any, fontSize: 14, fontWeight: "700" }}>
               {(coins ?? 0).toLocaleString()} coins
             </Text>
           </View>
@@ -1107,7 +1252,7 @@ export default function Shop() {
           <View style={{ marginTop: 24 }}>
             <Text
               style={{
-                color: (useTheme().tokens.text as any),
+                color: tokens.text as any,
                 fontSize: 16,
                 fontWeight: "800",
                 marginBottom: 10,
@@ -1120,17 +1265,17 @@ export default function Shop() {
                 key={o.id}
                 style={{
                   borderWidth: 1,
-                  borderColor: (useTheme().tokens.border as any),
+                  borderColor: tokens.border as any,
                   borderRadius: 12,
                   padding: 12,
                   marginBottom: 8,
                   backgroundColor: "rgba(255,255,255,0.03)",
                 }}
               >
-                <Text style={{ color: (useTheme().tokens.text as any), fontWeight: "700" }}>
+                <Text style={{ color: tokens.text as any, fontWeight: "700" }}>
                   {o.title}
                 </Text>
-                <Text style={{ color: (useTheme().tokens.text as any), fontSize: 12, marginTop: 16 }}>
+                <Text style={{ color: tokens.text as any, fontSize: 12, marginTop: 16 }}>
                   {new Date(o.createdAt).toLocaleString()} · {o.status.toUpperCase()}
                 </Text>
               </View>
@@ -1150,6 +1295,20 @@ export default function Shop() {
           setShowInsufficient(false);
           track("shop_modal_insufficient_buy_coins");
           setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
+        }}
+      />
+
+      {/* ✅ Order Success modal */}
+      <OrderSuccessModal
+        visible={showOrderSuccess}
+        title={lastOrderTitle}
+        onClose={() => {
+          setShowOrderSuccess(false);
+          // “Take them back to the shop page”: ensure they’re on this route and at the top
+          try {
+            router.replace("/(tabs)/shop");
+          } catch {}
+          requestAnimationFrame(() => scrollRef.current?.scrollTo({ y: 0, animated: true }));
         }}
       />
     </LinearGradient>

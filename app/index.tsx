@@ -1,5 +1,6 @@
+// app/index.tsx
 import React, { useRef, useEffect } from "react";
-import { View, Text, Pressable, StyleSheet, Image, Animated } from "react-native";
+import { View, Text, Pressable, StyleSheet, Image, Animated, Platform } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Link } from "expo-router";
 import * as Haptics from "expo-haptics";
@@ -26,14 +27,17 @@ export default function HomeScreen() {
   }, [pulseAnim]);
 
   const handlePress = async () => {
-    await Haptics.selectionAsync();
+    // ✅ Guard haptics for web
+    if (Platform.OS !== "web") {
+      await Haptics.selectionAsync().catch(() => {});
+    }
   };
 
   return (
     <View style={styles.container}>
       {/* Logo */}
       <Image
-        source={require("../assets/logo.png")}
+        source={require("./assets/logo.png")}  // ✅ Correct relative path
         style={styles.logo}
       />
 

@@ -1,13 +1,25 @@
+// app/utils/coinCheckout.ts
 import * as Linking from "expo-linking";
 
-export function startCoinCheckout(opts: { id: string; title: string; priceCoins: number; size?: string; category?: string; imageUrl?: string }) {
+type CoinCheckoutOpts = {
+  id: string;             // sku
+  title: string;
+  priceCoins: number;
+  category: string;
+  imageUrl?: string;
+  size?: string | null;
+};
+
+export function startCoinCheckout(opts: CoinCheckoutOpts) {
   const url = Linking.createURL("/checkout/coin", {
     queryParams: {
-      itemId: opts.id,
+      sku: opts.id,
       title: opts.title,
-      cost: String(opts.priceCoins || 0),
+      category: opts.category,
+      priceCoins: String(opts.priceCoins ?? 0),
+      imageUrl: opts.imageUrl ?? "",
       size: opts.size || "",
     },
   });
-  return Linking.openURL(url);
+  return Linking.openURL(url); // expo-router will handle this in-app
 }

@@ -514,6 +514,84 @@ def admin_orders_log():
     return ok({'orders': items[offset:end], 'total': len(items), 'offset': offset, 'limit': limit})
 
 # -----------------------------------------------------------------------------
+# API parity: /api/order-email (customer + admin emails)
+# -----------------------------------------------------------------------------
+@app.route("/api/order-email", methods=["POST", "OPTIONS"])
+def api_order_email():
+    # CORS preflight
+    if request.method == "OPTIONS":
+        return ("", 200)
+
+    b = request.get_json(silent=True) or {}
+
+    # minimal validation to match your TS version
+    order_id = (b.get("id") or "").strip()
+    title = (b.get("title") or "").strip()
+    if not order_id or not title:
+        return bad("Invalid payload: missing id or title", 400)
+
+    # normalize to the structure used by _format_order_email
+    shipping = {
+        "email": b.get("email") or "",
+        "name": b.get("name") or "",
+        "address1": b.get("address1") or "",
+        "address2": b.get("address2") or "",
+        "city": b.get("city") or "",
+        "state": b.get("state") or "",
+        "zip": b.get("postalCode") or "",
+        "country": b.get("country") or "US",
+        "size": (b.get("size") or None),
+    }
+
+    order = {
+        "id": order_id,
+        "sku": b.get("sku") or "",
+        "title": title,
+        "status": b.get("status") or "paid",
+        "createdAt": int(b.get("createdAt") or now_ms()),
+        "priceCoins": int(b.get("coinsPrice") or 0),
+        "shipping": shipping,
+        "meta": {
+            "category": b.get("category") or "",
+        },
+    }
+
+    # log to file (like before)
+    try:
+        _log_order_jsonl(order)
+    except Exception as e:
+        print("order log error:", e)
+
+    # build admin + customer emails
+    admin_subj, admin_body = _format_order_email(order)
+
+    cust_email = shipping.get("email")
+    cust_subj = f"Order Confirmation – {order['id']}"
+    cust_body = (
+        f"Thanks for your order!\n\n"
+        f"{admin_body}\n\n"
+        f"We'll notify you when it ships.\n"
+        f"- Nova Team"
+    )
+
+    # send customer confirmation (best effort)
+    if cust_email and valid_email(cust_email):
+        try:
+            send_email(cust_email, cust_subj, cust_body)
+        except Exception as e:
+            print("customer email error:", e)
+
+    # send admin/dev notification (required)
+    admin_to = os.getenv("ADMIN_EMAIL", "")
+    if admin_to:
+        try:
+            send_email(admin_to, f"NEW ORDER: {order['title']} — {order['id']}", admin_body)
+        except Exception as e:
+            print("admin email error:", e)
+
+    return ok({"sent": True})
+
+# -----------------------------------------------------------------------------
 # Main
 # -----------------------------------------------------------------------------
 if __name__ == "__main__":

@@ -41,3 +41,4 @@ token.json
 dev_script_dump.txt
 .env.local.bak
 *.bak
+.vercel
