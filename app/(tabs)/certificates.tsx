@@ -1,8 +1,6 @@
+// app/(tabs)/certificates.tsx
 import React, { useRef, useState, useEffect } from "react";
 import { View, Text, StyleSheet, Pressable, ScrollView, Image, Platform } from "react-native";
-import { captureRef } from "react-native-view-shot";
-import * as FileSystem from "expo-file-system";
-import * as Sharing from "expo-sharing";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useCoins } from "../context/CoinsContext";
 import { useUser } from "../context/UserContext";
@@ -14,12 +12,13 @@ type CertificateMeta = { name: string; quizTitle: string; scorePct: number; date
 
 export default function CertificatesScreen() {
   const { user } = useUser();
-  const { addCoins } = useCoins();
+  const { addCoins } = useCoins(); // keeping in case you hook coin rewards here later
 
   const [images, setImages] = useState<SavedImage[]>([]);           // legacy PNGs
-  const [unlocked, setUnlocked] = useState<CertificateMeta[]>([]);   // ≥80% earned
+  const [unlocked, setUnlocked] = useState<CertificateMeta[]>([]);  // ≥80% earned
 
-  const captureRefView = useRef<View>(null);
+  // Use a wrapper <View> as the capture target (no need for forwardRef in CertificateView)
+  const captureWrapperRef = useRef<View>(null);
   const [rendering, setRendering] = useState<CertificateMeta | null>(null);
 
   useEffect(() => {
@@ -49,24 +48,31 @@ export default function CertificatesScreen() {
     if (!el) throw new Error("element not found: " + id);
     const { default: html2canvas } = await import("html2canvas");
     const canvas = await html2canvas(el as HTMLElement, {
-      backgroundColor:"transparent",
+      backgroundColor: "transparent",
       scale: 2,
       useCORS: true,
     });
     return canvas.toDataURL("image/png");
   }
 
-  async function shareOut(fileUri: string, filename: string) {
+  async function shareOut(fileUriOrDataUrl: string, filename: string) {
     if (Platform.OS === "web") {
+      // data URL or object URL download on web
       const a = document.createElement("a");
-      a.href = fileUri;
+      a.href = fileUriOrDataUrl;
       a.download = filename;
       document.body.appendChild(a);
       a.click();
       a.remove();
       return;
     }
-    try { await Sharing.shareAsync(fileUri); } catch {}
+    try {
+      const Sharing = await import("expo-sharing");
+      // @ts-ignore
+      await Sharing.shareAsync(fileUriOrDataUrl);
+    } catch {
+      // ignore
+    }
   }
 
   async function exportRealCert(rec: CertificateMeta) {
@@ -74,11 +80,17 @@ export default function CertificatesScreen() {
     await new Promise((r) => setTimeout(r, 60));
     try {
       const filename = `certificate-${slugify(rec.quizTitle)}-${Date.now()}.png`;
+
       if (Platform.OS === "web") {
+        // Capture via html2canvas
         const dataUrl = await captureWebElementById("cert-real-capture");
         await shareOut(dataUrl, filename);
       } else {
-        const uri: any = await captureRef(captureRefView, { format: "png", quality: 1 });
+        // Native: capture view, save to doc dir, share
+        const { captureRef } = await import("react-native-view-shot");
+        const FileSystem = await import("expo-file-system");
+
+        const uri: any = await captureRef(captureWrapperRef, { format: "png", quality: 1 });
         const file = `${FileSystem.documentDirectory}${filename}`;
         await FileSystem.copyAsync({ from: String(uri), to: file });
         await shareOut(file, filename);
@@ -92,7 +104,9 @@ export default function CertificatesScreen() {
   }
 
   function handlePreview() {
-    alert("This is an example preview. Earn \u2265 80% on any quiz to unlock a real certificate you can download.");
+    alert(
+      "This is an example preview. Earn ≥ 80% on any quiz to unlock a real certificate you can download."
+    );
   }
 
   return (
@@ -101,8 +115,8 @@ export default function CertificatesScreen() {
 
       <View style={s.note}>
         <Text style={s.noteText}>
-          The card below is an <Text style={s.noteStrong}>example preview</Text>. Score{" "}
-          <Text style={s.noteStrong}>80%+</Text> on any quiz to unlock a{" "}
+          The card below is an <Text style={s.noteStrong}>example preview</Text>.
+          Score <Text style={s.noteStrong}>80%+</Text> on any quiz to unlock a{" "}
           <Text style={s.noteStrong}>real certificate</Text> you can download.
         </Text>
       </View>
@@ -126,17 +140,28 @@ export default function CertificatesScreen() {
       {/* Unlocked earned certificates */}
       <Text style={s.sectionTitle}>Unlocked Certificates</Text>
       {unlocked.length === 0 ? (
-        <Text style={s.empty}>No unlocked certificates yet. Finish a quiz with 80%+ to unlock one.</Text>
+        <Text style={s.empty}>
+          No unlocked certificates yet. Finish a quiz with 80%+ to unlock one.
+        </Text>
       ) : (
         unlocked.map((rec, i) => (
           <View key={i} style={s.card}>
             <View style={{ flex: 1 }}>
               <Text style={s.certTitle}>{rec.quizTitle}</Text>
-              <Text style={s.certMeta}>{rec.name} • {Math.round(rec.scorePct)}%</Text>
-              <Text style={s.certMetaDim}>{new Date(rec.dateISO || Date.now()).toLocaleDateString()}</Text>
+              <Text style={s.certMeta}>
+                {rec.name} • {Math.round(rec.scorePct)}%
+              </Text>
+              <Text style={s.certMetaDim}>
+                {new Date(rec.dateISO || Date.now()).toLocaleDateString()}
+              </Text>
             </View>
-            <Pressable style={[s.btn, { minWidth: 160 }]} onPress={() => exportRealCert(rec)}>
-              <Text style={s.btnTxt}>{Platform.OS === "web" ? "Generate & Download" : "Generate & Share"}</Text>
+            <Pressable
+              style={[s.btn, { minWidth: 160 }]}
+              onPress={() => exportRealCert(rec)}
+            >
+              <Text style={s.btnTxt}>
+                {Platform.OS === "web" ? "Generate & Download" : "Generate & Share"}
+              </Text>
             </Pressable>
           </View>
         ))
@@ -148,8 +173,13 @@ export default function CertificatesScreen() {
         <View key={i} style={s.legacyCard}>
           <Image source={{ uri: cert.image }} style={s.legacyImg} />
           <Text style={s.legacyTitle}>{cert.title}</Text>
-          <Pressable style={s.btn} onPress={() => shareOut(cert.fileUri, `${slugify(cert.title)}.png`)}>
-            <Text style={s.btnTxt}>{Platform.OS === "web" ? "Download" : "Download / Share"}</Text>
+          <Pressable
+            style={s.btn}
+            onPress={() => shareOut(cert.fileUri, `${slugify(cert.title)}.png`)}
+          >
+            <Text style={s.btnTxt}>
+              {Platform.OS === "web" ? "Download" : "Download / Share"}
+            </Text>
           </Pressable>
         </View>
       ))}
@@ -157,9 +187,8 @@ export default function CertificatesScreen() {
       {/* Hidden render target for exporting a REAL certificate */}
       <View style={{ height: 1, overflow: "hidden" }}>
         {rendering ? (
-          <View nativeID="cert-real-capture">
+          <View nativeID="cert-real-capture" ref={captureWrapperRef}>
             <CertificateView
-              ref={captureRefView}
               username={rendering.name}
               topic={rendering.quizTitle}
               date={new Date(rendering.dateISO || Date.now()).toLocaleDateString()}
@@ -174,7 +203,7 @@ export default function CertificatesScreen() {
 }
 
 const s = StyleSheet.create({
-  container: { padding: 16, backgroundColor:"transparent" },
+  container: { padding: 16, backgroundColor: "transparent" },
   title: { color: "#00e5ff", fontSize: 26, fontWeight: "900", marginBottom: 8, textAlign: "center" },
   note: { backgroundColor: "#061826", borderColor: "#00e5ff", borderWidth: 1, borderRadius: 10, padding: 10, marginBottom: 12 },
   noteText: { color: "#bfefff", textAlign: "center" },

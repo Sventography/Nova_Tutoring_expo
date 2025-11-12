@@ -1,6 +1,6 @@
 from __future__ import annotations
 from coins_orders import coins_bp
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, make_response
 from flask_cors import CORS
 from dotenv import load_dotenv, find_dotenv
 import os, re, smtplib, ssl, json, time, uuid
@@ -74,6 +74,7 @@ Base.metadata.create_all(engine)
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-change-me")
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "")
 ADMIN_KEY = os.getenv("ADMIN_KEY", "")
+ORDERS_TO_EMAIL = os.getenv("ORDERS_TO_EMAIL", "")  # optional override
 ORDERS_LOG_PATH = Path(__file__).parent.joinpath("orders.log")
 os.environ['ORDERS_LOG_PATH'] = str(ORDERS_LOG_PATH)
 serializer = URLSafeTimedSerializer(SECRET_KEY)
@@ -514,82 +515,93 @@ def admin_orders_log():
     return ok({'orders': items[offset:end], 'total': len(items), 'offset': offset, 'limit': limit})
 
 # -----------------------------------------------------------------------------
-# API parity: /api/order-email (customer + admin emails)
+# API parity: /api/order-email (customer + admin emails) — CORS explicit
 # -----------------------------------------------------------------------------
+def _corsify(resp):
+    # Be explicit so calls from http://localhost:8081 work even without Flask-CORS
+    resp.headers["Access-Control-Allow-Origin"] = "*"
+    resp.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+    resp.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+    return resp
+
 @app.route("/api/order-email", methods=["POST", "OPTIONS"])
 def api_order_email():
-    # CORS preflight
+    # Handle CORS preflight
     if request.method == "OPTIONS":
-        return ("", 200)
+        return _corsify(make_response(("", 200)))
 
     b = request.get_json(silent=True) or {}
 
-    # minimal validation to match your TS version
-    order_id = (b.get("id") or "").strip()
-    title = (b.get("title") or "").strip()
-    if not order_id or not title:
-        return bad("Invalid payload: missing id or title", 400)
+    # Accept both old/new shapes
+    order_id = (b.get("id") or b.get("orderId") or f"ord_{uuid.uuid4().hex[:10]}").strip()
+    title = (b.get("title") or b.get("itemTitle") or b.get("sku") or "Order").strip()
 
-    # normalize to the structure used by _format_order_email
+    # normalize shipping
     shipping = {
-        "email": b.get("email") or "",
-        "name": b.get("name") or "",
-        "address1": b.get("address1") or "",
-        "address2": b.get("address2") or "",
-        "city": b.get("city") or "",
-        "state": b.get("state") or "",
-        "zip": b.get("postalCode") or "",
-        "country": b.get("country") or "US",
+        "email": (b.get("email") or b.get("buyerEmail") or "").strip(),
+        "name": (b.get("name") or b.get("buyerName") or "").strip(),
+        "phone": (b.get("phone") or "").strip(),
+        "address1": (b.get("address1") or "").strip(),
+        "address2": (b.get("address2") or "").strip(),
+        "city": (b.get("city") or "").strip(),
+        "state": (b.get("state") or "").strip(),
+        "zip": (b.get("postalCode") or b.get("zip") or "").strip(),
+        "country": (b.get("country") or "US").strip(),
         "size": (b.get("size") or None),
     }
 
     order = {
         "id": order_id,
-        "sku": b.get("sku") or "",
+        "sku": (b.get("sku") or b.get("itemId") or "").strip(),
         "title": title,
-        "status": b.get("status") or "paid",
+        "status": (b.get("status") or "paid").strip(),
         "createdAt": int(b.get("createdAt") or now_ms()),
-        "priceCoins": int(b.get("coinsPrice") or 0),
+        "priceCoins": int(b.get("coinsPrice") or b.get("priceCoins") or 0),
         "shipping": shipping,
         "meta": {
-            "category": b.get("category") or "",
+            "category": (b.get("category") or "").strip(),
+            "imageUrl": (b.get("imageUrl") or "").strip(),
+            "notes": (b.get("notes") or "").strip(),
         },
     }
 
-    # log to file (like before)
+    # log to file
     try:
         _log_order_jsonl(order)
     except Exception as e:
         print("order log error:", e)
 
-    # build admin + customer emails
+    # format messages
     admin_subj, admin_body = _format_order_email(order)
 
-    cust_email = shipping.get("email")
-    cust_subj = f"Order Confirmation – {order['id']}"
-    cust_body = (
-        f"Thanks for your order!\n\n"
-        f"{admin_body}\n\n"
-        f"We'll notify you when it ships.\n"
-        f"- Nova Team"
-    )
+    # recipients
+    admin_to = (ORDERS_TO_EMAIL or ADMIN_EMAIL or "").strip()
+    buyer_to = shipping.get("email")
 
-    # send customer confirmation (best effort)
-    if cust_email and valid_email(cust_email):
-        try:
-            send_email(cust_email, cust_subj, cust_body)
-        except Exception as e:
-            print("customer email error:", e)
-
-    # send admin/dev notification (required)
-    admin_to = os.getenv("ADMIN_EMAIL", "")
+    # send admin
+    sent_admin = False
     if admin_to:
         try:
-            send_email(admin_to, f"NEW ORDER: {order['title']} — {order['id']}", admin_body)
+            sent_admin = bool(send_email(admin_to, f"NEW ORDER: {order['title']} — {order['id']}", admin_body))
         except Exception as e:
             print("admin email error:", e)
 
-    return ok({"sent": True})
+    # send buyer
+    sent_buyer = False
+    if buyer_to and valid_email(buyer_to):
+        ack_subj = f"[Nova] We received your order {order['id']}"
+        ack_body = (
+            "Thanks for your purchase with Nova coins! Below are your order details:\n\n"
+            + admin_body
+            + "\n\nWe'll email you again when it ships.\n— Nova"
+        )
+        try:
+            sent_buyer = bool(send_email(buyer_to, ack_subj, ack_body))
+        except Exception as e:
+            print("customer email error:", e)
+
+    resp = ok({"sentAdmin": sent_admin, "sentBuyer": sent_buyer, "orderId": order["id"]})
+    return _corsify(resp)
 
 # -----------------------------------------------------------------------------
 # Main

@@ -1,5 +1,6 @@
 // app/(checkout)/coin.tsx
 import React, { useMemo, useState } from "react";
+import { sendOrderEmail } from "../utils/sendOrderEmail";
 import { SafeAreaView, ScrollView, View, Text, Pressable } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -7,7 +8,6 @@ import { safeAppendPurchase } from "../utils/appendPurchase";
 import NeonSuccessModal from "../components/NeonSuccessModal";
 import { catalog } from "../_lib/catalog";
 import { getSizesFor } from "../constants/sizes";
-
 const ORDERS_KEY = "@nova/orders";
 
 type Order = {

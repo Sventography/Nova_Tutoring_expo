@@ -1,49 +1,41 @@
-// app/utils/sendOrderEmail.ts
-export type SendOrderEmailPayload = {
-  id: string;
-  sku: string;
-  title: string;
-  createdAt: number;
-  status: "paid" | "fulfilled" | "shipped";
-  size?: string | null;
-  category?: string;
-  coinsPrice?: number;
-  // shipping
-  name?: string;
-  email?: string;        // customer's email (for confirmation)
-  address1?: string;
-  address2?: string;
-  city?: string;
-  state?: string;
-  postalCode?: string;
-  country?: string;
+export type OrderEmailPayload = {
+  id: string; sku: string; title: string; status?: string; createdAt?: number;
+  coinsPrice?: number; email: string; name: string; address1: string; address2?: string;
+  city: string; state: string; postalCode: string; country?: string; size?: string;
+  category?: string; imageUrl?: string; notes?: string;
 };
 
-// Prefer explicit env var. In prod set EXPO_PUBLIC_API_BASE=https://YOUR-APP.vercel.app
-const ENV_BASE =
-  (typeof process !== "undefined" && (process as any).env?.EXPO_PUBLIC_API_BASE) || "";
+function pickBase(): string {
+  // When running the web app on localhost, force the local Flask backend
+  try {
+    if (typeof window !== "undefined") {
+      const h = window.location.hostname;
+      if (h === "localhost" || h === "127.0.0.1") {
+        return "http://127.0.0.1:8788";
+      }
+    }
+  } catch {}
 
-// Browser hints (for Expo web)
-const isBrowser = typeof window !== "undefined";
-const origin = isBrowser ? window.location.origin : "";
+  // Otherwise use env, fallback to local
+  const envBase = process.env.EXPO_PUBLIC_BACKEND_URL || "";
+  return (envBase || "http://127.0.0.1:8788").replace(/\/+$/, "");
+}
 
-// If we’re already running on your vercel domain, use relative; otherwise fallback to env or localhost.
-const isOnVercel =
-  isBrowser && /\.vercel\.app$/.test(window.location.hostname);
+export async function sendOrderEmail(payload: OrderEmailPayload) {
+  const url = `${pickBase()}/api/order-email`;
+  console.log("[sendOrderEmail] POST", url, payload);
 
-const BASE = ENV_BASE
-  || (isOnVercel ? "" : "http://localhost:3000"); // ← dev fallback; override via env in mobile
-
-const ORDER_EMAIL_ENDPOINT = `${BASE.replace(/\/$/, "")}/api/order-email`;
-
-export async function sendOrderEmail(order: SendOrderEmailPayload) {
-  const res = await fetch(ORDER_EMAIL_ENDPOINT, {
+  const res = await fetch(url, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify(order),
+    body: JSON.stringify(payload),
   });
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`sendOrderEmail failed: ${res.status} ${body}`);
-  }
+
+  const txt = await res.text().catch(() => "");
+  let json: any = null;
+  try { json = JSON.parse(txt); } catch {}
+  console.log("[sendOrderEmail] status", res.status, "body:", txt || "(empty)");
+
+  if (!res.ok) throw new Error(`order-email failed ${res.status}: ${txt}`);
+  return json ?? { ok: true };
 }
