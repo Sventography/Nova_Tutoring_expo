@@ -3,11 +3,13 @@
   "private": true,
   "scripts": {
     "dev": "expo start --web",
+    "dev:native": "expo start",
     "api:dev": "vercel dev --port 3000",
-    "build": "echo \"noop build for vercel\"",
+    "build": "expo export -p web",
     "build:web": "expo export -p web",
+    "export:web": "expo export -p web",
     "start:web": "expo start --web",
-    "deploy": "vercel --prod"
+    "deploy": "expo export -p web && vercel --prod"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",

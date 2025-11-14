@@ -1,6 +1,12 @@
 {
-  "framework": null,
-  "buildCommand": "npx expo export -p web",
-  "outputDirectory": "dist",
-  "cleanUrls": true
+  "version": 2,
+  "builds": [
+    {
+      "src": "dist/**/*",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    { "src": "/(.*)", "dest": "/dist/$1" }
+  ]
 }
