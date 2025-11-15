@@ -1,9 +1,24 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { View, Text, TextInput, Pressable, KeyboardAvoidingView, Platform, FlatList, ActivityIndicator } from "react-native";
+import React, {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  KeyboardAvoidingView,
+  Platform,
+  FlatList,
+  ActivityIndicator,
+} from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { askNova } from "../_lib/ai";
+import { useTheme } from "../context/ThemeContext";
 
 type Msg = { id: string; role: "user" | "assistant" | "system"; text: string };
 
@@ -26,6 +41,22 @@ async function bumpCount() {
 }
 
 export default function Ask() {
+  const { tokens } = useTheme();
+
+  // --- theme-driven colors
+  const gradient = tokens.gradient;
+  const headerTextColor = tokens.text;
+  const counterTextColor = tokens.cardText;
+  const chipBorderColor = tokens.border;
+  const chipBgColor = tokens.card;
+  const inputBg = tokens.isDark
+    ? "rgba(255,255,255,0.04)"
+    : "rgba(0,0,0,0.03)";
+  const inputBorder = tokens.border;
+  const placeholderColor = tokens.isDark ? "#678a94" : "#6b7685";
+  const sendEnabledColor = tokens.accent;
+  const sendDisabledColor = tokens.isDark ? "#294b55" : "#a0a8b2";
+
   const [messages, setMessages] = useState<Msg[]>([
     {
       id: "sys1",
@@ -71,7 +102,6 @@ export default function Ask() {
           ? "Missing OpenAI API key. Set EXPO_PUBLIC_OPENAI_API_KEY in your env."
           : e?.message || "Something went wrong.";
       setError(msg);
-      // keep the conversation intact, just show an inline error bubble
       setMessages((m) => [
         ...m,
         { id: String(Date.now() + 2), role: "system", text: `⚠️ ${msg}` },
@@ -85,21 +115,26 @@ export default function Ask() {
   const renderItem = ({ item }: { item: Msg }) => {
     const isUser = item.role === "user";
     const isSys = item.role === "system";
+
     const bg = isSys
-      ? "rgba(255,235,59,0.15)"
+      ? "rgba(255,235,59,0.12)"
       : isUser
-      ? "rgba(0,229,255,0.12)"
-      : "rgba(92,252,200,0.12)";
-    const border = isSys
-      ? "#ffeb3b"
-      : isUser
-      ? "#00e5ff"
-      : "#5cfcc8";
-    const color = isSys ? "#c09300" : "#cfeaf0";
+      ? "rgba(0,229,255,0.10)"
+      : "rgba(92,252,200,0.10)";
+
+    const border = isSys ? "#ffeb3b" : tokens.border;
+    const color = isSys ? "#c09300" : tokens.text;
     const align = isUser ? "flex-end" : "flex-start";
 
     return (
-      <View style={{ paddingHorizontal: 12, marginVertical: 6, width: "100%", alignItems: align }}>
+      <View
+        style={{
+          paddingHorizontal: 12,
+          marginVertical: 6,
+          width: "100%",
+          alignItems: align,
+        }}
+      >
         <View
           style={{
             maxWidth: "88%",
@@ -111,20 +146,58 @@ export default function Ask() {
             paddingVertical: 10,
           }}
         >
-          <Text style={{ color, fontSize: 15, lineHeight: 20 }}>{item.text}</Text>
+          <Text style={{ color, fontSize: 15, lineHeight: 20 }}>
+            {item.text}
+          </Text>
         </View>
       </View>
     );
   };
 
   return (
-    <LinearGradient colors={["#000000", "#001822"]} style={{ flex: 1 }}>
+    <LinearGradient colors={gradient} style={{ flex: 1 }}>
       {/* top bar with counter */}
-      <View style={{ padding: 12, paddingBottom: 4, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-        <Text style={{ color: "#cfeaf0", fontWeight: "800", fontSize: 20 }}>Ask Nova</Text>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-          <Ionicons name="help-buoy" size={16} color="#00e5ff" />
-          <Text style={{ color: "#98c7d1", fontWeight: "700" }}>Questions today: {count}</Text>
+      <View
+        style={{
+          padding: 12,
+          paddingBottom: 4,
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
+        <Text
+          style={{
+            color: headerTextColor,
+            fontWeight: "800",
+            fontSize: 20,
+          }}
+        >
+          Ask Nova
+        </Text>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 6,
+            paddingHorizontal: 10,
+            paddingVertical: 4,
+            borderRadius: 999,
+            borderWidth: 1,
+            borderColor: chipBorderColor,
+            backgroundColor: chipBgColor,
+          }}
+        >
+          <Ionicons name="help-buoy" size={16} color={tokens.accent} />
+          <Text
+            style={{
+              color: counterTextColor,
+              fontWeight: "700",
+              fontSize: 13,
+            }}
+          >
+            Questions today: {count}
+          </Text>
         </View>
       </View>
 
@@ -134,12 +207,21 @@ export default function Ask() {
         data={messages}
         keyExtractor={(m) => m.id}
         renderItem={renderItem}
-        contentContainerStyle={{ paddingHorizontal: 8, paddingTop: 8, paddingBottom: 80 }}
-        onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
+        contentContainerStyle={{
+          paddingHorizontal: 8,
+          paddingTop: 8,
+          paddingBottom: 80,
+        }}
+        onContentSizeChange={() =>
+          listRef.current?.scrollToEnd({ animated: true })
+        }
       />
 
       {/* input */}
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={80}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={80}
+      >
         <View style={{ padding: 10 }}>
           <View
             style={{
@@ -147,29 +229,35 @@ export default function Ask() {
               alignItems: "center",
               borderRadius: 12,
               borderWidth: 1,
-              borderColor: "#204853",
-              backgroundColor: "rgba(255,255,255,0.03)",
+              borderColor: inputBorder,
+              backgroundColor: inputBg,
               paddingHorizontal: 8,
             }}
           >
             <TextInput
               placeholder="Ask me anything…"
-              placeholderTextColor="#678a94"
+              placeholderTextColor={placeholderColor}
               value={input}
               onChangeText={setInput}
               onSubmitEditing={send}
-              style={{ flex: 1, color: "#cfeaf0", paddingVertical: 10 }}
+              style={{ flex: 1, color: tokens.text, paddingVertical: 10 }}
               editable={!loading}
             />
             <Pressable onPress={send} disabled={loading || !input.trim()}>
               {loading ? (
-                <ActivityIndicator color="#00e5ff" />
+                <ActivityIndicator color={tokens.accent} />
               ) : (
-                <Ionicons name="arrow-up-circle" size={28} color={input.trim() ? "#00e5ff" : "#294b55"} />
+                <Ionicons
+                  name="arrow-up-circle"
+                  size={28}
+                  color={input.trim() ? sendEnabledColor : sendDisabledColor}
+                />
               )}
             </Pressable>
           </View>
-          {error ? <Text style={{ color: "#ffa7a7", marginTop: 6 }}>{error}</Text> : null}
+          {error ? (
+            <Text style={{ color: "#ffa7a7", marginTop: 6 }}>{error}</Text>
+          ) : null}
         </View>
       </KeyboardAvoidingView>
     </LinearGradient>
