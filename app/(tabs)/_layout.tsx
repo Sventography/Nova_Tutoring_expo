@@ -2,11 +2,10 @@ import React, { useEffect, useState } from "react";
 import "../_dev/seed_coins";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Tabs } from "expo-router";
-import { useTheme } from "../context/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 
-import { ThemeProvider } from "../context/ThemeContext";
+import { ThemeProvider, useTheme } from "../context/ThemeContext";
 import { CursorProvider } from "../context/CursorContext";
 import CursorOverlay from "../overlays/CursorOverlay";
 import ScrollableTabBar from "../components/ScrollableTabBar";
@@ -21,7 +20,7 @@ import "../utils/dev-expose";
 import "../utils/achievements-smoketest";
 import AchievementsAutoTracker from "../context/AchievementsAutoTracker";
 import AchievementsCoinsBridge from "../context/AchievementsCoinsBridge";
-import FxOverlay from "../components/FxOverlay"; // ✅ neon rain overlay
+import FxOverlay from "../components/FxOverlay"; // neon / FX overlay
 import GlobalTextDefaults from "../components/GlobalTextDefaults";
 
 function CelebrateToast({ message, onClose }: { message: string; onClose: () => void }) {
@@ -42,7 +41,18 @@ function CelebrateToast({ message, onClose }: { message: string; onClose: () => 
   );
 }
 
+// Top-level wrapper: just mounts ThemeProvider
 export default function TabsLayout() {
+  return (
+    <ThemeProvider>
+      <ThemedTabsLayout />
+    </ThemeProvider>
+  );
+}
+
+// Inner layout: safe place to use useTheme()
+function ThemedTabsLayout() {
+  const { tokens } = useTheme();
   const [celebrate, setCelebrate] = useState<string | null>(null);
 
   useEffect(() => {
@@ -55,14 +65,22 @@ export default function TabsLayout() {
     return () => listener?.remove?.();
   }, []);
 
+  const tabActive = tokens.accent;
+  const tabInactive = tokens.isDark
+    ? "rgba(255,255,255,0.65)"
+    : "rgba(0,0,0,0.65)";
+
   return (
-    <ThemeProvider>
+    <>
       <GlobalTextDefaults />
       <CursorProvider>
         <ToastHost />
         <CollectionsProvider>
-          {/* full screen container so overlays anchor correctly */}
-          <View style={{ flex: 1, position: "relative" }}>
+          {/* Full-screen themed gradient background for ALL tabs */}
+          <LinearGradient
+            colors={tokens.gradient}
+            style={{ flex: 1, position: "relative" }}
+          >
             <HeaderBar />
             <AchievementsCoinsBridge />
             <AchievementsAutoTracker />
@@ -71,11 +89,11 @@ export default function TabsLayout() {
               screenOptions={{
                 headerShown: false,
                 tabBarShowLabel: true,
-                tabBarActiveTintColor: "#00e5ff",
-                tabBarInactiveTintColor: "rgba(0,229,255,0.7)",
+                tabBarActiveTintColor: tabActive,
+                tabBarInactiveTintColor: tabInactive,
                 tabBarStyle: {
                   height: 68,
-                  backgroundColor:"transparent",
+                  backgroundColor: "transparent",
                   borderTopWidth: 0,
                   elevation: 0,
                   shadowOpacity: 0,
@@ -89,35 +107,142 @@ export default function TabsLayout() {
               }}
               tabBar={(props) => <ScrollableTabBar {...props} />}
             >
-              <Tabs.Screen name="ask" options={{ title: "ASK", tabBarIcon: ({ color, size }) => (<Ionicons name="chatbubbles-outline" color={color} size={size} />) }} />
-              <Tabs.Screen name="flashcards" options={{ title: "FLASHCARDS", tabBarIcon: ({ color, size }) => (<Ionicons name="albums-outline" color={color} size={size} />) }} />
-              <Tabs.Screen name="quiz" options={{ title: "QUIZ", tabBarIcon: ({ color, size }) => (<Ionicons name="help-circle-outline" color={color} size={size} />) }} />
-              <Tabs.Screen name="brainteasers" options={{ title: "BRAINTEASERS", tabBarIcon: ({ color, size }) => (<Ionicons name="bulb-outline" color={color} size={size} />) }} />
-              <Tabs.Screen name="shop" options={{ title: "SHOP", tabBarIcon: ({ color, size }) => (<Ionicons name="bag-handle-outline" color={color} size={size} />) }} />
-              <Tabs.Screen name="achievements" options={{ title: "ACHIEVEMENTS", tabBarIcon: ({ color, size }) => (<Ionicons name="trophy-outline" color={color} size={size} />) }} />
-              <Tabs.Screen name="history" options={{ title: "HISTORY", tabBarIcon: ({ color, size }) => (<Ionicons name="time-outline" color={color} size={size} />) }} />
-              <Tabs.Screen name="relax" options={{ title: "RELAX", tabBarIcon: ({ color, size }) => (<Ionicons name="sparkles-outline" color={color} size={size} />) }} />
-              <Tabs.Screen name="account" options={{ title: "ACCOUNT", tabBarIcon: ({ color, size }) => (<Ionicons name="person-circle-outline" color={color} size={size} />) }} />
-              <Tabs.Screen name="certificates" options={{ title: "CERTIFICATES", tabBarIcon: ({ color, size }) => (<Ionicons name="ribbon-outline" color={color} size={size} />) }} />
-              <Tabs.Screen name="collections" options={{ title: "COLLECTIONS", tabBarIcon: ({ color, size }) => (<Ionicons name="bookmarks-outline" color={color} size={size} />) }} />
-              <Tabs.Screen name="purchases" options={{ title: "PURCHASES", tabBarIcon: ({ color, size }) => (<Ionicons name="bag" color={color} size={size} />) }} />
+              <Tabs.Screen
+                name="ask"
+                options={{
+                  title: "ASK",
+                  tabBarIcon: ({ color, size }) => (
+                    <Ionicons name="chatbubbles-outline" color={color} size={size} />
+                  ),
+                }}
+              />
+              <Tabs.Screen
+                name="flashcards"
+                options={{
+                  title: "FLASHCARDS",
+                  tabBarIcon: ({ color, size }) => (
+                    <Ionicons name="albums-outline" color={color} size={size} />
+                  ),
+                }}
+              />
+              <Tabs.Screen
+                name="quiz"
+                options={{
+                  title: "QUIZ",
+                  tabBarIcon: ({ color, size }) => (
+                    <Ionicons name="help-circle-outline" color={color} size={size} />
+                  ),
+                }}
+              />
+              <Tabs.Screen
+                name="brainteasers"
+                options={{
+                  title: "BRAINTEASERS",
+                  tabBarIcon: ({ color, size }) => (
+                    <Ionicons name="bulb-outline" color={color} size={size} />
+                  ),
+                }}
+              />
+              <Tabs.Screen
+                name="shop"
+                options={{
+                  title: "SHOP",
+                  tabBarIcon: ({ color, size }) => (
+                    <Ionicons name="bag-handle-outline" color={color} size={size} />
+                  ),
+                }}
+              />
+              <Tabs.Screen
+                name="achievements"
+                options={{
+                  title: "ACHIEVEMENTS",
+                  tabBarIcon: ({ color, size }) => (
+                    <Ionicons name="trophy-outline" color={color} size={size} />
+                  ),
+                }}
+              />
+              <Tabs.Screen
+                name="history"
+                options={{
+                  title: "HISTORY",
+                  tabBarIcon: ({ color, size }) => (
+                    <Ionicons name="time-outline" color={color} size={size} />
+                  ),
+                }}
+              />
+              <Tabs.Screen
+                name="relax"
+                options={{
+                  title: "RELAX",
+                  tabBarIcon: ({ color, size }) => (
+                    <Ionicons name="sparkles-outline" color={color} size={size} />
+                  ),
+                }}
+              />
+              <Tabs.Screen
+                name="account"
+                options={{
+                  title: "ACCOUNT",
+                  tabBarIcon: ({ color, size }) => (
+                    <Ionicons name="person-circle-outline" color={color} size={size} />
+                  ),
+                }}
+              />
+              <Tabs.Screen
+                name="certificates"
+                options={{
+                  title: "CERTIFICATES",
+                  tabBarIcon: ({ color, size }) => (
+                    <Ionicons name="ribbon-outline" color={color} size={size} />
+                  ),
+                }}
+              />
+              <Tabs.Screen
+                name="collections"
+                options={{
+                  title: "COLLECTIONS",
+                  tabBarIcon: ({ color, size }) => (
+                    <Ionicons name="bookmarks-outline" color={color} size={size} />
+                  ),
+                }}
+              />
+              <Tabs.Screen
+                name="purchases"
+                options={{
+                  title: "PURCHASES",
+                  tabBarIcon: ({ color, size }) => (
+                    <Ionicons name="bag" color={color} size={size} />
+                  ),
+                }}
+              />
             </Tabs>
 
             {/* overlays at top of stack */}
             <FxOverlay />
             <StarTrailOverlay />
 
-            {celebrate && <CelebrateToast message={celebrate} onClose={() => setCelebrate(null)} />}
-          </View>
+            {celebrate && (
+              <CelebrateToast message={celebrate} onClose={() => setCelebrate(null)} />
+            )}
+          </LinearGradient>
+
+          {/* cursor overlay above everything */}
           <CursorOverlay />
         </CollectionsProvider>
       </CursorProvider>
-    </ThemeProvider>
+    </>
   );
 }
 
 export const S = StyleSheet.create({
-  overlay: { position: "absolute", top: 16, left: 0, right: 0, zIndex: 9999, alignItems: "center" },
+  overlay: {
+    position: "absolute",
+    top: 16,
+    left: 0,
+    right: 0,
+    zIndex: 9999,
+    alignItems: "center",
+  },
   toast: {
     minWidth: 240,
     maxWidth: 340,
@@ -132,7 +257,12 @@ export const S = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     backgroundColor: "rgba(0,12,20,0.88)",
   },
-  toastText: { color: "white", fontWeight: "600", fontSize: 16, textAlign: "center" },
+  toastText: {
+    color: "white",
+    fontWeight: "600",
+    fontSize: 16,
+    textAlign: "center",
+  },
   closeBtn: { position: "absolute", right: 10, top: 6, padding: 4 },
   closeText: { color: "white", fontSize: 22, lineHeight: 22 },
 });

@@ -1,13 +1,12 @@
 // app/(checkout)/coin.tsx
 import React, { useMemo, useState } from "react";
-import { sendOrderEmail } from "../utils/sendOrderEmail";
 import { SafeAreaView, ScrollView, View, Text, Pressable } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { safeAppendPurchase } from "../utils/appendPurchase";
 import NeonSuccessModal from "../components/NeonSuccessModal";
 import { catalog } from "../_lib/catalog";
 import { getSizesFor } from "../constants/sizes";
+
 const ORDERS_KEY = "@nova/orders";
 
 type Order = {
@@ -24,10 +23,12 @@ export default function CoinCheckout() {
   const params = useLocalSearchParams<{ id?: string; sku?: string; title?: string; size?: string }>();
 
   const sku = (params.sku || params.id || "").toString();
-  const item = useMemo(() => catalog.find(c => c.id === sku), [sku]);
+  const item = useMemo(() => catalog.find((c) => c.id === sku), [sku]);
+
   const initialSize =
     (params.size || "").toString() ||
     (item ? (getSizesFor(item.stripeProductId || item.productId || item.id)[0] || "") : "");
+
   const [size, setSize] = useState<string>(initialSize);
   const [placing, setPlacing] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -36,11 +37,11 @@ export default function CoinCheckout() {
     if (!sku || !item) return;
     setPlacing(true);
     try {
-      await safeAppendPurchase(sku);
-
+      // Record order locally (coins were checked before we navigated here)
       const raw = (await AsyncStorage.getItem(ORDERS_KEY)) || "[]";
       let list: Order[] = [];
       try { list = JSON.parse(raw) as Order[]; } catch {}
+
       const order: Order = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         sku,
@@ -49,9 +50,11 @@ export default function CoinCheckout() {
         createdAt: Date.now(),
         size: size || null,
       };
+
       const next = [order, ...list];
       await AsyncStorage.setItem(ORDERS_KEY, JSON.stringify(next));
 
+      // Success UI → back to Shop
       setShowSuccess(true);
       setTimeout(() => {
         setShowSuccess(false);
@@ -86,7 +89,7 @@ export default function CoinCheckout() {
           <View style={{ marginBottom: 16 }}>
             <Text style={{ color: "#9ca3af", marginBottom: 8 }}>Select size</Text>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-              {sizeOptions.map(s => (
+              {sizeOptions.map((s) => (
                 <Pressable
                   key={s}
                   onPress={() => setSize(s)}

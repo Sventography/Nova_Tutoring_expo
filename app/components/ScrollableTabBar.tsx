@@ -1,53 +1,96 @@
 import React from "react";
-import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
+import { ScrollView, View, Pressable, Text } from "react-native";
+import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import * as Haptics from "expo-haptics";
 
-type Props = { state:any; descriptors:any; navigation:any };
-
-const ALLOWED = new Set([
-  "ask",
-  "flashcards",
-  "quiz",
-  "brainteasers",
-  "shop",
-  "achievements",
-  "history",
-  "relax",
-  "account",
-  "certificates",
-  "collections",
-  "purchases"
-]);
-
-export default function ScrollableTabBar({ state, descriptors, navigation }:Props){
-  const items = state.routes.filter(
-    (r:any) => ALLOWED.has(r.name) && descriptors[r.key]?.options?.href !== null
-  );
-
+export default function ScrollableTabBar({
+  state,
+  descriptors,
+  navigation,
+}: BottomTabBarProps) {
   return (
-    <View style={S.wrap}>
-      <ScrollView horizontal bounces showsHorizontalScrollIndicator={false} contentContainerStyle={S.row}>
-        {items.map((route:any, idx:number)=>{
-          const isFocused = state.index === state.routes.indexOf(route);
-          const { options } = descriptors[route.key] || {};
-          const raw = options?.tabBarLabel ?? options?.title ?? route.name ?? "";
-          const label = typeof raw === "string" ? raw.toUpperCase() : String(raw);
-          const onPress = async ()=>{
-            const ev = navigation.emit({ type:"tabPress", target:route.key, canPreventDefault:true });
-            if(!isFocused && !ev.defaultPrevented){
-              try{ await Haptics.selectionAsync(); }catch{}
-              navigation.navigate(route.name);
+    <View
+      style={{
+        borderTopWidth: 1,
+        borderTopColor: "rgba(0,229,255,0.12)",
+        backgroundColor: "#06111a",
+      }}
+    >
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 8 }}
+      >
+        {state.routes.map((route, index) => {
+          const { options } = descriptors[route.key];
+
+          const label =
+            (options.tabBarLabel as string) ??
+            (options.title as string) ??
+            route.name;
+
+          const Icon = options.tabBarIcon as
+            | ((props: {
+                focused: boolean;
+                color: string;
+                size: number;
+              }) => React.ReactNode)
+            | undefined;
+
+          const isFocused = state.index === index;
+
+          const onPress = () => {
+            const event = navigation.emit({
+              type: "tabPress",
+              target: route.key,
+              canPreventDefault: true,
+            });
+
+            // Fire-and-forget haptics – **no await** here ✅
+            try {
+              if ((Haptics as any)?.selectionAsync) {
+                (Haptics as any)
+                  .selectionAsync()
+                  .catch(() => {});
+              }
+            } catch {
+              // ignore if haptics not available
+            }
+
+            if (!isFocused && !event.defaultPrevented) {
+              navigation.navigate(route.name as never);
             }
           };
-          const icon = typeof options?.tabBarIcon === "function"
-            ? options.tabBarIcon({ focused:isFocused, color: isFocused ? "#00e5ff" : "rgba(0,229,255,0.7)", size:22 })
-            : null;
+
+          const color = isFocused ? "#00e5ff" : "#82cfe0";
 
           return (
-            <Pressable key={route.key} onPress={onPress} style={[S.item, isFocused && S.itemActive]} hitSlop={10}>
-              <View style={S.iconBox}>{icon}</View>
-              <Text style={[S.label,{color:isFocused?"#00e5ff":"rgba(0,229,255,0.7)"}]} numberOfLines={1}>{label}</Text>
-              {isFocused && <View style={S.underline} />}
+            <Pressable
+              key={route.key}
+              onPress={onPress}
+              style={{
+                alignItems: "center",
+                justifyContent: "center",
+                paddingVertical: 8,
+                paddingHorizontal: 10,
+                minWidth: 88,
+              }}
+            >
+              <View style={{ marginBottom: 2 }}>
+                {Icon ? (
+                  <Icon color={color} size={22} focused={isFocused} />
+                ) : null}
+              </View>
+              <Text
+                style={{
+                  color: isFocused ? "#e6f7fb" : "#8fb9c7",
+                  fontSize: 12,
+                  fontWeight: isFocused ? "800" : "600",
+                  textTransform: "uppercase", // ALL CAPS labels
+                }}
+              >
+                {label}
+              </Text>
             </Pressable>
           );
         })}
@@ -55,13 +98,3 @@ export default function ScrollableTabBar({ state, descriptors, navigation }:Prop
     </View>
   );
 }
-
-export const S = StyleSheet.create({
-  wrap:{ backgroundColor:"#000", paddingVertical:6 },
-  row:{ paddingHorizontal:8, alignItems:"center" },
-  item:{ minWidth:84, alignItems:"center", justifyContent:"center", paddingHorizontal:10, paddingVertical:6, marginHorizontal:2, borderRadius:10 },
-  itemActive:{ shadowColor:"#00e5ff", shadowOpacity:0.45, shadowRadius:10, shadowOffset:{width:0,height:6}, borderWidth:1, borderColor:"rgba(0,229,255,0.5)" },
-  iconBox:{ height:24, justifyContent:"center" },
-  label:{ fontSize:11, fontWeight:"700", marginTop:4, letterSpacing:0.5 },
-  underline:{ marginTop:6, height:2, width:36, borderRadius:2, backgroundColor:"#00e5ff" },
-});

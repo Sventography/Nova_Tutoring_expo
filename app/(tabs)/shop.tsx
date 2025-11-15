@@ -1,6 +1,6 @@
 // app/(tabs)/shop.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useCoins } from "../context/CoinsContext"; // adjust if needed
+import { useCoins } from "../context/CoinsContext";
 import {
   View,
   Text,
@@ -35,8 +35,7 @@ import { getSizesFor } from "../constants/sizes";
 import useSelectedSizes from "../utils/useSelectedSizes";
 
 import * as QuickRowNS from "../components/QuickRow";
-const QuickRow =
-  (QuickRowNS as any).default ?? (QuickRowNS as any).QuickRow;
+const QuickRow = (QuickRowNS as any).default ?? (QuickRowNS as any).QuickRow;
 
 import * as SizeSelectorNS from "../components/SizeSelector";
 const SizeSelector =
@@ -75,29 +74,43 @@ const CURSOR_KEY = "@nova/cursor";
 const THEME_KEY = "@nova/themeId";
 const ORDERS_KEY = "@nova/orders";
 
-const REQUIRES_SHIPPING = new Set<Category>([
-  "plushies",
-  "clothing",
-  "tangibles",
-]); // route coins → /checkout/coin
+const REQUIRES_SHIPPING = new Set<Category>(["plushies", "clothing", "tangibles"]);
 
-/* ------------------------------- Utilities -------------------------------- */
-
+/* ------------------------------- Canonical IDs ---------------------------- */
+// Final canonical keys we store & check: "theme:black-and-gold", "cursor:star-trail", etc.
 function canonId(id: string | null | undefined): string {
   if (!id) return "";
-  let v = String(id).trim();
-  if (!v.includes(":")) {
-    if (v.startsWith("cursor_") || v.startsWith("cursor"))
-      v = "cursor:" + v.replace(/^cursor[_:]?/, "");
-    else if (v.startsWith("theme_") || v.startsWith("theme"))
-      v = "theme:" + v.replace(/^theme[_:]?/, "");
+  let s = String(id).trim().toLowerCase();
+
+  // add namespace if missing and a common prefix exists
+  if (!s.includes(":")) {
+    if (/^cursor[_:-]?/i.test(s)) s = "cursor:" + s.replace(/^cursor[_:-]?/i, "");
+    else if (/^theme[_:-]?/i.test(s)) s = "theme:" + s.replace(/^theme[_:-]?/i, "");
   }
-  v = v.replace(/-/g, "_");
-  if (v === "cursor:startrail" || v === "cursor_startrail")
-    v = "cursor:star_trail";
-  if (v === "theme:black-gold") v = "theme:blackgold";
-  if (v === "theme:neon-purple") v = "theme:neonpurple";
-  return v;
+
+  // split namespace
+  const m = s.match(/^(cursor|theme):(.+)$/);
+  let ns: "cursor" | "theme" | "" = "";
+  let body = s;
+  if (m) {
+    ns = m[1] as any;
+    body = m[2];
+  }
+
+  // normalize body: spaces/underscores to dashes; & → -and-
+  body = body.replace(/\s*&\s*/g, "-and-");
+  body = body.replace(/[\s_]+/g, "-").replace(/-+/g, "-");
+  body = body.replace(/[^a-z0-9-]/g, "").replace(/^-|-$/g, "");
+
+  // alias fixes
+  const alias: Record<string, string> = {
+    "black-gold": "black-and-gold",
+    "startrail": "star-trail",
+    "neonpurple": "neon-purple",
+  };
+  body = alias[body] || body;
+
+  return ns ? `${ns}:${body}` : body;
 }
 
 const track = (event: string, props?: Record<string, any>) => {
@@ -116,7 +129,11 @@ async function saveCoins(n: number) {
 }
 async function loadPurchases(): Promise<PurchaseMap> {
   const v = await AsyncStorage.getItem(PURCHASES_KEY);
-  return v ? JSON.parse(v) : {};
+  try {
+    return v ? JSON.parse(v) : {};
+  } catch {
+    return {};
+  }
 }
 async function savePurchases(m: PurchaseMap) {
   await AsyncStorage.setItem(PURCHASES_KEY, JSON.stringify(m));
@@ -125,17 +142,21 @@ async function loadCursor(): Promise<string | null> {
   return (await AsyncStorage.getItem(CURSOR_KEY)) || null;
 }
 async function saveCursor(key: string | null) {
-  key
-    ? await AsyncStorage.setItem(CURSOR_KEY, key)
-    : await AsyncStorage.removeItem(CURSOR_KEY);
+  if (key) {
+    await AsyncStorage.setItem(CURSOR_KEY, key);
+  } else {
+    await AsyncStorage.removeItem(CURSOR_KEY);
+  }
 }
 async function loadTheme(): Promise<string | null> {
   return (await AsyncStorage.getItem(THEME_KEY)) || null;
 }
 async function saveTheme(id: string | null) {
-  id
-    ? await AsyncStorage.setItem(THEME_KEY, id)
-    : await AsyncStorage.removeItem(THEME_KEY);
+  if (id) {
+    await AsyncStorage.setItem(THEME_KEY, id);
+  } else {
+    await AsyncStorage.removeItem(THEME_KEY);
+  }
 }
 async function loadOrders(): Promise<Order[]> {
   const raw = (await AsyncStorage.getItem(ORDERS_KEY)) || "[]";
@@ -149,14 +170,13 @@ async function saveOrders(list: Order[]) {
   await AsyncStorage.setItem(ORDERS_KEY, JSON.stringify(list));
 }
 
+// Canonicalize whatever is already in storage
 function normalizePurchases(obj: Record<string, any>): PurchaseMap {
   const out: Record<string, true> = {};
-  const remap = (k: string) => {
-    if (k.startsWith("cursor_")) return "cursor:" + k.slice(7);
-    if (k.startsWith("theme_")) return "theme:" + k.slice(6);
-    return k;
-  };
-  for (const [k, v] of Object.entries(obj || {})) if (v) out[remap(k)] = true;
+  for (const [k, v] of Object.entries(obj || {})) {
+    if (!v) continue;
+    out[canonId(k)] = true;
+  }
   return out;
 }
 
@@ -171,8 +191,7 @@ async function startCheckoutRequest(opts: {
   meta?: any;
 }) {
   const origin =
-    (typeof window !== "undefined" &&
-      (window as any).location?.origin) ||
+    (typeof window !== "undefined" && (window as any).location?.origin) ||
     "http://localhost:8081";
 
   const payload: any = {
@@ -188,7 +207,6 @@ async function startCheckoutRequest(opts: {
   }
   if (opts?.priceId) payload.priceId = opts.priceId;
 
-  console.log("[shop] delegating to utils/checkout with", payload);
   return startCheckout(payload);
 }
 
@@ -329,7 +347,12 @@ function OrderSuccessModal({
             colors={["#00111E", "#001D33"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={{ padding: 18, borderRadius: 18, borderWidth: 1, borderColor: "#00E5FF66" }}
+            style={{
+              padding: 18,
+              borderRadius: 18,
+              borderWidth: 1,
+              borderColor: "#00E5FF66",
+            }}
           >
             <View
               style={{
@@ -360,7 +383,9 @@ function OrderSuccessModal({
                   marginBottom: 16,
                 }}
               >
-                {title ? `“${title}” is confirmed. A confirmation was sent to your email.` : "Your order is confirmed. A confirmation was sent to your email."}
+                {title
+                  ? `“${title}” is confirmed. A confirmation was sent to your email.`
+                  : "Your order is confirmed. A confirmation was sent to your email."}
               </Text>
               <Pressable
                 onPress={onClose}
@@ -373,7 +398,9 @@ function OrderSuccessModal({
                   borderRadius: 999,
                   borderWidth: 1,
                   borderColor: "#00E5FF",
-                  backgroundColor: pressed ? "rgba(0,229,255,0.25)" : "rgba(0,229,255,0.15)",
+                  backgroundColor: pressed
+                    ? "rgba(0,229,255,0.25)"
+                    : "rgba(0,229,255,0.15)",
                 })}
               >
                 <Text style={{ color: "#CFFFFF", fontWeight: "900" }}>Continue</Text>
@@ -388,7 +415,7 @@ function OrderSuccessModal({
 
 /* --------------------------------- Screen -------------------------------- */
 export default function Shop() {
-  const { coins, setCoins, add, spend } = useCoins(); // ⬅️ use setCoins
+  const { coins, setCoins } = useCoins();
   const { tokens, setThemeById } = useTheme();
   const router = useRouter();
 
@@ -422,7 +449,7 @@ export default function Shop() {
   const themePulse = useRef(new Animated.Value(0)).current;
   const cursorPulse = useRef(new Animated.Value(0)).current;
 
-  /* ---------- DEV: Hidden 5-tap top-up on the "Shop" title ---------- */
+  /* ---------- DEV: Hidden 5-tap top-up ---------- */
   const tapCounter = useRef(0);
   const tapWindowMs = 1500;
   const lastTapAt = useRef(0);
@@ -433,15 +460,13 @@ export default function Shop() {
     lastTapAt.current = now;
     if (tapCounter.current >= 5) {
       tapCounter.current = 0;
-      const bonus = 250_000; // quarter-million coins
+      const bonus = 250_000;
       const next = (coins ?? 0) + bonus;
       setCoins(next);
       saveCoins(next);
       track("dev_secret_top_up", { bonus, next });
-      console.log(`[dev] Added ${bonus} coins, new total ${next.toLocaleString()}`);
     }
   }
-  /* ------------------------------------------------------------------- */
 
   const runPulse = (which: "themes" | "cursors") => {
     const anim = which === "themes" ? themePulse : cursorPulse;
@@ -464,8 +489,7 @@ export default function Shop() {
     const mountTs = Date.now();
     track("shop_view", { ts: mountTs });
     return () => {
-      const durMs = Date.now() - mountTs;
-      track("shop_unview", { duration_ms: durMs });
+      track("shop_unview", { duration_ms: Date.now() - mountTs });
     };
   }, []);
 
@@ -481,19 +505,17 @@ export default function Shop() {
       ]);
 
       const p = normalizePurchases(pRaw);
-      if (JSON.stringify(p) !== JSON.stringify(pRaw)) {
-        await savePurchases(p);
-      }
+      if (JSON.stringify(p) !== JSON.stringify(pRaw)) await savePurchases(p);
 
       setCoins(c);
       setPurchases(p);
-      setEquippedCursor(cur);
-      setEquippedTheme(th);
+      setEquippedCursor(cur ? canonId(cur) : null);
+      setEquippedTheme(th ? canonId(th) : null);
       setOrders(ord);
 
-      const mappedCursor = toCursorCtxId(cur);
+      const mappedCursor = toCursorCtxId(cur ? canonId(cur) : null);
       if (typeof setCursorById === "function") setCursorById(mappedCursor);
-      const mappedTheme = toThemeCtxId(th);
+      const mappedTheme = toThemeCtxId(th ? canonId(th) : null);
       if (typeof setThemeById === "function") setThemeById(mappedTheme);
 
       track("shop_state_hydrated", {
@@ -523,26 +545,38 @@ export default function Shop() {
       const sku = (queryParams?.sku as string) || "";
       track("shop_return_deeplink", { url: event.url, path, sku });
       if (!sku) return;
+
       const it = catalog.find((x) => x.id === sku);
       if (!it) return;
 
-      if (it.category === "theme" || it.category === "cursor" || it.category === "bundle") {
+      if (
+        it.category === "theme" ||
+        it.category === "cursor" ||
+        it.category === "bundle"
+      ) {
+        const cid = canonId(it.id);
         setPurchases((prev) => {
-          const cid = canonId(it.id);
-          const next = { ...prev, [it.id]: true } as PurchaseMap;
-          if (cid && cid !== it.id) (next as any)[cid] = true;
+          const next = { ...prev, [cid]: true } as PurchaseMap;
           savePurchases(next);
-          track("shop_purchase_complete", { sku: it.id, category: it.category, mode: "stripe" });
+          track("shop_purchase_complete", {
+            sku: cid,
+            category: it.category,
+            mode: "stripe",
+          });
           return next;
         });
-        if (it.category === "theme") equipThemeImmediate(it.id, { source: "deeplink" });
-        if (it.category === "cursor") void equipCursorImmediate(it.id, { source: "deeplink" });
+        if (it.category === "theme") equipThemeImmediate(cid, { source: "deeplink" });
+        if (it.category === "cursor") equipCursorImmediate(cid, { source: "deeplink" });
       } else if (it.category === "coin_pack") {
         const addAmt = dollarsToCoins(it.priceUSD ?? 0);
         const nextCoins = (coins ?? 0) + addAmt;
         setCoins(nextCoins);
         await saveCoins(nextCoins);
-        track("shop_coins_added", { amount: addAmt, via: "stripe", sku: it.id });
+        track("shop_coins_added", {
+          amount: addAmt,
+          via: "stripe",
+          sku: it.id,
+        });
       } else {
         const order: Order = {
           id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -557,8 +591,6 @@ export default function Shop() {
           track("shop_order_created", { sku: it.id, title: it.title });
           return next;
         });
-
-        // ✨ Show order success modal
         setLastOrderTitle(it.title);
         setShowOrderSuccess(true);
       }
@@ -572,16 +604,19 @@ export default function Shop() {
   /* -------------------------- Equip helpers ------------------------------- */
   function toCursorCtxId(shopId: string | null) {
     if (!shopId) return null;
+    const id = canonId(shopId);
     const map: Record<string, string> = {
       "cursor:glow": "glowCursor",
       "cursor:orb": "orbCursor",
-      "cursor:star_trail": "starTrailCursor",
+      "cursor:star-trail": "starTrailCursor",
+      "cursor:star_trail": "starTrailCursor", // legacy
     };
-    return map[shopId] ?? (shopId.startsWith("cursor:") ? shopId.slice(7) : shopId);
+    return map[id] ?? (id.startsWith("cursor:") ? id.slice(7) : id);
   }
 
   function toThemeCtxId(id: string | null) {
     if (!id) return null;
+    const cid = canonId(id);
     const map: Record<string, string> = {
       "theme:neon": "neon",
       "theme:starry": "theme:starry",
@@ -589,32 +624,37 @@ export default function Shop() {
       "theme:dark": "dark",
       "theme:mint": "mint",
       "theme:glitter": "glitter",
-      "theme:blackgold": "theme:blackgold",
+      "theme:black-and-gold": "theme:blackgold", // canonical → existing theme key
+      "theme:blackgold": "theme:blackgold", // legacy
       "theme:crimson": "crimson",
       "theme:emerald": "emerald",
-      "theme:neonpurple": "theme:neonpurple",
+      "theme:neon-purple": "theme:neonpurple",
+      "theme:neonpurple": "theme:neonpurple", // legacy
       "theme:silver": "silver",
     };
-    return map[id] ?? (id.startsWith("theme:") ? id.slice(6) : id);
+    return map[cid] ?? (cid.startsWith("theme:") ? cid.slice(6) : cid);
   }
 
   function markOwned(id: string) {
     const cid = canonId(id);
     setPurchases((prev) => {
-      const next = { ...prev, [id]: true } as PurchaseMap;
-      if (cid && cid !== id) (next as any)[cid] = true;
+      const next = { ...prev, [cid]: true } as PurchaseMap;
       savePurchases(next);
-      track("shop_owned_marked", { id, owned_count: Object.keys(next).length });
+      track("shop_owned_marked", {
+        id: cid,
+        owned_count: Object.keys(next).length,
+      });
       return next;
     });
   }
 
   function equipThemeImmediate(shopThemeId: string, meta?: Record<string, any>) {
-    setEquippedTheme(shopThemeId);
-    saveTheme(shopThemeId);
-    const mapped = toThemeCtxId(shopThemeId);
+    const cid = canonId(shopThemeId);
+    setEquippedTheme(cid);
+    saveTheme(cid);
+    const mapped = toThemeCtxId(cid);
     if (typeof setThemeById === "function") setThemeById(mapped);
-    track("shop_equip", { kind: "theme", id: shopThemeId, mapped, ...meta });
+    track("shop_equip", { kind: "theme", id: cid, mapped, ...meta });
   }
 
   function unequipThemeImmediate(meta?: Record<string, any>) {
@@ -625,18 +665,22 @@ export default function Shop() {
     track("shop_unequip", { kind: "theme", id: prev });
   }
 
-  async function equipCursorImmediate(shopId: string, meta?: Record<string, any>) {
-    setEquippedCursor(shopId);
-    await saveCursor(shopId);
-    const mapped = toCursorCtxId(shopId);
+  // Make cursor equip/unequip fully sync from the React side;
+  // we don't need to await the storage writes.
+  function equipCursorImmediate(shopId: string, meta?: Record<string, any>) {
+    const cid = canonId(shopId);
+    setEquippedCursor(cid);
+    // fire-and-forget storage
+    saveCursor(cid).catch(() => {});
+    const mapped = toCursorCtxId(cid);
     if (mapped && typeof setCursorById === "function") setCursorById(mapped);
-    track("shop_equip", { kind: "cursor", id: shopId, mapped, ...meta });
+    track("shop_equip", { kind: "cursor", id: cid, mapped, ...meta });
   }
 
-  async function unequipCursorImmediate(meta?: Record<string, any>) {
+  function unequipCursorImmediate(meta?: Record<string, any>) {
     const prev = equippedCursor;
     setEquippedCursor(null);
-    await saveCursor(null);
+    saveCursor(null).catch(() => {});
     if (typeof setCursorById === "function") setCursorById(null);
     track("shop_unequip", { kind: "cursor", id: prev });
   }
@@ -646,17 +690,83 @@ export default function Shop() {
     const p = purchases;
     const eq = equippedTheme;
     return [
-      { id: "theme:neon", name: "Neon Nova", kind: "theme", owned: !!p["theme:neon"], equipped: eq === "theme:neon" },
-      { id: "theme:starry", name: "Starry Night", kind: "theme", owned: !!p["theme:starry"], equipped: eq === "theme:starry" },
-      { id: "theme:pink", name: "Pink Dawn", kind: "theme", owned: !!p["theme:pink"], equipped: eq === "theme:pink" },
-      { id: "theme:dark", name: "Dark Nova", kind: "theme", owned: !!p["theme:dark"], equipped: eq === "theme:dark" },
-      { id: "theme:mint", name: "Mint Breeze", kind: "theme", owned: !!p["theme:mint"], equipped: eq === "theme:mint" },
-      { id: "theme:glitter", name: "Glitter", kind: "theme", owned: !!p["theme:glitter"], equipped: eq === "theme:glitter" },
-      { id: "theme:blackgold", name: "Black & Gold", kind: "theme", owned: !!p["theme:blackgold"], equipped: eq === "theme:blackgold" },
-      { id: "theme:crimson", name: "Crimson Dream", kind: "theme", owned: !!p["theme:crimson"], equipped: eq === "theme:crimson" },
-      { id: "theme:emerald", name: "Emerald Wave", kind: "theme", owned: !!p["theme:emerald"], equipped: eq === "theme:emerald" },
-      { id: "theme:neonpurple", name: "Neon Purple", kind: "theme", owned: !!p["theme:neonpurple"], equipped: eq === "theme:neonpurple" },
-      { id: "theme:silver", name: "Silver Frost", kind: "theme", owned: !!p["theme:silver"], equipped: eq === "theme:silver" },
+      {
+        id: "theme:neon",
+        name: "Neon Nova",
+        kind: "theme",
+        owned: !!p["theme:neon"],
+        equipped: eq === "theme:neon",
+      },
+      {
+        id: "theme:starry",
+        name: "Starry Night",
+        kind: "theme",
+        owned: !!p["theme:starry"],
+        equipped: eq === "theme:starry",
+      },
+      {
+        id: "theme:pink",
+        name: "Pink Dawn",
+        kind: "theme",
+        owned: !!p["theme:pink"],
+        equipped: eq === "theme:pink",
+      },
+      {
+        id: "theme:dark",
+        name: "Dark Nova",
+        kind: "theme",
+        owned: !!p["theme:dark"],
+        equipped: eq === "theme:dark",
+      },
+      {
+        id: "theme:mint",
+        name: "Mint Breeze",
+        kind: "theme",
+        owned: !!p["theme:mint"],
+        equipped: eq === "theme:mint",
+      },
+      {
+        id: "theme:glitter",
+        name: "Glitter",
+        kind: "theme",
+        owned: !!p["theme:glitter"],
+        equipped: eq === "theme:glitter",
+      },
+      {
+        id: "theme:black-and-gold",
+        name: "Black & Gold",
+        kind: "theme",
+        owned: !!p["theme:black-and-gold"],
+        equipped: eq === "theme:black-and-gold",
+      },
+      {
+        id: "theme:crimson",
+        name: "Crimson Dream",
+        kind: "theme",
+        owned: !!p["theme:crimson"],
+        equipped: eq === "theme:crimson",
+      },
+      {
+        id: "theme:emerald",
+        name: "Emerald Wave",
+        kind: "theme",
+        owned: !!p["theme:emerald"],
+        equipped: eq === "theme:emerald",
+      },
+      {
+        id: "theme:neon-purple",
+        name: "Neon Purple",
+        kind: "theme",
+        owned: !!p["theme:neon-purple"],
+        equipped: eq === "theme:neon-purple",
+      },
+      {
+        id: "theme:silver",
+        name: "Silver Frost",
+        kind: "theme",
+        owned: !!p["theme:silver"],
+        equipped: eq === "theme:silver",
+      },
     ];
   }, [purchases, equippedTheme]);
 
@@ -664,40 +774,61 @@ export default function Shop() {
     const p = purchases;
     const eq = equippedCursor;
     return [
-      { id: "cursor:glow", name: "Glow Cursor", kind: "cursor", owned: !!p["cursor:glow"], equipped: eq === "cursor:glow" },
-      { id: "cursor:orb", name: "Orb Glow", kind: "cursor", owned: !!p["cursor:orb"], equipped: eq === "cursor:orb" },
-      { id: "cursor:star_trail", name: "Star Trail", kind: "cursor", owned: !!p["cursor:star_trail"], equipped: eq === "cursor:star_trail" },
+      {
+        id: "cursor:glow",
+        name: "Glow Cursor",
+        kind: "cursor",
+        owned: !!p["cursor:glow"],
+        equipped: eq === "cursor:glow",
+      },
+      {
+        id: "cursor:orb",
+        name: "Orb Glow",
+        kind: "cursor",
+        owned: !!p["cursor:orb"],
+        equipped: eq === "cursor:orb",
+      },
+      {
+        id: "cursor:star-trail",
+        name: "Star Trail",
+        kind: "cursor",
+        owned: !!p["cursor:star-trail"],
+        equipped: eq === "cursor:star-trail",
+      },
     ];
   }, [purchases, equippedCursor]);
 
   function quickEquip(id: string, kind: "theme" | "cursor") {
-    const isCurrentlyEq = kind === "theme" ? equippedTheme === id : equippedCursor === id;
+    const cid = canonId(id);
+    const isCurrentlyEq =
+      kind === "theme" ? equippedTheme === cid : equippedCursor === cid;
     track("shop_quick_action", {
       action: isCurrentlyEq ? "unequip" : "equip",
-      id,
+      id: cid,
       kind,
       source: "quick_row",
     });
     if (kind === "theme") {
       isCurrentlyEq
         ? unequipThemeImmediate({ source: "quick_row" })
-        : equipThemeImmediate(id, { source: "quick_row" });
+        : equipThemeImmediate(cid, { source: "quick_row" });
     } else {
       isCurrentlyEq
-        ? void unequipCursorImmediate({ source: "quick_row" })
-        : void equipCursorImmediate(id, { source: "quick_row" });
+        ? unequipCursorImmediate({ source: "quick_row" })
+        : equipCursorImmediate(cid, { source: "quick_row" });
     }
   }
 
   function quickBuy(id: string) {
-    const kindGuess: "theme" | "cursor" | "other" = id.startsWith("theme:")
+    const cid = canonId(id);
+    const kindGuess: "theme" | "cursor" | "other" = cid.startsWith("theme:")
       ? "theme"
-      : id.startsWith("cursor:")
+      : cid.startsWith("cursor:")
       ? "cursor"
       : "other";
     track("shop_quick_action", {
       action: "unlock_click",
-      id,
+      id: cid,
       kind: kindGuess,
       source: "quick_row",
     });
@@ -709,10 +840,10 @@ export default function Shop() {
       scrollTo(cursorSectionY.current, { section: "cursors" });
       return;
     }
-    const it = catalog.find((x) => x.id === id);
+    const it = catalog.find((x) => canonId(x.id) === cid);
     if (it?.priceUSD) {
       const amount = Math.round((it.priceUSD ?? 1) * 100);
-      const success = Linking.createURL("/", { queryParams: { sku: id } });
+      const success = Linking.createURL("/", { queryParams: { sku: it.id } });
       void startCheckoutRequest({
         amount,
         currency: "usd",
@@ -723,7 +854,6 @@ export default function Shop() {
     }
     setNeed(1000);
     setShowInsufficient(true);
-    track("shop_modal_insufficient_shown", { needed: 1000, via: "quick_row" });
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
   }
 
@@ -751,7 +881,6 @@ export default function Shop() {
     const price = it.priceCoins ?? 0;
     if (!price) return;
 
-    // Route to shipping form for physical items (+ size)
     if (REQUIRES_SHIPPING.has(it.category)) {
       const sizeKey =
         it.stripeProductId ||
@@ -765,49 +894,50 @@ export default function Shop() {
         price,
         size: chosen || null,
       });
-
       startCoinCheckout({
         id: it.id,
         title: it.title,
         priceCoins: price,
         imageUrl: undefined,
         category: it.category,
-        size: chosen, // <— routes coins → shipping form
+        size: chosen,
       });
       return;
     }
 
-    // Instant unlock for digital goods
-    if (coins < price) {
-      setNeed(price - coins);
+    // Digital unlock
+    if ((coins ?? 0) < price) {
+      setNeed(price - (coins ?? 0));
       setShowInsufficient(true);
       track("shop_modal_insufficient_shown", {
-        needed: price - coins,
+        needed: price - (coins ?? 0),
         sku: it.id,
         via: "coins",
       });
       return;
     }
-    const nextCoins = coins - price;
+
+    const nextCoins = (coins ?? 0) - price;
     const cid = canonId(it.id);
-    const nextPurch = { ...purchases, [it.id]: true, [cid]: true } as PurchaseMap;
+    const nextPurch = { ...purchases, [cid]: true } as PurchaseMap;
+
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setCoins(nextCoins);
     saveCoins(nextCoins);
     setPurchases(nextPurch);
     savePurchases(nextPurch);
-    markOwned(it.id);
+    markOwned(cid);
     track("shop_purchase_complete", {
-      sku: it.id,
+      sku: cid,
       category: it.category,
       mode: "coins",
       price,
     });
 
     if (it.category === "theme")
-      equipThemeImmediate(it.id, { source: "coins_purchase" });
+      equipThemeImmediate(cid, { source: "coins_purchase" });
     if (it.category === "cursor")
-      void equipCursorImmediate(it.id, { source: "coins_purchase" });
+      equipCursorImmediate(cid, { source: "coins_purchase" });
   }
 
   async function moneyBuy(it: any, meta?: { size?: string }) {
@@ -822,23 +952,31 @@ export default function Shop() {
       success_url: success,
       cancel_url: success,
     });
-    // optimistic unlock for digital; physicals will be marked via deeplink handler above
-    markOwned(it.id);
+    // Optimistic unlock for digital; physicals handled via deeplink/coin checkout
+    if (
+      it.category === "theme" ||
+      it.category === "cursor" ||
+      it.category === "bundle"
+    )
+      markOwned(it.id);
   }
 
   function equipTheme(it: any) {
-    if (!purchases[it.id]) return;
-    equipThemeImmediate(it.id, { source: "card_equip" });
+    const cid = canonId(it.id);
+    if (!purchases[cid]) return;
+    equipThemeImmediate(cid, { source: "card_equip" });
   }
 
-  async function equipCursor(it: any) {
-    if (!purchases[it.id]) return;
-    await equipCursorImmediate(it.id, { source: "card_equip" });
+  function equipCursor(it: any) {
+    const cid = canonId(it.id);
+    if (!purchases[cid]) return;
+    equipCursorImmediate(cid, { source: "card_equip" });
   }
 
   /* ----------------------------- Render helpers --------------------------- */
   const renderItem = (it: any, color: string, equipable?: "theme" | "cursor") => {
-    const owned = !!purchases[canonId(it.id)];
+    const cid = canonId(it.id);
+    const owned = !!purchases[cid];
     const showAlt = flipped[it.id] && it.altImageKey && altImages[it.altImageKey];
     const src = showAlt ? altImages[it.altImageKey!] : it.image;
 
@@ -848,15 +986,14 @@ export default function Shop() {
       (it.stripe && it.stripe.productId) ||
       it.id;
     let sizes = getSizesFor(sizeKey);
-    if (!sizes.length && it.category === "clothing")
-      sizes = ["S", "M", "L", "XL"];
-    const selected = sizes.length ? (sizeCtl.get(sizeKey) || sizes[0]) : null;
+    if (!sizes.length && it.category === "clothing") sizes = ["S", "M", "L", "XL"];
+    const selected = sizes.length ? sizeCtl.get(sizeKey) || sizes[0] : null;
 
     const equipped =
       equipable === "theme"
-        ? equippedTheme === it.id
+        ? equippedTheme === cid
         : equipable === "cursor"
-        ? equippedCursor === it.id
+        ? equippedCursor === cid
         : false;
 
     return (
@@ -867,7 +1004,10 @@ export default function Shop() {
               if (it.altImageKey) {
                 setFlipped((f) => {
                   const next = { ...f, [it.id]: !f[it.id] };
-                  track("shop_image_flip", { sku: it.id, flipped: !!next[it.id] });
+                  track("shop_image_flip", {
+                    sku: it.id,
+                    flipped: !!next[it.id],
+                  });
                   return next;
                 });
               }
@@ -919,7 +1059,13 @@ export default function Shop() {
 
         {sizes.length > 0 ? (
           <View style={{ marginTop: 10 }}>
-            <Text style={{ color: tokens.text as any, fontSize: 12, marginBottom: 6 }}>
+            <Text
+              style={{
+                color: tokens.text as any,
+                fontSize: 12,
+                marginBottom: 6,
+              }}
+            >
               Size
             </Text>
             <SizeSelector
@@ -1102,8 +1248,9 @@ export default function Shop() {
                   it.productId ||
                   (it.stripe && it.stripe.productId) ||
                   it.id;
-                const chosen = sizeCtl.get(sizeKey) || (getSizesFor(sizeKey)[0] ?? null);
-                buyWithCoins(it, { size: chosen }); // <— routes to /checkout/coin for physicals
+                const chosen =
+                  sizeCtl.get(sizeKey) || (getSizesFor(sizeKey)[0] ?? null);
+                buyWithCoins(it, { size: chosen });
               }}
               style={({ pressed }) => ({
                 flex: 1,
@@ -1127,7 +1274,8 @@ export default function Shop() {
                   it.productId ||
                   (it.stripe && it.stripe.productId) ||
                   it.id;
-                const chosen = sizeCtl.get(sizeKey) || (getSizesFor(sizeKey)[0] ?? null);
+                const chosen =
+                  sizeCtl.get(sizeKey) || (getSizesFor(sizeKey)[0] ?? null);
                 moneyBuy(it, { size: chosen });
               }}
               style={({ pressed }) => ({
@@ -1176,8 +1324,12 @@ export default function Shop() {
           }}
         >
           <Text
-            onPress={secretTopUp} // ⬅️ 5 taps within ~1.5s adds 250k coins (dev)
-            style={{ color: tokens.text as any, fontSize: 24, fontWeight: "800" }}
+            onPress={secretTopUp}
+            style={{
+              color: tokens.text as any,
+              fontSize: 24,
+              fontWeight: "800",
+            }}
           >
             Shop
           </Text>
@@ -1193,15 +1345,31 @@ export default function Shop() {
               backgroundColor: "rgba(0,229,255,0.1)",
             }}
           >
-            <Text style={{ color: tokens.text as any, fontSize: 14, fontWeight: "700" }}>
+            <Text
+              style={{
+                color: tokens.text as any,
+                fontSize: 14,
+                fontWeight: "700",
+              }}
+            >
               {(coins ?? 0).toLocaleString()} coins
             </Text>
           </View>
         </View>
 
         <View data-quick-rows style={{ marginBottom: 16 }}>
-          <QuickRow title="Themes" items={THEMES_MENU} onEquip={quickEquip} onBuy={quickBuy} />
-          <QuickRow title="Cursors" items={CURSORS_MENU} onEquip={quickEquip} onBuy={quickBuy} />
+          <QuickRow
+            title="Themes"
+            items={THEMES_MENU}
+            onEquip={quickEquip}
+            onBuy={quickBuy}
+          />
+          <QuickRow
+            title="Cursors"
+            items={CURSORS_MENU}
+            onEquip={quickEquip}
+            onBuy={quickBuy}
+          />
         </View>
 
         <Section title="Plushies">
@@ -1209,27 +1377,29 @@ export default function Shop() {
             renderItem(it, CATEGORY_BORDER.plushies)
           )}
         </Section>
-
         <Section title="Clothing">
           {groups.clothing.map((it) =>
             renderItem(it, CATEGORY_BORDER.clothing)
           )}
         </Section>
-
         <Section title="Tangibles">
           {groups.tangibles.map((it) =>
             renderItem(it, CATEGORY_BORDER.tangibles)
           )}
         </Section>
 
-        <View onLayout={(e) => (cursorSectionY.current = e.nativeEvent.layout.y)} />
+        <View
+          onLayout={(e) => (cursorSectionY.current = e.nativeEvent.layout.y)}
+        />
         <Section title="Cursors" pulseAnim={cursorPulse}>
           {groups.cursor.map((it) =>
             renderItem(it, CATEGORY_BORDER.cursor, "cursor")
           )}
         </Section>
 
-        <View onLayout={(e) => (themeSectionY.current = e.nativeEvent.layout.y)} />
+        <View
+          onLayout={(e) => (themeSectionY.current = e.nativeEvent.layout.y)}
+        />
         <Section title="Themes" pulseAnim={themePulse}>
           {groups.theme.map((it) =>
             renderItem(it, CATEGORY_BORDER.theme, "theme")
@@ -1241,7 +1411,6 @@ export default function Shop() {
             renderItem(it, CATEGORY_BORDER.bundle)
           )}
         </Section>
-
         <Section title="Coin Packs">
           {groups.coin_pack.map((it) =>
             renderItem(it, CATEGORY_BORDER.coin_pack)
@@ -1272,11 +1441,20 @@ export default function Shop() {
                   backgroundColor: "rgba(255,255,255,0.03)",
                 }}
               >
-                <Text style={{ color: tokens.text as any, fontWeight: "700" }}>
+                <Text
+                  style={{ color: tokens.text as any, fontWeight: "700" }}
+                >
                   {o.title}
                 </Text>
-                <Text style={{ color: tokens.text as any, fontSize: 12, marginTop: 16 }}>
-                  {new Date(o.createdAt).toLocaleString()} · {o.status.toUpperCase()}
+                <Text
+                  style={{
+                    color: tokens.text as any,
+                    fontSize: 12,
+                    marginTop: 16,
+                  }}
+                >
+                  {new Date(o.createdAt).toLocaleString()} ·{" "}
+                  {o.status.toUpperCase()}
                 </Text>
               </View>
             ))}
@@ -1294,21 +1472,24 @@ export default function Shop() {
         onBuyCoins={() => {
           setShowInsufficient(false);
           track("shop_modal_insufficient_buy_coins");
-          setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
+          setTimeout(
+            () => scrollRef.current?.scrollToEnd({ animated: true }),
+            50
+          );
         }}
       />
 
-      {/* ✅ Order Success modal */}
       <OrderSuccessModal
         visible={showOrderSuccess}
         title={lastOrderTitle}
         onClose={() => {
           setShowOrderSuccess(false);
-          // “Take them back to the shop page”: ensure they’re on this route and at the top
           try {
             router.replace("/(tabs)/shop");
           } catch {}
-          requestAnimationFrame(() => scrollRef.current?.scrollTo({ y: 0, animated: true }));
+          requestAnimationFrame(() =>
+            scrollRef.current?.scrollTo({ y: 0, animated: true })
+          );
         }}
       />
     </LinearGradient>

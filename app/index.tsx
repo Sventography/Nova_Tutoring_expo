@@ -26,10 +26,10 @@ export default function HomeScreen() {
     ).start();
   }, [pulseAnim]);
 
-  const handlePress = async () => {
-    // ✅ Guard haptics for web
-    if (Platform.OS !== "web") {
-      await Haptics.selectionAsync().catch(() => {});
+  const handlePress = () => {
+    // ✅ Guard haptics for web, no await
+    if (Platform.OS !== "web" && Haptics?.selectionAsync) {
+      Haptics.selectionAsync().catch(() => {});
     }
   };
 
@@ -37,12 +37,12 @@ export default function HomeScreen() {
     <View style={styles.container}>
       {/* Logo */}
       <Image
-        source={require("./assets/logo.png")}  // ✅ Correct relative path
+        source={require("./assets/logo.png")}
         style={styles.logo}
       />
 
       {/* Let’s Learn button */}
-      <Link href="/ask" asChild>
+      <Link href="/(tabs)/ask" asChild>
         <Pressable onPress={handlePress}>
           <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
             <LinearGradient
@@ -58,7 +58,7 @@ export default function HomeScreen() {
       </Link>
 
       {/* Login button */}
-      <Link href="/account" asChild>
+      <Link href="/(tabs)/account" asChild>
         <Pressable onPress={handlePress}>
           <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
             <LinearGradient
