@@ -1,30 +1,90 @@
+// app/_lib/quizHistory.ts
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-export type QuizEntry = {
+export type QuizHistoryEntry = {
+  id: string;
   topicId: string;
   title: string;
   total: number;
   correct: number;
   percent: number;
-  finishedAt: string;
+  finishedAt: string; // ISO string
 };
 
 const KEY = "@nova/quizHistory.v1";
 
-export async function getAll(): Promise<QuizEntry[]> {
+function normalizeEntry(raw: any): QuizHistoryEntry | null {
+  if (!raw) return null;
+  const topicId = String(raw.topicId || "");
+  const title = String(raw.title || topicId || "Quiz");
+  const total = Number(raw.total || 0);
+  const correct = Number(raw.correct || 0);
+  const percent =
+    typeof raw.percent === "number"
+      ? raw.percent
+      : total
+      ? Math.round((correct / total) * 100)
+      : 0;
+  const finishedAt =
+    typeof raw.finishedAt === "string" && raw.finishedAt
+      ? raw.finishedAt
+      : new Date().toISOString();
+
+  const id =
+    typeof raw.id === "string" && raw.id
+      ? raw.id
+      : `${topicId || "quiz"}-${finishedAt}`;
+
+  return {
+    id,
+    topicId,
+    title,
+    total,
+    correct,
+    percent,
+    finishedAt,
+  };
+}
+
+export async function getAll(): Promise<QuizHistoryEntry[]> {
   try {
     const raw = await AsyncStorage.getItem(KEY);
     const arr = raw ? JSON.parse(raw) : [];
-    return Array.isArray(arr) ? arr : [];
+    if (!Array.isArray(arr)) return [];
+
+    const normalized = arr
+      .map(normalizeEntry)
+      .filter(Boolean) as QuizHistoryEntry[];
+
+    // newest first by finishedAt
+    normalized.sort((a, b) =>
+      a.finishedAt < b.finishedAt ? 1 : a.finishedAt > b.finishedAt ? -1 : 0
+    );
+
+    return normalized;
   } catch {
     return [];
   }
 }
 
-export async function add(e: QuizEntry) {
+type AddParams = {
+  topicId: string;
+  title: string;
+  total: number;
+  correct: number;
+  percent: number;
+  finishedAt?: string;
+};
+
+export async function add(e: AddParams) {
+  const entry = normalizeEntry(e);
+  if (!entry) return;
+
   const list = await getAll();
-  list.unshift(e);
-  await AsyncStorage.setItem(KEY, JSON.stringify(list.slice(0, 200)));
+  list.unshift(entry);
+  const trimmed = list.slice(0, 200);
+
+  await AsyncStorage.setItem(KEY, JSON.stringify(trimmed));
 }
 
 export async function clear() {
