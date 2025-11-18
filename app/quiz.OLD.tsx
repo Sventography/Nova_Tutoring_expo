@@ -1,3 +1,4 @@
+// app/quiz.tsx
 import React, {
   useEffect,
   useMemo,
@@ -19,9 +20,11 @@ import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import { Ionicons } from "@expo/vector-icons";
 
-import { getTopics, type TopicIndex, getCardsById } from "../_lib/flashcards";
-import { buildQuiz, type MCQ } from "../_lib/quiz";
-import { logQuizResult } from "../utils/quiz-history-bridge"; // 🔹 history bridge
+console.log("[QUIZ LOADED] app/quiz.tsx");
+
+import { getTopics, type TopicIndex, getCardsById } from "./_lib/flashcards";
+import { buildQuiz, type MCQ } from "./_lib/quiz";
+import { add as addQuizHistory } from "./_lib/quizHistory"; // 🔹 history writer
 
 const QUIZ_LEN = 20;
 const QUIZ_SECONDS = 5 * 60;
@@ -30,11 +33,9 @@ const FEEDBACK_DELAY = 450;
 function useTimer(seconds: number, running: boolean, onDone: () => void) {
   const [remaining, setRemaining] = useState(seconds);
   const ref = useRef<NodeJS.Timer | null>(null);
-
   useEffect(() => {
     if (!running) return;
-    if (ref.current) clearInterval(ref.current);
-
+    ref.current && clearInterval(ref.current);
     ref.current = setInterval(() => {
       setRemaining((s) => {
         if (s <= 1) {
@@ -45,15 +46,12 @@ function useTimer(seconds: number, running: boolean, onDone: () => void) {
         return s - 1;
       });
     }, 1000);
-
     return () => {
-      if (ref.current) clearInterval(ref.current);
+      ref.current && clearInterval(ref.current);
     };
   }, [running, onDone]);
-
   const mm = Math.floor(remaining / 60).toString();
   const ss = (remaining % 60).toString().padStart(2, "0");
-
   return {
     remaining,
     label: `${mm}:${ss}`,
@@ -62,7 +60,7 @@ function useTimer(seconds: number, running: boolean, onDone: () => void) {
 }
 
 export default function QuizScreen() {
-  const topics = useMemo<TopicIndex[]>(() => getTopics(), []);
+  const topics = useMemo(() => getTopics(), []);
 
   const [sel, setSel] = useState<TopicIndex | null>(null);
   const [mc, setMc] = useState<MCQ[]>([]);
@@ -72,20 +70,17 @@ export default function QuizScreen() {
   const [finished, setFinished] = useState(false);
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const [locked, setLocked] = useState(false);
-
-  // 🔹 make sure we only log once per completed run
-  const loggedRef = useRef(false);
+  const [hasLogged, setHasLogged] = useState(false); // 🔹 prevent double logging
 
   const onTimeUp = useCallback(() => setFinished(true), []);
   const timer = useTimer(QUIZ_SECONDS, started && !finished, onTimeUp);
 
-  // Progress bar (fills as you answer)
+  // Progress bar
   const prog = useRef(new Animated.Value(0)).current;
   const totalQ = mc.length || QUIZ_LEN;
   const answered = finished
     ? totalQ
     : Math.min(idx + (selectedIdx !== null ? 1 : 0), totalQ);
-
   useEffect(() => {
     Animated.timing(prog, {
       toValue: totalQ ? answered / totalQ : 0,
@@ -93,23 +88,18 @@ export default function QuizScreen() {
       easing: Easing.out(Easing.cubic),
       useNativeDriver: false,
     }).start();
-  }, [answered, totalQ, prog]);
-
+  }, [answered, totalQ]);
   const progWidth = prog.interpolate({
     inputRange: [0, 1],
     outputRange: ["0%", "100%"],
   });
 
-  // ────────────────────────────────────────────
-  // START QUIZ FOR A TOPIC
-  // ────────────────────────────────────────────
+  // Start quiz when a topic is tapped
   const startForTopic = (t: TopicIndex) => {
     setSel(t);
     const raw = getCardsById(t.id);
-    if (!raw || !raw.length) {
-      Alert.alert("No cards", "This topic has no cards yet.");
-      return;
-    }
+    if (!raw || !raw.length)
+      return Alert.alert("No cards", "This topic has no cards yet.");
 
     const built = buildQuiz(
       raw.map((c) => ({ q: c.q, a: c.a, choices: c.choices })),
@@ -123,34 +113,30 @@ export default function QuizScreen() {
     setLocked(false);
     setFinished(false);
     setStarted(true);
-    loggedRef.current = false; // 🔹 new run, allow logging again
+    setHasLogged(false); // 🔹 reset log flag
     timer.reset();
   };
 
-  // Auto-advance after selection (green/red flash first)
+  // Auto-advance after selection (flash first)
   useEffect(() => {
     if (selectedIdx === null || finished) return;
-    const timeout = setTimeout(() => {
-      if (idx >= mc.length - 1) {
-        setFinished(true);
-      } else {
+    const t = setTimeout(() => {
+      if (idx >= mc.length - 1) setFinished(true);
+      else {
         setIdx((i) => i + 1);
         setSelectedIdx(null);
         setLocked(false);
       }
     }, FEEDBACK_DELAY);
-
-    return () => clearTimeout(timeout);
-  }, [selectedIdx, finished, idx, mc.length]);
+    return () => clearTimeout(t);
+  }, [selectedIdx, idx, mc.length, finished]);
 
   const onPick = (choiceIndex: number) => {
     if (finished || locked) return;
     const current = mc[idx];
     if (!current) return;
-
     setLocked(true);
     setSelectedIdx(choiceIndex);
-
     if (choiceIndex === current.correctIndex) {
       setCorrect((c) => c + 1);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -160,34 +146,26 @@ export default function QuizScreen() {
   };
 
   const restart = () => {
-    // fully reset to "pick a topic" state
     setStarted(false);
     setFinished(false);
     setCorrect(0);
     setIdx(0);
     setSelectedIdx(null);
     setLocked(false);
-    loggedRef.current = false;
+    setHasLogged(false); // 🔹 reset when starting fresh
     timer.reset(QUIZ_SECONDS);
   };
 
   const current = mc[idx];
 
-  // ────────────────────────────────────────────
-  // LOG RESULT TO HISTORY ONCE WHEN FINISHED
-  // ────────────────────────────────────────────
+  // 🔹 LOG QUIZ TO HISTORY WHEN FINISHED
   useEffect(() => {
-    if (!finished) return;
-    if (!sel) return;
-    if (!mc.length) return;
-    if (loggedRef.current) return;
+    if (!finished || !sel || hasLogged) return;
 
     const total = mc.length || QUIZ_LEN;
     const percent = total ? Math.round((correct / total) * 100) : 0;
 
-    loggedRef.current = true;
-
-    const payload = {
+    const entry = {
       topicId: sel.id,
       title: sel.title || "Quiz",
       total,
@@ -195,24 +173,24 @@ export default function QuizScreen() {
       percent,
     };
 
-    console.log("[quiz-topics] logging quiz result → history", payload);
+    console.log("[quiz-root] logging quiz result", entry);
 
-    void logQuizResult(payload);
-  }, [finished, sel, mc.length, correct]);
+    (async () => {
+      try {
+        await addQuizHistory(entry);
+        console.log("[quiz-root] log -> done");
+        setHasLogged(true);
+      } catch (err) {
+        console.log("[quiz-root] log FAILED", err);
+      }
+    })();
+  }, [finished, sel, correct, mc.length, hasLogged]);
 
-  // ────────────────────────────────────────────
-  // RENDER
-  // ────────────────────────────────────────────
   return (
     <View style={S.container}>
       <LinearGradient colors={["#000", "#020814"]} style={S.bg} />
-
-      {/* Header: timer, score, progress */}
       <View style={S.header}>
         <Text style={S.title}>QUIZ</Text>
-        {/* tiny debug marker so we know THIS file is active */}
-        <Text style={S.debug}>QUIZ (topics v2)</Text>
-
         <View style={S.row}>
           <View style={S.timerPill}>
             <Ionicons name="time-outline" size={16} color="#BFEFFF" />
@@ -221,16 +199,14 @@ export default function QuizScreen() {
           <View style={S.scorePill}>
             <Ionicons name="trophy-outline" size={16} color="#FFE7A8" />
             <Text style={S.scoreTxt}>
-              {correct}/{totalQ || QUIZ_LEN}
+              {correct}/{totalQ}
             </Text>
           </View>
         </View>
-
         <View style={S.progWrap}>
           <Animated.View style={[S.progFill, { width: progWidth }]} />
         </View>
 
-        {/* Tap a topic to START */}
         <FlatList
           horizontal
           data={topics}
@@ -242,7 +218,10 @@ export default function QuizScreen() {
               onPress={() => startForTopic(item)}
               style={[
                 S.topicPill,
-                sel?.id === item.id && started && !finished && S.topicPillOn,
+                sel?.id === item.id &&
+                  started &&
+                  !finished &&
+                  S.topicPillOn,
               ]}
             >
               <Text
@@ -261,7 +240,6 @@ export default function QuizScreen() {
         />
       </View>
 
-      {/* Stage */}
       <View style={S.stage}>
         {!started && !finished && (
           <View style={S.center}>
@@ -277,14 +255,12 @@ export default function QuizScreen() {
               Question {idx + 1} / {totalQ}
             </Text>
             <Text style={S.qText}>{current.q}</Text>
-
             <View style={S.choices}>
               {current.options.map((opt, i) => {
                 const isSel = selectedIdx === i;
                 const isRight = i === current.correctIndex;
                 const showGreen = isSel && isRight;
                 const showRed = isSel && !isRight;
-
                 return (
                   <Pressable
                     key={i}
@@ -309,18 +285,6 @@ export default function QuizScreen() {
                 );
               })}
             </View>
-
-            {/* 🔹 FIRST "Finish" — ends wherever they are */}
-            <View style={S.finishRow}>
-              <Pressable
-                style={S.finishBtn}
-                onPress={() => {
-                  setFinished(true);
-                }}
-              >
-                <Text style={S.finishTxt}>Finish</Text>
-              </Pressable>
-            </View>
           </View>
         )}
 
@@ -333,17 +297,14 @@ export default function QuizScreen() {
               Score: <Text style={S.bold}>{correct}</Text> /{" "}
               <Text style={S.bold}>{totalQ}</Text>
             </Text>
-
             <View style={S.row}>
-              {/* 🔹 SECOND action — clearly labeled Start Over */}
               <Pressable
                 style={S.primaryBtn}
                 onPress={() => sel && startForTopic(sel)}
               >
                 <Ionicons name="refresh" size={18} color="#00121E" />
-                <Text style={S.primaryTxt}>Start Over</Text>
+                <Text style={S.primaryTxt}>Retry Topic</Text>
               </Pressable>
-
               <Pressable style={S.secondaryBtn} onPress={restart}>
                 <Text style={S.secondaryTxt}>Pick New Topic</Text>
               </Pressable>
@@ -358,17 +319,12 @@ export default function QuizScreen() {
 export const S = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#000" },
   bg: { ...StyleSheet.absoluteFillObject },
-  header: { paddingTop: 12, paddingHorizontal: 12, gap: 4 },
+  header: { paddingTop: 12, paddingHorizontal: 12, gap: 10 },
   title: {
     color: "#D9F6FF",
     fontSize: 22,
     fontWeight: "800",
     letterSpacing: 1.2,
-  },
-  debug: {
-    fontSize: 10,
-    color: "#6BAAD4",
-    opacity: 0.7,
   },
   row: { flexDirection: "row", alignItems: "center", gap: 10 },
   timerPill: {
@@ -437,20 +393,6 @@ export const S = StyleSheet.create({
   choiceBtnDim: { opacity: 0.5 },
   choiceTxt: { color: "#D6F2FF", fontWeight: "700" },
   choiceTxtOn: { color: "#FFF", fontWeight: "900" },
-  finishRow: {
-    marginTop: 16,
-    flexDirection: "row",
-    justifyContent: "flex-end",
-  },
-  finishBtn: {
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#2EB8E6",
-    backgroundColor: "#061B2A",
-  },
-  finishTxt: { color: "#9FE2FF", fontWeight: "800" },
   resultTitle: { color: "#EAFBFF", fontSize: 20, fontWeight: "800" },
   resultLine: { color: "#CFEAF7", fontSize: 16 },
   bold: { fontWeight: "900", color: "#fff" },

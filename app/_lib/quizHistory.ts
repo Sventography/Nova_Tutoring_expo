@@ -49,6 +49,7 @@ function normalizeEntry(raw: any): QuizHistoryEntry | null {
 export async function getAll(): Promise<QuizHistoryEntry[]> {
   try {
     const raw = await AsyncStorage.getItem(KEY);
+    console.log("[quizHistory] raw =", raw);
     const arr = raw ? JSON.parse(raw) : [];
     if (!Array.isArray(arr)) return [];
 
@@ -56,13 +57,15 @@ export async function getAll(): Promise<QuizHistoryEntry[]> {
       .map(normalizeEntry)
       .filter(Boolean) as QuizHistoryEntry[];
 
-    // newest first by finishedAt
+    // newest first
     normalized.sort((a, b) =>
       a.finishedAt < b.finishedAt ? 1 : a.finishedAt > b.finishedAt ? -1 : 0
     );
 
+    console.log("[quizHistory] getAll ->", normalized.length, "entries");
     return normalized;
-  } catch {
+  } catch (err) {
+    console.log("[quizHistory] getAll error", err);
     return [];
   }
 }
@@ -80,11 +83,14 @@ export async function add(e: AddParams) {
   const entry = normalizeEntry(e);
   if (!entry) return;
 
+  console.log("[quizHistory.add] adding entry", entry);
+
   const list = await getAll();
   list.unshift(entry);
   const trimmed = list.slice(0, 200);
 
   await AsyncStorage.setItem(KEY, JSON.stringify(trimmed));
+  console.log("[quizHistory.add] stored, new length =", trimmed.length);
 }
 
 export async function clear() {

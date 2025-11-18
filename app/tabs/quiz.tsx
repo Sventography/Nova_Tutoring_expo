@@ -1,3 +1,4 @@
+// app/(tabs)/quiz.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
@@ -13,12 +14,16 @@ import { useRouter } from "expo-router";
 
 import { buildQuiz } from "../_lib/quiz";
 import { getCardsById, toQA } from "../_lib/flashcards";
-import { logQuizResult } from "../utils/log-quiz-result";
+
 import { reportQuizFinished } from "../utils/report-quiz-finish";
 import { createCertificate } from "../utils/certificates";
 import { useUser } from "../context/UserContext";
 import { showToast } from "../utils/toast";
 import { useTheme } from "../context/ThemeContext";
+import { unlockQuizAchievements } from "../utils/achievements-bridge";
+
+// 🔹 unified history bridge
+import { logQuizResult } from "../utils/quiz-history-bridge";
 
 type QItem = { question: string; choices: string[]; answer: string };
 
@@ -67,43 +72,13 @@ export default function QuizScreen({
 
   const loggedRef = useRef(false);
   const certSavedRef = useRef(false);
+
   const autoRef = useRef<NodeJS.Timeout | null>(null);
   const totalTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const current = items[idx];
   const total = items.length;
-  const headerTitle = useMemo(
-    () => (title ? String(title) : "Quiz"),
-    [title]
-  );
-
-  // load quiz for topic
-  useEffect(() => {
-    const raw = getCardsById(String(topicId));
-    const hasQA = raw
-      .map(toQA)
-      .filter(Boolean) as { question: string; answer: string }[];
-
-    if (!hasQA.length) {
-      setNoData(true);
-      setLoading(false);
-      return;
-    }
-
-    const built = buildQuiz(raw as any, QUIZ_LEN);
-    setItems(built);
-    setIdx(0);
-    setCorrect(0);
-    setSelected(null);
-    setLocked(false);
-    setDone(false);
-    setTotalLeft(TOTAL_TIME);
-    setNoData(false);
-    setLoading(false);
-    setShowCert(false);
-    loggedRef.current = false;
-    certSavedRef.current = false;
-  }, [topicId]);
+  const headerTitle = useMemo(() => (title ? String(title) : "Quiz"), [title]);
 
   // total timer
   useEffect(() => {
@@ -126,47 +101,96 @@ export default function QuizScreen({
     };
   }, [loading, done, noData]);
 
-  // log results + certificate
+  // load quiz
   useEffect(() => {
-    if (!done) return;
+    const raw = getCardsById(String(topicId));
+    const hasQA = raw.map(toQA).filter(Boolean) as {
+      question: string;
+      answer: string;
+    }[];
+
+    if (!hasQA.length) {
+      setNoData(true);
+      setLoading(false);
+      return;
+    }
+
+    const built = buildQuiz(raw as any, QUIZ_LEN) as QItem[];
+
+    setItems(built);
+    setIdx(0);
+    setCorrect(0);
+    setSelected(null);
+    setLocked(false);
+    setDone(false);
+    setTotalLeft(TOTAL_TIME);
+    setNoData(false);
+    setLoading(false);
+    setShowCert(false);
+    loggedRef.current = false;
+    certSavedRef.current = false;
+  }, [topicId]);
+
+  // log result once
+  const logResultIfNeeded = async (reason: string) => {
+    if (loggedRef.current) return;
+    if (!total) return;
+
     const pct = total ? Math.round((correct / total) * 100) : 0;
 
-    (async () => {
-      if (!loggedRef.current) {
-        try {
-          await logQuizResult({
-            topicId: String(topicId),
-            title: headerTitle,
-            total,
-            correct,
-            percent: pct,
-          });
-        } catch {}
-        loggedRef.current = true;
-      }
+    // 1) history
+    try {
+      await logQuizResult({
+        topicId: String(topicId),
+        title: headerTitle,
+        total,
+        correct,
+        percent: pct,
+      });
+    } catch {}
 
+    // 2) achievements hook
+    try {
+      await reportQuizFinished(pct, String(topicId));
+    } catch {}
+
+    // 3) unlock achievements
+    try {
+      await unlockQuizAchievements({
+        correct,
+        total,
+        pct,
+        topicId: String(topicId),
+      });
+    } catch {}
+
+    // 4) certificate
+    if (pct >= 80 && !certSavedRef.current) {
+      certSavedRef.current = true;
       try {
-        await reportQuizFinished(pct, String(topicId));
+        await createCertificate({
+          name: user?.username || "Student",
+          quizTitle: headerTitle,
+          scorePct: pct,
+        });
+        showToast(`🎓 Certificate earned: ${headerTitle}`);
       } catch {}
+      setShowCert(true);
+    }
 
-      if (pct >= 80 && !certSavedRef.current) {
-        certSavedRef.current = true;
-        try {
-          await createCertificate({
-            name: user?.username || "Student",
-            quizTitle: headerTitle,
-            scorePct: pct,
-          });
-          showToast(`🎓 Certificate earned: ${headerTitle}`);
-        } catch {}
-        setShowCert(true);
-      }
-    })();
+    loggedRef.current = true;
+  };
+
+  // react to done
+  useEffect(() => {
+    if (!done) return;
+    void logResultIfNeeded("effect(done=true)");
   }, [done, total, correct, headerTitle, topicId, user?.username]);
 
   function goNext() {
     if (idx + 1 >= total) {
       setDone(true);
+      void logResultIfNeeded("goNext(last-question)");
       return;
     }
     setIdx((i) => i + 1);
@@ -178,15 +202,19 @@ export default function QuizScreen({
     if (locked || !current) return;
     setSelected(i);
     setLocked(true);
-    if (current.choices[i] === current.answer) {
+
+    const isCorrect = current.choices[i] === current.answer;
+    if (isCorrect) {
       setCorrect((c) => c + 1);
     }
+
     if (autoRef.current) clearTimeout(autoRef.current);
     autoRef.current = setTimeout(goNext, ADVANCE_DELAY);
   }
 
   function finishNow() {
     setDone(true);
+    void logResultIfNeeded("finishNow(button)");
   }
 
   const mm = Math.floor(totalLeft / 60);
@@ -195,7 +223,6 @@ export default function QuizScreen({
   const renderShell = (children: React.ReactNode) => (
     <LinearGradient colors={gradient} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={S.container}>
-        {/* tiny debug marker so we know this file is actually used */}
         <Text
           style={{
             color: metaColor,
@@ -204,7 +231,7 @@ export default function QuizScreen({
             marginBottom: 4,
           }}
         >
-          QUIZ (themed)
+          QUIZ (themed, history-bridged)
         </Text>
         {children}
       </ScrollView>
@@ -214,11 +241,7 @@ export default function QuizScreen({
   const ViewCertificateButtons: React.FC<{ pct: number }> = ({ pct }) => (
     <View style={S.row}>
       <Pressable
-        style={[
-          S.btn,
-          S.outline,
-          { borderColor: accent },
-        ]}
+        style={[S.btn, S.outline, { borderColor: accent }]}
         onPress={() => {
           try {
             router.navigate("/(tabs)/certificates");
@@ -227,12 +250,7 @@ export default function QuizScreen({
           }
         }}
       >
-        <Text
-          style={[
-            S.btnTxt,
-            { color: headerTextColor },
-          ]}
-        >
+        <Text style={[S.btnTxt, { color: headerTextColor }]}>
           View Certificate
         </Text>
       </Pressable>
@@ -244,12 +262,7 @@ export default function QuizScreen({
     return renderShell(
       <View style={S.center}>
         <ActivityIndicator color={accent} />
-        <Text
-          style={[
-            S.dim,
-            { color: accent, marginTop: 8 },
-          ]}
-        >
+        <Text style={[S.dim, { color: accent, marginTop: 8 }]}>
           Loading {headerTitle}…
         </Text>
       </View>
@@ -260,20 +273,10 @@ export default function QuizScreen({
   if (noData) {
     return renderShell(
       <>
-        <Text
-          style={[
-            S.title,
-            { color: headerTextColor },
-          ]}
-        >
+        <Text style={[S.title, { color: headerTextColor }]}>
           {headerTitle}
         </Text>
-        <Text
-          style={[
-            S.result,
-            { color: headerTextColor },
-          ]}
-        >
+        <Text style={[S.result, { color: headerTextColor }]}>
           No questions available.
         </Text>
       </>
@@ -285,20 +288,10 @@ export default function QuizScreen({
     const pct = total ? Math.round((correct / total) * 100) : 0;
     return renderShell(
       <>
-        <Text
-          style={[
-            S.title,
-            { color: headerTextColor },
-          ]}
-        >
+        <Text style={[S.title, { color: headerTextColor }]}>
           {headerTitle}
         </Text>
-        <Text
-          style={[
-            S.result,
-            { color: headerTextColor },
-          ]}
-        >
+        <Text style={[S.result, { color: headerTextColor }]}>
           Score: {correct} / {total} ({pct}%)
         </Text>
 
@@ -307,26 +300,19 @@ export default function QuizScreen({
         <View style={{ height: 12 }} />
 
         <View style={S.row}>
+          {/* left */}
           <Pressable
-            style={[
-              S.btn,
-              S.outline,
-              { borderColor: borderColor },
-            ]}
-            onPress={() => {
-              // hook this up later if you add a topics list screen
-            }}
+            style={[S.btn, S.outline, { borderColor: borderColor }]}
+            onPress={() => {}}
           >
-            <Text
-              style={[
-                S.btnTxt,
-                { color: headerTextColor },
-              ]}
-            >
+            <Text style={[S.btnTxt, { color: headerTextColor }]}>
               Topics
             </Text>
           </Pressable>
+
           <View style={{ width: 10 }} />
+
+          {/* right button: Start Over */}
           <Pressable
             style={[
               S.btn,
@@ -351,11 +337,12 @@ export default function QuizScreen({
                 { color: tokens.isDark ? "#000" : "#fff" },
               ]}
             >
-              Retry
+              Start Over
             </Text>
           </Pressable>
         </View>
 
+        {/* FIXED MODAL LINE — must begin with <Modal */}
         <Modal
           visible={showCert}
           transparent
@@ -365,22 +352,15 @@ export default function QuizScreen({
           <View style={S.modalBackdrop}>
             <LinearGradient colors={gradient} style={S.modalCard}>
               <Text
-                style={[
-                  S.modalTitle,
-                  { color: headerTextColor },
-                ]}
+                style={[S.modalTitle, { color: headerTextColor }]}
               >
                 You scored {pct}% 🎉
               </Text>
-              <Text
-                style={[
-                  S.modalBody,
-                  { color: metaColor },
-                ]}
-              >
+              <Text style={[S.modalBody, { color: metaColor }]}>
                 80% or higher! Here’s your certificate.
               </Text>
               <View style={{ height: 12 }} />
+
               <Pressable
                 style={[
                   S.btn,
@@ -405,7 +385,9 @@ export default function QuizScreen({
                   View / Download Certificate
                 </Text>
               </Pressable>
+
               <View style={{ height: 10 }} />
+
               <Pressable
                 style={[
                   S.btn,
@@ -414,12 +396,7 @@ export default function QuizScreen({
                 ]}
                 onPress={() => setShowCert(false)}
               >
-                <Text
-                  style={[
-                    S.btnTxt,
-                    { color: headerTextColor },
-                  ]}
-                >
+                <Text style={[S.btnTxt, { color: headerTextColor }]}>
                   Close
                 </Text>
               </Pressable>
@@ -434,12 +411,7 @@ export default function QuizScreen({
   return renderShell(
     <>
       <View style={S.row}>
-        <Text
-          style={[
-            S.title,
-            { color: headerTextColor },
-          ]}
-        >
+        <Text style={[S.title, { color: headerTextColor }]}>
           {headerTitle}
         </Text>
         <Text
@@ -452,21 +424,11 @@ export default function QuizScreen({
         </Text>
       </View>
 
-      <Text
-        style={[
-          S.meta,
-          { color: metaColor },
-        ]}
-      >
+      <Text style={[S.meta, { color: metaColor }]}>
         Question {idx + 1} / {total}
       </Text>
 
-      <Text
-        style={[
-          S.qText,
-          { color: headerTextColor },
-        ]}
-      >
+      <Text style={[S.qText, { color: headerTextColor }]}>
         {current.question}
       </Text>
 
@@ -504,12 +466,7 @@ export default function QuizScreen({
               },
             ]}
           >
-            <Text
-              style={[
-                S.choiceTxt,
-                { color: textColor },
-              ]}
-            >
+            <Text style={[S.choiceTxt, { color: textColor }]}>
               {opt}
             </Text>
           </Pressable>
@@ -518,40 +475,22 @@ export default function QuizScreen({
 
       <View style={{ height: 12 }} />
       <View style={S.row}>
-        <Text
-          style={[
-            S.meta,
-            { color: metaColor },
-          ]}
-        >
+        <Text style={[S.meta, { color: metaColor }]}>
           Correct: {correct}
         </Text>
-        <Text
-          style={[
-            S.meta,
-            { color: metaColor },
-          ]}
-        >
+        <Text style={[S.meta, { color: metaColor }]}>
           Remaining: {total - (idx + 1)}
         </Text>
       </View>
 
       <View style={{ height: 12 }} />
+
       <View style={S.row}>
         <Pressable
-          style={[
-            S.btn,
-            S.outline,
-            { borderColor: borderColor },
-          ]}
+          style={[S.btn, S.outline, { borderColor: borderColor }]}
           onPress={finishNow}
         >
-          <Text
-            style={[
-              S.btnTxt,
-              { color: headerTextColor },
-            ]}
-          >
+          <Text style={[S.btnTxt, { color: headerTextColor }]}>
             Finish
           </Text>
         </Pressable>
