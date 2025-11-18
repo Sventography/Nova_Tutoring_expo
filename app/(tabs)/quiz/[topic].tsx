@@ -6,14 +6,19 @@ import {
   ActivityIndicator,
   StyleSheet,
   ScrollView,
+  Alert,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { buildQuiz } from "../../_lib/quiz";
 import { getCardsById, toQA } from "../../_lib/flashcards";
-// 🔹 History bridge – we’ll use safeLogQuiz / logQuizToHistory
-import * as quizHistoryBridge from "../../utils/quiz-history-bridge";
+import { safeLogQuiz } from "../../utils/quiz-history-bridge"; // ✅ history bridge
+import { quizFinished } from "../../utils/achievements-bridge"; // ✅ achievements bridge
+import {
+  useAchievements,
+  AchieveEmitter,
+} from "../../context/AchievementsContext"; // ✅ achievements emitter
 
 type QItem = { question: string; choices: string[]; answer: string };
 
@@ -29,6 +34,7 @@ export default function TopicQuiz() {
   const { id = "", title = "" } =
     useLocalSearchParams<{ id?: string; title?: string }>();
   const router = useRouter();
+  const ach = useAchievements(); // may or may not have onQuizFinished
 
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<QItem[]>([]);
@@ -40,10 +46,15 @@ export default function TopicQuiz() {
 
   const [totalLeft, setTotalLeft] = useState(TOTAL_TIME);
   const [done, setDone] = useState(false);
-
   const autoRef = useRef<NodeJS.Timeout | null>(null);
   const totalTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const loggedRef = useRef(false); // 🔹 avoid double-logging
+
+  // ✅ guards so history + achievements + modal only fire once per run
+  const loggedRef = useRef(false);
+  const notifiedRef = useRef(false);
+
+  // ✅ for in-screen modal overlay
+  const [showCongrats, setShowCongrats] = useState(false);
 
   const current = items[idx];
   const total = items.length;
@@ -52,12 +63,9 @@ export default function TopicQuiz() {
     [title]
   );
 
-  // ─────────────────────────────
-  // Load quiz data for this topic
-  // ─────────────────────────────
+  // 🔹 Load questions for this topic
   useEffect(() => {
     let mounted = true;
-
     (async () => {
       try {
         const raw = getCardsById(String(id));
@@ -82,7 +90,9 @@ export default function TopicQuiz() {
           setDone(false);
           setTotalLeft(TOTAL_TIME);
           setNoData(false);
-          loggedRef.current = false; // new run, allow logging
+          loggedRef.current = false;
+          notifiedRef.current = false;
+          setShowCongrats(false);
         }
       } finally {
         mounted && setLoading(false);
@@ -91,16 +101,15 @@ export default function TopicQuiz() {
 
     return () => {
       mounted = false;
+      if (autoRef.current) clearTimeout(autoRef.current);
+      if (totalTimerRef.current) clearInterval(totalTimerRef.current as any);
     };
   }, [id]);
 
-  // ─────────────────────────────
-  // Total 5-minute timer
-  // ─────────────────────────────
+  // 🔹 Total 5-min timer
   useEffect(() => {
     if (loading || done || noData) return;
     if (totalTimerRef.current) clearInterval(totalTimerRef.current);
-
     totalTimerRef.current = setInterval(() => {
       setTotalLeft((t) => {
         if (t <= 1) {
@@ -111,15 +120,11 @@ export default function TopicQuiz() {
         return t - 1;
       });
     }, 1000);
-
     return () => {
-      if (totalTimerRef.current) clearInterval(totalTimerRef.current);
+      if (totalTimerRef.current) clearInterval(totalTimerRef.current as any);
     };
   }, [loading, done, noData]);
 
-  // ─────────────────────────────
-  // Quiz controls
-  // ─────────────────────────────
   function next() {
     if (idx + 1 >= total) {
       setDone(true);
@@ -134,17 +139,27 @@ export default function TopicQuiz() {
     if (locked || !current) return;
     setSelected(i);
     setLocked(true);
-
     if (current.choices[i] === current.answer) {
       setCorrect((c) => c + 1);
     }
-
     if (autoRef.current) clearTimeout(autoRef.current);
     autoRef.current = setTimeout(next, ADVANCE_DELAY);
   }
 
   function finishNow() {
     setDone(true);
+  }
+
+  function restart() {
+    setIdx(0);
+    setCorrect(0);
+    setSelected(null);
+    setLocked(false);
+    setDone(false);
+    setTotalLeft(TOTAL_TIME);
+    loggedRef.current = false;
+    notifiedRef.current = false;
+    setShowCongrats(false);
   }
 
   const mm = Math.floor(totalLeft / 60);
@@ -156,50 +171,102 @@ export default function TopicQuiz() {
     </LinearGradient>
   );
 
-  // ─────────────────────────────
-  // Log to History when quiz is done (ONCE per run)
-  // ─────────────────────────────
+  // ✅ When quiz is finished, log to History + fire achievements + show modal (ONCE)
   useEffect(() => {
     if (!done) return;
     if (!total) return;
     if (loggedRef.current) return;
 
     const pct = total ? Math.round((correct / total) * 100) : 0;
-
     loggedRef.current = true;
 
-    const payload = {
+    const durationSecRaw = TOTAL_TIME - totalLeft;
+    const durationSec = durationSecRaw < 0 ? 0 : durationSecRaw;
+
+    console.log("[topic-quiz] FINISHED → logging + achievements", {
       topicId: String(id),
       title: headerTitle,
       total,
       correct,
       percent: pct,
-    };
+      durationSec,
+    });
 
-    const anyBridge = quizHistoryBridge as any;
-    const fn =
-      typeof anyBridge.safeLogQuiz === "function"
-        ? anyBridge.safeLogQuiz
-        : typeof anyBridge.logQuizToHistory === "function"
-        ? anyBridge.logQuizToHistory
-        : null;
+    // 🔹 Kick off history + achievements work in the background
+    (async () => {
+      try {
+        // History logging
+        await safeLogQuiz({
+          topicId: String(id),
+          title: headerTitle,
+          total,
+          correct,
+          percent: pct,
+        });
+      } catch (err) {
+        console.warn("[topic-quiz] safeLogQuiz failed", err);
+      }
 
-    if (!fn) {
-      console.log(
-        "[topic-quiz] quiz-history-bridge has no usable logger; payload & module:",
-        payload,
-        quizHistoryBridge
+      // Achievements via context (if you later add onQuizFinished)
+      if ((ach as any)?.onQuizFinished) {
+        try {
+          console.log("[topic-quiz] calling ach.onQuizFinished", {
+            pct,
+            subject: headerTitle,
+          });
+          await (ach as any).onQuizFinished(pct, headerTitle);
+        } catch (e) {
+          console.warn("[topic-quiz] ach.onQuizFinished error", e);
+        }
+      } else {
+        console.log(
+          "[topic-quiz] no ach.onQuizFinished on context; skipping direct call"
+        );
+      }
+
+      // Global bridge — now gets total as well
+      try {
+        console.log("[topic-quiz] calling quizFinished bridge", {
+          correct,
+          durationSec,
+          total,
+        });
+        await quizFinished(correct, durationSec, total);
+      } catch (e) {
+        console.warn("[topic-quiz] quizFinished bridge error", e);
+      }
+
+      // Emitter fallback (if something listens for this shape)
+      try {
+        AchieveEmitter.emit("ACHIEVEMENT_EVENT", {
+          type: "quizFinished",
+          scorePct: pct,
+          subject: headerTitle,
+        });
+        console.log(
+          "[topic-quiz] emitted ACHIEVEMENT_EVENT quizFinished",
+          { scorePct: pct, subject: headerTitle }
+        );
+      } catch (e) {
+        console.warn("[topic-quiz] AchieveEmitter emit error", e);
+      }
+    })();
+
+    // 🔹 Modal + native Alert should ALWAYS run, even if above fails
+    if (!notifiedRef.current) {
+      notifiedRef.current = true;
+      setShowCongrats(true);
+      Alert.alert(
+        pct >= 80 ? "Quiz complete! 🎉" : "Quiz complete!",
+        pct >= 80
+          ? `You scored ${pct}%. Check Achievements to see what you unlocked.`
+          : `You scored ${pct}%. Keep going — more achievements unlock as you finish quizzes.`
       );
-      return;
     }
+  }, [done, total, correct, totalLeft, id, headerTitle, ach]);
 
-    console.log("[topic-quiz] logging quiz result → history", payload);
-    void fn(payload);
-  }, [done, total, correct, headerTitle, id]);
+  // ───────────────── RENDER STATES ─────────────────
 
-  // ─────────────────────────────
-  // Render states
-  // ─────────────────────────────
   if (loading) {
     return (
       <Shell>
@@ -231,10 +298,8 @@ export default function TopicQuiz() {
     );
   }
 
-  // Finished screen
   if (done || !current) {
     const pct = total ? Math.round((correct / total) * 100) : 0;
-
     return (
       <Shell>
         <Text style={S.title}>{headerTitle}</Text>
@@ -250,32 +315,60 @@ export default function TopicQuiz() {
             <Text style={S.btnTxt}>Topics</Text>
           </Pressable>
           <View style={{ width: 10 }} />
-          {/* 🔹 Start Over — same look as Topics button now */}
-          <Pressable
-            style={[S.btn, S.outline]}
-            onPress={() => {
-              setIdx(0);
-              setCorrect(0);
-              setSelected(null);
-              setLocked(false);
-              setDone(false);
-              setTotalLeft(TOTAL_TIME);
-              loggedRef.current = false; // allow a new history entry next time
-            }}
-          >
+          {/* 🔹 Same style as Topics, different label + behavior */}
+          <Pressable style={[S.btn, S.solid]} onPress={restart}>
             <Text style={S.btnTxt}>Start Over</Text>
           </Pressable>
         </View>
+
+        {/* 🔹 In-screen modal overlay */}
+        {showCongrats && (
+          <View style={S.modalBackdrop}>
+            <View style={S.modalCard}>
+              <Text style={S.modalTitle}>
+                {pct >= 80 ? "Quiz complete! 🎉" : "Quiz complete"}
+              </Text>
+              <Text style={S.modalText}>
+                You scored {pct}%.{"\n"}
+                Check the Achievements tab to see what you’ve unlocked and
+                what’s next.
+              </Text>
+              <View style={S.modalButtons}>
+                <Pressable
+                  style={[S.btn, S.solid, { flex: 1 }]}
+                  onPress={() => {
+                    setShowCongrats(false);
+                    router.push("/achievements");
+                  }}
+                >
+                  <Text style={S.btnTxt}>View Achievements</Text>
+                </Pressable>
+                <View style={{ width: 10 }} />
+                <Pressable
+                  style={[S.btn, S.outline, { flex: 0.7 }]}
+                  onPress={() => setShowCongrats(false)}
+                >
+                  <Text style={S.btnTxt}>Close</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        )}
       </Shell>
     );
   }
 
-  // Active question
+  // 🔹 Active quiz state
   return (
     <Shell>
       <View style={S.headerRow}>
         <Text style={S.title}>{headerTitle}</Text>
-        <Text style={[S.meta, totalLeft <= 20 ? S.danger : undefined]}>
+        <Text
+          style={[
+            S.meta,
+            totalLeft <= 20 ? S.danger : undefined,
+          ]}
+        >
           ⏳ {mm}:{ss}
         </Text>
       </View>
@@ -302,7 +395,12 @@ export default function TopicQuiz() {
               isWrong && S.choiceWrong,
             ]}
           >
-            <Text style={[S.choiceTxt, isRight && S.choiceTxtRight]}>
+            <Text
+              style={[
+                S.choiceTxt,
+                isRight && S.choiceTxtRight,
+              ]}
+            >
               {opt}
             </Text>
           </Pressable>
@@ -326,7 +424,6 @@ export default function TopicQuiz() {
           <Text style={S.btnTxt}>Topics</Text>
         </Pressable>
         <View style={{ width: 10 }} />
-        {/* FIRST Finish — ends the quiz wherever they are */}
         <Pressable style={[S.btn, S.solid]} onPress={finishNow}>
           <Text style={S.btnTxt}>Finish</Text>
         </Pressable>
@@ -398,11 +495,7 @@ export const S = StyleSheet.create({
     alignItems: "center",
     flex: 1,
   },
-  btnTxt: {
-    color: CYAN,
-    fontWeight: "800",
-    textAlign: "center",
-  },
+  btnTxt: { color: CYAN, fontWeight: "800", textAlign: "center" },
   solid: {
     backgroundColor: "rgba(0, 229, 255, 0.12)",
     borderWidth: 1.5,
@@ -414,4 +507,40 @@ export const S = StyleSheet.create({
     borderColor: CYAN,
   },
   result: { fontSize: 18, color: CYAN, marginTop: 6 },
+
+  // 🔹 Modal styles
+  modalBackdrop: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.65)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalCard: {
+    width: "86%",
+    borderRadius: 16,
+    padding: 18,
+    backgroundColor: "#03131E",
+    borderWidth: 1.5,
+    borderColor: CYAN,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: CYAN,
+    marginBottom: 6,
+  },
+  modalText: {
+    fontSize: 14,
+    color: "#CFEAF7",
+    marginBottom: 14,
+  },
+  modalButtons: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
 });
