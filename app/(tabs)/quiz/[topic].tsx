@@ -1,3 +1,4 @@
+// app/(tabs)/quiz/[topic].tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
@@ -13,12 +14,13 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { buildQuiz } from "../../_lib/quiz";
 import { getCardsById, toQA } from "../../_lib/flashcards";
-import { safeLogQuiz } from "../../utils/quiz-history-bridge"; // ✅ history bridge
+import { add as addQuizHistory } from "../../_lib/quizHistory"; // ✅ direct history logger
+import { safeLogQuiz } from "../../utils/quiz-history-bridge"; // ✅ bridge logger
 import { quizFinished } from "../../utils/achievements-bridge"; // ✅ achievements bridge
 import {
   useAchievements,
   AchieveEmitter,
-} from "../../context/AchievementsContext"; // ✅ achievements emitter
+} from "../../context/AchievementsContext"; // ✅ achievements context / emitter
 
 type QItem = { question: string; choices: string[]; answer: string };
 
@@ -34,7 +36,7 @@ export default function TopicQuiz() {
   const { id = "", title = "" } =
     useLocalSearchParams<{ id?: string; title?: string }>();
   const router = useRouter();
-  const ach = useAchievements(); // may or may not have onQuizFinished
+  const ach = useAchievements();
 
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<QItem[]>([]);
@@ -183,8 +185,10 @@ export default function TopicQuiz() {
     const durationSecRaw = TOTAL_TIME - totalLeft;
     const durationSec = durationSecRaw < 0 ? 0 : durationSecRaw;
 
+    const topicId = String(id);
+
     console.log("[topic-quiz] FINISHED → logging + achievements", {
-      topicId: String(id),
+      topicId,
       title: headerTitle,
       total,
       correct,
@@ -192,67 +196,90 @@ export default function TopicQuiz() {
       durationSec,
     });
 
-    // 🔹 Kick off history + achievements work in the background
-    (async () => {
-      try {
-        // History logging
-        await safeLogQuiz({
-          topicId: String(id),
-          title: headerTitle,
-          total,
-          correct,
-          percent: pct,
-        });
-      } catch (err) {
+    // 🔹 1) Bridge logger (whatever the History tab is already wired to)
+    void safeLogQuiz({
+      topicId,
+      title: headerTitle,
+      total,
+      correct,
+      percent: pct,
+    })
+      .then(() => {
+        console.log("[topic-quiz] safeLogQuiz OK");
+      })
+      .catch((err: any) => {
         console.warn("[topic-quiz] safeLogQuiz failed", err);
-      }
+      });
 
-      // Achievements via context (if you later add onQuizFinished)
-      if ((ach as any)?.onQuizFinished) {
-        try {
-          console.log("[topic-quiz] calling ach.onQuizFinished", {
-            pct,
-            subject: headerTitle,
-          });
-          await (ach as any).onQuizFinished(pct, headerTitle);
-        } catch (e) {
-          console.warn("[topic-quiz] ach.onQuizFinished error", e);
+    // 🔹 2) Direct logger into quizHistory (belt + suspenders)
+    void addQuizHistory({
+      topicId,
+      title: headerTitle,
+      total,
+      correct,
+      percent: pct,
+    })
+      .then(() => {
+        console.log("[topic-quiz] quizHistory.add OK");
+      })
+      .catch((err: any) => {
+        console.warn("[topic-quiz] quizHistory.add failed", err);
+      });
+
+    // 🔹 Direct Achievements API (sync now; defensive about promises)
+    if (ach && typeof ach.onQuizFinished === "function") {
+      console.log("[topic-quiz] calling ach.onQuizFinished", {
+        pct,
+        subject: headerTitle,
+      });
+      try {
+        const maybePromise = (ach as any).onQuizFinished(pct, headerTitle);
+        if (
+          maybePromise &&
+          typeof maybePromise === "object" &&
+          typeof (maybePromise as any).catch === "function"
+        ) {
+          (maybePromise as any).catch((e: any) =>
+            console.warn("[topic-quiz] ach.onQuizFinished async error", e)
+          );
         }
-      } else {
-        console.log(
-          "[topic-quiz] no ach.onQuizFinished on context; skipping direct call"
-        );
+      } catch (e: any) {
+        console.warn("[topic-quiz] ach.onQuizFinished error", e);
       }
+    } else {
+      console.log(
+        "[topic-quiz] no ach.onQuizFinished on context; skipping direct call"
+      );
+    }
 
-      // Global bridge — now gets total as well
-      try {
-        console.log("[topic-quiz] calling quizFinished bridge", {
-          correct,
-          durationSec,
-          total,
-        });
-        await quizFinished(correct, durationSec, total);
-      } catch (e) {
-        console.warn("[topic-quiz] quizFinished bridge error", e);
-      }
+    // 🔹 Global bridge — expects correct answers + duration + total
+    try {
+      console.log("[topic-quiz] calling quizFinished bridge", {
+        correct,
+        durationSec,
+        total,
+      });
+      quizFinished(correct, durationSec, total);
+    } catch (e) {
+      console.warn("[topic-quiz] quizFinished bridge error", e);
+    }
 
-      // Emitter fallback (if something listens for this shape)
-      try {
-        AchieveEmitter.emit("ACHIEVEMENT_EVENT", {
-          type: "quizFinished",
-          scorePct: pct,
-          subject: headerTitle,
-        });
-        console.log(
-          "[topic-quiz] emitted ACHIEVEMENT_EVENT quizFinished",
-          { scorePct: pct, subject: headerTitle }
-        );
-      } catch (e) {
-        console.warn("[topic-quiz] AchieveEmitter emit error", e);
-      }
-    })();
+    // 🔹 Emitter fallback (same shape as other emitters)
+    try {
+      AchieveEmitter.emit("ACHIEVEMENT_EVENT", {
+        type: "quizFinished",
+        scorePct: pct,
+        subject: headerTitle,
+      });
+      console.log(
+        "[topic-quiz] emitted ACHIEVEMENT_EVENT quizFinished",
+        { scorePct: pct, subject: headerTitle }
+      );
+    } catch (e) {
+      console.warn("[topic-quiz] AchieveEmitter emit error", e);
+    }
 
-    // 🔹 Modal + native Alert should ALWAYS run, even if above fails
+    // 🔹 In-screen modal + native Alert, once
     if (!notifiedRef.current) {
       notifiedRef.current = true;
       setShowCongrats(true);
@@ -315,7 +342,6 @@ export default function TopicQuiz() {
             <Text style={S.btnTxt}>Topics</Text>
           </Pressable>
           <View style={{ width: 10 }} />
-          {/* 🔹 Same style as Topics, different label + behavior */}
           <Pressable style={[S.btn, S.solid]} onPress={restart}>
             <Text style={S.btnTxt}>Start Over</Text>
           </Pressable>
@@ -363,12 +389,7 @@ export default function TopicQuiz() {
     <Shell>
       <View style={S.headerRow}>
         <Text style={S.title}>{headerTitle}</Text>
-        <Text
-          style={[
-            S.meta,
-            totalLeft <= 20 ? S.danger : undefined,
-          ]}
-        >
+        <Text style={[S.meta, totalLeft <= 20 ? S.danger : undefined]}>
           ⏳ {mm}:{ss}
         </Text>
       </View>
