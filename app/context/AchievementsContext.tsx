@@ -1,5 +1,6 @@
 // app/context/AchievementsContext.tsx
-import React, {
+import React,
+{
   createContext,
   useCallback,
   useContext,
@@ -22,17 +23,16 @@ export const ACHIEVEMENT_EVENT = "ACHIEVEMENT_EVENT";
 
 // ───────────────── TYPES ─────────────────
 
-type UnlockedMap = Record<string, number>; // id -> timestamp
+type UnlockedMap = Record<string, number>;
 
 type AchievementsContextValue = {
   unlocked: UnlockedMap;
-  // Return a Promise so callers can safely do `.catch(...)`
   onQuizFinished: (pct: number, subject: string) => Promise<void>;
 };
 
 type Listener = (payload: any) => void;
 
-// ───────────────── SIMPLE EMITTER (USED BY QUIZ + BRIDGE) ─────────────────
+// ───────────────── SIMPLE EMITTER ─────────────────
 
 class SimpleEmitter {
   private listeners: Record<string, Listener[]> = {};
@@ -62,7 +62,7 @@ class SimpleEmitter {
 
 export const AchieveEmitter = new SimpleEmitter();
 
-// Build a quick lookup map from ACHIEVEMENT_LIST for coins & title
+// quick lookup for title/coins
 const ACH_MAP: Record<
   string,
   { id: string; title: string; coins: number; desc?: string }
@@ -88,38 +88,32 @@ export function useAchievements(): AchievementsContextValue {
   return ctx;
 }
 
-export function AchievementsProvider({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export function AchievementsProvider({ children }: { children: React.ReactNode }) {
   const [unlocked, setUnlocked] = useState<UnlockedMap>({});
   const unlockedRef = useRef<UnlockedMap>({});
   const quizCountRef = useRef<number>(0);
   const [hydrated, setHydrated] = useState(false);
 
-  // ───────────── SAFE HOOKS FOR COINS + TOAST ─────────────
-  // We always call useCoins/useToast (hook rules OK),
-  // but if the provider isn't above us yet, we fall back to no-ops.
+  // ───────── SAFE COINS + TOAST HOOKS ─────────
   let coinsApi: ReturnType<typeof useCoins> | null = null;
   let toastApi: ReturnType<typeof useToast> | null = null;
 
   try {
     coinsApi = useCoins();
-  } catch (e) {
-    console.warn("[Achievements] useCoins outside CoinsProvider, using no-op", e);
+  } catch {
+    console.warn("[Achievements] useCoins outside CoinsProvider, using no-op");
   }
 
   try {
     toastApi = useToast();
-  } catch (e) {
-    console.warn("[Achievements] useToast outside ToastProvider, using no-op", e);
+  } catch {
+    console.warn("[Achievements] useToast outside ToastProvider, using no-op");
   }
 
   const addCoins = coinsApi?.add ?? (() => {});
   const showToast = toastApi?.show ?? (() => {});
 
-  // ───────────────── HYDRATE FROM STORAGE ─────────────────
+  // ───────── HYDRATE ─────────
 
   useEffect(() => {
     (async () => {
@@ -145,6 +139,7 @@ export function AchievementsProvider({
         console.warn("[Achievements] hydrate failed", e);
       } finally {
         setHydrated(true);
+        console.log("[Achievements] hydrated");
       }
     })();
   }, []);
@@ -171,7 +166,7 @@ export function AchievementsProvider({
     }
   }, []);
 
-  // ───────────────── UNLOCK HELPER ─────────────────
+  // ───────── UNLOCK HELPER ─────────
 
   const unlock = useCallback(
     (id: string, opts?: { silent?: boolean }) => {
@@ -183,8 +178,9 @@ export function AchievementsProvider({
       persistUnlocked();
 
       const ach = ACH_MAP[id];
+      console.log("[Achievements] unlock", { id, ach });
+
       if (ach) {
-        // award coins if defined
         if (ach.coins && ach.coins > 0) {
           try {
             addCoins(ach.coins);
@@ -209,7 +205,6 @@ export function AchievementsProvider({
         }
       }
 
-      // Notify UI (confetti / haptics)
       try {
         DeviceEventEmitter.emit(ACHIEVEMENT_EVENT, { id, ts: now });
         if (Platform.OS === "web" && typeof window !== "undefined") {
@@ -226,18 +221,16 @@ export function AchievementsProvider({
     [addCoins, showToast, persistUnlocked]
   );
 
-  // ───────────────── QUIZ FINISHED HANDLER ─────────────────
+  // ───────── QUIZ FINISH HANDLER ─────────
 
   const handleQuizFinished = useCallback(
     (pct: number, subject: string) => {
       console.log("[Achievements] handleQuizFinished", { pct, subject });
 
-      // 1️⃣ First quiz completed
       if (!unlockedRef.current["first_quiz"]) {
         unlock("first_quiz");
       }
 
-      // 2️⃣ Score-based
       if (pct >= 80 && !unlockedRef.current["quiz_80"]) {
         unlock("quiz_80");
       }
@@ -245,7 +238,6 @@ export function AchievementsProvider({
         unlock("quiz_90");
       }
 
-      // 3️⃣ Quiz count milestones
       quizCountRef.current += 1;
       persistQuizCount();
       const total = quizCountRef.current;
@@ -260,10 +252,11 @@ export function AchievementsProvider({
     [unlock, persistQuizCount]
   );
 
-  // Exposed API for TopicQuiz, etc.
-  // Make this return a Promise so caller can do `.catch(...)` safely
+  // ───────── PUBLIC API ─────────
+
   const onQuizFinished = useCallback(
     (pct: number, subject: string): Promise<void> => {
+      console.log("[Achievements] onQuizFinished emit", { pct, subject });
       return Promise.resolve().then(() => {
         AchieveEmitter.emit(ACHIEVEMENT_EVENT, {
           type: "quizFinished",
@@ -275,19 +268,18 @@ export function AchievementsProvider({
     []
   );
 
-  // Listen to the emitter for quizFinished events (both from onQuizFinished and any bridges)
+  // listener for quizFinished events
   useEffect(() => {
-    if (!hydrated) return;
-
     const sub = AchieveEmitter.addListener(ACHIEVEMENT_EVENT, (payload) => {
       if (!payload || payload.type !== "quizFinished") return;
       const pct = Number(payload.scorePct ?? 0);
       const subject = String(payload.subject || "Quiz");
+      console.log("[Achievements] listener quizFinished", { pct, subject, hydrated });
       handleQuizFinished(pct, subject);
     });
 
     return () => sub.remove();
-  }, [hydrated, handleQuizFinished]);
+  }, [handleQuizFinished, hydrated]);
 
   const value = useMemo<AchievementsContextValue>(
     () => ({
@@ -304,5 +296,4 @@ export function AchievementsProvider({
   );
 }
 
-// ✅ Default export so existing `import AchievementsProvider from ...` keeps working
 export default AchievementsProvider;

@@ -1,268 +1,266 @@
 // app/(tabs)/history.tsx
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
-  Text,
-  ScrollView,
   StyleSheet,
+  FlatList,
   ActivityIndicator,
-  RefreshControl,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect } from "expo-router";
 
-import { getAll } from "../_lib/quizHistory"; // history store
-import { useTheme } from "../context/ThemeContext"; // ✅ real theme hook
-
-const CYAN = "#00E5FF";
-const BLUE = "#0B2239";
-const BLACK = "#000000";
+import { useTheme } from "../context/ThemeContext";
+import ThemedText from "../components/ThemedText";
+import { getAll as getQuizHistory } from "../_lib/quizHistory";
 
 type QuizEntry = {
-  id?: string;
-  topicId?: string;
-  title?: string;
+  id: string;
+  topicId: string;
+  title: string;
   total: number;
   correct: number;
-  percent?: number;
+  percent: number;
   finishedAt?: string;
 };
 
 export default function HistoryScreen() {
-  const [entries, setEntries] = useState<QuizEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-
-  // 🔹 Use the same theme system as the rest of the app
   const { tokens } = useTheme();
-  const gradientColors =
-    tokens?.gradient && Array.isArray(tokens.gradient)
-      ? tokens.gradient
-      : [BLACK, BLUE];
+  const [loading, setLoading] = useState(true);
+  const [entries, setEntries] = useState<QuizEntry[]>([]);
 
-  const load = useCallback(async () => {
+  const loadHistory = useCallback(async () => {
     try {
-      const all = await getAll();
-      console.log("[history] loaded entries:", all?.length ?? 0);
-      setEntries(all || []);
+      const list = await getQuizHistory();
+      const arr: QuizEntry[] = Array.isArray(list) ? (list as QuizEntry[]) : [];
+
+      arr.sort((a, b) => {
+        const ta = a.finishedAt ? Date.parse(a.finishedAt) : 0;
+        const tb = b.finishedAt ? Date.parse(b.finishedAt) : 0;
+        return tb - ta;
+      });
+
+      setEntries(arr);
     } catch (e) {
-      console.warn("[history] getAll failed", e);
+      console.warn("[History] getQuizHistory failed", e);
+      setEntries([]);
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   }, []);
 
+  // initial load
+  useEffect(() => {
+    setLoading(true);
+    loadHistory();
+  }, [loadHistory]);
+
+  // 🔁 reload every time the History tab comes into focus
   useFocusEffect(
     useCallback(() => {
       setLoading(true);
-      load();
-    }, [load])
+      loadHistory();
+    }, [loadHistory])
   );
 
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    load();
-  }, [load]);
-
   const quizzesCompleted = entries.length;
-
   const avgScore =
     quizzesCompleted === 0
       ? 0
       : Math.round(
-          entries.reduce((sum, e) => {
-            const pct =
-              typeof e.percent === "number"
-                ? e.percent
-                : e.total
-                ? (e.correct / e.total) * 100
-                : 0;
-            return sum + pct;
-          }, 0) / quizzesCompleted
+          entries.reduce((sum, e) => sum + (Number(e.percent ?? 0) || 0), 0) /
+            quizzesCompleted
         );
 
-  const flashcardsSaved = 0;
-
-  const Shell = ({ children }: { children: React.ReactNode }) => (
-    <LinearGradient colors={gradientColors} style={{ flex: 1 }}>
-      <ScrollView
-        contentContainerStyle={S.container}
-        refreshControl={
-          <RefreshControl
-            tintColor={CYAN}
-            colors={[CYAN]}
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-          />
-        }
-      >
-        {children}
-      </ScrollView>
-    </LinearGradient>
-  );
-
-  if (loading && !refreshing) {
-    return (
-      <Shell>
-        <View style={S.center}>
-          <ActivityIndicator color={CYAN} />
-          <Text style={[S.meta, { marginTop: 8 }]}>Loading history…</Text>
-        </View>
-      </Shell>
-    );
-  }
-
-  // 🔹 Sort newest first
-  const sorted = entries.slice().sort((a, b) => {
-    const ta = a.finishedAt ? new Date(a.finishedAt).getTime() : 0;
-    const tb = b.finishedAt ? new Date(b.finishedAt).getTime() : 0;
-    return tb - ta;
-  });
+  const bgColors = tokens?.gradient ?? [tokens.background, tokens.card];
 
   return (
-    <Shell>
-      <Text style={S.title}>Quiz History</Text>
+    <LinearGradient colors={bgColors} style={{ flex: 1 }}>
+      <View style={S.container}>
+        {/* Header / stats */}
+        <View style={S.headerBlock}>
+          <ThemedText weight="bold" style={S.title}>
+            Quiz History
+          </ThemedText>
 
-      <View style={S.summaryRow}>
-        <View style={S.summaryCard}>
-          <Text style={S.summaryLabel}>Quizzes completed</Text>
-          <Text style={S.summaryValue}>{quizzesCompleted}</Text>
-        </View>
-        <View style={S.summaryCard}>
-          <Text style={S.summaryLabel}>Average quiz score</Text>
-          <Text style={S.summaryValue}>{avgScore}%</Text>
-        </View>
-        <View style={S.summaryCard}>
-          <Text style={S.summaryLabel}>Flashcards saved</Text>
-          <Text style={S.summaryValue}>{flashcardsSaved}</Text>
-        </View>
-      </View>
-
-      <Text style={[S.sectionTitle, { marginTop: 18 }]}>Recent attempts</Text>
-
-      {sorted.length === 0 ? (
-        <Text style={S.meta}>Take a quiz to see your attempts here.</Text>
-      ) : (
-        sorted.map((e, idx) => {
-          const pct =
-            typeof e.percent === "number"
-              ? e.percent
-              : e.total
-              ? Math.round((e.correct / e.total) * 100)
-              : 0;
-
-          let when = "Unknown time";
-          if (e.finishedAt) {
-            try {
-              when = new Date(e.finishedAt).toLocaleString();
-            } catch {
-              when = e.finishedAt;
-            }
-          }
-
-          return (
-            <View key={e.id ?? idx} style={S.entryCard}>
-              <View style={S.entryHeader}>
-                <Text style={S.entryTitle}>
-                  {e.title || e.topicId || "Quiz"}
-                </Text>
-                <Text style={S.entryScore}>
-                  {e.correct}/{e.total} • {pct}%
-                </Text>
-              </View>
-              <Text style={S.entryMeta}>{when}</Text>
+          <View style={S.statsRow}>
+            <View style={[S.statCard, { backgroundColor: tokens.card }]}>
+              <ThemedText muted style={S.statLabel}>
+                Quizzes completed
+              </ThemedText>
+              <ThemedText weight="bold" style={S.statValue}>
+                {quizzesCompleted}
+              </ThemedText>
             </View>
-          );
-        })
-      )}
-    </Shell>
+
+            <View style={[S.statCard, { backgroundColor: tokens.card }]}>
+              <ThemedText muted style={S.statLabel}>
+                Average quiz score
+              </ThemedText>
+              <ThemedText weight="bold" style={S.statValue}>
+                {avgScore}%
+              </ThemedText>
+            </View>
+          </View>
+        </View>
+
+        <ThemedText weight="medium" muted style={S.sectionTitle}>
+          Recent attempts
+        </ThemedText>
+
+        {loading ? (
+          <View style={S.loadingWrap}>
+            <ActivityIndicator />
+          </View>
+        ) : entries.length === 0 ? (
+          <View style={S.emptyWrap}>
+            <ThemedText muted>
+              No quiz attempts yet. Take a quiz to see your history here.
+            </ThemedText>
+          </View>
+        ) : (
+          <FlatList
+            data={entries}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={S.listContent}
+            renderItem={({ item }) => (
+              <HistoryCard item={item} tokens={tokens} />
+            )}
+          />
+        )}
+      </View>
+    </LinearGradient>
+  );
+}
+
+function formatWhen(iso?: string) {
+  if (!iso) return "";
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "";
+    return `${d.toLocaleDateString()} ${d.toLocaleTimeString()}`;
+  } catch {
+    return "";
+  }
+}
+
+function HistoryCard({ item, tokens }: { item: QuizEntry; tokens: any }) {
+  const topic = item.title || "Quiz";
+  const correct = Number(item.correct ?? 0);
+  const total = Number(item.total ?? 0);
+  const pct = Number(item.percent ?? 0);
+  const when = formatWhen(item.finishedAt);
+
+  return (
+    <View
+      style={[
+        S.card,
+        {
+          backgroundColor: tokens.card,
+          shadowColor: tokens.accent,
+        },
+      ]}
+    >
+      <View style={S.cardHeaderRow}>
+        <ThemedText weight="bold" style={S.cardTitle}>
+          {topic}
+        </ThemedText>
+        <ThemedText
+          weight="bold"
+          style={[
+            S.cardScore,
+            {
+              color:
+                pct >= 80
+                  ? tokens.accent
+                  : pct >= 50
+                  ? tokens.text
+                  : tokens.cardText,
+            },
+          ]}
+        >
+          {correct}/{total} • {pct}%
+        </ThemedText>
+      </View>
+      {when ? (
+        <ThemedText muted style={S.cardMeta}>
+          {when}
+        </ThemedText>
+      ) : null}
+    </View>
   );
 }
 
 const S = StyleSheet.create({
   container: {
-    padding: 16,
-    paddingBottom: 32,
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 18,
+    paddingBottom: 12,
   },
-  center: {
+  headerBlock: {
+    marginBottom: 12,
+  },
+  title: {
+    fontSize: 20,
+    marginBottom: 8,
+  },
+  statsRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  statCard: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    opacity: 0.96,
+  },
+  statLabel: {
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  statValue: {
+    fontSize: 18,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  loadingWrap: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingTop: 60,
   },
-  title: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: CYAN,
-    marginBottom: 8,
+  emptyWrap: {
+    paddingVertical: 32,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: CYAN,
-    marginBottom: 6,
+  listContent: {
+    paddingBottom: 16,
   },
-  meta: {
-    fontSize: 14,
-    color: CYAN,
-    opacity: 0.9,
+  card: {
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginBottom: 10,
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
   },
-
-  summaryRow: {
+  cardHeaderRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 8,
-  },
-  summaryCard: {
-    flex: 1,
-    marginRight: 8,
-    padding: 10,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: CYAN,
-    backgroundColor: "rgba(0, 229, 255, 0.06)",
-  },
-  summaryLabel: {
-    fontSize: 12,
-    color: CYAN,
-    opacity: 0.85,
+    alignItems: "center",
     marginBottom: 4,
   },
-  summaryValue: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: CYAN,
-  },
-
-  entryCard: {
-    marginTop: 10,
-    padding: 12,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: CYAN,
-    backgroundColor: "rgba(0, 229, 255, 0.06)",
-  },
-  entryHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 4,
-  },
-  entryTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: CYAN,
-    flexShrink: 1,
-    paddingRight: 8,
-  },
-  entryScore: {
+  cardTitle: {
     fontSize: 14,
-    fontWeight: "700",
-    color: CYAN,
   },
-  entryMeta: {
-    fontSize: 12,
-    color: CYAN,
-    opacity: 0.8,
+  cardScore: {
+    fontSize: 13,
+  },
+  cardMeta: {
+    fontSize: 11,
   },
 });

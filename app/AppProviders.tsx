@@ -9,7 +9,7 @@ import { PurchasesProvider, usePurchases } from "./context/PurchasesContext";
 import { CursorProvider, useCursor } from "./context/CursorContext";
 import { CollectionsProvider } from "./context/CollectionsContext";
 import { StreakProvider } from "./context/StreakContext";
-import { AchievementsProvider } from "./context/AchievementsContext";
+import AchievementsProvider from "./context/AchievementsContext";
 import { ToastProvider } from "./context/ToastContext";
 import { CertificatesProvider } from "./context/CertificatesContext";
 import { UserProvider } from "./context/UserContext";
@@ -17,16 +17,15 @@ import { UserProvider } from "./context/UserContext";
 function ThemeGate({ children }: { children: React.ReactNode }) {
   const { themeId, tokens } = useTheme();
 
-  // 🔹 Global default for ALL <Text> in the app
+  // 🔹 Global default for ALL <Text> in the app, merged with any existing styles
   if (Text.defaultProps == null) Text.defaultProps = {};
-  Text.defaultProps.style = [
-    ...(Array.isArray(Text.defaultProps.style)
-      ? Text.defaultProps.style
-      : Text.defaultProps.style
-      ? [Text.defaultProps.style]
-      : []),
-    { color: tokens.text },
-  ];
+  const baseStyle = Text.defaultProps.style;
+  const baseArr = Array.isArray(baseStyle)
+    ? baseStyle
+    : baseStyle
+    ? [baseStyle]
+    : [];
+  Text.defaultProps.style = [...baseArr, { color: tokens.text }];
 
   // key forces a remount when theme changes, ensuring static styles reset
   return <React.Fragment key={themeId}>{children}</React.Fragment>;
@@ -123,10 +122,11 @@ export function AppProviders(props: any) {
     <ThemeProvider>
       <ThemeGate>
         <StreakProvider>
-          <AchievementsProvider>
+          {/* Coins + Toast wrap Achievements so achievements can award coins + show toasts */}
+          <CoinsProvider>
             <ToastProvider>
-              <CertificatesProvider>
-                <CoinsProvider>
+              <AchievementsProvider>
+                <CertificatesProvider>
                   <PurchasesProvider>
                     <CursorProvider>
                       <UserProvider>
@@ -139,10 +139,10 @@ export function AppProviders(props: any) {
                       </UserProvider>
                     </CursorProvider>
                   </PurchasesProvider>
-                </CoinsProvider>
-              </CertificatesProvider>
+                </CertificatesProvider>
+              </AchievementsProvider>
             </ToastProvider>
-          </AchievementsProvider>
+          </CoinsProvider>
         </StreakProvider>
       </ThemeGate>
     </ThemeProvider>
