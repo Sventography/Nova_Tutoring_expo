@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+// app/(tabs)/achievements.tsx
+import React, { useEffect, useMemo, useRef } from "react";
 import {
   View,
   Text,
@@ -14,7 +15,6 @@ import {
   ACHIEVEMENT_EVENT,
 } from "../context/AchievementsContext";
 import {
-  ACHIEVEMENTS,
   ACHIEVEMENT_LIST,
   SUBJECT_COLORS,
 } from "../constants/achievements";
@@ -47,8 +47,10 @@ export default function AchievementsScreen() {
         confettiRef.current?.start?.();
       } catch {}
     };
+
     const sub = DeviceEventEmitter.addListener(ACHIEVEMENT_EVENT, onUnlocked);
-    if (Platform.OS === "web") {
+
+    if (Platform.OS === "web" && typeof window !== "undefined") {
       const handler = () => onUnlocked();
       // @ts-ignore
       window.addEventListener(ACHIEVEMENT_EVENT as any, handler as any);
@@ -58,26 +60,33 @@ export default function AchievementsScreen() {
         window.removeEventListener(ACHIEVEMENT_EVENT as any, handler as any);
       };
     }
+
     return () => sub.remove();
   }, []);
 
   const sections: Section[] = useMemo(() => {
     const unlockedList: Item[] = [];
     const lockedList: Item[] = [];
+
     for (const a of ACHIEVEMENT_LIST) {
       const ts = unlocked && unlocked[a.id];
-      const base = {
+      const base: Item = {
         id: a.id,
         title: a.title,
         desc: a.desc,
-        coins: a.coins,
+        coins: a.coins ?? 0,
       };
-      if (ts) unlockedList.push({ ...base, unlockedAt: ts });
-      else lockedList.push(base);
+      if (ts) {
+        unlockedList.push({ ...base, unlockedAt: ts });
+      } else {
+        lockedList.push(base);
+      }
     }
+
     unlockedList.sort(
       (a, b) => (b.unlockedAt ?? 0) - (a.unlockedAt ?? 0)
     );
+
     return [
       ...(unlockedList.length
         ? [{ title: "Unlocked Achievements", data: unlockedList }]
@@ -140,19 +149,24 @@ function subjectFromId(id: string): string | null {
   // quiz_taken_<subject>_<n>    -> subject
   if (!id.startsWith("quiz_")) return null;
   const parts = id.split("_"); // e.g., ["quiz","math","90"] or ["quiz","taken","science","10"]
+
   if (parts.length === 3) {
     const mid = parts[1];
     if (isNaN(Number(mid))) return mid; // quiz_<subject>_<pct>
   }
+
   if (parts.length === 4 && parts[1] === "taken") {
     const mid = parts[2];
     if (isNaN(Number(mid))) return mid; // quiz_taken_<subject>_<n>
   }
+
   return null;
 }
+
 function titleCase(s: string) {
   return s.replace(/\b\w/g, (c) => c.toUpperCase()).replace(/_/g, " ");
 }
+
 function formatWhen(ts?: number) {
   if (!ts) return "";
   try {
@@ -169,6 +183,7 @@ function formatWhen(ts?: number) {
 
 function UnlockedCard({ item, tokens }: { item: Item; tokens: any }) {
   const pulse = useRef(new Animated.Value(0)).current;
+
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
@@ -198,6 +213,7 @@ function UnlockedCard({ item, tokens }: { item: Item; tokens: any }) {
   });
 
   const subj = subjectFromId(item.id);
+  const subjectColor = subj ? SUBJECT_COLORS[subj] ?? tokens.accent : tokens.accent;
 
   const bgColors = tokens.isDark
     ? [tokens.card, "#050b18"]
@@ -208,7 +224,7 @@ function UnlockedCard({ item, tokens }: { item: Item; tokens: any }) {
       style={[
         S.cardWrap,
         {
-          shadowColor: tokens.accent,
+          shadowColor: subjectColor,
           shadowOpacity: 0.35,
           shadowRadius,
           shadowOffset: { width: 0, height: 0 },
@@ -217,7 +233,7 @@ function UnlockedCard({ item, tokens }: { item: Item; tokens: any }) {
     >
       <LinearGradient colors={bgColors} style={S.cardBg}>
         <LinearGradient
-          colors={[tokens.accent, "transparent"]}
+          colors={[subjectColor, "transparent"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={S.neonBorder}
@@ -225,12 +241,12 @@ function UnlockedCard({ item, tokens }: { item: Item; tokens: any }) {
         <Animated.View
           style={[
             S.borderOverlay,
-            { opacity: borderOpacity, borderColor: tokens.accent },
+            { opacity: borderOpacity, borderColor: subjectColor },
           ]}
         />
         <View style={S.cardInner}>
           <View style={S.titleRow}>
-            <Ionicons name="trophy" size={18} color={tokens.accent} />
+            <Ionicons name="trophy" size={18} color={subjectColor} />
             <Text
               style={[
                 S.title,
@@ -244,7 +260,7 @@ function UnlockedCard({ item, tokens }: { item: Item; tokens: any }) {
                 style={[
                   S.pill,
                   {
-                    borderColor: tokens.accent,
+                    borderColor: subjectColor,
                     backgroundColor: tokens.isDark
                       ? "rgba(0,229,255,0.08)"
                       : "rgba(0,120,200,0.06)",
@@ -254,7 +270,7 @@ function UnlockedCard({ item, tokens }: { item: Item; tokens: any }) {
                 <Text
                   style={[
                     S.pillText,
-                    { color: tokens.accent },
+                    { color: subjectColor },
                   ]}
                 >
                   {titleCase(subj)}
@@ -276,10 +292,10 @@ function UnlockedCard({ item, tokens }: { item: Item; tokens: any }) {
             <View
               style={[
                 S.badge,
-                { borderColor: tokens.accent },
+                { borderColor: subjectColor },
               ]}
             >
-              <Ionicons name="sparkles" size={14} color={tokens.accent} />
+              <Ionicons name="sparkles" size={14} color={subjectColor} />
               <Text
                 style={[
                   S.badgeText,
@@ -306,6 +322,7 @@ function UnlockedCard({ item, tokens }: { item: Item; tokens: any }) {
 
 function LockedCard({ item, tokens }: { item: Item; tokens: any }) {
   const subj = subjectFromId(item.id);
+  const subjectColor = subj ? SUBJECT_COLORS[subj] ?? tokens.border : tokens.border;
 
   const bgColors = tokens.isDark
     ? [tokens.card, "#050b18"]
@@ -320,7 +337,7 @@ function LockedCard({ item, tokens }: { item: Item; tokens: any }) {
       style={[
         S.cardWrap,
         {
-          shadowColor: tokens.accent,
+          shadowColor: subjectColor,
           shadowOpacity: 0.15,
           shadowRadius: 6,
           shadowOffset: { width: 0, height: 0 },
@@ -329,7 +346,7 @@ function LockedCard({ item, tokens }: { item: Item; tokens: any }) {
     >
       <LinearGradient colors={bgColors} style={S.cardBg}>
         <LinearGradient
-          colors={[tokens.border, "transparent"]}
+          colors={[subjectColor, "transparent"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={S.neonBorder}
