@@ -52,6 +52,36 @@ export function buildAchievements() {
     }
   }
 
+  // *** ADDED — REQUIRED BY AchievementsContext ***
+  list.push(
+    make(
+      "first_quiz",
+      "First Quiz!",
+      50,
+      "quiz",
+      "Completed your very first quiz."
+    )
+  );
+  list.push(
+    make(
+      "quiz_10",
+      "Quiz Grinder I",
+      100,
+      "quiz",
+      "Completed 10 total quizzes."
+    )
+  );
+  list.push(
+    make(
+      "quiz_25",
+      "Quiz Grinder II",
+      250,
+      "quiz",
+      "Completed 25 total quizzes."
+    )
+  );
+  // *** END ADDED ***
+
   // QUIZ volume (global taken count)
   for (let n of [1, 5, 10, 25, 50, 100, 200]) {
     const coins = n <= 10 ? 20 : n <= 50 ? 50 : 120;

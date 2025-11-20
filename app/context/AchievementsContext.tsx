@@ -1,6 +1,5 @@
 // app/context/AchievementsContext.tsx
-import React,
-{
+import React, {
   createContext,
   useCallback,
   useContext,
@@ -23,16 +22,16 @@ export const ACHIEVEMENT_EVENT = "ACHIEVEMENT_EVENT";
 
 // ───────────────── TYPES ─────────────────
 
-type UnlockedMap = Record<string, number>;
+type UnlockedMap = Record<string, number>; // id -> timestamp
 
 type AchievementsContextValue = {
   unlocked: UnlockedMap;
-  onQuizFinished: (pct: number, subject: string) => Promise<void>;
+  onQuizFinished: (pct: number, subject: string) => void;
 };
 
 type Listener = (payload: any) => void;
 
-// ───────────────── SIMPLE EMITTER ─────────────────
+// ───────────────── SIMPLE EMITTER (USED BY QUIZ + BRIDGE) ─────────────────
 
 class SimpleEmitter {
   private listeners: Record<string, Listener[]> = {};
@@ -62,7 +61,7 @@ class SimpleEmitter {
 
 export const AchieveEmitter = new SimpleEmitter();
 
-// quick lookup for title/coins
+// Build a quick lookup map from ACHIEVEMENT_LIST for coins & title
 const ACH_MAP: Record<
   string,
   { id: string; title: string; coins: number; desc?: string }
@@ -88,32 +87,20 @@ export function useAchievements(): AchievementsContextValue {
   return ctx;
 }
 
-export function AchievementsProvider({ children }: { children: React.ReactNode }) {
+export function AchievementsProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const [unlocked, setUnlocked] = useState<UnlockedMap>({});
   const unlockedRef = useRef<UnlockedMap>({});
   const quizCountRef = useRef<number>(0);
   const [hydrated, setHydrated] = useState(false);
 
-  // ───────── SAFE COINS + TOAST HOOKS ─────────
-  let coinsApi: ReturnType<typeof useCoins> | null = null;
-  let toastApi: ReturnType<typeof useToast> | null = null;
+  const { add: addCoins } = useCoins();
+  const { show: showToast } = useToast();
 
-  try {
-    coinsApi = useCoins();
-  } catch {
-    console.warn("[Achievements] useCoins outside CoinsProvider, using no-op");
-  }
-
-  try {
-    toastApi = useToast();
-  } catch {
-    console.warn("[Achievements] useToast outside ToastProvider, using no-op");
-  }
-
-  const addCoins = coinsApi?.add ?? (() => {});
-  const showToast = toastApi?.show ?? (() => {});
-
-  // ───────── HYDRATE ─────────
+  // ───────────────── HYDRATE FROM STORAGE ─────────────────
 
   useEffect(() => {
     (async () => {
@@ -139,7 +126,6 @@ export function AchievementsProvider({ children }: { children: React.ReactNode }
         console.warn("[Achievements] hydrate failed", e);
       } finally {
         setHydrated(true);
-        console.log("[Achievements] hydrated");
       }
     })();
   }, []);
@@ -166,7 +152,7 @@ export function AchievementsProvider({ children }: { children: React.ReactNode }
     }
   }, []);
 
-  // ───────── UNLOCK HELPER ─────────
+  // ───────────────── UNLOCK HELPER ─────────────────
 
   const unlock = useCallback(
     (id: string, opts?: { silent?: boolean }) => {
@@ -178,10 +164,9 @@ export function AchievementsProvider({ children }: { children: React.ReactNode }
       persistUnlocked();
 
       const ach = ACH_MAP[id];
-      console.log("[Achievements] unlock", { id, ach });
-
       if (ach) {
-        if (ach.coins && ach.coins > 0) {
+        // 👇 Only award coins for NON-silent unlocks
+        if (!opts?.silent && ach.coins && ach.coins > 0) {
           try {
             addCoins(ach.coins);
           } catch (e) {
@@ -205,14 +190,13 @@ export function AchievementsProvider({ children }: { children: React.ReactNode }
         }
       }
 
+      // Notify UI (confetti / haptics)
       try {
         DeviceEventEmitter.emit(ACHIEVEMENT_EVENT, { id, ts: now });
         if (Platform.OS === "web" && typeof window !== "undefined") {
           try {
             window.dispatchEvent(new Event(ACHIEVEMENT_EVENT));
-          } catch {
-            // ignore
-          }
+          } catch {}
         }
       } catch (e) {
         console.warn("[Achievements] DeviceEventEmitter emit failed", e);
@@ -221,23 +205,39 @@ export function AchievementsProvider({ children }: { children: React.ReactNode }
     [addCoins, showToast, persistUnlocked]
   );
 
-  // ───────── QUIZ FINISH HANDLER ─────────
+  // ───────────────── QUIZ FINISHED HANDLER ─────────────────
 
   const handleQuizFinished = useCallback(
     (pct: number, subject: string) => {
-      console.log("[Achievements] handleQuizFinished", { pct, subject });
+      console.log("[Achievements] handleQuizFinished", {
+        pct,
+        subject,
+        hydrated,
+      });
 
+      // 1️⃣ First quiz completed
       if (!unlockedRef.current["first_quiz"]) {
         unlock("first_quiz");
       }
 
+      // 2️⃣ Score-based (global)
       if (pct >= 80 && !unlockedRef.current["quiz_80"]) {
         unlock("quiz_80");
+      }
+      if (pct >= 85 && !unlockedRef.current["quiz_85"]) {
+        unlock("quiz_85");
       }
       if (pct >= 90 && !unlockedRef.current["quiz_90"]) {
         unlock("quiz_90");
       }
+      if (pct >= 95 && !unlockedRef.current["quiz_95"]) {
+        unlock("quiz_95");
+      }
+      if (pct >= 100 && !unlockedRef.current["quiz_100"]) {
+        unlock("quiz_100");
+      }
 
+      // 3️⃣ Quiz count milestones (simple global)
       quizCountRef.current += 1;
       persistQuizCount();
       const total = quizCountRef.current;
@@ -248,38 +248,73 @@ export function AchievementsProvider({ children }: { children: React.ReactNode }
       if (total >= 25 && !unlockedRef.current["quiz_25"]) {
         unlock("quiz_25");
       }
+
+      // 4️⃣ Volume-based global (coins disabled by silent flag)
+      const volumeThresholds = [1, 5, 10, 25, 50, 100, 200];
+      for (const n of volumeThresholds) {
+        if (total >= n) {
+          const id = `quiz_taken_${n}`;
+          if (!unlockedRef.current[id] && ACH_MAP[id]) {
+            unlock(id, { silent: true });
+          }
+        }
+      }
+
+      // 5️⃣ Subject-based achievements (also silent: no extra coins)
+      const key = subject
+        ? subject.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_")
+        : "";
+      if (key) {
+        const subjectThresholds = [80, 85, 90, 95, 100];
+        for (const p of subjectThresholds) {
+          if (pct >= p) {
+            const id = `quiz_${key}_${p}`;
+            if (!unlockedRef.current[id] && ACH_MAP[id]) {
+              unlock(id, { silent: true });
+            }
+          }
+        }
+
+        const subjectVolumeThresholds = [1, 5, 10, 25, 50, 100, 200];
+        for (const n of subjectVolumeThresholds) {
+          if (total >= n) {
+            const id = `quiz_taken_${key}_${n}`;
+            if (!unlockedRef.current[id] && ACH_MAP[id]) {
+              unlock(id, { silent: true });
+            }
+          }
+        }
+      }
     },
-    [unlock, persistQuizCount]
+    [unlock, persistQuizCount, hydrated]
   );
 
-  // ───────── PUBLIC API ─────────
-
+  // Exposed API for TopicQuiz, etc.
   const onQuizFinished = useCallback(
-    (pct: number, subject: string): Promise<void> => {
+    (pct: number, subject: string) => {
       console.log("[Achievements] onQuizFinished emit", { pct, subject });
-      return Promise.resolve().then(() => {
-        AchieveEmitter.emit(ACHIEVEMENT_EVENT, {
-          type: "quizFinished",
-          scorePct: pct,
-          subject,
-        });
+      AchieveEmitter.emit(ACHIEVEMENT_EVENT, {
+        type: "quizFinished",
+        scorePct: pct,
+        subject,
       });
     },
     []
   );
 
-  // listener for quizFinished events
+  // Listen to the emitter for quizFinished events (both from onQuizFinished and any bridges)
   useEffect(() => {
+    if (!hydrated) return;
+
     const sub = AchieveEmitter.addListener(ACHIEVEMENT_EVENT, (payload) => {
       if (!payload || payload.type !== "quizFinished") return;
       const pct = Number(payload.scorePct ?? 0);
       const subject = String(payload.subject || "Quiz");
-      console.log("[Achievements] listener quizFinished", { pct, subject, hydrated });
       handleQuizFinished(pct, subject);
     });
 
     return () => sub.remove();
-  }, [handleQuizFinished, hydrated]);
+  }, [hydrated, handleQuizFinished]);
 
   const value = useMemo<AchievementsContextValue>(
     () => ({
@@ -295,5 +330,3 @@ export function AchievementsProvider({ children }: { children: React.ReactNode }
     </AchievementsCtx.Provider>
   );
 }
-
-export default AchievementsProvider;

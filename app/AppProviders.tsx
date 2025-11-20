@@ -1,6 +1,5 @@
 // app/AppProviders.tsx
 import React, { useEffect } from "react";
-import { Text } from "react-native";
 import * as Linking from "expo-linking";
 
 import { ThemeProvider, useTheme } from "./context/ThemeContext";
@@ -8,25 +7,14 @@ import { CoinsProvider, useCoins } from "./context/CoinsContext";
 import { PurchasesProvider, usePurchases } from "./context/PurchasesContext";
 import { CursorProvider, useCursor } from "./context/CursorContext";
 import { CollectionsProvider } from "./context/CollectionsContext";
-import { StreakProvider } from "./context/StreakContext";
-import AchievementsProvider from "./context/AchievementsContext";
+import { AchievementsProvider } from "./context/AchievementsContext";
 import { ToastProvider } from "./context/ToastContext";
 import { CertificatesProvider } from "./context/CertificatesContext";
 import { UserProvider } from "./context/UserContext";
+import { StreakProvider } from "./context/StreakContext";
 
 function ThemeGate({ children }: { children: React.ReactNode }) {
-  const { themeId, tokens } = useTheme();
-
-  // 🔹 Global default for ALL <Text> in the app, merged with any existing styles
-  if (Text.defaultProps == null) Text.defaultProps = {};
-  const baseStyle = Text.defaultProps.style;
-  const baseArr = Array.isArray(baseStyle)
-    ? baseStyle
-    : baseStyle
-    ? [baseStyle]
-    : [];
-  Text.defaultProps.style = [...baseArr, { color: tokens.text }];
-
+  const { themeId } = useTheme();
   // key forces a remount when theme changes, ensuring static styles reset
   return <React.Fragment key={themeId}>{children}</React.Fragment>;
 }
@@ -38,7 +26,11 @@ function DevCoinsListener() {
       if (!url) return;
       const { hostname, path, queryParams } = Linking.parse(url);
       const route = (hostname || path || "").toLowerCase();
-      if (route.includes("coins") && queryParams && typeof queryParams.add !== "undefined") {
+      if (
+        route.includes("coins") &&
+        queryParams &&
+        typeof queryParams.add !== "undefined"
+      ) {
         const amt = Number(queryParams.add);
         if (!Number.isNaN(amt) && amt !== 0) addCoins(amt);
       }
@@ -57,7 +49,11 @@ function DevThemeListener() {
       if (!url) return;
       const { hostname, path, queryParams } = Linking.parse(url);
       const route = (hostname || path || "").toLowerCase();
-      if (route.includes("theme") && queryParams && typeof queryParams.id !== "undefined") {
+      if (
+        route.includes("theme") &&
+        queryParams &&
+        typeof queryParams.id !== "undefined"
+      ) {
         setThemeById(String(queryParams.id));
       }
     };
@@ -76,12 +72,15 @@ function DevGrantListener() {
       if (!url) return;
       const { hostname, path, queryParams } = Linking.parse(url);
       const route = (hostname || path || "").toLowerCase();
-      if (route.includes("grant") && queryParams && typeof queryParams.id !== "undefined") {
+      if (
+        route.includes("grant") &&
+        queryParams &&
+        typeof queryParams.id !== "undefined"
+      ) {
         let ids = String(queryParams.id)
           .split(",")
           .map((s) => s.trim())
           .filter(Boolean);
-
         if (ids.length === 1 && ids[0] === "all") {
           ids = [
             "theme:neon",
@@ -100,15 +99,12 @@ function DevGrantListener() {
             "cursor:star-trail",
           ];
         }
-
         ids.forEach((id) => {
           if (id.startsWith("cursor:")) setCursorById(id as any);
         });
-
         grant(ids).catch(() => {});
       }
     };
-
     Linking.getInitialURL().then(handle).catch(() => {});
     const sub = Linking.addEventListener("url", (e) => handle(e.url));
     return () => sub.remove();
@@ -122,26 +118,25 @@ export function AppProviders(props: any) {
     <ThemeProvider>
       <ThemeGate>
         <StreakProvider>
-          {/* Coins + Toast wrap Achievements so achievements can award coins + show toasts */}
           <CoinsProvider>
-            <ToastProvider>
-              <AchievementsProvider>
-                <CertificatesProvider>
-                  <PurchasesProvider>
-                    <CursorProvider>
-                      <UserProvider>
-                        <CollectionsProvider>
+            <PurchasesProvider>
+              <CursorProvider>
+                <UserProvider>
+                  <CollectionsProvider>
+                    <ToastProvider>
+                      <CertificatesProvider>
+                        <AchievementsProvider>
                           <DevCoinsListener />
                           <DevThemeListener />
                           <DevGrantListener />
                           {children}
-                        </CollectionsProvider>
-                      </UserProvider>
-                    </CursorProvider>
-                  </PurchasesProvider>
-                </CertificatesProvider>
-              </AchievementsProvider>
-            </ToastProvider>
+                        </AchievementsProvider>
+                      </CertificatesProvider>
+                    </ToastProvider>
+                  </CollectionsProvider>
+                </UserProvider>
+              </CursorProvider>
+            </PurchasesProvider>
           </CoinsProvider>
         </StreakProvider>
       </ThemeGate>
