@@ -1,4 +1,3 @@
-// app/context/AchievementsContext.tsx
 import React, {
   createContext,
   useCallback,
@@ -17,6 +16,7 @@ import { useToast } from "./ToastContext";
 
 const STORAGE_KEY_UNLOCKED = "@achieve/unlocked.v1";
 const STORAGE_KEY_QUIZ_COUNT = "@achieve/quizCount.v1";
+const STORAGE_KEY_ASK_COUNT = "@achieve/askCount.v1";
 
 export const ACHIEVEMENT_EVENT = "ACHIEVEMENT_EVENT";
 
@@ -27,6 +27,7 @@ type UnlockedMap = Record<string, number>; // id -> timestamp
 type AchievementsContextValue = {
   unlocked: UnlockedMap;
   onQuizFinished: (pct: number, subject: string) => void;
+  onAskQuestion: () => void;
 };
 
 type Listener = (payload: any) => void;
@@ -95,9 +96,10 @@ export function AchievementsProvider({
   const [unlocked, setUnlocked] = useState<UnlockedMap>({});
   const unlockedRef = useRef<UnlockedMap>({});
   const quizCountRef = useRef<number>(0);
+  const askCountRef = useRef<number>(0);
   const [hydrated, setHydrated] = useState(false);
 
-  const { add: addCoins } = useCoins();
+  const { addCoins } = useCoins();
   const { show: showToast } = useToast();
 
   // ───────────────── HYDRATE FROM STORAGE ─────────────────
@@ -105,9 +107,10 @@ export function AchievementsProvider({
   useEffect(() => {
     (async () => {
       try {
-        const [rawUnlocked, rawQuizCount] = await Promise.all([
+        const [rawUnlocked, rawQuizCount, rawAskCount] = await Promise.all([
           AsyncStorage.getItem(STORAGE_KEY_UNLOCKED),
           AsyncStorage.getItem(STORAGE_KEY_QUIZ_COUNT),
+          AsyncStorage.getItem(STORAGE_KEY_ASK_COUNT),
         ]);
 
         if (rawUnlocked) {
@@ -120,6 +123,13 @@ export function AchievementsProvider({
           const n = parseInt(rawQuizCount, 10);
           if (!Number.isNaN(n)) {
             quizCountRef.current = n;
+          }
+        }
+
+        if (rawAskCount) {
+          const n = parseInt(rawAskCount, 10);
+          if (!Number.isNaN(n)) {
+            askCountRef.current = n;
           }
         }
       } catch (e) {
@@ -152,6 +162,17 @@ export function AchievementsProvider({
     }
   }, []);
 
+  const persistAskCount = useCallback(async () => {
+    try {
+      await AsyncStorage.setItem(
+        STORAGE_KEY_ASK_COUNT,
+        String(askCountRef.current)
+      );
+    } catch (e) {
+      console.warn("[Achievements] persist ask count failed", e);
+    }
+  }, []);
+
   // ───────────────── UNLOCK HELPER ─────────────────
 
   const unlock = useCallback(
@@ -164,38 +185,56 @@ export function AchievementsProvider({
       persistUnlocked();
 
       const ach = ACH_MAP[id];
+      let coinsAwarded = 0;
+
       if (ach) {
-        // 👇 Only award coins for NON-silent unlocks
-        if (!opts?.silent && ach.coins && ach.coins > 0) {
+        coinsAwarded = ach.coins ?? 0;
+        console.log("[Achievements] unlock", id, "coins =", coinsAwarded);
+
+        // Award coins if defined
+        if (coinsAwarded > 0) {
           try {
-            addCoins(ach.coins);
+            addCoins(coinsAwarded);
           } catch (e) {
             console.warn("[Achievements] addCoins failed", e);
           }
         }
 
+        // Toast for the user
         if (!opts?.silent) {
           try {
+            const msg =
+              coinsAwarded > 0
+                ? `${ach.title} • +${coinsAwarded} coins`
+                : ach.title;
             showToast({
               title: "Achievement unlocked!",
-              message:
-                ach.coins && ach.coins > 0
-                  ? `${ach.title} • +${ach.coins} coins`
-                  : ach.title,
+              message: msg,
               type: "success",
             });
           } catch (e) {
             console.warn("[Achievements] toast failed", e);
           }
         }
+      } else {
+        console.log(
+          "[Achievements] unlock called with id not in ACH_MAP:",
+          id
+        );
       }
 
-      // Notify UI (confetti / haptics)
+      // Notify UI (confetti / haptics / overlays)
       try {
-        DeviceEventEmitter.emit(ACHIEVEMENT_EVENT, { id, ts: now });
+        DeviceEventEmitter.emit(ACHIEVEMENT_EVENT, {
+          id,
+          ts: now,
+          coinsAwarded,
+          type: "unlocked",
+        });
+
         if (Platform.OS === "web" && typeof window !== "undefined") {
           try {
-            window.dispatchEvent(new Event(ACHIEVEMENT_EVENT));
+            (window as any).dispatchEvent(new Event(ACHIEVEMENT_EVENT));
           } catch {}
         }
       } catch (e) {
@@ -209,18 +248,9 @@ export function AchievementsProvider({
 
   const handleQuizFinished = useCallback(
     (pct: number, subject: string) => {
-      console.log("[Achievements] handleQuizFinished", {
-        pct,
-        subject,
-        hydrated,
-      });
+      console.log("[Achievements] handleQuizFinished", { pct, subject });
 
-      // 1️⃣ First quiz completed
-      if (!unlockedRef.current["first_quiz"]) {
-        unlock("first_quiz");
-      }
-
-      // 2️⃣ Score-based (global)
+      // Global quiz performance thresholds
       if (pct >= 80 && !unlockedRef.current["quiz_80"]) {
         unlock("quiz_80");
       }
@@ -237,62 +267,45 @@ export function AchievementsProvider({
         unlock("quiz_100");
       }
 
-      // 3️⃣ Quiz count milestones (simple global)
+      // Quiz count milestones (global)
       quizCountRef.current += 1;
       persistQuizCount();
       const total = quizCountRef.current;
 
-      if (total >= 10 && !unlockedRef.current["quiz_10"]) {
-        unlock("quiz_10");
-      }
-      if (total >= 25 && !unlockedRef.current["quiz_25"]) {
-        unlock("quiz_25");
-      }
-
-      // 4️⃣ Volume-based global (coins disabled by silent flag)
-      const volumeThresholds = [1, 5, 10, 25, 50, 100, 200];
-      for (const n of volumeThresholds) {
-        if (total >= n) {
-          const id = `quiz_taken_${n}`;
-          if (!unlockedRef.current[id] && ACH_MAP[id]) {
-            unlock(id, { silent: true });
-          }
-        }
-      }
-
-      // 5️⃣ Subject-based achievements (also silent: no extra coins)
-      const key = subject
-        ? subject.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_")
-        : "";
-      if (key) {
-        const subjectThresholds = [80, 85, 90, 95, 100];
-        for (const p of subjectThresholds) {
-          if (pct >= p) {
-            const id = `quiz_${key}_${p}`;
-            if (!unlockedRef.current[id] && ACH_MAP[id]) {
-              unlock(id, { silent: true });
-            }
-          }
-        }
-
-        const subjectVolumeThresholds = [1, 5, 10, 25, 50, 100, 200];
-        for (const n of subjectVolumeThresholds) {
-          if (total >= n) {
-            const id = `quiz_taken_${key}_${n}`;
-            if (!unlockedRef.current[id] && ACH_MAP[id]) {
-              unlock(id, { silent: true });
-            }
-          }
+      const thresholds = [1, 5, 10, 25, 50, 100, 200];
+      for (const n of thresholds) {
+        const id = `quiz_taken_${n}`;
+        if (total >= n && !unlockedRef.current[id]) {
+          unlock(id);
         }
       }
     },
-    [unlock, persistQuizCount, hydrated]
+    [unlock, persistQuizCount]
   );
+
+  // ───────────────── ASK QUESTION HANDLER ─────────────────
+
+  const onAskQuestion = useCallback(() => {
+    askCountRef.current += 1;
+    const total = askCountRef.current;
+    persistAskCount();
+    console.log("[Achievements] onAskQuestion total =", total);
+
+    const thresholds = [
+      1, 5, 10, 20, 25, 50, 75, 100, 150, 200, 250, 300, 400, 500, 750, 1000,
+    ];
+    for (const n of thresholds) {
+      const id = `ask_${n}`;
+      if (total >= n && !unlockedRef.current[id]) {
+        unlock(id);
+      }
+    }
+  }, [unlock, persistAskCount]);
 
   // Exposed API for TopicQuiz, etc.
   const onQuizFinished = useCallback(
     (pct: number, subject: string) => {
-      console.log("[Achievements] onQuizFinished emit", { pct, subject });
+      // Emit via SimpleEmitter so any bridges can forward it
       AchieveEmitter.emit(ACHIEVEMENT_EVENT, {
         type: "quizFinished",
         scorePct: pct,
@@ -306,12 +319,15 @@ export function AchievementsProvider({
   useEffect(() => {
     if (!hydrated) return;
 
-    const sub = AchieveEmitter.addListener(ACHIEVEMENT_EVENT, (payload) => {
-      if (!payload || payload.type !== "quizFinished") return;
-      const pct = Number(payload.scorePct ?? 0);
-      const subject = String(payload.subject || "Quiz");
-      handleQuizFinished(pct, subject);
-    });
+    const sub = AchieveEmitter.addListener(
+      ACHIEVEMENT_EVENT,
+      (payload: any) => {
+        if (!payload || payload.type !== "quizFinished") return;
+        const pct = Number(payload.scorePct ?? 0);
+        const subject = String(payload.subject || "Quiz");
+        handleQuizFinished(pct, subject);
+      }
+    );
 
     return () => sub.remove();
   }, [hydrated, handleQuizFinished]);
@@ -320,8 +336,9 @@ export function AchievementsProvider({
     () => ({
       unlocked,
       onQuizFinished,
+      onAskQuestion,
     }),
-    [unlocked, onQuizFinished]
+    [unlocked, onQuizFinished, onAskQuestion]
   );
 
   return (

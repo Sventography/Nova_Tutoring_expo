@@ -19,6 +19,7 @@ import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { askNova } from "../_lib/ai";
 import { useTheme } from "../context/ThemeContext";
+import { useAchievements } from "../context/AchievementsContext";
 
 type Msg = { id: string; role: "user" | "assistant" | "system"; text: string };
 
@@ -42,6 +43,7 @@ async function bumpCount() {
 
 export default function Ask() {
   const { tokens } = useTheme();
+  const { onAskQuestion } = useAchievements();
 
   // --- theme-driven colors
   const gradient = tokens.gradient;
@@ -94,8 +96,16 @@ export default function Ask() {
       };
       setMessages((m) => [...m, aiMsg]);
       setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 10);
+
       const newCount = await bumpCount();
       setCount(newCount);
+
+      // fire Ask achievements
+      try {
+        onAskQuestion?.();
+      } catch (e) {
+        console.log("[Ask] onAskQuestion error", e);
+      }
     } catch (e: any) {
       const msg =
         e?.message === "NO_OPENAI_KEY"
@@ -110,7 +120,7 @@ export default function Ask() {
       setLoading(false);
       setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 10);
     }
-  }, [input, loading]);
+  }, [input, loading, onAskQuestion]);
 
   const renderItem = ({ item }: { item: Msg }) => {
     const isUser = item.role === "user";
