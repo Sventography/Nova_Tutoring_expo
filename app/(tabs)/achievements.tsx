@@ -1,4 +1,3 @@
-// app/(tabs)/achievements.tsx
 import React, { useEffect, useMemo, useRef } from "react";
 import {
   View,
@@ -14,10 +13,7 @@ import {
   useAchievements,
   ACHIEVEMENT_EVENT,
 } from "../context/AchievementsContext";
-import {
-  ACHIEVEMENT_LIST,
-  SUBJECT_COLORS,
-} from "../constants/achievements";
+import { ACHIEVEMENT_LIST } from "../constants/achievements";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import ConfettiCannon from "react-native-confetti-cannon";
@@ -47,10 +43,8 @@ export default function AchievementsScreen() {
         confettiRef.current?.start?.();
       } catch {}
     };
-
     const sub = DeviceEventEmitter.addListener(ACHIEVEMENT_EVENT, onUnlocked);
-
-    if (Platform.OS === "web" && typeof window !== "undefined") {
+    if (Platform.OS === "web") {
       const handler = () => onUnlocked();
       // @ts-ignore
       window.addEventListener(ACHIEVEMENT_EVENT as any, handler as any);
@@ -60,33 +54,26 @@ export default function AchievementsScreen() {
         window.removeEventListener(ACHIEVEMENT_EVENT as any, handler as any);
       };
     }
-
     return () => sub.remove();
   }, []);
 
   const sections: Section[] = useMemo(() => {
     const unlockedList: Item[] = [];
     const lockedList: Item[] = [];
-
     for (const a of ACHIEVEMENT_LIST) {
       const ts = unlocked && unlocked[a.id];
-      const base: Item = {
+      const base = {
         id: a.id,
         title: a.title,
         desc: a.desc,
         coins: a.coins ?? 0,
       };
-      if (ts) {
-        unlockedList.push({ ...base, unlockedAt: ts });
-      } else {
-        lockedList.push(base);
-      }
+      if (ts) unlockedList.push({ ...base, unlockedAt: ts });
+      else lockedList.push(base);
     }
-
     unlockedList.sort(
       (a, b) => (b.unlockedAt ?? 0) - (a.unlockedAt ?? 0)
     );
-
     return [
       ...(unlockedList.length
         ? [{ title: "Unlocked Achievements", data: unlockedList }]
@@ -114,12 +101,7 @@ export default function AchievementsScreen() {
           contentContainerStyle={S.listContent}
           stickySectionHeadersEnabled={false}
           renderSectionHeader={({ section }) => (
-            <Text
-              style={[
-                S.sectionTitle,
-                { color: tokens.text },
-              ]}
-            >
+            <Text style={[S.sectionTitle, { color: tokens.text }]}>
               {section.title}
             </Text>
           )}
@@ -143,23 +125,16 @@ export default function AchievementsScreen() {
 /* ---------- helpers ---------- */
 
 function subjectFromId(id: string): string | null {
-  // quiz_<pct>                  -> no subject
-  // quiz_<subject>_<pct>        -> subject
-  // quiz_taken_<n>              -> no subject
-  // quiz_taken_<subject>_<n>    -> subject
   if (!id.startsWith("quiz_")) return null;
-  const parts = id.split("_"); // e.g., ["quiz","math","90"] or ["quiz","taken","science","10"]
-
+  const parts = id.split("_");
   if (parts.length === 3) {
     const mid = parts[1];
-    if (isNaN(Number(mid))) return mid; // quiz_<subject>_<pct>
+    if (isNaN(Number(mid))) return mid;
   }
-
   if (parts.length === 4 && parts[1] === "taken") {
     const mid = parts[2];
-    if (isNaN(Number(mid))) return mid; // quiz_taken_<subject>_<n>
+    if (isNaN(Number(mid))) return mid;
   }
-
   return null;
 }
 
@@ -183,7 +158,6 @@ function formatWhen(ts?: number) {
 
 function UnlockedCard({ item, tokens }: { item: Item; tokens: any }) {
   const pulse = useRef(new Animated.Value(0)).current;
-
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
@@ -213,7 +187,6 @@ function UnlockedCard({ item, tokens }: { item: Item; tokens: any }) {
   });
 
   const subj = subjectFromId(item.id);
-  const subjectColor = subj ? SUBJECT_COLORS[subj] ?? tokens.accent : tokens.accent;
 
   const bgColors = tokens.isDark
     ? [tokens.card, "#050b18"]
@@ -224,7 +197,7 @@ function UnlockedCard({ item, tokens }: { item: Item; tokens: any }) {
       style={[
         S.cardWrap,
         {
-          shadowColor: subjectColor,
+          shadowColor: tokens.accent,
           shadowOpacity: 0.35,
           shadowRadius,
           shadowOffset: { width: 0, height: 0 },
@@ -233,7 +206,7 @@ function UnlockedCard({ item, tokens }: { item: Item; tokens: any }) {
     >
       <LinearGradient colors={bgColors} style={S.cardBg}>
         <LinearGradient
-          colors={[subjectColor, "transparent"]}
+          colors={[tokens.accent, "transparent"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={S.neonBorder}
@@ -241,18 +214,13 @@ function UnlockedCard({ item, tokens }: { item: Item; tokens: any }) {
         <Animated.View
           style={[
             S.borderOverlay,
-            { opacity: borderOpacity, borderColor: subjectColor },
+            { opacity: borderOpacity, borderColor: tokens.accent },
           ]}
         />
         <View style={S.cardInner}>
           <View style={S.titleRow}>
-            <Ionicons name="trophy" size={18} color={subjectColor} />
-            <Text
-              style={[
-                S.title,
-                { color: tokens.text },
-              ]}
-            >
+            <Ionicons name="trophy" size={18} color={tokens.accent} />
+            <Text style={[S.title, { color: tokens.text }]}>
               {item.title}
             </Text>
             {!!subj && (
@@ -260,31 +228,21 @@ function UnlockedCard({ item, tokens }: { item: Item; tokens: any }) {
                 style={[
                   S.pill,
                   {
-                    borderColor: subjectColor,
+                    borderColor: tokens.accent,
                     backgroundColor: tokens.isDark
                       ? "rgba(0,229,255,0.08)"
                       : "rgba(0,120,200,0.06)",
                   },
                 ]}
               >
-                <Text
-                  style={[
-                    S.pillText,
-                    { color: subjectColor },
-                  ]}
-                >
+                <Text style={[S.pillText, { color: tokens.accent }]}>
                   {titleCase(subj)}
                 </Text>
               </View>
             )}
           </View>
           {!!item.desc && (
-            <Text
-              style={[
-                S.desc,
-                { color: tokens.cardText },
-              ]}
-            >
+            <Text style={[S.desc, { color: tokens.cardText }]}>
               {item.desc}
             </Text>
           )}
@@ -292,25 +250,15 @@ function UnlockedCard({ item, tokens }: { item: Item; tokens: any }) {
             <View
               style={[
                 S.badge,
-                { borderColor: subjectColor },
+                { borderColor: tokens.accent },
               ]}
             >
-              <Ionicons name="sparkles" size={14} color={subjectColor} />
-              <Text
-                style={[
-                  S.badgeText,
-                  { color: tokens.text },
-                ]}
-              >
+              <Ionicons name="sparkles" size={14} color={tokens.accent} />
+              <Text style={[S.badgeText, { color: tokens.text }]}>
                 +{item.coins} coins
               </Text>
             </View>
-            <Text
-              style={[
-                S.whenText,
-                { color: tokens.cardText },
-              ]}
-            >
+            <Text style={[S.whenText, { color: tokens.cardText }]}>
               {formatWhen(item.unlockedAt)}
             </Text>
           </View>
@@ -322,7 +270,6 @@ function UnlockedCard({ item, tokens }: { item: Item; tokens: any }) {
 
 function LockedCard({ item, tokens }: { item: Item; tokens: any }) {
   const subj = subjectFromId(item.id);
-  const subjectColor = subj ? SUBJECT_COLORS[subj] ?? tokens.border : tokens.border;
 
   const bgColors = tokens.isDark
     ? [tokens.card, "#050b18"]
@@ -337,7 +284,7 @@ function LockedCard({ item, tokens }: { item: Item; tokens: any }) {
       style={[
         S.cardWrap,
         {
-          shadowColor: subjectColor,
+          shadowColor: tokens.accent,
           shadowOpacity: 0.15,
           shadowRadius: 6,
           shadowOffset: { width: 0, height: 0 },
@@ -346,7 +293,7 @@ function LockedCard({ item, tokens }: { item: Item; tokens: any }) {
     >
       <LinearGradient colors={bgColors} style={S.cardBg}>
         <LinearGradient
-          colors={[subjectColor, "transparent"]}
+          colors={[tokens.border, "transparent"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={S.neonBorder}
@@ -354,12 +301,7 @@ function LockedCard({ item, tokens }: { item: Item; tokens: any }) {
         <View style={S.cardInner}>
           <View style={S.titleRow}>
             <Ionicons name="lock-closed" size={18} color={muted} />
-            <Text
-              style={[
-                S.title,
-                { color: tokens.text },
-              ]}
-            >
+            <Text style={[S.title, { color: tokens.text }]}>
               {item.title}
             </Text>
             {!!subj && (
@@ -374,24 +316,14 @@ function LockedCard({ item, tokens }: { item: Item; tokens: any }) {
                   },
                 ]}
               >
-                <Text
-                  style={[
-                    S.pillText,
-                    { color: muted },
-                  ]}
-                >
+                <Text style={[S.pillText, { color: muted }]}>
                   {titleCase(subj)}
                 </Text>
               </View>
             )}
           </View>
           {!!item.desc && (
-            <Text
-              style={[
-                S.descMuted,
-                { color: muted },
-              ]}
-            >
+            <Text style={[S.descMuted, { color: muted }]}>
               {item.desc}
             </Text>
           )}
@@ -407,21 +339,11 @@ function LockedCard({ item, tokens }: { item: Item; tokens: any }) {
                 size={14}
                 color={muted}
               />
-              <Text
-                style={[
-                  S.badgeText,
-                  { color: muted },
-                ]}
-              >
+              <Text style={[S.badgeText, { color: muted }]}>
                 +{item.coins} coins
               </Text>
             </View>
-            <Text
-              style={[
-                S.whenText,
-                { color: muted },
-              ]}
-            >
+            <Text style={[S.whenText, { color: muted }]}>
               Locked
             </Text>
           </View>

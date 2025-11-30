@@ -17,22 +17,28 @@ import { useToast } from "./ToastContext";
 const STORAGE_KEY_UNLOCKED = "@achieve/unlocked.v1";
 const STORAGE_KEY_QUIZ_COUNT = "@achieve/quizCount.v1";
 const STORAGE_KEY_ASK_COUNT = "@achieve/askCount.v1";
+const STORAGE_KEY_FLASHCARD_COUNT = "@achieve/flashcardCount.v1";
+const STORAGE_KEY_BRAIN_COUNT = "@achieve/brainteaserCount.v1";
+const STORAGE_KEY_RELAX_MIN = "@achieve/relaxMinutes.v1";
 
 export const ACHIEVEMENT_EVENT = "ACHIEVEMENT_EVENT";
 
-// ───────────────── TYPES ─────────────────
+// ─────────────── TYPES ───────────────
 
 type UnlockedMap = Record<string, number>; // id -> timestamp
 
 type AchievementsContextValue = {
   unlocked: UnlockedMap;
   onQuizFinished: (pct: number, subject: string) => void;
-  onAskQuestion: () => void;
+  onAskQuestion?: () => void;
+  onFlashcardSaved?: () => void;
+  onBrainPairCompleted?: () => void;
+  onRelaxMinutes?: (deltaMinutes: number) => void;
 };
 
 type Listener = (payload: any) => void;
 
-// ───────────────── SIMPLE EMITTER (USED BY QUIZ + BRIDGE) ─────────────────
+// ─────────────── SIMPLE EMITTER ───────────────
 
 class SimpleEmitter {
   private listeners: Record<string, Listener[]> = {};
@@ -62,7 +68,7 @@ class SimpleEmitter {
 
 export const AchieveEmitter = new SimpleEmitter();
 
-// Build a quick lookup map from ACHIEVEMENT_LIST for coins & title
+// quick lookup map from ACHIEVEMENT_LIST
 const ACH_MAP: Record<
   string,
   { id: string; title: string; coins: number; desc?: string }
@@ -76,7 +82,15 @@ const ACH_MAP: Record<
   return acc;
 }, {} as Record<string, { id: string; title: string; coins: number; desc?: string }>);
 
-// ───────────────── CONTEXT ─────────────────
+// thresholds
+const ASK_THRESHOLDS = [
+  1, 5, 10, 20, 25, 50, 75, 100, 150, 200, 250, 300, 400, 500, 750, 1000,
+];
+const FLASH_THRESHOLDS = [1, 5, 10, 25, 50, 100, 200];
+const BRAIN_THRESHOLDS = [1, 3, 5, 10, 20, 50, 100];
+const RELAX_THRESHOLDS = [5, 10, 20, 30, 60, 120];
+
+// ─────────────── CONTEXT ───────────────
 
 const AchievementsCtx = createContext<AchievementsContextValue | null>(null);
 
@@ -88,29 +102,47 @@ export function useAchievements(): AchievementsContextValue {
   return ctx;
 }
 
-export function AchievementsProvider({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export function AchievementsProvider({ children }: { children: React.ReactNode }) {
   const [unlocked, setUnlocked] = useState<UnlockedMap>({});
   const unlockedRef = useRef<UnlockedMap>({});
   const quizCountRef = useRef<number>(0);
   const askCountRef = useRef<number>(0);
+  const flashCountRef = useRef<number>(0);
+  const brainCountRef = useRef<number>(0);
+  const relaxMinutesRef = useRef<number>(0);
   const [hydrated, setHydrated] = useState(false);
 
-  const { addCoins } = useCoins();
+  const coinsApi = useCoins();
   const { show: showToast } = useToast();
 
-  // ───────────────── HYDRATE FROM STORAGE ─────────────────
+  const addCoinsFn = useMemo(() => {
+    const anyCoins = coinsApi as any;
+    if (typeof anyCoins.add === "function") return anyCoins.add.bind(anyCoins);
+    if (typeof anyCoins.addCoins === "function") return anyCoins.addCoins.bind(anyCoins);
+    if (typeof anyCoins.credit === "function") return anyCoins.credit.bind(anyCoins);
+    console.warn("[Achievements] No coin adder function found in useCoins()");
+    return null;
+  }, [coinsApi]);
+
+  // ─────────────── HYDRATE ───────────────
 
   useEffect(() => {
     (async () => {
       try {
-        const [rawUnlocked, rawQuizCount, rawAskCount] = await Promise.all([
+        const [
+          rawUnlocked,
+          rawQuizCount,
+          rawAskCount,
+          rawFlashCount,
+          rawBrainCount,
+          rawRelaxMin,
+        ] = await Promise.all([
           AsyncStorage.getItem(STORAGE_KEY_UNLOCKED),
           AsyncStorage.getItem(STORAGE_KEY_QUIZ_COUNT),
           AsyncStorage.getItem(STORAGE_KEY_ASK_COUNT),
+          AsyncStorage.getItem(STORAGE_KEY_FLASHCARD_COUNT),
+          AsyncStorage.getItem(STORAGE_KEY_BRAIN_COUNT),
+          AsyncStorage.getItem(STORAGE_KEY_RELAX_MIN),
         ]);
 
         if (rawUnlocked) {
@@ -119,19 +151,17 @@ export function AchievementsProvider({
           setUnlocked(parsed || {});
         }
 
-        if (rawQuizCount) {
-          const n = parseInt(rawQuizCount, 10);
-          if (!Number.isNaN(n)) {
-            quizCountRef.current = n;
-          }
-        }
+        const parseNum = (raw: string | null) => {
+          if (!raw) return 0;
+          const n = parseInt(raw, 10);
+          return Number.isNaN(n) ? 0 : n;
+        };
 
-        if (rawAskCount) {
-          const n = parseInt(rawAskCount, 10);
-          if (!Number.isNaN(n)) {
-            askCountRef.current = n;
-          }
-        }
+        quizCountRef.current = parseNum(rawQuizCount);
+        askCountRef.current = parseNum(rawAskCount);
+        flashCountRef.current = parseNum(rawFlashCount);
+        brainCountRef.current = parseNum(rawBrainCount);
+        relaxMinutesRef.current = parseNum(rawRelaxMin);
       } catch (e) {
         console.warn("[Achievements] hydrate failed", e);
       } finally {
@@ -173,7 +203,40 @@ export function AchievementsProvider({
     }
   }, []);
 
-  // ───────────────── UNLOCK HELPER ─────────────────
+  const persistFlashCount = useCallback(async () => {
+    try {
+      await AsyncStorage.setItem(
+        STORAGE_KEY_FLASHCARD_COUNT,
+        String(flashCountRef.current)
+      );
+    } catch (e) {
+      console.warn("[Achievements] persist flashcard count failed", e);
+    }
+  }, []);
+
+  const persistBrainCount = useCallback(async () => {
+    try {
+      await AsyncStorage.setItem(
+        STORAGE_KEY_BRAIN_COUNT,
+        String(brainCountRef.current)
+      );
+    } catch (e) {
+      console.warn("[Achievements] persist brainteaser count failed", e);
+    }
+  }, []);
+
+  const persistRelaxMinutes = useCallback(async () => {
+    try {
+      await AsyncStorage.setItem(
+        STORAGE_KEY_RELAX_MIN,
+        String(relaxMinutesRef.current)
+      );
+    } catch (e) {
+      console.warn("[Achievements] persist relax minutes failed", e);
+    }
+  }, []);
+
+  // ─────────────── UNLOCK ───────────────
 
   const unlock = useCallback(
     (id: string, opts?: { silent?: boolean }) => {
@@ -185,105 +248,99 @@ export function AchievementsProvider({
       persistUnlocked();
 
       const ach = ACH_MAP[id];
-      let coinsAwarded = 0;
-
       if (ach) {
-        coinsAwarded = ach.coins ?? 0;
-        console.log("[Achievements] unlock", id, "coins =", coinsAwarded);
-
-        // Award coins if defined
-        if (coinsAwarded > 0) {
+        if (ach.coins && ach.coins > 0 && addCoinsFn) {
           try {
-            addCoins(coinsAwarded);
+            console.log("[Achievements] awarding coins", ach.coins, "for", id);
+            const res = addCoinsFn(ach.coins);
+            if (res && typeof (res as any).catch === "function") {
+              (res as any).catch((e: any) =>
+                console.warn("[Achievements] addCoins async failed", e)
+              );
+            }
           } catch (e) {
             console.warn("[Achievements] addCoins failed", e);
           }
         }
 
-        // Toast for the user
         if (!opts?.silent) {
           try {
-            const msg =
-              coinsAwarded > 0
-                ? `${ach.title} • +${coinsAwarded} coins`
-                : ach.title;
             showToast({
               title: "Achievement unlocked!",
-              message: msg,
+              message:
+                ach.coins && ach.coins > 0
+                  ? `${ach.title} • +${ach.coins} coins`
+                  : ach.title,
               type: "success",
+              icon: "🎉",
             });
           } catch (e) {
             console.warn("[Achievements] toast failed", e);
           }
         }
-      } else {
-        console.log(
-          "[Achievements] unlock called with id not in ACH_MAP:",
-          id
-        );
       }
 
-      // Notify UI (confetti / haptics / overlays)
       try {
-        DeviceEventEmitter.emit(ACHIEVEMENT_EVENT, {
-          id,
-          ts: now,
-          coinsAwarded,
-          type: "unlocked",
-        });
-
+        DeviceEventEmitter.emit(ACHIEVEMENT_EVENT, { id, ts: now });
         if (Platform.OS === "web" && typeof window !== "undefined") {
           try {
-            (window as any).dispatchEvent(new Event(ACHIEVEMENT_EVENT));
+            window.dispatchEvent(new Event(ACHIEVEMENT_EVENT));
           } catch {}
         }
       } catch (e) {
         console.warn("[Achievements] DeviceEventEmitter emit failed", e);
       }
     },
-    [addCoins, showToast, persistUnlocked]
+    [addCoinsFn, showToast, persistUnlocked]
   );
 
-  // ───────────────── QUIZ FINISHED HANDLER ─────────────────
+  // ─────────────── QUIZ ───────────────
 
   const handleQuizFinished = useCallback(
     (pct: number, subject: string) => {
       console.log("[Achievements] handleQuizFinished", { pct, subject });
 
-      // Global quiz performance thresholds
-      if (pct >= 80 && !unlockedRef.current["quiz_80"]) {
-        unlock("quiz_80");
-      }
-      if (pct >= 85 && !unlockedRef.current["quiz_85"]) {
-        unlock("quiz_85");
-      }
-      if (pct >= 90 && !unlockedRef.current["quiz_90"]) {
-        unlock("quiz_90");
-      }
-      if (pct >= 95 && !unlockedRef.current["quiz_95"]) {
-        unlock("quiz_95");
-      }
-      if (pct >= 100 && !unlockedRef.current["quiz_100"]) {
-        unlock("quiz_100");
-      }
+      if (pct >= 80 && !unlockedRef.current["quiz_80"]) unlock("quiz_80");
+      if (pct >= 85 && !unlockedRef.current["quiz_85"]) unlock("quiz_85");
+      if (pct >= 90 && !unlockedRef.current["quiz_90"]) unlock("quiz_90");
+      if (pct >= 95 && !unlockedRef.current["quiz_95"]) unlock("quiz_95");
+      if (pct >= 100 && !unlockedRef.current["quiz_100"]) unlock("quiz_100");
 
-      // Quiz count milestones (global)
       quizCountRef.current += 1;
       persistQuizCount();
       const total = quizCountRef.current;
 
-      const thresholds = [1, 5, 10, 25, 50, 100, 200];
-      for (const n of thresholds) {
+      const quizTakenThresholds = [1, 5, 10, 25, 50, 100, 200];
+      for (const n of quizTakenThresholds) {
         const id = `quiz_taken_${n}`;
-        if (total >= n && !unlockedRef.current[id]) {
-          unlock(id);
-        }
+        if (total >= n && !unlockedRef.current[id]) unlock(id);
       }
     },
     [unlock, persistQuizCount]
   );
 
-  // ───────────────── ASK QUESTION HANDLER ─────────────────
+  const onQuizFinished = useCallback((pct: number, subject: string) => {
+    AchieveEmitter.emit(ACHIEVEMENT_EVENT, {
+      type: "quizFinished",
+      scorePct: pct,
+      subject,
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+
+    const sub = AchieveEmitter.addListener(ACHIEVEMENT_EVENT, (payload) => {
+      if (!payload || payload.type !== "quizFinished") return;
+      const pct = Number(payload.scorePct ?? 0);
+      const subject = String(payload.subject || "Quiz");
+      handleQuizFinished(pct, subject);
+    });
+
+    return () => sub.remove();
+  }, [hydrated, handleQuizFinished]);
+
+  // ─────────────── ASK ───────────────
 
   const onAskQuestion = useCallback(() => {
     askCountRef.current += 1;
@@ -291,10 +348,7 @@ export function AchievementsProvider({
     persistAskCount();
     console.log("[Achievements] onAskQuestion total =", total);
 
-    const thresholds = [
-      1, 5, 10, 20, 25, 50, 75, 100, 150, 200, 250, 300, 400, 500, 750, 1000,
-    ];
-    for (const n of thresholds) {
+    for (const n of ASK_THRESHOLDS) {
       const id = `ask_${n}`;
       if (total >= n && !unlockedRef.current[id]) {
         unlock(id);
@@ -302,43 +356,75 @@ export function AchievementsProvider({
     }
   }, [unlock, persistAskCount]);
 
-  // Exposed API for TopicQuiz, etc.
-  const onQuizFinished = useCallback(
-    (pct: number, subject: string) => {
-      // Emit via SimpleEmitter so any bridges can forward it
-      AchieveEmitter.emit(ACHIEVEMENT_EVENT, {
-        type: "quizFinished",
-        scorePct: pct,
-        subject,
-      });
-    },
-    []
-  );
+  // ─────────────── FLASHCARDS ───────────────
 
-  // Listen to the emitter for quizFinished events (both from onQuizFinished and any bridges)
-  useEffect(() => {
-    if (!hydrated) return;
+  const onFlashcardSaved = useCallback(() => {
+    flashCountRef.current += 1;
+    const total = flashCountRef.current;
+    persistFlashCount();
+    console.log("[Achievements] onFlashcardSaved total =", total);
 
-    const sub = AchieveEmitter.addListener(
-      ACHIEVEMENT_EVENT,
-      (payload: any) => {
-        if (!payload || payload.type !== "quizFinished") return;
-        const pct = Number(payload.scorePct ?? 0);
-        const subject = String(payload.subject || "Quiz");
-        handleQuizFinished(pct, subject);
+    for (const n of FLASH_THRESHOLDS) {
+      const id = `flashcards_saved_${n}`;
+      if (total >= n && !unlockedRef.current[id]) {
+        unlock(id);
       }
-    );
+    }
+  }, [unlock, persistFlashCount]);
 
-    return () => sub.remove();
-  }, [hydrated, handleQuizFinished]);
+  // ─────────────── BRAINTEASERS ───────────────
+
+  const onBrainPairCompleted = useCallback(() => {
+    brainCountRef.current += 1;
+    const total = brainCountRef.current;
+    persistBrainCount();
+    console.log("[Achievements] onBrainPairCompleted total =", total);
+
+    for (const n of BRAIN_THRESHOLDS) {
+      const id = `brain_pair_${n}`;
+      if (total >= n && !unlockedRef.current[id]) {
+        unlock(id);
+      }
+    }
+  }, [unlock, persistBrainCount]);
+
+  // ─────────────── RELAX TIME ───────────────
+
+  const onRelaxMinutes = useCallback(
+    (deltaMinutes: number) => {
+      if (!deltaMinutes || deltaMinutes <= 0) return;
+      relaxMinutesRef.current += deltaMinutes;
+      const total = relaxMinutesRef.current;
+      persistRelaxMinutes();
+      console.log("[Achievements] onRelaxMinutes total =", total);
+
+      for (const mins of RELAX_THRESHOLDS) {
+        const id = `relax_minutes_${mins}`;
+        if (total >= mins && !unlockedRef.current[id]) {
+          unlock(id);
+        }
+      }
+    },
+    [unlock, persistRelaxMinutes]
+  );
 
   const value = useMemo<AchievementsContextValue>(
     () => ({
       unlocked,
       onQuizFinished,
       onAskQuestion,
+      onFlashcardSaved,
+      onBrainPairCompleted,
+      onRelaxMinutes,
     }),
-    [unlocked, onQuizFinished, onAskQuestion]
+    [
+      unlocked,
+      onQuizFinished,
+      onAskQuestion,
+      onFlashcardSaved,
+      onBrainPairCompleted,
+      onRelaxMinutes,
+    ]
   );
 
   return (
