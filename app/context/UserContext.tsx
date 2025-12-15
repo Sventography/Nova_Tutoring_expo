@@ -19,7 +19,7 @@ type Ctx = {
   reload: () => Promise<void>;
 };
 
-const KEY = "@nova/user";
+export const USER_STORAGE_KEY = "@nova/user";
 const C = createContext<Ctx | null>(null);
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
@@ -29,7 +29,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     (async () => {
       try {
-        const raw = await AsyncStorage.getItem(KEY);
+        const raw = await AsyncStorage.getItem(USER_STORAGE_KEY);
         if (raw) {
           const parsed = JSON.parse(raw);
           if (parsed && typeof parsed === "object") setUserState(parsed as User);
@@ -40,7 +40,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
   // persist on change
   useEffect(() => {
-    AsyncStorage.setItem(KEY, JSON.stringify(user ?? {})).catch(() => {});
+    AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user ?? {})).catch(() => {});
   }, [user]);
 
   const setUser = useCallback((u: User | null) => setUserState(u), []);
@@ -52,7 +52,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const updateProfile = useCallback(async (patch: Partial<User>) => {
     setUserState((prev) => {
       const next = { ...(prev ?? {}), ...patch };
-      AsyncStorage.setItem(KEY, JSON.stringify(next)).catch(() => {});
+      AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(next)).catch(() => {});
       return next;
     });
   }, []);
@@ -61,17 +61,17 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     const base: User = { id: "local", name: "Student", username: "Student", avatarUri: undefined };
     const next: User = { ...base, ...(user ?? {}), ...u };
     setUserState(next);
-    try { await AsyncStorage.setItem(KEY, JSON.stringify(next)); } catch {}
+    try { await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(next)); } catch {}
   }, [user]);
 
   const signOut = useCallback(() => {
     setUserState(null);
-    AsyncStorage.setItem(KEY, JSON.stringify({})).catch(() => {});
+    AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify({})).catch(() => {});
   }, []);
 
   const reload = useCallback(async () => {
     try {
-      const raw = await AsyncStorage.getItem(KEY);
+      const raw = await AsyncStorage.getItem(USER_STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
         if (parsed && typeof parsed === "object") setUserState(parsed as User);

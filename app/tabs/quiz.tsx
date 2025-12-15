@@ -151,7 +151,7 @@ export default function QuizScreen({
 
     // 2) achievements hook
     try {
-      await reportQuizFinished(pct, String(topicId));
+      await reportQuizFinished(pct, headerTitle ?? String(topicId));
     } catch {}
 
     // 3) unlock achievements

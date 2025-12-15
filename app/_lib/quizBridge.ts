@@ -41,7 +41,7 @@ export async function handleQuizFinished(payload: QuizBridgePayload) {
 
   // 2) Achievements reporter
   try {
-    await reportQuizFinished(percent, topicId);
+    await reportQuizFinished(percent, title);
   } catch (err) {
     console.log("[quizBridge] reportQuizFinished FAILED", err);
   }

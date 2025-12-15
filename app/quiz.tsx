@@ -162,7 +162,7 @@ export default function QuizScreen() {
     );
 
     // 2) achievements
-    await reportQuizFinished(pct, String(topicId)).catch(() => {});
+    await reportQuizFinished(pct, headerTitle ?? String(topicId)).catch(() => {});
     await unlockQuizAchievements({
       correct,
       total,
