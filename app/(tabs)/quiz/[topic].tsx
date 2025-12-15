@@ -1,4 +1,5 @@
 // app/(tabs)/quiz/[topic].tsx
+import { reportQuizFinished } from "../../utils/report-quiz-finish";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
@@ -180,6 +181,8 @@ export default function TopicQuiz() {
     if (loggedRef.current) return;
 
     const pct = total ? Math.round((correct / total) * 100) : 0;
+
+    reportQuizFinished(pct, headerTitle ?? topicTitle ?? title ?? "Quiz").catch(() => {});
     loggedRef.current = true;
 
     const durationSecRaw = TOTAL_TIME - totalLeft;

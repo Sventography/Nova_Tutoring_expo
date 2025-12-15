@@ -164,20 +164,6 @@ export default function QuizScreen({
       });
     } catch {}
 
-    // 4) certificate
-    if (pct >= 80 && !certSavedRef.current) {
-      certSavedRef.current = true;
-      try {
-        await createCertificate({
-          name: user?.username || "Student",
-          quizTitle: headerTitle,
-          scorePct: pct,
-        });
-        showToast(`🎓 Certificate earned: ${headerTitle}`);
-      } catch {}
-      setShowCert(true);
-    }
-
     loggedRef.current = true;
   };
 

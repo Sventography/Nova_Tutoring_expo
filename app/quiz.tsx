@@ -169,21 +169,8 @@ export default function QuizScreen() {
       pct,
       topicId: String(topicId),
     }).catch(() => {});
-
-    // 3) certificate
-    if (pct >= 80 && !certSavedRef.current) {
-      certSavedRef.current = true;
-      try {
-        await createCertificate({
-          name: user?.username || "Student",
-          quizTitle: headerTitle,
-          scorePct: pct,
-        });
-        showToast(`🎓 Certificate earned: ${headerTitle}`);
-      } catch {}
-      setShowCert(true);
-    }
   };
+
 
   useEffect(() => {
     if (done) logResultIfNeeded("done");

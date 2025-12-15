@@ -57,19 +57,4 @@ export async function handleQuizFinished(payload: QuizBridgePayload) {
   } catch (err) {
     console.log("[quizBridge] unlockQuizAchievements FAILED", err);
   }
-
-  // 4) Certificate + toast if ≥ 80%
-  if (percent >= 80) {
-    try {
-      await createCertificate({
-        name: username || "Student",
-        quizTitle: title,
-        scorePct: percent,
-      });
-      showToast(`🎓 Certificate earned: ${title}`);
-    } catch (err) {
-      console.log("[quizBridge] certificate FAILED", err);
-    }
-  }
 }
-
