@@ -1,6 +1,7 @@
 from __future__ import annotations
 from coins_orders import coins_bp
 from flask import Flask, request, jsonify, make_response
+from routes.certs_pdf import bp as certs_pdf_bp
 from flask_cors import CORS
 from dotenv import load_dotenv, find_dotenv
 import os, re, smtplib, ssl, json, time, uuid
@@ -19,6 +20,7 @@ from openai import OpenAI
 # -----------------------------------------------------------------------------
 load_dotenv(find_dotenv(usecwd=True)) or load_dotenv()
 app = Flask(__name__)
+app.register_blueprint(certs_pdf_bp)
 app.register_blueprint(coins_bp)
 
 # ---- Idempotent blueprint registration ----
@@ -612,4 +614,4 @@ if __name__ == "__main__":
     print("SECRET_KEY present:", bool(SECRET_KEY))
     host = os.getenv("FLASK_RUN_HOST", "127.0.0.1")
     port = int(os.getenv("FLASK_RUN_PORT", "8788"))  # default 8788 to match frontend
-    app.run(host=host, port=port, debug=True, use_reloader=False)
+    app.run(host="127.0.0.1", port=8787, debug=True, use_reloader=False)

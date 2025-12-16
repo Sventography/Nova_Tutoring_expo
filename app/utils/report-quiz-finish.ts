@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { USER_STORAGE_KEY } from "../context/UserContext";
 import { createCertificate } from "./certificates";
 import { showToast } from "./toast";
 
@@ -37,8 +38,15 @@ export async function reportQuizFinished(pct: number, subject?: string) {
     if (score >= 80) {
       const dup = await alreadyAwardedRecently(quizTitle);
       if (!dup) {
+        let displayName = "Student";
+        try {
+          const rawU = await AsyncStorage.getItem(USER_STORAGE_KEY);
+          const u = rawU ? JSON.parse(rawU) : null;
+          displayName = (u?.username || u?.name || "Student");
+        } catch {}
+
         await createCertificate({
-          name: "Student",
+          name: displayName,
           quizTitle,
           scorePct: score,
         });

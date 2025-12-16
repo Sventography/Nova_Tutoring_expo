@@ -1,5 +1,6 @@
 import os
 from flask import Flask, request, jsonify
+from routes.certs_pdf import bp as certs_pdf_bp
 from flask_cors import CORS
 
 # Optional Stripe (card flow). Coins flow will work without it.
@@ -9,6 +10,7 @@ except Exception:
     stripe = None
 
 app = Flask(__name__)
+app.register_blueprint(certs_pdf_bp)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 # Load server/.env if present

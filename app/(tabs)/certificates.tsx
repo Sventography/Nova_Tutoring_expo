@@ -1,24 +1,51 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useCallback } from "react";
 import { View, Text, StyleSheet, Pressable, ScrollView, Image, Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import CertificateView from "../components/CertificateView";
-import { listCertificates } from "../utils/certificates";
+import { listCertificates, createCertificate } from "../utils/certificates";
+import Constants from "expo-constants";
 import { useUser } from "../context/UserContext";
+import { useFocusEffect } from "expo-router";
 
 type SavedImage = { title: string; image: string; fileUri: string };
 type CertificateMeta = { name: string; quizTitle: string; scorePct: number; dateISO?: string };
 
+function backendBase() {
+  const b = (process.env.EXPO_PUBLIC_BACKEND_URL || "").trim();
+  return b ? b.replace(/\/+$/, "") : "http://127.0.0.1:8787";
+}
+
 export default function CertificatesScreen() {
   const { user } = useUser();
 
-  const [images, setImages] = useState<SavedImage[]>([]);           // legacy PNGs
-  const [unlocked, setUnlocked] = useState<CertificateMeta[]>([]);  // ≥80% earned
+  const [images, setImages] = useState<SavedImage[]>([]);
+  const [unlocked, setUnlocked] = useState<CertificateMeta[]>([]);
 
-  // Use a wrapper <View> as the capture target
   const captureWrapperRef = useRef<View>(null);
   const [rendering, setRendering] = useState<CertificateMeta | null>(null);
 
-  useEffect(() => {
+  const refreshUnlocked = useCallback(async () => {
+    try {
+      const list = await listCertificates();
+      setUnlocked(Array.isArray(list) ? (list as CertificateMeta[]) : []);
+    } catch {}
+  }, []);
+  async function devAward() {
+    if (!__DEV__) return;
+
+    try {
+      const name = user?.username || user?.name || "Nova Student";
+      const quizTitle = "DEV — Algebra I";
+      const scorePct = 95;
+      await createCertificate({ name, quizTitle, scorePct });
+      await refreshUnlocked();
+      alert("DEV certificate added! Open Unlocked Certificates below.");
+    } catch (e) {
+      console.warn("devAward failed", e);
+      alert("DEV award failed — check console.");
+    }
+  }
+useEffect(() => {
     (async () => {
       try {
         const raw = await AsyncStorage.getItem("certificates");
@@ -28,15 +55,20 @@ export default function CertificatesScreen() {
   }, []);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const list = await listCertificates();
-        setUnlocked(Array.isArray(list) ? (list as CertificateMeta[]) : []);
-      } catch {}
-    })();
-  }, []);
+    refreshUnlocked();
+  }, [refreshUnlocked]);
 
-  function slugify(s: string) {
+  useFocusEffect(
+    useCallback(() => {
+      refreshUnlocked();
+    }, [refreshUnlocked])
+  );
+
+  function backendBase() {
+  return Constants.expoConfig?.extra?.backendUrl || process.env.EXPO_PUBLIC_BACKEND_URL || "http://127.0.0.1:8787";
+}
+
+function slugify(s: string) {
     return String(s).toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9\-]/g, "");
   }
 
@@ -44,9 +76,9 @@ export default function CertificatesScreen() {
     if (typeof document === "undefined") throw new Error("no document");
     const el: any =
       document.getElementById(id) ||
-      document.querySelector(`[data-nativeid=""]`) ||
-      document.querySelector(`[nativeid=""]`) ||
-      document.querySelector(`#`);
+      document.querySelector(`[data-nativeid="${id}"]`) ||
+      document.querySelector(`[nativeid="${id}"]`) ||
+      document.querySelector(`#${id}`);
     if (!el) throw new Error("element not found: " + id);
     const { default: html2canvas } = await import("html2canvas");
     const canvas = await html2canvas(el as HTMLElement, {
@@ -105,34 +137,40 @@ export default function CertificatesScreen() {
     w.document.close();
   }
 
-  async function printOutNative(fileUri: string, title: string) {
-    // Try direct print from file (best case)
+  async function printPdfWeb(blobUrl: string, title: string) {
+    const w = window.open("", "_blank");
+    if (!w) throw new Error("Popup blocked");
+    const safeTitle = String(title || "Certificate").replace(/</g, "&lt;");
+    w.document.open();
+    w.document.write(`
+<!doctype html>
+<html>
+<head><meta charset="utf-8" /><title>${safeTitle}</title></head>
+<body style="margin:0;padding:0">
+  <iframe src="${blobUrl}" style="border:0;width:100vw;height:100vh"></iframe>
+  <script>
+    window.focus();
+    setTimeout(() => { window.print(); }, 250);
+  </script>
+</body>
+</html>`);
+    w.document.close();
+  }
+
+  async function printOutNative(fileUri: string) {
     try {
       const Print = await import("expo-print");
       // @ts-ignore
       await Print.printAsync({ uri: fileUri });
       return;
     } catch {}
-
-    // Fallback: embed as base64 into printable HTML
     try {
       const Print = await import("expo-print");
       const FileSystem = await import("expo-file-system");
       const b64 = await FileSystem.readAsStringAsync(fileUri, {
         encoding: FileSystem.EncodingType.Base64,
       });
-
-      const html = `
-<!doctype html>
-<html>
-<head><meta charset="utf-8" />
-<style>html,body{margin:0;padding:0;} img{width:100%;height:auto;}</style>
-</head>
-<body>
-  <img src="data:image/png;base64,${b64}" />
-</body>
-</html>`;
-
+      const html = `<!doctype html><html><body style="margin:0"><img style="width:100%" src="data:image/png;base64,${b64}" /></body></html>`;
       // @ts-ignore
       await Print.printAsync({ html });
     } catch (e) {
@@ -150,11 +188,8 @@ export default function CertificatesScreen() {
     try {
       if (Platform.OS === "web") {
         const dataUrl = await captureWebElementById("cert-real-capture");
-        if (mode === "print") {
-          await printOutWeb(dataUrl, rec.quizTitle);
-        } else {
-          await shareOut(dataUrl, filename);
-        }
+        if (mode === "print") await printOutWeb(dataUrl, rec.quizTitle);
+        else await shareOut(dataUrl, filename);
       } else {
         const { captureRef } = await import("react-native-view-shot");
         const FileSystem = await import("expo-file-system");
@@ -163,17 +198,74 @@ export default function CertificatesScreen() {
         const file = `${FileSystem.documentDirectory}${filename}`;
         await FileSystem.copyAsync({ from: String(uri), to: file });
 
-        if (mode === "print") {
-          await printOutNative(file, rec.quizTitle);
-        } else {
-          await shareOut(file, filename);
-        }
+        if (mode === "print") await printOutNative(file);
+        else await shareOut(file, filename);
       }
     } catch (e) {
       console.warn("Export failed", e);
       alert("Sorry—couldn’t generate the certificate.");
     } finally {
       setRendering(null);
+    }
+  }
+
+  async function exportPdf(rec: CertificateMeta, mode: "download" | "print" | "share") {
+    const base = backendBase();
+    const url =
+      `${base}/api/certificate.pdf?` +
+      `user=${encodeURIComponent(rec.name)}` +
+      `&topic=${encodeURIComponent(rec.quizTitle)}` +
+      `&score=${encodeURIComponent(String(Math.round(rec.scorePct)))}`;
+
+    const filename = `certificate-${slugify(rec.quizTitle)}-${Date.now()}.pdf`;
+
+    try {
+      if (Platform.OS === "web") {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("pdf fetch failed");
+        const blob = await res.blob();
+        const blobUrl = URL.createObjectURL(blob);
+
+        if (mode === "print") {
+          await printPdfWeb(blobUrl, rec.quizTitle);
+          return;
+        }
+
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        return;
+      }
+
+      const FileSystem = await import("expo-file-system");
+      const target = `${FileSystem.documentDirectory}${filename}`;
+      const dl = await FileSystem.downloadAsync(url, target);
+
+      if (mode === "print") {
+        try {
+          const Print = await import("expo-print");
+          // @ts-ignore
+          await Print.printAsync({ uri: dl.uri });
+        } catch {
+          alert("Sorry—couldn’t print the PDF.");
+        }
+        return;
+      }
+
+      // share (best UX on native)
+      try {
+        const Sharing = await import("expo-sharing");
+        // @ts-ignore
+        await Sharing.shareAsync(dl.uri);
+      } catch {
+        alert("Sorry—couldn’t share the PDF.");
+      }
+    } catch (e) {
+      console.warn("PDF export failed", e);
+      alert("Sorry—couldn’t generate the PDF certificate.");
     }
   }
 
@@ -184,6 +276,12 @@ export default function CertificatesScreen() {
   return (
     <ScrollView contentContainerStyle={s.container}>
       <Text style={s.title}>Certificates</Text>
+
+      {__DEV__ ? (
+        <Pressable style={[s.btn, { marginBottom: 12 }]} onPress={devAward}>
+          <Text style={s.btnTxt}>DEV: Award 95% Certificate</Text>
+        </Pressable>
+      ) : null}
 
       <View style={s.note}>
         <Text style={s.noteText}>
@@ -213,7 +311,6 @@ export default function CertificatesScreen() {
             <Pressable
               style={s.btn}
               onPress={async () => {
-                // Print the demo cert too
                 try {
                   const dataUrl = await captureWebElementById("cert-demo");
                   await printOutWeb(dataUrl, "Sample Quiz");
@@ -255,6 +352,14 @@ export default function CertificatesScreen() {
               <Pressable style={[s.btnOutline, { minWidth: 170 }]} onPress={() => exportRealCert(rec, "print")}>
                 <Text style={s.btnOutlineTxt}>Generate & Print</Text>
               </Pressable>
+
+              <Pressable style={[s.btnOutline2, { minWidth: 170 }]} onPress={() => exportPdf(rec, Platform.OS === "web" ? "download" : "share")}>
+                <Text style={s.btnOutline2Txt}>{Platform.OS === "web" ? "PDF Download" : "PDF Share"}</Text>
+              </Pressable>
+
+              <Pressable style={[s.btnOutline2, { minWidth: 170 }]} onPress={() => exportPdf(rec, "print")}>
+                <Text style={s.btnOutline2Txt}>PDF Print</Text>
+              </Pressable>
             </View>
           </View>
         ))
@@ -286,17 +391,7 @@ export default function CertificatesScreen() {
                 <Text style={s.btnOutlineTxt}>Print</Text>
               </Pressable>
             ) : (
-              <Pressable
-                style={[s.btnOutline, { flex: 1 }]}
-                onPress={async () => {
-                  try {
-                    // cert.fileUri is a local file on native; print it
-                    await printOutNative(cert.fileUri, cert.title);
-                  } catch {
-                    alert("Sorry—couldn’t print that image.");
-                  }
-                }}
-              >
+              <Pressable style={[s.btnOutline, { flex: 1 }]} onPress={async () => printOutNative(cert.fileUri)}>
                 <Text style={s.btnOutlineTxt}>Print</Text>
               </Pressable>
             )}
@@ -355,6 +450,9 @@ const s = StyleSheet.create({
 
   btnOutline: { borderWidth: 2, borderColor: "#00e5ff", paddingVertical: 9, paddingHorizontal: 14, borderRadius: 8, alignItems: "center" },
   btnOutlineTxt: { color: "#00e5ff", fontWeight: "900", textAlign: "center" },
+
+  btnOutline2: { borderWidth: 2, borderColor: "#5df2ff", paddingVertical: 9, paddingHorizontal: 14, borderRadius: 8, alignItems: "center" },
+  btnOutline2Txt: { color: "#5df2ff", fontWeight: "900", textAlign: "center" },
 
   btnMuted: { backgroundColor: "#0b2a33", paddingVertical: 10, paddingHorizontal: 14, borderRadius: 8, alignItems: "center" },
   btnMutedTxt: { color: "#bfefff", fontWeight: "800", textAlign: "center" },
