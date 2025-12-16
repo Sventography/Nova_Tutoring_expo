@@ -278,9 +278,12 @@ function slugify(s: string) {
       <Text style={s.title}>Certificates</Text>
 
       {__DEV__ ? (
+
+      {__DEV__ ? (
         <Pressable style={[s.btn, { marginBottom: 12 }]} onPress={devAward}>
           <Text style={s.btnTxt}>DEV: Award 95% Certificate</Text>
         </Pressable>
+      ) : null}
       ) : null}
 
       <View style={s.note}>

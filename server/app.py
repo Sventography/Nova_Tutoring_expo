@@ -2,6 +2,7 @@ from __future__ import annotations
 from coins_orders import coins_bp
 from flask import Flask, request, jsonify, make_response
 from routes.certs_pdf import bp as certs_pdf_bp
+from routes.verify import bp as verify_bp
 from flask_cors import CORS
 from dotenv import load_dotenv, find_dotenv
 import os, re, smtplib, ssl, json, time, uuid
@@ -21,6 +22,7 @@ from openai import OpenAI
 load_dotenv(find_dotenv(usecwd=True)) or load_dotenv()
 app = Flask(__name__)
 app.register_blueprint(certs_pdf_bp)
+app.register_blueprint(verify_bp)
 app.register_blueprint(coins_bp)
 
 # ---- Idempotent blueprint registration ----
