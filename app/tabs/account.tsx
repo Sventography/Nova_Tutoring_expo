@@ -17,7 +17,7 @@ export default function AccountScreen(){
     try{
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (perm.status !== "granted") { Alert.alert("Permission required","Media access needed"); return; }
-      const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, quality: 0.9 });
+      const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaType.Images, allowsEditing: true, quality: 0.9 });
       if (res.canceled) return;
       const uri = res.assets?.[0]?.uri || null;
       if (uri){ setAvatarLocal(uri); await setAvatar(uri); showToast("Avatar updated"); }

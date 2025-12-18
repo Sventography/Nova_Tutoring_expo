@@ -17,6 +17,7 @@ export default {
     plugins: [
       "expo-router", // ✅ needed so `import 'expo-router/entry'` resolves
       "expo-mail-composer",
+      "expo-web-browser",
       [
         "@stripe/stripe-react-native",
         {

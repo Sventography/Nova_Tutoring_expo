@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from "react";
-import { View, Text, StyleSheet, Pressable, ScrollView, Image, Platform, Linking } from "react-native";
+import { View, Text, StyleSheet, Pressable, ScrollView, Image, Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import CertificateView from "../components/CertificateView";
 import { listCertificates, createCertificate } from "../utils/certificates";
@@ -10,8 +10,10 @@ import { useFocusEffect } from "expo-router";
 type SavedImage = { title: string; image: string; fileUri: string };
 type CertificateMeta = { name: string; quizTitle: string; scorePct: number; dateISO?: string };
 
-// hard off (no matter what __DEV__ is)
-const SHOW_DEV_CERT_BUTTON = false;
+function backendBase() {
+  const b = (process.env.EXPO_PUBLIC_BACKEND_URL || "").trim();
+  return b ? b.replace(/\/+$/, "") : "http://127.0.0.1:8787";
+}
 
 export default function CertificatesScreen() {
   const { user } = useUser();
@@ -28,9 +30,9 @@ export default function CertificatesScreen() {
       setUnlocked(Array.isArray(list) ? (list as CertificateMeta[]) : []);
     } catch {}
   }, []);
-
   async function devAward() {
-    if (!SHOW_DEV_CERT_BUTTON) return;
+    if (!__DEV__) return;
+
     try {
       const name = user?.username || user?.name || "Nova Student";
       const quizTitle = "DEV — Algebra I";
@@ -43,8 +45,7 @@ export default function CertificatesScreen() {
       alert("DEV award failed — check console.");
     }
   }
-
-  useEffect(() => {
+useEffect(() => {
     (async () => {
       try {
         const raw = await AsyncStorage.getItem("certificates");
@@ -63,23 +64,12 @@ export default function CertificatesScreen() {
     }, [refreshUnlocked])
   );
 
-  function slugify(s: string) {
-    return String(s).toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9\-]/g, "");
-  }
-
   function backendBase() {
-    const env = String(process?.env?.EXPO_PUBLIC_BACKEND_URL || "").trim();
-    let base =
-      env ||
-      (Constants?.expoConfig as any)?.extra?.backendUrl ||
-      "http://127.0.0.1:8787";
+  return Constants.expoConfig?.extra?.backendUrl || process.env.EXPO_PUBLIC_BACKEND_URL || "http://127.0.0.1:8787";
+}
 
-    base = String(base).trim().replace(/\/+$/, "");
-
-    if (Platform.OS === "android" && /127\.0\.0\.1|localhost/.test(base)) {
-      base = "http://10.0.2.2:8787";
-    }
-    return base;
+function slugify(s: string) {
+    return String(s).toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9\-]/g, "");
   }
 
   async function captureWebElementById(id: string) {
@@ -147,6 +137,26 @@ export default function CertificatesScreen() {
     w.document.close();
   }
 
+  async function printPdfWeb(blobUrl: string, title: string) {
+    const w = window.open("", "_blank");
+    if (!w) throw new Error("Popup blocked");
+    const safeTitle = String(title || "Certificate").replace(/</g, "&lt;");
+    w.document.open();
+    w.document.write(`
+<!doctype html>
+<html>
+<head><meta charset="utf-8" /><title>${safeTitle}</title></head>
+<body style="margin:0;padding:0">
+  <iframe src="${blobUrl}" style="border:0;width:100vw;height:100vh"></iframe>
+  <script>
+    window.focus();
+    setTimeout(() => { window.print(); }, 250);
+  </script>
+</body>
+</html>`);
+    w.document.close();
+  }
+
   async function printOutNative(fileUri: string) {
     try {
       const Print = await import("expo-print");
@@ -199,35 +209,63 @@ export default function CertificatesScreen() {
     }
   }
 
-  // PDF: don't fetch/download on native; just open the URL
-  async function exportPdf(rec: CertificateMeta, _mode: "download" | "print" | "share") {
-    try {
-      const base = backendBase();
-      const url =
-        base +
-        "/api/certificate.pdf?user=" +
-        encodeURIComponent(rec.name) +
-        "&topic=" +
-        encodeURIComponent(rec.quizTitle) +
-        "&score=" +
-        encodeURIComponent(String(Math.round(rec.scorePct)));
+  async function exportPdf(rec: CertificateMeta, mode: "download" | "print" | "share") {
+    const base = backendBase();
+    const url =
+      `${base}/api/certificate.pdf?` +
+      `user=${encodeURIComponent(rec.name)}` +
+      `&topic=${encodeURIComponent(rec.quizTitle)}` +
+      `&score=${encodeURIComponent(String(Math.round(rec.scorePct)))}`;
 
+    const filename = `certificate-${slugify(rec.quizTitle)}-${Date.now()}.pdf`;
+
+    try {
       if (Platform.OS === "web") {
-        // @ts-ignore
-        window.open(url, "_blank");
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("pdf fetch failed");
+        const blob = await res.blob();
+        const blobUrl = URL.createObjectURL(blob);
+
+        if (mode === "print") {
+          await printPdfWeb(blobUrl, rec.quizTitle);
+          return;
+        }
+
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
         return;
       }
 
-      try {
-        const mod = await import("expo-web-browser");
-        await mod.openBrowserAsync(url);
-        return;
-      } catch {}
+      const FileSystem = await import("expo-file-system");
+      const target = `${FileSystem.documentDirectory}${filename}`;
+      const dl = await FileSystem.downloadAsync(url, target);
 
-      await Linking.openURL(url);
+      if (mode === "print") {
+        try {
+          const Print = await import("expo-print");
+          // @ts-ignore
+          await Print.printAsync({ uri: dl.uri });
+        } catch {
+          alert("Sorry—couldn’t print the PDF.");
+        }
+        return;
+      }
+
+      // share (best UX on native)
+      try {
+        const Sharing = await import("expo-sharing");
+        // @ts-ignore
+        await Sharing.shareAsync(dl.uri);
+      } catch {
+        alert("Sorry—couldn’t share the PDF.");
+      }
     } catch (e) {
-      console.warn("PDF open failed", e);
-      alert("Sorry — couldn’t open the PDF certificate.");
+      console.warn("PDF export failed", e);
+      alert("Sorry—couldn’t generate the PDF certificate.");
     }
   }
 
@@ -239,10 +277,13 @@ export default function CertificatesScreen() {
     <ScrollView contentContainerStyle={s.container}>
       <Text style={s.title}>Certificates</Text>
 
-      {SHOW_DEV_CERT_BUTTON ? (
-        <Pressable style={[s.btnMuted, { marginBottom: 12 }]} onPress={devAward}>
-          <Text style={s.btnMutedTxt}>DEV: Award 95% Certificate</Text>
+      {__DEV__ ? (
+
+      {__DEV__ ? (
+        <Pressable style={[s.btn, { marginBottom: 12 }]} onPress={devAward}>
+          <Text style={s.btnTxt}>DEV: Award 95% Certificate</Text>
         </Pressable>
+      ) : null}
       ) : null}
 
       <View style={s.note}>
@@ -253,6 +294,7 @@ export default function CertificatesScreen() {
         </Text>
       </View>
 
+      {/* Example preview */}
       <View style={{ alignItems: "center", marginBottom: 20 }}>
         <View nativeID="cert-demo">
           <CertificateView
@@ -268,7 +310,6 @@ export default function CertificatesScreen() {
           <Pressable style={s.btnMuted} onPress={handlePreview}>
             <Text style={s.btnMutedTxt}>Example only</Text>
           </Pressable>
-
           {Platform.OS === "web" ? (
             <Pressable
               style={s.btn}
@@ -287,8 +328,8 @@ export default function CertificatesScreen() {
         </View>
       </View>
 
+      {/* Unlocked earned certificates */}
       <Text style={s.sectionTitle}>Unlocked Certificates</Text>
-
       {unlocked.length === 0 ? (
         <Text style={s.empty}>No unlocked certificates yet. Finish a quiz with 80%+ to unlock one.</Text>
       ) : (
@@ -313,13 +354,22 @@ export default function CertificatesScreen() {
 
               <Pressable style={[s.btnOutline, { minWidth: 170 }]} onPress={() => exportRealCert(rec, "print")}>
                 <Text style={s.btnOutlineTxt}>Generate & Print</Text>
-              </Pressable></View>
+              </Pressable>
+
+              <Pressable style={[s.btnOutline2, { minWidth: 170 }]} onPress={() => exportPdf(rec, Platform.OS === "web" ? "download" : "share")}>
+                <Text style={s.btnOutline2Txt}>{Platform.OS === "web" ? "PDF Download" : "PDF Share"}</Text>
+              </Pressable>
+
+              <Pressable style={[s.btnOutline2, { minWidth: 170 }]} onPress={() => exportPdf(rec, "print")}>
+                <Text style={s.btnOutline2Txt}>PDF Print</Text>
+              </Pressable>
+            </View>
           </View>
         ))
       )}
 
+      {/* Legacy image gallery */}
       {images.length > 0 && <Text style={s.sectionTitle}>Saved Images (Legacy)</Text>}
-
       {images.map((cert, i) => (
         <View key={`${cert.title}-${i}`} style={s.legacyCard}>
           <Image source={{ uri: cert.image }} style={s.legacyImg} />
@@ -352,6 +402,7 @@ export default function CertificatesScreen() {
         </View>
       ))}
 
+      {/* Hidden render target for exporting a REAL certificate */}
       <View style={{ height: 1, overflow: "hidden" }}>
         {rendering ? (
           <View nativeID="cert-real-capture" ref={captureWrapperRef}>

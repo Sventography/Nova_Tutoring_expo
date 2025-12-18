@@ -27,20 +27,94 @@ export default function HeaderBar() {
   const router = useRouter();
 
   const { enabled: fxOn, toggle: toggleFx } = useFx();
-  const { user } = (useUser() || {}) as any;
+  const userCtx = (useUser() || {}) as any;
   const { coins = 0 } = (useCoins() || {}) as any;
   const { loaded, count, todayChecked, markToday } =
     (useStreak() || {}) as any;
 
-  // Auto-mark today's streak (only after context is ready)
+  // Helpful debug (you can remove later)
   useEffect(() => {
-    if (loaded && !todayChecked) {
+    try {
+      console.log("HeaderBar useUser() shape:", userCtx);
+    } catch {}
+  }, [userCtx]);
+
+  const nested = userCtx.user || {};
+
+  const pickString = (v: any) =>
+    typeof v === "string" && v.trim().length > 0 ? v.trim() : null;
+
+  const scanForAvatar = (obj: any) => {
+    if (!obj || typeof obj !== "object") return null;
+
+    const preferred = [
+      "avatar",
+      "avatarUrl",
+      "avatarURL",
+      "avatarUri",
+      "avatarURI",
+      "photoUrl",
+      "photoURL",
+      "photo",
+      "image",
+      "imageUrl",
+      "imageURL",
+      "profilePic",
+      "profilePicUrl",
+      "profilePicture",
+      "profilePictureUrl",
+      "pfp",
+    ];
+
+    for (const k of preferred) {
+      const v = pickString(obj[k]);
+      if (v) return v;
+
+      if (obj[k] && typeof obj[k] === "object") {
+        const u = pickString(obj[k].uri);
+        if (u) return u;
+      }
+    }
+
+    for (const [k, v] of Object.entries(obj)) {
+      const key = String(k).toLowerCase();
+      if (
+        key.includes("avatar") ||
+        key.includes("photo") ||
+        key.includes("image") ||
+        key.includes("picture") ||
+        key.includes("pfp")
+      ) {
+        const s = pickString(v);
+        if (s) return s;
+        if (v && typeof v === "object") {
+          const u = pickString((v as any).uri);
+          if (u) return u;
+        }
+      }
+    }
+
+    return null;
+  };
+
+  const rawName =
+    userCtx.username ??
+    userCtx.name ??
+    userCtx.displayName ??
+    nested.username ??
+    nested.name ??
+    nested.displayName;
+
+  const rawAvatar = scanForAvatar(userCtx) || scanForAvatar(nested);
+
+  const name: string = (rawName || "Nova Student") as string;
+  const avatar: string | undefined = rawAvatar || undefined;
+
+  useEffect(() => {
+    if (loaded && !todayChecked && typeof markToday === "function") {
       markToday();
     }
   }, [loaded, todayChecked, markToday]);
-
-  const name: string = user?.name ?? "Nova Student";
-  const avatar: string | undefined = user?.avatar;
 
   const goAccount = () => {
     try {
@@ -95,6 +169,7 @@ export default function HeaderBar() {
         }),
       ])
     ).start();
+
     Animated.loop(
       Animated.sequence([
         Animated.timing(glow, {
@@ -135,9 +210,7 @@ export default function HeaderBar() {
             <Image source={{ uri: avatar }} style={S.avatar} />
           ) : (
             <View style={[S.avatar, S.avatarFallback]}>
-              <Text style={S.initial}>
-                {name.slice(0, 1).toUpperCase()}
-              </Text>
+              <Text style={S.initial}>{name.slice(0, 1).toUpperCase()}</Text>
             </View>
           )}
         </View>
@@ -147,21 +220,11 @@ export default function HeaderBar() {
         </Text>
 
         <View style={S.coinPill}>
-          <Image
-            source={COIN_IMG}
-            style={S.coinImg}
-            resizeMode="contain"
-          />
-          <Text style={S.coinText}>
-            {Number(coins).toLocaleString()}
-          </Text>
+          <Image source={COIN_IMG} style={S.coinImg} resizeMode="contain" />
+          <Text style={S.coinText}>{Number(coins).toLocaleString()}</Text>
         </View>
 
-        <Pressable
-          onPress={markToday}
-          hitSlop={hit}
-          style={S.streakPill}
-        >
+        <Pressable onPress={markToday} hitSlop={hit} style={S.streakPill}>
           <Text style={S.streakText}>{streakLabel}</Text>
           <Text
             style={[
@@ -200,23 +263,13 @@ export default function HeaderBar() {
           accessibilityRole="button"
           accessibilityLabel="Share"
         >
-          <Ionicons
-            name="share-social-outline"
-            size={iconSize}
-            color="#8ecae6"
-          />
+          <Ionicons name="share-social-outline" size={iconSize} color="#8ecae6" />
         </Pressable>
 
         <Animated.View style={{ transform: [{ scale: pulse }] }}>
-          <Pressable
-            onPress={openDonate}
-            accessibilityRole="button"
-            accessibilityLabel="Donate"
-          >
+          <Pressable onPress={openDonate} accessibilityRole="button" accessibilityLabel="Donate">
             <View style={{ position: "relative" }}>
-              <Animated.View
-                style={[S.donateGlow, { opacity: glowOpacity }]}
-              />
+              <Animated.View style={[S.donateGlow, { opacity: glowOpacity }]} />
               <LinearGradient
                 colors={["#000000", "#001a33"]}
                 start={{ x: 0, y: 0 }}

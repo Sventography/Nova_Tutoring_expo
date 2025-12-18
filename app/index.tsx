@@ -1,12 +1,23 @@
-// app/index.tsx
 import React, { useRef, useEffect } from "react";
 import { View, Text, Pressable, StyleSheet, Image, Animated, Platform } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { Link } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+const TUTORIAL_KEY = "onboarding.tutorial.done.v1";
 
 export default function HomeScreen() {
+  const router = useRouter();
   const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  // One-time tutorial gate (shows only once ever)
+  useEffect(() => {
+    (async () => {
+      const done = await AsyncStorage.getItem(TUTORIAL_KEY);
+      if (!done) router.replace("/tutorial");
+    })();
+  }, [router]);
 
   // Subtle pulsing animation
   useEffect(() => {
@@ -27,19 +38,25 @@ export default function HomeScreen() {
   }, [pulseAnim]);
 
   const handlePress = async () => {
-    // ✅ Guard haptics for web
     if (Platform.OS !== "web") {
       await Haptics.selectionAsync().catch(() => {});
     }
   };
 
+  const handleResetTutorial = async () => {
+    if (Platform.OS !== "web") {
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    }
+    await AsyncStorage.removeItem(TUTORIAL_KEY);
+    router.replace("/tutorial");
+  };
+
   return (
     <View style={styles.container}>
-      {/* Logo */}
-      <Image
-        source={require("./assets/logo.png")}  // ✅ Correct relative path
-        style={styles.logo}
-      />
+      {/* Logo (long-press to reset tutorial) */}
+      <Pressable onLongPress={handleResetTutorial} delayLongPress={500}>
+        <Image source={require("./assets/logo.png")} style={styles.logo} />
+      </Pressable>
 
       {/* Let’s Learn button */}
       <Link href="/ask" asChild>
@@ -72,6 +89,8 @@ export default function HomeScreen() {
           </Animated.View>
         </Pressable>
       </Link>
+
+      <Text style={styles.hint}>Tip: Long-press the logo to replay the tutorial.</Text>
     </View>
   );
 }
@@ -101,5 +120,10 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "bold",
     textAlign: "center",
+  },
+  hint: {
+    marginTop: 18,
+    color: "#666",
+    fontSize: 12,
   },
 });

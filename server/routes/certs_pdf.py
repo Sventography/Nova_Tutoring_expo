@@ -108,7 +108,7 @@ def generate_certificate_pdf(username: str, score: int, topic: str):
 
     # QR (optional verify link)
     issued_at = int(time.time())
-    verify_url = _build_verify_url(username, topic, int(score), issued_at)
+    verify_url = _build_verify_url(username, topic, score, int(time.time()))
     if verify_url:
         qr_img = qrcode.make(verify_url)
         qr_bytes = BytesIO()

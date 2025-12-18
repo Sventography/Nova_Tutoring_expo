@@ -11,16 +11,16 @@ export type UserShape = {
   displayName?: string;
   coins?: number;
   balance?: number;
+  avatar?: string;
   avatarUrl?: string;
+  email?: string;
+  user?: any; // allow nested user objects from real provider
 };
 
 const FallbackUserContext = createContext<UserShape | null>(null);
 
-// Try to grab the real provider/hook from our new providers
 function getRealProvider() {
   try {
-    // path from project root "context/" → "app/_providers/UserProvider"
-    // (dynamic require keeps web bundling happy)
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const mod = require("../app/_providers/UserProvider");
     return {
@@ -40,11 +40,14 @@ export function useUserContext(): UserShape {
     try {
       const u = useHook();
       return (u as UserShape) || {};
-    } catch {
-      // fall through to fallback
-    }
+    } catch {}
   }
   return useContext(FallbackUserContext) ?? {};
+}
+
+// Alias so `import { useUser } from "../context/UserContext"` works everywhere
+export function useUser(): UserShape {
+  return useUserContext();
 }
 
 export function UserProvider({ children }: PropsWithChildren) {
@@ -52,12 +55,7 @@ export function UserProvider({ children }: PropsWithChildren) {
   if (ProviderComp) {
     return <ProviderComp>{children}</ProviderComp>;
   }
-  return (
-    <FallbackUserContext.Provider value={{}}>
-      {children}
-    </FallbackUserContext.Provider>
-  );
+  return <FallbackUserContext.Provider value={{}}>{children}</FallbackUserContext.Provider>;
 }
 
-// default export keeps parity with some legacy imports
 export default UserContext;
