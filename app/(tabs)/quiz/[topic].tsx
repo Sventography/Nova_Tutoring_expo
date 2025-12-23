@@ -320,7 +320,7 @@ export default function TopicQuiz() {
         <View style={{ height: 12 }} />
         <Pressable
           style={[S.btn, S.outline]}
-          onPress={() => router.replace("/quiz")}
+          onPress={() => router.replace("/(tabs)/quiz")}
         >
           <Text style={S.btnTxt}>Topics</Text>
         </Pressable>
@@ -340,7 +340,7 @@ export default function TopicQuiz() {
         <View style={S.row}>
           <Pressable
             style={[S.btn, S.outline]}
-            onPress={() => router.replace("/quiz")}
+            onPress={() => router.replace("/(tabs)/quiz")}
           >
             <Text style={S.btnTxt}>Topics</Text>
           </Pressable>
@@ -443,7 +443,7 @@ export default function TopicQuiz() {
       <View style={S.row}>
         <Pressable
           style={[S.btn, S.outline]}
-          onPress={() => router.replace("/quiz")}
+          onPress={() => router.replace("/(tabs)/quiz")}
         >
           <Text style={S.btnTxt}>Topics</Text>
         </Pressable>
