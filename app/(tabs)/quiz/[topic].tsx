@@ -9,9 +9,10 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
+  BackHandler,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 
 import { buildQuiz } from "../../_lib/quiz";
 import { getCardsById, toQA } from "../../_lib/flashcards";
@@ -28,6 +29,7 @@ type QItem = { question: string; choices: string[]; answer: string };
 const QUIZ_LEN = 20;
 const TOTAL_TIME = 300; // 5 min
 const ADVANCE_DELAY = 650;
+
 const CYAN = "#00E5FF";
 const BLUE = "#0B2239";
 const BLACK = "#000000";
@@ -49,8 +51,8 @@ export default function TopicQuiz() {
 
   const [totalLeft, setTotalLeft] = useState(TOTAL_TIME);
   const [done, setDone] = useState(false);
-  const autoRef = useRef<NodeJS.Timeout | null>(null);
-  const totalTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const autoRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const totalTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ✅ guards so history + achievements + modal only fire once per run
   const loggedRef = useRef(false);
@@ -61,16 +63,47 @@ export default function TopicQuiz() {
 
   const current = items[idx];
   const total = items.length;
+
   const headerTitle = useMemo(
     () => (title ? String(title) : "Quiz"),
     [title]
   );
 
+  // ✅ Android back button protection: confirm before quitting mid-quiz
+  useFocusEffect(
+    React.useCallback(() => {
+      const onBack = () => {
+        if (!done && !loading && !noData) {
+          Alert.alert(
+            "Exit quiz?",
+            "Your progress will be lost.",
+            [
+              { text: "Cancel", style: "cancel" },
+              {
+                text: "Exit",
+                style: "destructive",
+                onPress: () => router.replace("/(tabs)/quiz"),
+              },
+            ]
+          );
+          return true;
+        }
+        return false;
+      };
+
+      const sub = BackHandler.addEventListener("hardwareBackPress", onBack);
+      return () => sub.remove();
+    }, [done, loading, noData, router])
+  );
+
   // 🔹 Load questions for this topic
   useEffect(() => {
     let mounted = true;
+
     (async () => {
       try {
+        setLoading(true);
+
         const raw = getCardsById(String(id));
         const hasQA = raw
           .map(toQA)
@@ -84,6 +117,7 @@ export default function TopicQuiz() {
         }
 
         const built = buildQuiz(raw as any, QUIZ_LEN);
+
         if (mounted) {
           setItems(built);
           setIdx(0);
@@ -93,6 +127,7 @@ export default function TopicQuiz() {
           setDone(false);
           setTotalLeft(TOTAL_TIME);
           setNoData(false);
+
           loggedRef.current = false;
           notifiedRef.current = false;
           setShowCongrats(false);
@@ -105,26 +140,32 @@ export default function TopicQuiz() {
     return () => {
       mounted = false;
       if (autoRef.current) clearTimeout(autoRef.current);
-      if (totalTimerRef.current) clearInterval(totalTimerRef.current as any);
+      if (totalTimerRef.current) clearInterval(totalTimerRef.current);
+      autoRef.current = null;
+      totalTimerRef.current = null;
     };
   }, [id]);
 
   // 🔹 Total 5-min timer
   useEffect(() => {
     if (loading || done || noData) return;
+
     if (totalTimerRef.current) clearInterval(totalTimerRef.current);
     totalTimerRef.current = setInterval(() => {
       setTotalLeft((t) => {
         if (t <= 1) {
-          clearInterval(totalTimerRef.current as any);
+          if (totalTimerRef.current) clearInterval(totalTimerRef.current);
+          totalTimerRef.current = null;
           setDone(true);
           return 0;
         }
         return t - 1;
       });
     }, 1000);
+
     return () => {
-      if (totalTimerRef.current) clearInterval(totalTimerRef.current as any);
+      if (totalTimerRef.current) clearInterval(totalTimerRef.current);
+      totalTimerRef.current = null;
     };
   }, [loading, done, noData]);
 
@@ -140,11 +181,14 @@ export default function TopicQuiz() {
 
   function onPick(i: number) {
     if (locked || !current) return;
+
     setSelected(i);
     setLocked(true);
+
     if (current.choices[i] === current.answer) {
       setCorrect((c) => c + 1);
     }
+
     if (autoRef.current) clearTimeout(autoRef.current);
     autoRef.current = setTimeout(next, ADVANCE_DELAY);
   }
@@ -154,12 +198,16 @@ export default function TopicQuiz() {
   }
 
   function restart() {
+    if (autoRef.current) clearTimeout(autoRef.current);
+    autoRef.current = null;
+
     setIdx(0);
     setCorrect(0);
     setSelected(null);
     setLocked(false);
     setDone(false);
     setTotalLeft(TOTAL_TIME);
+
     loggedRef.current = false;
     notifiedRef.current = false;
     setShowCongrats(false);
@@ -182,22 +230,14 @@ export default function TopicQuiz() {
 
     const pct = total ? Math.round((correct / total) * 100) : 0;
 
-    reportQuizFinished(pct, headerTitle ?? topicTitle ?? title ?? "Quiz").catch(() => {});
+    // ✅ FIX: remove topicTitle (was undefined)
+    reportQuizFinished(pct, headerTitle || "Quiz").catch(() => {});
     loggedRef.current = true;
 
     const durationSecRaw = TOTAL_TIME - totalLeft;
     const durationSec = durationSecRaw < 0 ? 0 : durationSecRaw;
 
     const topicId = String(id);
-
-    console.log("[topic-quiz] FINISHED → logging + achievements", {
-      topicId,
-      title: headerTitle,
-      total,
-      correct,
-      percent: pct,
-      durationSec,
-    });
 
     // 🔹 1) Bridge logger (whatever the History tab is already wired to)
     void safeLogQuiz({
@@ -206,13 +246,7 @@ export default function TopicQuiz() {
       total,
       correct,
       percent: pct,
-    })
-      .then(() => {
-        console.log("[topic-quiz] safeLogQuiz OK");
-      })
-      .catch((err: any) => {
-        console.warn("[topic-quiz] safeLogQuiz failed", err);
-      });
+    }).catch(() => {});
 
     // 🔹 2) Direct logger into quizHistory (belt + suspenders)
     void addQuizHistory({
@@ -221,77 +255,36 @@ export default function TopicQuiz() {
       total,
       correct,
       percent: pct,
-    })
-      .then(() => {
-        console.log("[topic-quiz] quizHistory.add OK");
-      })
-      .catch((err: any) => {
-        console.warn("[topic-quiz] quizHistory.add failed", err);
-      });
+    }).catch(() => {});
 
     // 🔹 Direct Achievements API (sync now; defensive about promises)
-    if (ach && typeof ach.onQuizFinished === "function") {
-      console.log("[topic-quiz] calling ach.onQuizFinished", {
-        pct,
-        subject: headerTitle,
-      });
+    if (ach && typeof (ach as any).onQuizFinished === "function") {
       try {
         const maybePromise = (ach as any).onQuizFinished(pct, headerTitle);
-        if (
-          maybePromise &&
-          typeof maybePromise === "object" &&
-          typeof (maybePromise as any).catch === "function"
-        ) {
-          (maybePromise as any).catch((e: any) =>
-            console.warn("[topic-quiz] ach.onQuizFinished async error", e)
-          );
+        if (maybePromise && typeof maybePromise?.catch === "function") {
+          maybePromise.catch(() => {});
         }
-      } catch (e: any) {
-        console.warn("[topic-quiz] ach.onQuizFinished error", e);
-      }
-    } else {
-      console.log(
-        "[topic-quiz] no ach.onQuizFinished on context; skipping direct call"
-      );
+      } catch {}
     }
 
     // 🔹 Global bridge — expects correct answers + duration + total
     try {
-      console.log("[topic-quiz] calling quizFinished bridge", {
-        correct,
-        durationSec,
-        total,
-      });
       quizFinished(correct, durationSec, total);
-    } catch (e) {
-      console.warn("[topic-quiz] quizFinished bridge error", e);
-    }
+    } catch {}
 
-    // 🔹 Emitter fallback (same shape as other emitters)
+    // 🔹 Emitter fallback
     try {
       AchieveEmitter.emit("ACHIEVEMENT_EVENT", {
         type: "quizFinished",
         scorePct: pct,
         subject: headerTitle,
       });
-      console.log(
-        "[topic-quiz] emitted ACHIEVEMENT_EVENT quizFinished",
-        { scorePct: pct, subject: headerTitle }
-      );
-    } catch (e) {
-      console.warn("[topic-quiz] AchieveEmitter emit error", e);
-    }
+    } catch {}
 
-    // 🔹 In-screen modal + native Alert, once
+    // ✅ Modal only (no extra Alert spam)
     if (!notifiedRef.current) {
       notifiedRef.current = true;
       setShowCongrats(true);
-      Alert.alert(
-        pct >= 80 ? "Quiz complete! 🎉" : "Quiz complete!",
-        pct >= 80
-          ? `You scored ${pct}%. Check Achievements to see what you unlocked.`
-          : `You scored ${pct}%. Keep going — more achievements unlock as you finish quizzes.`
-      );
     }
   }, [done, total, correct, totalLeft, id, headerTitle, ach]);
 
@@ -302,9 +295,7 @@ export default function TopicQuiz() {
       <Shell>
         <View style={S.center}>
           <ActivityIndicator color={CYAN} />
-          <Text style={[S.dim, { color: CYAN }]}>
-            Loading {headerTitle}…
-          </Text>
+          <Text style={[S.dim, { color: CYAN }]}>Loading {headerTitle}…</Text>
         </View>
       </Shell>
     );
@@ -314,14 +305,9 @@ export default function TopicQuiz() {
     return (
       <Shell>
         <Text style={S.title}>{headerTitle}</Text>
-        <Text style={S.result}>
-          No questions are available for this topic yet.
-        </Text>
+        <Text style={S.result}>No questions are available for this topic yet.</Text>
         <View style={{ height: 12 }} />
-        <Pressable
-          style={[S.btn, S.outline]}
-          onPress={() => router.replace("/(tabs)/quiz")}
-        >
+        <Pressable style={[S.btn, S.outline]} onPress={() => router.replace("/(tabs)/quiz")}>
           <Text style={S.btnTxt}>Topics</Text>
         </Pressable>
       </Shell>
@@ -330,18 +316,17 @@ export default function TopicQuiz() {
 
   if (done || !current) {
     const pct = total ? Math.round((correct / total) * 100) : 0;
+
     return (
       <Shell>
         <Text style={S.title}>{headerTitle}</Text>
         <Text style={S.result}>
           Score: {correct} / {total} ({pct}%).
         </Text>
+
         <View style={{ height: 12 }} />
         <View style={S.row}>
-          <Pressable
-            style={[S.btn, S.outline]}
-            onPress={() => router.replace("/(tabs)/quiz")}
-          >
+          <Pressable style={[S.btn, S.outline]} onPress={() => router.replace("/(tabs)/quiz")}>
             <Text style={S.btnTxt}>Topics</Text>
           </Pressable>
           <View style={{ width: 10 }} />
@@ -359,9 +344,9 @@ export default function TopicQuiz() {
               </Text>
               <Text style={S.modalText}>
                 You scored {pct}%.{"\n"}
-                Check the Achievements tab to see what you’ve unlocked and
-                what’s next.
+                Check the Achievements tab to see what you’ve unlocked and what’s next.
               </Text>
+
               <View style={S.modalButtons}>
                 <Pressable
                   style={[S.btn, S.solid, { flex: 1 }]}
@@ -400,16 +385,19 @@ export default function TopicQuiz() {
       <Text style={S.meta}>
         Question {idx + 1} / {total}
       </Text>
+
       <Text style={S.qText}>{current.question}</Text>
 
-      <View style={{ height: 8 }} />
+      <View style={{ height: 10 }} />
+
       {current.choices.map((opt, i) => {
         const isPicked = selected === i;
         const isRight = locked && opt === current.answer;
         const isWrong = locked && isPicked && !isRight;
+
         return (
           <Pressable
-            key={i}
+            key={`${i}-${opt}`}
             disabled={locked}
             onPress={() => onPick(i)}
             style={[
@@ -419,32 +407,22 @@ export default function TopicQuiz() {
               isWrong && S.choiceWrong,
             ]}
           >
-            <Text
-              style={[
-                S.choiceTxt,
-                isRight && S.choiceTxtRight,
-              ]}
-            >
+            <Text style={[S.choiceTxt, isRight && S.choiceTxtRight]}>
               {opt}
             </Text>
           </Pressable>
         );
       })}
 
-      <View style={{ height: 10 }} />
+      <View style={{ height: 12 }} />
       <View style={S.headerRow}>
         <Text style={S.meta}>Correct: {correct}</Text>
-        <Text style={S.meta}>
-          Remaining: {total - (idx + 1)}
-        </Text>
+        <Text style={S.meta}>Remaining: {total - (idx + 1)}</Text>
       </View>
 
-      <View style={{ height: 12 }} />
+      <View style={{ height: 14 }} />
       <View style={S.row}>
-        <Pressable
-          style={[S.btn, S.outline]}
-          onPress={() => router.replace("/(tabs)/quiz")}
-        >
+        <Pressable style={[S.btn, S.outline]} onPress={() => router.replace("/(tabs)/quiz")}>
           <Text style={S.btnTxt}>Topics</Text>
         </Pressable>
         <View style={{ width: 10 }} />
@@ -457,30 +435,44 @@ export default function TopicQuiz() {
 }
 
 export const S = StyleSheet.create({
-  container: { padding: 16 },
+  container: { padding: 16, paddingBottom: 28 },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   dim: { opacity: 0.8 },
+
   title: {
     fontSize: 22,
-    fontWeight: "800",
+    fontWeight: "900",
     color: CYAN,
     marginBottom: 4,
   },
-  qText: { fontSize: 18, color: CYAN, marginTop: 6 },
+  qText: {
+    fontSize: 18,
+    color: CYAN,
+    marginTop: 10,
+    fontWeight: "800",
+    lineHeight: 24,
+  },
+
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: 12,
   },
-  meta: { fontSize: 14, color: CYAN, opacity: 0.9 },
-  danger: { color: "#ff6b6b", fontWeight: "800" },
 
+  meta: { fontSize: 14, color: CYAN, opacity: 0.9, fontWeight: "700" },
+  danger: { color: "#ff6b6b", fontWeight: "900" },
+
+  // ✅ Mobile-friendly answer buttons
   choice: {
-    padding: 14,
-    borderRadius: 10,
+    minHeight: 56,
+    justifyContent: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 14,
+    borderRadius: 16,
     borderWidth: 1.5,
     borderColor: CYAN,
-    marginVertical: 6,
+    marginVertical: 7,
     backgroundColor: "rgba(0, 229, 255, 0.06)",
   },
   choicePicked: {
@@ -492,12 +484,12 @@ export const S = StyleSheet.create({
     backgroundColor: "rgba(57, 255, 20, 0.22)",
     borderColor: NEON,
     shadowColor: NEON,
-    shadowOpacity: 0.9,
+    shadowOpacity: 0.75,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 0 },
     elevation: 6,
   },
-  choiceTxtRight: { color: NEON, fontWeight: "800" },
+  choiceTxtRight: { color: NEON, fontWeight: "900" },
 
   // Wrong = red
   choiceWrong: {
@@ -505,21 +497,30 @@ export const S = StyleSheet.create({
     borderColor: "#ff6b6b",
   },
 
-  choiceTxt: { fontSize: 16, color: CYAN },
+  choiceTxt: {
+    fontSize: 16,
+    color: CYAN,
+    fontWeight: "800",
+    lineHeight: 22,
+  },
 
   row: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
+
   btn: {
     paddingVertical: 12,
     paddingHorizontal: 18,
-    borderRadius: 10,
+    borderRadius: 12,
     alignItems: "center",
     flex: 1,
+    minHeight: 48,
+    justifyContent: "center",
   },
-  btnTxt: { color: CYAN, fontWeight: "800", textAlign: "center" },
+  btnTxt: { color: CYAN, fontWeight: "900", textAlign: "center" },
+
   solid: {
     backgroundColor: "rgba(0, 229, 255, 0.12)",
     borderWidth: 1.5,
@@ -530,7 +531,8 @@ export const S = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: CYAN,
   },
-  result: { fontSize: 18, color: CYAN, marginTop: 6 },
+
+  result: { fontSize: 18, color: CYAN, marginTop: 6, fontWeight: "800" },
 
   // 🔹 Modal styles
   modalBackdrop: {
@@ -544,7 +546,7 @@ export const S = StyleSheet.create({
     justifyContent: "center",
   },
   modalCard: {
-    width: "86%",
+    width: "88%",
     borderRadius: 16,
     padding: 18,
     backgroundColor: "#03131E",
@@ -553,7 +555,7 @@ export const S = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: "800",
+    fontWeight: "900",
     color: CYAN,
     marginBottom: 6,
   },
@@ -561,6 +563,8 @@ export const S = StyleSheet.create({
     fontSize: 14,
     color: "#CFEAF7",
     marginBottom: 14,
+    lineHeight: 20,
+    fontWeight: "700",
   },
   modalButtons: {
     flexDirection: "row",
