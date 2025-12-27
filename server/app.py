@@ -37,12 +37,23 @@ except Exception:
 # -----------------------------------------------------------------------------
 # Boot + CORS
 # -----------------------------------------------------------------------------
+load_dotenv(Path(__file__).with_name(".env"))
+load_dotenv(Path(__file__).with_name(".env"))
 load_dotenv(find_dotenv(usecwd=True)) or load_dotenv()
 
 app = Flask(__name__)
 app.register_blueprint(certs_pdf_bp)
 app.register_blueprint(verify_bp)
 app.register_blueprint(coins_bp)
+
+# --- Stripe Checkout routes (POST /checkout/start) ---
+try:
+    from checkout_routes import bp as checkout_bp
+    if "checkout" not in app.blueprints:
+        app.register_blueprint(checkout_bp)
+except Exception as e:
+    print("[checkout_bp] register skip/error:", e)
+
 
 # ---- Idempotent blueprint registration ----
 try:
@@ -597,3 +608,11 @@ if __name__ == "__main__":
 
     # IMPORTANT: 0.0.0.0 so iPhone can reach it via LAN IP
     app.run(host="0.0.0.0", port=port, debug=True, use_reloader=False)
+
+@app.get("/__which_app")
+def __which_app():
+    return jsonify({
+        "ok": True,
+        "file": __file__,
+        "blueprints": sorted(list(app.blueprints.keys())),
+    })

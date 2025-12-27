@@ -1,75 +1,113 @@
-import os, json, logging
-from flask import Blueprint, request, jsonify
-from dotenv import load_dotenv
-load_dotenv()
+from __future__ import annotations
+
+import os, json, time
+from flask import Blueprint, request, jsonify, make_response
 
 bp = Blueprint("checkout", __name__)
-log = logging.getLogger("checkout")
-log.setLevel(logging.INFO)
 
-def _require_secret():
-  sk = os.environ.get("STRIPE_SECRET_KEY")
-  if not sk:
-    return None, (jsonify({"error":"Missing STRIPE_SECRET_KEY on server"}), 500)
-  try:
-    import stripe
-    stripe.api_key = sk
-    return stripe, None
-  except Exception as e:
-    return None, (jsonify({"error": f"Stripe import/error: {e}"}), 500)
+def _cors(resp):
+  resp.headers["Access-Control-Allow-Origin"] = "*"
+  resp.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+  resp.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+  return resp
 
-def _mk_success_cancel(data):
-  success = data.get("success_url") or "http://localhost:8081/?purchase=success"
-  cancel  = data.get("cancel_url")  or "http://localhost:8081/?purchase=cancel"
-  return success, cancel
+def _origin() -> str:
+  # Where Stripe should send the user back after checkout
+  # Prefer explicit origin if you set it (like http://192.168.1.74:8081 or your web URL)
+  o = (os.getenv("CHECKOUT_ORIGIN") or "").strip()
+  if o:
+    return o.rstrip("/")
+  # dev default (matches Expo web)
+  return "http://localhost:8081"
 
-@bp.post("/checkout/start")
+@bp.route("/checkout/start", methods=["POST", "OPTIONS"])
+@bp.route("/api/checkout/start", methods=["POST", "OPTIONS"])
+@bp.route("/payments/checkout/start", methods=["POST", "OPTIONS"])
 def checkout_start():
-  return _checkout_common()
+  if request.method == "OPTIONS":
+    return _cors(make_response(("", 200)))
 
-@bp.post("/api/checkout/start")
-def api_checkout_start():
-  return _checkout_common()
-
-def _checkout_common():
   data = request.get_json(silent=True) or {}
-  log.info("Checkout start: %s", json.dumps(data))
-  stripe, err = _require_secret()
-  if err: return err
-  success, cancel = _mk_success_cancel(data)
-
-  # Preferred: use a Stripe Price ID (maps to your products)
-  price_id = data.get("priceId") or data.get("price_id")
-  # Alternative: accept raw amount/currency in cents (e.g., {"amount": 500, "currency": "usd"})
+  # Accept any of these:
+  price_id = (data.get("priceId") or data.get("price_id") or data.get("price") or "").strip()
   amount = data.get("amount")
-  currency = (data.get("currency") or "usd").lower()
+  currency = (data.get("currency") or "usd").lower().strip()
+  quantity = int(data.get("quantity") or 1)
+
+  # Return URLs (can be passed in from app)
+  origin = _origin()
+  success_url = (data.get("success_url") or f"{origin}/checkout/success?session_id={{CHECKOUT_SESSION_ID}}").strip()
+  cancel_url = (data.get("cancel_url") or f"{origin}/checkout/cancel").strip()
+
+  # Optional nice-to-have info when using amount mode
+  title = (data.get("title") or data.get("sku") or "Nova Purchase")
+  description = (data.get("description") or "")
+  images = data.get("images") or []
+  image = data.get("image")
+  if image and not images:
+    images = [image]
+
+  # meta passthrough
+  meta = data.get("meta") or {}
+  if not isinstance(meta, dict):
+    meta = {"meta": str(meta)}
+
+  # Stripe is optional: if not configured, return a clear error (no 404)
+  stripe_key = (os.getenv("STRIPE_SECRET_KEY") or os.getenv("STRIPE_API_KEY") or "").strip()
+  if not stripe_key:
+    return _cors(jsonify({"ok": False, "error": "Stripe not configured: missing STRIPE_SECRET_KEY"})), 500
 
   try:
-    if price_id:
-      session = stripe.checkout.Session.create(
-        mode="payment",
-        line_items=[{"price": price_id, "quantity": int(data.get("quantity") or 1)}],
-        success_url=success,
-        cancel_url=cancel,
-      )
-    elif amount:
-      session = stripe.checkout.Session.create(
-        mode="payment",
-        line_items=[{
-          "price_data": {
-            "currency": currency,
-            "product_data": {"name": data.get("name") or "Nova Purchase"},
-            "unit_amount": int(amount),
-          },
-          "quantity": int(data.get("quantity") or 1),
-        }],
-        success_url=success,
-        cancel_url=cancel,
-      )
-    else:
-      return jsonify({"error":"Provide priceId or amount"}), 400
-
-    return jsonify({"id": session.id, "url": session.url, "success_url": success, "cancel_url": cancel}), 200
+    import stripe  # type: ignore
   except Exception as e:
-    log.exception("Stripe session error")
-    return jsonify({"error": str(e)}), 500
+    return _cors(jsonify({"ok": False, "error": f"stripe import failed: {e}"})), 500
+
+  stripe.api_key = stripe_key
+
+  try:
+    line_item = None
+
+    if price_id:
+      line_item = {"price": price_id, "quantity": quantity}
+    else:
+      # Amount-mode requires amount in cents
+      if not isinstance(amount, int):
+        try:
+          amount = int(amount)
+        except Exception:
+          amount = 0
+      if amount <= 0:
+        return _cors(jsonify({"ok": False, "error": "Missing priceId or amount"})), 400
+
+      product_data = {"name": str(title)}
+      if description:
+        product_data["description"] = str(description)[:500]
+      # Stripe Checkout requires public https images; keep optional
+      if isinstance(images, list) and images:
+        product_data["images"] = [str(x) for x in images if x]
+
+      line_item = {
+        "price_data": {
+          "currency": currency,
+          "unit_amount": amount,
+          "product_data": product_data,
+        },
+        "quantity": quantity,
+      }
+
+    session = stripe.checkout.Session.create(
+      mode="payment",
+      line_items=[line_item],
+      success_url=success_url,
+      cancel_url=cancel_url,
+      metadata={k: str(v) for k, v in meta.items()},
+    )
+
+    return _cors(jsonify({"ok": True, "url": session.url, "id": session.id})), 200
+
+  except Exception as e:
+    return _cors(jsonify({"ok": False, "error": str(e)})), 500
+
+@bp.get("/checkout/ping")
+def ping():
+  return _cors(jsonify({"ok": True, "ts": int(time.time()*1000)}))

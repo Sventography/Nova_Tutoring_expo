@@ -1,211 +1,128 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Platform, View, StyleSheet, Animated } from "react-native";
-import { useCursor } from "../context/CursorContext";
-import { useTheme } from "../context/ThemeContext";
+import { View, StyleSheet, Animated, Easing } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 type Pt = { x: number; y: number };
-type Props = { p: Pt; down: boolean };
 
-type Star = {
-  id: number;
-  x: number;
-  y: number;
-  size: number;
-  bornAt: number;
-  life: number;
-  hue: number;
+type Props = {
+  p: Pt;          // current touch point (page coords)
+  down: boolean;  // finger down?
 };
 
+type Spark = {
+  id: string;
+  x: number;
+  y: number;
+  a: Animated.Value; // opacity
+  s: Animated.Value; // scale
+};
+
+function uid() {
+  return Math.random().toString(16).slice(2) + Date.now().toString(16);
+}
+
+/**
+ * Mobile star-trail overlay:
+ * - pointerEvents none (never steals taps)
+ * - emits tiny "sparkles" while finger is down
+ * - auto-fades and prunes old sparks
+ */
 export default function TouchCursorOverlay({ p, down }: Props) {
-  // Native only
-  if (Platform.OS === "web") return null;
+  const [sparks, setSparks] = useState<Spark[]>([]);
+  const last = useRef<Pt>({ x: -1, y: -1 });
+  const tickRef = useRef<any>(null);
 
-  const { cursorId } = useCursor();
-  const { tokens } = useTheme();
-
-  if (!cursorId || cursorId === "none") return null;
-
-  const accent = tokens?.accent ?? "#00e5ff";
-
-  // Smooth follow
-  const ax = useRef(new Animated.Value(-9999)).current;
-  const ay = useRef(new Animated.Value(-9999)).current;
+  const shouldEmit = useMemo(() => {
+    const dx = p.x - last.current.x;
+    const dy = p.y - last.current.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    return down && p.x >= 0 && p.y >= 0 && dist >= 6; // emit every ~6px move
+  }, [p, down]);
 
   useEffect(() => {
-    Animated.spring(ax, {
-      toValue: p.x,
-      useNativeDriver: true,
-      speed: 26,
-      bounciness: 0,
-    }).start();
-    Animated.spring(ay, {
-      toValue: p.y,
-      useNativeDriver: true,
-      speed: 26,
-      bounciness: 0,
-    }).start();
-  }, [p.x, p.y, ax, ay]);
+    if (!shouldEmit) return;
 
-  /* -------------------- star trail (native) -------------------- */
-  const [stars, setStars] = useState<Star[]>([]);
-  const nextId = useRef(0);
-  const lastP = useRef<Pt>({ x: -9999, y: -9999 });
-  const baseHues = useMemo(() => [190, 200, 210, 280, 300, 320], []);
+    last.current = { x: p.x, y: p.y };
 
-  useEffect(() => {
-    if (cursorId !== "starTrailCursor") return;
-    // prune loop
-    const t = setInterval(() => {
-      const now = Date.now();
-      setStars((prev) => prev.filter((s) => now - s.bornAt < s.life));
-    }, 60);
-    return () => clearInterval(t);
-  }, [cursorId]);
+    // create spark
+    const a = new Animated.Value(1);
+    const s = new Animated.Value(1);
+    const sp: Spark = { id: uid(), x: p.x, y: p.y, a, s };
 
-  useEffect(() => {
-    if (cursorId !== "starTrailCursor") return;
-
-    // only spawn when finger is down and moving on-screen
-    if (!down) return;
-    if (p.x < 0 || p.y < 0) return;
-
-    const dx = p.x - lastP.current.x;
-    const dy = p.y - lastP.current.y;
-    const dist = Math.hypot(dx, dy);
-
-    // spawn every ~12px moved
-    if (dist < 12) return;
-
-    lastP.current = p;
-    const count = Math.max(1, Math.min(3, Math.floor(dist / 12)));
-    const now = Date.now();
-
-    const out: Star[] = [];
-    for (let i = 0; i < count; i++) {
-      const size = 5 + Math.random() * 10;
-      const hue =
-        baseHues[Math.floor(Math.random() * baseHues.length)] +
-        (Math.random() * 10 - 5);
-      const life = 450 + Math.random() * 650;
-      const jitter = () => (Math.random() - 0.5) * 16;
-
-      out.push({
-        id: nextId.current++,
-        x: p.x + jitter(),
-        y: p.y + jitter(),
-        size,
-        bornAt: now,
-        life,
-        hue,
-      });
-    }
-
-    setStars((prev) => {
-      const next = [...prev, ...out];
-      return next.slice(Math.max(0, next.length - 80));
+    setSparks((prev) => {
+      const next = [sp, ...prev];
+      return next.slice(0, 24); // cap count
     });
-  }, [p.x, p.y, down, cursorId, baseHues]);
 
-  // don’t show cursor until user touches at least once
-  const hasTouch = p.x > 0 && p.y > 0;
+    // animate: slight pop then fade
+    Animated.parallel([
+      Animated.sequence([
+        Animated.timing(s, { toValue: 1.25, duration: 120, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+        Animated.timing(s, { toValue: 0.75, duration: 520, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+      ]),
+      Animated.timing(a, { toValue: 0, duration: 700, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+    ]).start(() => {
+      // prune after done
+      setSparks((prev) => prev.filter((x) => x.id !== sp.id));
+    });
+  }, [shouldEmit, p.x, p.y]);
 
-  const orbSize = 34;
-  const haloSize = 26;
+  // also emit a small "burst" on touch-down
+  useEffect(() => {
+    if (!down || p.x < 0 || p.y < 0) return;
+
+    // burst: 4 sparks around the finger
+    const offsets = [
+      { dx: 0, dy: 0 },
+      { dx: 10, dy: -6 },
+      { dx: -10, dy: 6 },
+      { dx: 6, dy: 10 },
+    ];
+
+    offsets.forEach((o, k) => {
+      const a = new Animated.Value(1);
+      const s = new Animated.Value(0.9);
+      const sp: Spark = { id: uid() + "_" + k, x: p.x + o.dx, y: p.y + o.dy, a, s };
+
+      setSparks((prev) => [sp, ...prev].slice(0, 24));
+
+      Animated.parallel([
+        Animated.timing(s, { toValue: 1.35, duration: 220, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+        Animated.timing(a, { toValue: 0, duration: 800, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+      ]).start(() => {
+        setSparks((prev) => prev.filter((x) => x.id !== sp.id));
+      });
+    });
+  }, [down]);
 
   return (
-    <View pointerEvents="none" style={S.wrap}>
-      {/* Glow cursor */}
-      {cursorId === "glowCursor" && hasTouch ? (
+    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+      {sparks.map((sp) => (
         <Animated.View
+          key={sp.id}
           style={[
-            S.halo,
+            S.sparkWrap,
             {
-              width: haloSize,
-              height: haloSize,
-              borderRadius: haloSize,
-              opacity: down ? 0.95 : 0.75,
-              transform: [
-                { translateX: Animated.subtract(ax, haloSize / 2) as any },
-                { translateY: Animated.subtract(ay, haloSize / 2) as any },
-              ],
-              shadowColor: accent,
-              shadowOpacity: 0.9,
-              shadowRadius: 12,
-            },
-          ]}
-        />
-      ) : null}
-
-      {/* Orb cursor */}
-      {cursorId === "orbCursor" && hasTouch ? (
-        <Animated.View
-          style={[
-            S.orb,
-            {
-              width: orbSize,
-              height: orbSize,
-              borderRadius: orbSize,
-              opacity: down ? 0.98 : 0.88,
-              transform: [
-                { translateX: Animated.subtract(ax, orbSize / 2) as any },
-                { translateY: Animated.subtract(ay, orbSize / 2) as any },
-              ],
-              shadowColor: accent,
-              shadowOpacity: 0.9,
-              shadowRadius: 18,
+              left: sp.x - 10,
+              top: sp.y - 10,
+              opacity: sp.a,
+              transform: [{ scale: sp.s }],
             },
           ]}
         >
-          <View
-            style={{
-              width: orbSize,
-              height: orbSize,
-              borderRadius: orbSize,
-              borderWidth: 2,
-              borderColor: "rgba(255,255,255,0.18)",
-            }}
-          />
+          <Ionicons name="star" size={16} color="#00E5FF" />
         </Animated.View>
-      ) : null}
-
-      {/* Star trail */}
-      {cursorId === "starTrailCursor" ? (
-        <>
-          {stars.map((s) => {
-            const age = Date.now() - s.bornAt;
-            const t = Math.max(0, Math.min(1, age / s.life));
-            const opacity = 1 - t;
-            const color = `hsl(${s.hue}, 100%, 60%)`;
-            return (
-              <View
-                key={s.id}
-                style={{
-                  position: "absolute",
-                  left: s.x - s.size / 2,
-                  top: s.y - s.size / 2,
-                  width: s.size,
-                  height: s.size,
-                  opacity,
-                  borderRadius: 999,
-                  backgroundColor: color,
-                  shadowColor: color,
-                  shadowOpacity: 0.95,
-                  shadowRadius: 10,
-                }}
-              />
-            );
-          })}
-        </>
-      ) : null}
+      ))}
     </View>
   );
 }
 
 const S = StyleSheet.create({
-  wrap: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 999999,
+  sparkWrap: {
+    position: "absolute",
+    width: 20,
+    height: 20,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  halo: { position: "absolute", backgroundColor: "transparent" },
-  orb: { position: "absolute", backgroundColor: "transparent" },
 });
