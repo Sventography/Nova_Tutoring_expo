@@ -35,8 +35,7 @@ import { getSizesFor } from "../constants/sizes";
 import useSelectedSizes from "../utils/useSelectedSizes";
 
 import * as QuickRowNS from "../components/QuickRow";
-const QuickRow =
-  (QuickRowNS as any).default ?? (QuickRowNS as any).QuickRow;
+const QuickRow = (QuickRowNS as any).default ?? (QuickRowNS as any).QuickRow;
 
 import * as SizeSelectorNS from "../components/SizeSelector";
 const SizeSelector =
@@ -171,8 +170,7 @@ async function startCheckoutRequest(opts: {
   meta?: any;
 }) {
   const origin =
-    (typeof window !== "undefined" &&
-      (window as any).location?.origin) ||
+    (typeof window !== "undefined" && (window as any).location?.origin) ||
     "http://localhost:8081";
 
   const payload: any = {
@@ -291,8 +289,16 @@ function OrderSuccessModal({
     glow.setValue(0);
     Animated.loop(
       Animated.sequence([
-        Animated.timing(glow, { toValue: 1, duration: 900, useNativeDriver: false }),
-        Animated.timing(glow, { toValue: 0, duration: 900, useNativeDriver: false }),
+        Animated.timing(glow, {
+          toValue: 1,
+          duration: 900,
+          useNativeDriver: false,
+        }),
+        Animated.timing(glow, {
+          toValue: 0,
+          duration: 900,
+          useNativeDriver: false,
+        }),
       ])
     ).start();
   }, [visible, glow]);
@@ -329,7 +335,12 @@ function OrderSuccessModal({
             colors={["#00111E", "#001D33"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={{ padding: 18, borderRadius: 18, borderWidth: 1, borderColor: "#00E5FF66" }}
+            style={{
+              padding: 18,
+              borderRadius: 18,
+              borderWidth: 1,
+              borderColor: "#00E5FF66",
+            }}
           >
             <View
               style={{
@@ -360,7 +371,9 @@ function OrderSuccessModal({
                   marginBottom: 16,
                 }}
               >
-                {title ? `“${title}” is confirmed. A confirmation was sent to your email.` : "Your order is confirmed. A confirmation was sent to your email."}
+                {title
+                  ? `“${title}” is confirmed. A confirmation was sent to your email.`
+                  : "Your order is confirmed. A confirmation was sent to your email."}
               </Text>
               <Pressable
                 onPress={onClose}
@@ -373,10 +386,14 @@ function OrderSuccessModal({
                   borderRadius: 999,
                   borderWidth: 1,
                   borderColor: "#00E5FF",
-                  backgroundColor: pressed ? "rgba(0,229,255,0.25)" : "rgba(0,229,255,0.15)",
+                  backgroundColor: pressed
+                    ? "rgba(0,229,255,0.25)"
+                    : "rgba(0,229,255,0.15)",
                 })}
               >
-                <Text style={{ color: "#CFFFFF", fontWeight: "900" }}>Continue</Text>
+                <Text style={{ color: "#CFFFFF", fontWeight: "900" }}>
+                  Continue
+                </Text>
               </Pressable>
             </View>
           </LinearGradient>
@@ -388,7 +405,7 @@ function OrderSuccessModal({
 
 /* --------------------------------- Screen -------------------------------- */
 export default function Shop() {
-  const { coins, setCoins, add, spend } = useCoins(); // ⬅️ use setCoins
+  const { coins, setCoins } = useCoins(); // ⬅️ use setCoins
   const { tokens, setThemeById } = useTheme();
   const router = useRouter();
 
@@ -422,6 +439,11 @@ export default function Shop() {
   const themePulse = useRef(new Animated.Value(0)).current;
   const cursorPulse = useRef(new Animated.Value(0)).current;
 
+  const isOwned = (id: string) => {
+    const cid = canonId(id);
+    return !!(purchases[id] || (cid && purchases[cid]));
+  };
+
   /* ---------- DEV: Hidden 5-tap top-up on the "Shop" title ---------- */
   const tapCounter = useRef(0);
   const tapWindowMs = 1500;
@@ -438,7 +460,9 @@ export default function Shop() {
       setCoins(next);
       saveCoins(next);
       track("dev_secret_top_up", { bonus, next });
-      console.log(`[dev] Added ${bonus} coins, new total ${next.toLocaleString()}`);
+      console.log(
+        `[dev] Added ${bonus} coins, new total ${next.toLocaleString()}`
+      );
     }
   }
   /* ------------------------------------------------------------------- */
@@ -447,10 +471,26 @@ export default function Shop() {
     const anim = which === "themes" ? themePulse : cursorPulse;
     anim.setValue(0);
     Animated.sequence([
-      Animated.timing(anim, { toValue: 1, duration: 220, useNativeDriver: false }),
-      Animated.timing(anim, { toValue: 0, duration: 350, useNativeDriver: false }),
-      Animated.timing(anim, { toValue: 1, duration: 160, useNativeDriver: false }),
-      Animated.timing(anim, { toValue: 0, duration: 420, useNativeDriver: false }),
+      Animated.timing(anim, {
+        toValue: 1,
+        duration: 220,
+        useNativeDriver: false,
+      }),
+      Animated.timing(anim, {
+        toValue: 0,
+        duration: 350,
+        useNativeDriver: false,
+      }),
+      Animated.timing(anim, {
+        toValue: 1,
+        duration: 160,
+        useNativeDriver: false,
+      }),
+      Animated.timing(anim, {
+        toValue: 0,
+        duration: 420,
+        useNativeDriver: false,
+      }),
     ]).start();
   };
 
@@ -491,8 +531,10 @@ export default function Shop() {
       setEquippedTheme(th);
       setOrders(ord);
 
-      const mappedCursor = toCursorCtxId(cur);
-      if (typeof setCursorById === "function") setCursorById(mappedCursor);
+      // ✅ IMPORTANT: Keep canonical IDs. Do NOT map to "glowCursor"/etc.
+      if (typeof setCursorById === "function") setCursorById(cur);
+
+      // Themes: keep your existing mapping behavior (safe), but allow canonical too.
       const mappedTheme = toThemeCtxId(th);
       if (typeof setThemeById === "function") setThemeById(mappedTheme);
 
@@ -507,8 +549,7 @@ export default function Shop() {
   }, []);
 
   useEffect(() => {
-    const mapped = toCursorCtxId(equippedCursor);
-    if (typeof setCursorById === "function") setCursorById(mapped);
+    if (typeof setCursorById === "function") setCursorById(equippedCursor);
   }, [equippedCursor, setCursorById]);
 
   useEffect(() => {
@@ -523,20 +564,32 @@ export default function Shop() {
       const sku = (queryParams?.sku as string) || "";
       track("shop_return_deeplink", { url: event.url, path, sku });
       if (!sku) return;
+
       const it = catalog.find((x) => x.id === sku);
       if (!it) return;
 
-      if (it.category === "theme" || it.category === "cursor" || it.category === "bundle") {
+      if (
+        it.category === "theme" ||
+        it.category === "cursor" ||
+        it.category === "bundle"
+      ) {
         setPurchases((prev) => {
           const cid = canonId(it.id);
           const next = { ...prev, [it.id]: true } as PurchaseMap;
           if (cid && cid !== it.id) (next as any)[cid] = true;
           savePurchases(next);
-          track("shop_purchase_complete", { sku: it.id, category: it.category, mode: "stripe" });
+          track("shop_purchase_complete", {
+            sku: it.id,
+            category: it.category,
+            mode: "stripe",
+          });
           return next;
         });
-        if (it.category === "theme") equipThemeImmediate(it.id, { source: "deeplink" });
-        if (it.category === "cursor") void equipCursorImmediate(it.id, { source: "deeplink" });
+
+        if (it.category === "theme")
+          equipThemeImmediate(it.id, { source: "deeplink" });
+        if (it.category === "cursor")
+          void equipCursorImmediate(it.id, { source: "deeplink" });
       } else if (it.category === "coin_pack") {
         const addAmt = dollarsToCoins(it.priceUSD ?? 0);
         const nextCoins = (coins ?? 0) + addAmt;
@@ -558,7 +611,6 @@ export default function Shop() {
           return next;
         });
 
-        // ✨ Show order success modal
         setLastOrderTitle(it.title);
         setShowOrderSuccess(true);
       }
@@ -570,14 +622,10 @@ export default function Shop() {
   }, [coins]);
 
   /* -------------------------- Equip helpers ------------------------------- */
+
+  // ✅ Canonical: cursor IDs are already like "cursor:glow", etc.
   function toCursorCtxId(shopId: string | null) {
-    if (!shopId) return null;
-    const map: Record<string, string> = {
-      "cursor:glow": "glowCursor",
-      "cursor:orb": "orbCursor",
-      "cursor:star_trail": "starTrailCursor",
-    };
-    return map[shopId] ?? (shopId.startsWith("cursor:") ? shopId.slice(7) : shopId);
+    return shopId;
   }
 
   function toThemeCtxId(id: string | null) {
@@ -604,7 +652,10 @@ export default function Shop() {
       const next = { ...prev, [id]: true } as PurchaseMap;
       if (cid && cid !== id) (next as any)[cid] = true;
       savePurchases(next);
-      track("shop_owned_marked", { id, owned_count: Object.keys(next).length });
+      track("shop_owned_marked", {
+        id,
+        owned_count: Object.keys(next).length,
+      });
       return next;
     });
   }
@@ -622,14 +673,14 @@ export default function Shop() {
     setEquippedTheme(null);
     saveTheme(null);
     if (typeof setThemeById === "function") setThemeById(null);
-    track("shop_unequip", { kind: "theme", id: prev });
+    track("shop_unequip", { kind: "theme", id: prev, ...meta });
   }
 
   async function equipCursorImmediate(shopId: string, meta?: Record<string, any>) {
     setEquippedCursor(shopId);
     await saveCursor(shopId);
     const mapped = toCursorCtxId(shopId);
-    if (mapped && typeof setCursorById === "function") setCursorById(mapped);
+    if (typeof setCursorById === "function") setCursorById(mapped);
     track("shop_equip", { kind: "cursor", id: shopId, mapped, ...meta });
   }
 
@@ -638,46 +689,133 @@ export default function Shop() {
     setEquippedCursor(null);
     await saveCursor(null);
     if (typeof setCursorById === "function") setCursorById(null);
-    track("shop_unequip", { kind: "cursor", id: prev });
+    track("shop_unequip", { kind: "cursor", id: prev, ...meta });
   }
 
   /* ----------------------------- Quick menus ------------------------------ */
   const THEMES_MENU: QuickItem[] = useMemo(() => {
-    const p = purchases;
     const eq = equippedTheme;
     return [
-      { id: "theme:neon", name: "Neon Nova", kind: "theme", owned: !!p["theme:neon"], equipped: eq === "theme:neon" },
-      { id: "theme:starry", name: "Starry Night", kind: "theme", owned: !!p["theme:starry"], equipped: eq === "theme:starry" },
-      { id: "theme:pink", name: "Pink Dawn", kind: "theme", owned: !!p["theme:pink"], equipped: eq === "theme:pink" },
-      { id: "theme:dark", name: "Dark Nova", kind: "theme", owned: !!p["theme:dark"], equipped: eq === "theme:dark" },
-      { id: "theme:mint", name: "Mint Breeze", kind: "theme", owned: !!p["theme:mint"], equipped: eq === "theme:mint" },
-      { id: "theme:glitter", name: "Glitter", kind: "theme", owned: !!p["theme:glitter"], equipped: eq === "theme:glitter" },
-      { id: "theme:blackgold", name: "Black & Gold", kind: "theme", owned: !!p["theme:blackgold"], equipped: eq === "theme:blackgold" },
-      { id: "theme:crimson", name: "Crimson Dream", kind: "theme", owned: !!p["theme:crimson"], equipped: eq === "theme:crimson" },
-      { id: "theme:emerald", name: "Emerald Wave", kind: "theme", owned: !!p["theme:emerald"], equipped: eq === "theme:emerald" },
-      { id: "theme:neonpurple", name: "Neon Purple", kind: "theme", owned: !!p["theme:neonpurple"], equipped: eq === "theme:neonpurple" },
-      { id: "theme:silver", name: "Silver Frost", kind: "theme", owned: !!p["theme:silver"], equipped: eq === "theme:silver" },
+      {
+        id: "theme:neon",
+        name: "Neon Nova",
+        kind: "theme",
+        owned: isOwned("theme:neon"),
+        equipped: eq === "theme:neon",
+      },
+      {
+        id: "theme:starry",
+        name: "Starry Night",
+        kind: "theme",
+        owned: isOwned("theme:starry"),
+        equipped: eq === "theme:starry",
+      },
+      {
+        id: "theme:pink",
+        name: "Pink Dawn",
+        kind: "theme",
+        owned: isOwned("theme:pink"),
+        equipped: eq === "theme:pink",
+      },
+      {
+        id: "theme:dark",
+        name: "Dark Nova",
+        kind: "theme",
+        owned: isOwned("theme:dark"),
+        equipped: eq === "theme:dark",
+      },
+      {
+        id: "theme:mint",
+        name: "Mint Breeze",
+        kind: "theme",
+        owned: isOwned("theme:mint"),
+        equipped: eq === "theme:mint",
+      },
+      {
+        id: "theme:glitter",
+        name: "Glitter",
+        kind: "theme",
+        owned: isOwned("theme:glitter"),
+        equipped: eq === "theme:glitter",
+      },
+      {
+        id: "theme:blackgold",
+        name: "Black & Gold",
+        kind: "theme",
+        owned: isOwned("theme:blackgold"),
+        equipped: eq === "theme:blackgold",
+      },
+      {
+        id: "theme:crimson",
+        name: "Crimson Dream",
+        kind: "theme",
+        owned: isOwned("theme:crimson"),
+        equipped: eq === "theme:crimson",
+      },
+      {
+        id: "theme:emerald",
+        name: "Emerald Wave",
+        kind: "theme",
+        owned: isOwned("theme:emerald"),
+        equipped: eq === "theme:emerald",
+      },
+      {
+        id: "theme:neonpurple",
+        name: "Neon Purple",
+        kind: "theme",
+        owned: isOwned("theme:neonpurple"),
+        equipped: eq === "theme:neonpurple",
+      },
+      {
+        id: "theme:silver",
+        name: "Silver Frost",
+        kind: "theme",
+        owned: isOwned("theme:silver"),
+        equipped: eq === "theme:silver",
+      },
     ];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [purchases, equippedTheme]);
 
   const CURSORS_MENU: QuickItem[] = useMemo(() => {
-    const p = purchases;
     const eq = equippedCursor;
     return [
-      { id: "cursor:glow", name: "Glow Cursor", kind: "cursor", owned: !!p["cursor:glow"], equipped: eq === "cursor:glow" },
-      { id: "cursor:orb", name: "Orb Glow", kind: "cursor", owned: !!p["cursor:orb"], equipped: eq === "cursor:orb" },
-      { id: "cursor:star_trail", name: "Star Trail", kind: "cursor", owned: !!p["cursor:star_trail"], equipped: eq === "cursor:star_trail" },
+      {
+        id: "cursor:glow",
+        name: "Glow Cursor",
+        kind: "cursor",
+        owned: isOwned("cursor:glow"),
+        equipped: eq === "cursor:glow",
+      },
+      {
+        id: "cursor:orb",
+        name: "Orb Glow",
+        kind: "cursor",
+        owned: isOwned("cursor:orb"),
+        equipped: eq === "cursor:orb",
+      },
+      {
+        id: "cursor:star_trail",
+        name: "Star Trail",
+        kind: "cursor",
+        owned: isOwned("cursor:star_trail"),
+        equipped: eq === "cursor:star_trail",
+      },
     ];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [purchases, equippedCursor]);
 
   function quickEquip(id: string, kind: "theme" | "cursor") {
-    const isCurrentlyEq = kind === "theme" ? equippedTheme === id : equippedCursor === id;
+    const isCurrentlyEq =
+      kind === "theme" ? equippedTheme === id : equippedCursor === id;
+
     track("shop_quick_action", {
       action: isCurrentlyEq ? "unequip" : "equip",
       id,
       kind,
       source: "quick_row",
     });
+
     if (kind === "theme") {
       isCurrentlyEq
         ? unequipThemeImmediate({ source: "quick_row" })
@@ -695,12 +833,14 @@ export default function Shop() {
       : id.startsWith("cursor:")
       ? "cursor"
       : "other";
+
     track("shop_quick_action", {
       action: "unlock_click",
       id,
       kind: kindGuess,
       source: "quick_row",
     });
+
     if (kindGuess === "theme") {
       scrollTo(themeSectionY.current, { section: "themes" });
       return;
@@ -709,6 +849,7 @@ export default function Shop() {
       scrollTo(cursorSectionY.current, { section: "cursors" });
       return;
     }
+
     const it = catalog.find((x) => x.id === id);
     if (it?.priceUSD) {
       const amount = Math.round((it.priceUSD ?? 1) * 100);
@@ -721,6 +862,7 @@ export default function Shop() {
       });
       return;
     }
+
     setNeed(1000);
     setShowInsufficient(true);
     track("shop_modal_insufficient_shown", { needed: 1000, via: "quick_row" });
@@ -744,9 +886,6 @@ export default function Shop() {
 
   /* ---------------------------- Purchase flows ---------------------------- */
 
-  // 🪙 Coins path:
-  // - Digital (themes/cursors) → instant unlock (local)
-  // - Physical (plushies/clothing/tangibles) → navigate to /checkout/coin (shipping form) and pass size
   function buyWithCoins(it: any, meta?: { size?: string }) {
     const price = it.priceCoins ?? 0;
     if (!price) return;
@@ -758,7 +897,9 @@ export default function Shop() {
         it.productId ||
         (it.stripe && it.stripe.productId) ||
         it.id;
+
       const chosen = meta?.size || (getSizesFor(sizeKey)[0] ?? null);
+
       track("shop_coin_checkout_start", {
         sku: it.id,
         category: it.category,
@@ -772,31 +913,37 @@ export default function Shop() {
         priceCoins: price,
         imageUrl: undefined,
         category: it.category,
-        size: chosen, // <— routes coins → shipping form
+        size: chosen,
       });
       return;
     }
 
     // Instant unlock for digital goods
-    if (coins < price) {
-      setNeed(price - coins);
+    if ((coins ?? 0) < price) {
+      setNeed(price - (coins ?? 0));
       setShowInsufficient(true);
       track("shop_modal_insufficient_shown", {
-        needed: price - coins,
+        needed: price - (coins ?? 0),
         sku: it.id,
         via: "coins",
       });
       return;
     }
-    const nextCoins = coins - price;
+
+    const nextCoins = (coins ?? 0) - price;
     const cid = canonId(it.id);
-    const nextPurch = { ...purchases, [it.id]: true, [cid]: true } as PurchaseMap;
+    const nextPurch = {
+      ...purchases,
+      [it.id]: true,
+      ...(cid ? { [cid]: true } : {}),
+    } as PurchaseMap;
+
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setCoins(nextCoins);
     saveCoins(nextCoins);
     setPurchases(nextPurch);
     savePurchases(nextPurch);
-    markOwned(it.id);
+
     track("shop_purchase_complete", {
       sku: it.id,
       category: it.category,
@@ -815,31 +962,36 @@ export default function Shop() {
     const success = Linking.createURL("/", {
       queryParams: { sku: it.id, size: meta?.size || "" },
     });
+
     track("shop_money_buy", { sku: it.id, amount_cents: amount, meta });
+
     await startCheckoutRequest({
       amount,
       currency: "usd",
       success_url: success,
       cancel_url: success,
     });
-    // optimistic unlock for digital; physicals will be marked via deeplink handler above
+
+    // optimistic unlock for digital; physicals will be marked via deeplink handler
     markOwned(it.id);
   }
 
   function equipTheme(it: any) {
-    if (!purchases[it.id]) return;
+    if (!isOwned(it.id)) return;
     equipThemeImmediate(it.id, { source: "card_equip" });
   }
 
   async function equipCursor(it: any) {
-    if (!purchases[it.id]) return;
+    if (!isOwned(it.id)) return;
     await equipCursorImmediate(it.id, { source: "card_equip" });
   }
 
   /* ----------------------------- Render helpers --------------------------- */
   const renderItem = (it: any, color: string, equipable?: "theme" | "cursor") => {
-    const owned = !!purchases[canonId(it.id)];
-    const showAlt = flipped[it.id] && it.altImageKey && altImages[it.altImageKey];
+    const owned = isOwned(it.id);
+
+    const showAlt =
+      flipped[it.id] && it.altImageKey && altImages[it.altImageKey];
     const src = showAlt ? altImages[it.altImageKey!] : it.image;
 
     const sizeKey =
@@ -847,10 +999,10 @@ export default function Shop() {
       it.productId ||
       (it.stripe && it.stripe.productId) ||
       it.id;
+
     let sizes = getSizesFor(sizeKey);
-    if (!sizes.length && it.category === "clothing")
-      sizes = ["S", "M", "L", "XL"];
-    const selected = sizes.length ? (sizeCtl.get(sizeKey) || sizes[0]) : null;
+    if (!sizes.length && it.category === "clothing") sizes = ["S", "M", "L", "XL"];
+    const selected = sizes.length ? sizeCtl.get(sizeKey) || sizes[0] : null;
 
     const equipped =
       equipable === "theme"
@@ -867,7 +1019,10 @@ export default function Shop() {
               if (it.altImageKey) {
                 setFlipped((f) => {
                   const next = { ...f, [it.id]: !f[it.id] };
-                  track("shop_image_flip", { sku: it.id, flipped: !!next[it.id] });
+                  track("shop_image_flip", {
+                    sku: it.id,
+                    flipped: !!next[it.id],
+                  });
                   return next;
                 });
               }
@@ -919,7 +1074,9 @@ export default function Shop() {
 
         {sizes.length > 0 ? (
           <View style={{ marginTop: 10 }}>
-            <Text style={{ color: tokens.text as any, fontSize: 12, marginBottom: 6 }}>
+            <Text
+              style={{ color: tokens.text as any, fontSize: 12, marginBottom: 6 }}
+            >
               Size
             </Text>
             <SizeSelector
@@ -959,13 +1116,7 @@ export default function Shop() {
               </Text>
             </Pressable>
           ) : (
-            <View
-              style={{
-                flexDirection: "row",
-                justifyContent: "space-between",
-                columnGap: 8,
-              }}
-            >
+            <View style={{ flexDirection: "row", justifyContent: "space-between", columnGap: 8 }}>
               <Pressable
                 onPress={() => buyWithCoins(it)}
                 style={({ pressed }) => ({
@@ -1026,13 +1177,7 @@ export default function Shop() {
               </Text>
             </Pressable>
           ) : (
-            <View
-              style={{
-                flexDirection: "row",
-                justifyContent: "space-between",
-                columnGap: 8,
-              }}
-            >
+            <View style={{ flexDirection: "row", justifyContent: "space-between", columnGap: 8 }}>
               <Pressable
                 onPress={() => buyWithCoins(it)}
                 style={({ pressed }) => ({
@@ -1088,22 +1233,11 @@ export default function Shop() {
             </Text>
           </Pressable>
         ) : (
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              columnGap: 8,
-            }}
-          >
+          <View style={{ flexDirection: "row", justifyContent: "space-between", columnGap: 8 }}>
             <Pressable
               onPress={() => {
-                const sizeKey =
-                  it.stripeProductId ||
-                  it.productId ||
-                  (it.stripe && it.stripe.productId) ||
-                  it.id;
                 const chosen = sizeCtl.get(sizeKey) || (getSizesFor(sizeKey)[0] ?? null);
-                buyWithCoins(it, { size: chosen }); // <— routes to /checkout/coin for physicals
+                buyWithCoins(it, { size: chosen as any });
               }}
               style={({ pressed }) => ({
                 flex: 1,
@@ -1122,13 +1256,8 @@ export default function Shop() {
             </Pressable>
             <Pressable
               onPress={() => {
-                const sizeKey =
-                  it.stripeProductId ||
-                  it.productId ||
-                  (it.stripe && it.stripe.productId) ||
-                  it.id;
                 const chosen = sizeCtl.get(sizeKey) || (getSizesFor(sizeKey)[0] ?? null);
-                moneyBuy(it, { size: chosen });
+                moneyBuy(it, { size: chosen as any });
               }}
               style={({ pressed }) => ({
                 flex: 1,
@@ -1176,7 +1305,7 @@ export default function Shop() {
           }}
         >
           <Text
-            onPress={secretTopUp} // ⬅️ 5 taps within ~1.5s adds 250k coins (dev)
+            onPress={secretTopUp}
             style={{ color: tokens.text as any, fontSize: 24, fontWeight: "800" }}
           >
             Shop
@@ -1204,60 +1333,26 @@ export default function Shop() {
           <QuickRow title="Cursors" items={CURSORS_MENU} onEquip={quickEquip} onBuy={quickBuy} />
         </View>
 
-        <Section title="Plushies">
-          {groups.plushies.map((it) =>
-            renderItem(it, CATEGORY_BORDER.plushies)
-          )}
-        </Section>
-
-        <Section title="Clothing">
-          {groups.clothing.map((it) =>
-            renderItem(it, CATEGORY_BORDER.clothing)
-          )}
-        </Section>
-
-        <Section title="Tangibles">
-          {groups.tangibles.map((it) =>
-            renderItem(it, CATEGORY_BORDER.tangibles)
-          )}
-        </Section>
+        <Section title="Plushies">{groups.plushies.map((it) => renderItem(it, CATEGORY_BORDER.plushies))}</Section>
+        <Section title="Clothing">{groups.clothing.map((it) => renderItem(it, CATEGORY_BORDER.clothing))}</Section>
+        <Section title="Tangibles">{groups.tangibles.map((it) => renderItem(it, CATEGORY_BORDER.tangibles))}</Section>
 
         <View onLayout={(e) => (cursorSectionY.current = e.nativeEvent.layout.y)} />
         <Section title="Cursors" pulseAnim={cursorPulse}>
-          {groups.cursor.map((it) =>
-            renderItem(it, CATEGORY_BORDER.cursor, "cursor")
-          )}
+          {groups.cursor.map((it) => renderItem(it, CATEGORY_BORDER.cursor, "cursor"))}
         </Section>
 
         <View onLayout={(e) => (themeSectionY.current = e.nativeEvent.layout.y)} />
         <Section title="Themes" pulseAnim={themePulse}>
-          {groups.theme.map((it) =>
-            renderItem(it, CATEGORY_BORDER.theme, "theme")
-          )}
+          {groups.theme.map((it) => renderItem(it, CATEGORY_BORDER.theme, "theme"))}
         </Section>
 
-        <Section title="Bundles">
-          {groups.bundle.map((it) =>
-            renderItem(it, CATEGORY_BORDER.bundle)
-          )}
-        </Section>
-
-        <Section title="Coin Packs">
-          {groups.coin_pack.map((it) =>
-            renderItem(it, CATEGORY_BORDER.coin_pack)
-          )}
-        </Section>
+        <Section title="Bundles">{groups.bundle.map((it) => renderItem(it, CATEGORY_BORDER.bundle))}</Section>
+        <Section title="Coin Packs">{groups.coin_pack.map((it) => renderItem(it, CATEGORY_BORDER.coin_pack))}</Section>
 
         {orders.length > 0 && (
           <View style={{ marginTop: 24 }}>
-            <Text
-              style={{
-                color: tokens.text as any,
-                fontSize: 16,
-                fontWeight: "800",
-                marginBottom: 10,
-              }}
-            >
+            <Text style={{ color: tokens.text as any, fontSize: 16, fontWeight: "800", marginBottom: 10 }}>
               Orders
             </Text>
             {orders.map((o) => (
@@ -1272,9 +1367,7 @@ export default function Shop() {
                   backgroundColor: "rgba(255,255,255,0.03)",
                 }}
               >
-                <Text style={{ color: tokens.text as any, fontWeight: "700" }}>
-                  {o.title}
-                </Text>
+                <Text style={{ color: tokens.text as any, fontWeight: "700" }}>{o.title}</Text>
                 <Text style={{ color: tokens.text as any, fontSize: 12, marginTop: 16 }}>
                   {new Date(o.createdAt).toLocaleString()} · {o.status.toUpperCase()}
                 </Text>
@@ -1298,13 +1391,11 @@ export default function Shop() {
         }}
       />
 
-      {/* ✅ Order Success modal */}
       <OrderSuccessModal
         visible={showOrderSuccess}
         title={lastOrderTitle}
         onClose={() => {
           setShowOrderSuccess(false);
-          // “Take them back to the shop page”: ensure they’re on this route and at the top
           try {
             router.replace("/(tabs)/shop");
           } catch {}

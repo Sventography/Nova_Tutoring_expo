@@ -1,52 +1,58 @@
 from __future__ import annotations
 
-from coins_orders import coins_bp
-from flask import Flask, request, jsonify, make_response
-from routes.certs_pdf import bp as certs_pdf_bp
-from routes.verify import bp as verify_bp
-from flask_cors import CORS
-from dotenv import load_dotenv, find_dotenv
-
-import os, re, json, time, uuid
+import os, re, json, time, uuid, sys
 from datetime import datetime
 from pathlib import Path
+from typing import Dict, Any
+
+from dotenv import load_dotenv, find_dotenv
+from flask import Flask, request, jsonify, make_response
+from flask_cors import CORS
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
+from openai import OpenAI
 from passlib.hash import bcrypt
 from sqlalchemy import Column, Integer, String, DateTime, create_engine, select
 from sqlalchemy.orm import declarative_base, sessionmaker
-from typing import Dict, Any
-
-from openai import OpenAI
-
-# Email helpers (new)
-from mailer import send_email, send_admin_and_buyer
-try:
-    # Prefer our server/email.py
-    from .email import send_email as send_email2, send_admin_and_buyer as send_admin_and_buyer2
-    send_email = send_email2
-    send_admin_and_buyer = send_admin_and_buyer2
-except Exception:
-    # If run as script (python server/app.py), relative import may fail; fallback to absolute
-    try:
-        from server.email import send_email as send_email3, send_admin_and_buyer as send_admin_and_buyer3
-        send_email = send_email3
-        send_admin_and_buyer = send_admin_and_buyer3
-    except Exception:
-        pass
 
 # -----------------------------------------------------------------------------
-# Boot + CORS
+# Ensure local imports work when running "python server/app.py"
 # -----------------------------------------------------------------------------
-load_dotenv(Path(__file__).with_name(".env"))
-load_dotenv(Path(__file__).with_name(".env"))
-load_dotenv(find_dotenv(usecwd=True)) or load_dotenv()
+THIS_DIR = Path(__file__).resolve().parent
+if str(THIS_DIR) not in sys.path:
+    sys.path.insert(0, str(THIS_DIR))
 
+# -----------------------------------------------------------------------------
+# Env
+# -----------------------------------------------------------------------------
+load_dotenv(THIS_DIR / ".env")
+load_dotenv(find_dotenv(usecwd=True) or "")
+load_dotenv()  # final fallback
+
+# -----------------------------------------------------------------------------
+# App + CORS
+# -----------------------------------------------------------------------------
 app = Flask(__name__)
+
+CORS(
+    app,
+    resources={r"/*": {"origins": "*"}},
+    supports_credentials=False,
+    allow_headers=["Content-Type", "Authorization", "X-Admin-Key"],
+    methods=["GET", "POST", "OPTIONS"],
+)
+
+# -----------------------------------------------------------------------------
+# Blueprints
+# -----------------------------------------------------------------------------
+from coins_orders import coins_bp
+from routes.certs_pdf import bp as certs_pdf_bp
+from routes.verify import bp as verify_bp
+
 app.register_blueprint(certs_pdf_bp)
 app.register_blueprint(verify_bp)
 app.register_blueprint(coins_bp)
 
-# --- Stripe Checkout routes (POST /checkout/start) ---
+# Stripe checkout routes (POST /checkout/start, /api/checkout/start, /payments/checkout/start)
 try:
     from checkout_routes import bp as checkout_bp
     if "checkout" not in app.blueprints:
@@ -54,8 +60,7 @@ try:
 except Exception as e:
     print("[checkout_bp] register skip/error:", e)
 
-
-# ---- Idempotent blueprint registration ----
+# Optional admin blueprints
 try:
     from admin_routes import admin_bp as _admin_bp
     if "admin_bp" not in app.blueprints:
@@ -70,20 +75,16 @@ try:
 except Exception as e:
     print("[admin_debug] register skip/error:", e)
 
-# CORS: keep it permissive for dev (web + mobile)
-CORS(
-    app,
-    resources={r"/*": {"origins": "*"}},
-    supports_credentials=False,
-    allow_headers=["Content-Type", "Authorization", "X-Admin-Key"],
-    methods=["GET", "POST", "OPTIONS"],
-)
+# -----------------------------------------------------------------------------
+# Mailer (single source of truth)
+# -----------------------------------------------------------------------------
+from mailer import send_email, send_admin_and_buyer
 
 # -----------------------------------------------------------------------------
 # DB (users)
 # -----------------------------------------------------------------------------
 Base = declarative_base()
-DB_PATH = Path(__file__).parent.joinpath("nova.db")
+DB_PATH = THIS_DIR / "nova.db"
 engine = create_engine(f"sqlite:///{DB_PATH}", connect_args={"check_same_thread": False})
 Session = sessionmaker(bind=engine)
 
@@ -101,11 +102,7 @@ Base.metadata.create_all(engine)
 # Auth utils
 # -----------------------------------------------------------------------------
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-change-me")
-ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "")
 ADMIN_KEY = os.getenv("ADMIN_KEY", "")
-ORDERS_TO_EMAIL = os.getenv("ORDERS_TO_EMAIL", "")  # optional override
-ORDERS_LOG_PATH = Path(__file__).parent.joinpath("orders.log")
-os.environ["ORDERS_LOG_PATH"] = str(ORDERS_LOG_PATH)
 serializer = URLSafeTimedSerializer(SECRET_KEY)
 
 def make_token(user_id: int) -> str:
@@ -125,8 +122,11 @@ def get_uid_from_header() -> int | None:
         return None
     return verify_token(token)
 
+def valid_email(s: str) -> bool:
+    return bool(re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", s or ""))
+
 # -----------------------------------------------------------------------------
-# JSON helpers
+# JSON helpers + CORS helper
 # -----------------------------------------------------------------------------
 def ok(data=None, **kw):
     base = {"ok": True}
@@ -140,8 +140,22 @@ def bad(msg, code=400, **kw):
     base.update(kw)
     return jsonify(base), code
 
-def valid_email(s: str) -> bool:
-    return bool(re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", s or ""))
+def _corsify(resp):
+    resp.headers["Access-Control-Allow-Origin"] = "*"
+    resp.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS, GET"
+    resp.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Admin-Key"
+    return resp
+
+# -----------------------------------------------------------------------------
+# Debug: identify which app is running / which blueprints loaded
+# -----------------------------------------------------------------------------
+@app.get("/__which_app")
+def __which_app():
+    return jsonify({
+        "ok": True,
+        "file": __file__,
+        "blueprints": sorted(list(app.blueprints.keys())),
+    })
 
 # -----------------------------------------------------------------------------
 # Auth routes
@@ -153,12 +167,14 @@ def register():
     name = (body.get("name") or "").strip()
     pw = body.get("password") or ""
     cpw = body.get("confirm") or ""
+
     if not valid_email(email):
         return bad("invalid email")
     if len(pw) < 8:
         return bad("password must be at least 8 characters")
     if pw != cpw:
         return bad("passwords do not match")
+
     with Session() as s:
         if s.scalar(select(User).where(User.email == email)):
             return bad("email already registered")
@@ -173,6 +189,7 @@ def login():
     body = request.get_json(silent=True) or {}
     email = (body.get("email") or "").strip().lower()
     pw = body.get("password") or ""
+
     with Session() as s:
         u = s.scalar(select(User).where(User.email == email))
         if not u or not bcrypt.verify(pw, u.password_hash):
@@ -186,20 +203,30 @@ def request_reset():
     email = (body.get("email") or "").strip().lower()
     if not valid_email(email):
         return bad("invalid email")
+
     with Session() as s:
         u = s.scalar(select(User).where(User.email == email))
         if not u:
             return ok({"sent": True})
+
         token = serializer.dumps({"uid": u.id}, salt="reset")
         base = os.getenv("APP_BASE_URL", "http://localhost:3000")
         link = f"{base}/reset?token={token}"
+
         subject = "Nova password reset"
-        body_text = f"Hi,\n\nUse this link to reset your Nova password:\n{link}\n\nThis link expires in 1 hour."
+        body_text = (
+            "Hi,\n\n"
+            "Use this link to reset your Nova password:\n"
+            f"{link}\n\n"
+            "This link expires in 1 hour."
+        )
+
         sent = False
         try:
             sent = bool(send_email(u.email, subject, body_text))
         except Exception as e:
-            print("Email error:", e)
+            print("[auth/reset] email error:", e)
+
         return ok({"sent": bool(sent)})
 
 @app.post("/auth/reset")
@@ -208,15 +235,18 @@ def reset_pw():
     token = body.get("token") or ""
     pw = body.get("password") or ""
     cpw = body.get("confirm") or ""
+
     if len(pw) < 8:
         return bad("password must be at least 8 characters")
     if pw != cpw:
         return bad("passwords do not match")
+
     try:
         data = serializer.loads(token, salt="reset", max_age=3600)
         uid = int(data.get("uid"))
     except (BadSignature, SignatureExpired):
         return bad("invalid or expired token")
+
     with Session() as s:
         u = s.get(User, uid)
         if not u:
@@ -228,10 +258,11 @@ def reset_pw():
 @app.get("/auth/me")
 def me():
     auth = request.headers.get("Authorization", "")
-    token = auth.replace("Bearer ", "")
+    token = auth.replace("Bearer ", "").strip()
     uid = verify_token(token)
     if not uid:
         return bad("unauthorized", 401)
+
     with Session() as s:
         u = s.get(User, uid)
         if not u:
@@ -283,15 +314,15 @@ def ask():
 # -----------------------------------------------------------------------------
 @app.get("/health")
 def health():
-    return ok({"ts": int(time.time() * 1000)})
+    return ok({"status": "ok", "ts": int(time.time() * 1000)})
 
 # -----------------------------------------------------------------------------
 # In-memory store for coins + orders (swap to real DB later)
 # -----------------------------------------------------------------------------
 STATE: Dict[str, Any] = {
-    "balances": {},         # userId(str) -> coins
-    "reservations": {},     # rsvId -> {...}
-    "orders": [],           # array of orders
+    "balances": {},
+    "reservations": {},
+    "orders": [],
 }
 RESERVATION_TTL_SEC = 15 * 60
 
@@ -311,9 +342,14 @@ def now_ms() -> int:
 def mint_reservation_id() -> str:
     return f"rsv_{uuid.uuid4().hex[:10]}"
 
-# -----------------------------------------------------------------------------
-# Order helpers (email + log)
-# -----------------------------------------------------------------------------
+def _log_order_jsonl(order: dict):
+    try:
+        path = THIS_DIR / "orders.log"
+        with path.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(order, ensure_ascii=False) + "\n")
+    except Exception as e:
+        print("[orders.log] write error:", e)
+
 def _format_order_email(order: dict) -> tuple[str, str]:
     title = order.get("title") or order.get("sku") or "Order"
     created = order.get("createdAt")
@@ -331,10 +367,8 @@ def _format_order_email(order: dict) -> tuple[str, str]:
     lines.append("")
     lines.append(f"Item: {title}")
     lines.append(f"SKU: {order.get('sku')}")
-    if order.get("priceCoins"):
+    if order.get("priceCoins") is not None:
         lines.append(f"Price (coins): {order.get('priceCoins')}")
-    if order.get("priceUsd"):
-        lines.append(f"Price (usd): {order.get('priceUsd')}")
     lines.append("")
     lines.append("Ship To:")
     lines.append(f"  {sh.get('name','')}")
@@ -349,25 +383,11 @@ def _format_order_email(order: dict) -> tuple[str, str]:
     lines.append(f"Buyer email: {sh.get('email','')}")
     if sh.get("phone"):
         lines.append(f"Buyer phone: {sh.get('phone')}")
-    return f"NEW ORDER — {title} — {order.get('id')}", "\n".join(lines)
-
-def _log_order_jsonl(order: dict):
-    try:
-        path = Path(__file__).parent.joinpath("orders.log")
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with path.open("a", encoding="utf-8") as f:
-            f.write(json.dumps(order, ensure_ascii=False) + "\n")
-    except Exception as e:
-        print("Order log error:", e)
-
-def _corsify(resp):
-    resp.headers["Access-Control-Allow-Origin"] = "*"
-    resp.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS, GET"
-    resp.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Admin-Key"
-    return resp
+    subj = f"NEW ORDER — {title} — {order.get('id')}"
+    return subj, "\n".join(lines)
 
 # -----------------------------------------------------------------------------
-# Coin checkout: start (preflight + POST)
+# Coin checkout: start
 # -----------------------------------------------------------------------------
 @app.route("/orders/coin/start", methods=["POST", "OPTIONS"])
 def orders_coin_start():
@@ -381,7 +401,7 @@ def orders_coin_start():
     meta = body.get("meta") or {}
 
     if not item_id or not title or price_coins <= 0:
-        return bad("Invalid request")
+        return _corsify(make_response(bad("Invalid request")))
 
     uid = user_key()
     rsv_id = mint_reservation_id()
@@ -396,10 +416,10 @@ def orders_coin_start():
         "createdAt": now_ms(),
     }
 
-    return ok({"reservationId": rsv_id})
+    return _corsify(ok({"reservationId": rsv_id}))
 
 # -----------------------------------------------------------------------------
-# Coin checkout: confirm (preflight + POST) + EMAILS
+# Coin checkout: confirm + EMAILS
 # -----------------------------------------------------------------------------
 @app.route("/orders/coin/confirm", methods=["POST", "OPTIONS"])
 def orders_coin_confirm():
@@ -411,26 +431,27 @@ def orders_coin_confirm():
     shipping = body.get("shipping") or {}
 
     if not reservation_id:
-        return bad("Missing reservationId")
+        return _corsify(make_response(bad("Missing reservationId")))
 
     rsv = STATE["reservations"].get(reservation_id)
     if not rsv:
-        return bad("Invalid or expired reservation", 404)
+        return _corsify(make_response(bad("Invalid or expired reservation", 404)))
 
     if (now_ms() - int(rsv["createdAt"])) > (RESERVATION_TTL_SEC * 1000):
         rsv["status"] = "expired"
-        return bad("Reservation expired", 410)
+        return _corsify(make_response(bad("Reservation expired", 410)))
+
     if rsv["status"] != "pending":
-        return bad(f"Reservation is {rsv['status']}")
+        return _corsify(make_response(bad(f"Reservation is {rsv['status']}")))
 
     required = ["email", "name", "address1", "city", "state", "zip"]
     missing = [k for k in required if not str(shipping.get(k) or "").strip()]
     if missing:
-        return bad(f"Missing fields: {', '.join(missing)}")
+        return _corsify(make_response(bad(f"Missing fields: {', '.join(missing)}")))
 
     buyer_email = (shipping.get("email") or "").strip()
     if not valid_email(buyer_email):
-        return bad("Invalid email")
+        return _corsify(make_response(bad("Invalid email")))
 
     size = (shipping.get("size") or rsv.get("meta", {}).get("size") or None)
     if size is not None:
@@ -440,7 +461,7 @@ def orders_coin_confirm():
     price = int(rsv["priceCoins"])
     prev_bal = get_balance(uid)
     if prev_bal < price:
-        return bad("Insufficient balance", 402)
+        return _corsify(make_response(bad("Insufficient balance", 402)))
 
     new_bal = prev_bal - price
     set_balance(uid, new_bal)
@@ -470,29 +491,37 @@ def orders_coin_confirm():
         "meta": rsv.get("meta") or {},
         "reservationId": reservation_id,
     }
+
     STATE["orders"].insert(0, order)
     _log_order_jsonl(order)
 
-    # EMAIL BOTH ADMIN + BUYER
-    subj, body_txt = _format_order_email(order)
+    # EMAIL admin + buyer
+    admin_subj, admin_body = _format_order_email(order)
     buyer_subj = f"We received your order — {order_id}"
     buyer_body = (
         "Thanks! We received your order.\n\n"
-        + body_txt
+        + admin_body
         + "\n\n— Nova Tutoring"
     )
-    email_res = send_admin_and_buyer(
-        buyer_email=buyer_email,
-        admin_subject=subj,
-        admin_body=body_txt,
-        buyer_subject=buyer_subj,
-        buyer_body=buyer_body,
-    )
+
+    email_res = {}
+    try:
+        email_res = send_admin_and_buyer(
+            buyer_email=buyer_email,
+            admin_subject=admin_subj,
+            admin_body=admin_body,
+            buyer_subject=buyer_subj,
+            buyer_body=buyer_body,
+        )
+        print("[coin-order] email:", email_res)
+    except Exception as e:
+        print("[coin-order] email error:", e)
+        email_res = {"sentAdmin": False, "sentBuyer": False}
 
     return _corsify(ok({"order": order, "balance": new_bal, **email_res}))
 
 # -----------------------------------------------------------------------------
-# Admin routes for viewing orders
+# Admin routes (simple)
 # -----------------------------------------------------------------------------
 @app.get("/admin/orders")
 def admin_orders():
@@ -506,14 +535,16 @@ def admin_orders_log():
     key = request.headers.get("X-Admin-Key", "")
     if not ADMIN_KEY or key != ADMIN_KEY:
         return bad("unauthorized", 401)
+
     try:
         limit = int(request.args.get("limit", "50"))
         offset = int(request.args.get("offset", "0"))
     except Exception:
         limit, offset = 50, 0
+
     items = []
     try:
-        path = ORDERS_LOG_PATH
+        path = THIS_DIR / "orders.log"
         if path.exists():
             with path.open("r", encoding="utf-8") as f:
                 for line in f:
@@ -527,11 +558,12 @@ def admin_orders_log():
         items.sort(key=lambda x: x.get("createdAt", 0), reverse=True)
     except Exception as e:
         return bad(f"log read error: {e}", 500)
+
     end = offset + limit
     return ok({"orders": items[offset:end], "total": len(items), "offset": offset, "limit": limit})
 
 # -----------------------------------------------------------------------------
-# API parity: /api/order-email (customer + admin emails)
+# API parity: /api/order-email (manual trigger; keeps working)
 # -----------------------------------------------------------------------------
 @app.route("/api/order-email", methods=["POST", "OPTIONS"])
 def api_order_email():
@@ -539,7 +571,6 @@ def api_order_email():
         return _corsify(make_response(("", 200)))
 
     b = request.get_json(silent=True) or {}
-
     order_id = (b.get("id") or b.get("orderId") or f"ord_{uuid.uuid4().hex[:10]}").strip()
     title = (b.get("title") or b.get("itemTitle") or b.get("sku") or "Order").strip()
 
@@ -558,7 +589,7 @@ def api_order_email():
 
     buyer_email = shipping.get("email") or ""
     if buyer_email and not valid_email(buyer_email):
-        return _corsify(bad("Invalid email", 400))
+        return _corsify(make_response(bad("Invalid email", 400)))
 
     order = {
         "id": order_id,
@@ -585,13 +616,18 @@ def api_order_email():
         + "\n\n— Nova Tutoring"
     )
 
-    email_res = send_admin_and_buyer(
-        buyer_email=buyer_email or None,
-        admin_subject=admin_subj,
-        admin_body=admin_body,
-        buyer_subject=buyer_subj,
-        buyer_body=buyer_body,
-    )
+    email_res = {}
+    try:
+        email_res = send_admin_and_buyer(
+            buyer_email=buyer_email or None,
+            admin_subject=admin_subj,
+            admin_body=admin_body,
+            buyer_subject=buyer_subj,
+            buyer_body=buyer_body,
+        )
+    except Exception as e:
+        print("[api/order-email] email error:", e)
+        email_res = {"sentAdmin": False, "sentBuyer": False}
 
     return _corsify(ok({"orderId": order_id, **email_res}))
 
@@ -606,13 +642,5 @@ if __name__ == "__main__":
     host = os.getenv("FLASK_RUN_HOST", "0.0.0.0")
     port = int(os.getenv("FLASK_RUN_PORT", "8787"))
 
-    # IMPORTANT: 0.0.0.0 so iPhone can reach it via LAN IP
-    app.run(host="0.0.0.0", port=port, debug=True, use_reloader=False)
-
-@app.get("/__which_app")
-def __which_app():
-    return jsonify({
-        "ok": True,
-        "file": __file__,
-        "blueprints": sorted(list(app.blueprints.keys())),
-    })
+    # 0.0.0.0 so iPhone can reach it via LAN IP
+    app.run(host=host, port=port, debug=True, use_reloader=False)

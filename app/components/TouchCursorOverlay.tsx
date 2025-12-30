@@ -7,58 +7,41 @@ import { useTheme } from "../context/ThemeContext";
 type Pt = { x: number; y: number };
 
 type Props = {
-  p: Pt;
-  down: boolean;
+  p: Pt;       // current touch point (page coords)
+  down: boolean; // finger down?
 };
 
 type Spark = {
   id: string;
   x: number;
   y: number;
-  a: Animated.Value;
-  s: Animated.Value;
-  r: Animated.Value;
+  a: Animated.Value; // opacity
+  s: Animated.Value; // scale
+  r: Animated.Value; // rotate
   kind: "glow" | "orb" | "star_trail" | "default";
   icon: any;
   size: number;
   color: string;
-  halo?: boolean;
+  halo?: boolean; // orb special
 };
 
 function uid() {
   return Math.random().toString(16).slice(2) + Date.now().toString(16);
 }
 
-/** Accepts BOTH your “context ids” and “shop ids” and normalizes to shop ids. */
 function canonCursorId(id: string | null | undefined): string {
   if (!id) return "";
-
-  const raw = String(id).trim();
-
-  // Context variants (web) -> shop variants
-  if (raw === "glowCursor") return "cursor:glow";
-  if (raw === "orbCursor") return "cursor:orb";
-  if (raw === "starTrailCursor") return "cursor:star_trail";
-
-  // Native seed/default variants
-  if (raw === "star" || raw === "default") return ""; // default cursor behavior
-
-  // Already shop-ish?
-  let v = raw;
-
-  // allow "cursor_orb", "cursor-orb", "cursor:orb"
+  let v = String(id).trim();
   if (!v.includes(":") && (v.startsWith("cursor") || v.startsWith("cursor_"))) {
     v = "cursor:" + v.replace(/^cursor[_:]?/, "");
   }
   v = v.replace(/-/g, "_");
   if (v === "cursor:startrail") v = "cursor:star_trail";
-
   return v;
 }
 
 function pickAccent(tokens: any): string {
-  // Your ThemeContext can name these differently per theme,
-  // so we pick the best available.
+  // We don’t know every theme token name you use, so we fall back safely.
   return (
     tokens?.accent ??
     tokens?.primary ??
@@ -74,28 +57,33 @@ function pickStyle(cursorIdRaw: string, tokens: any) {
   const id = canonCursorId(cursorIdRaw);
   const accent = pickAccent(tokens);
 
+  // Distinct cursor “products”
   if (id === "cursor:glow") {
     return { kind: "glow" as const, icon: "sparkles", color: accent, baseSize: 16, jitter: 14 };
   }
-
   if (id === "cursor:orb") {
-    // ✅ premium: halo + core orb (not same as default)
+    // Visibly different: soft halo orb (not the same as default)
     return { kind: "orb" as const, icon: "ellipse", color: accent, baseSize: 18, jitter: 10 };
   }
-
   if (id === "cursor:star_trail") {
     return { kind: "star_trail" as const, icon: "star", color: accent, baseSize: 16, jitter: 12 };
   }
 
-  // default
+  // Default
   return { kind: "default" as const, icon: "star", color: accent, baseSize: 14, jitter: 10 };
 }
 
+/**
+ * TouchCursorOverlay
+ * - pointerEvents none (never steals taps)
+ * - emits particles while finger is down
+ * - color is theme-driven (tokens)
+ * - orb cursor is visually distinct (halo + core)
+ */
 export default function TouchCursorOverlay({ p, down }: Props) {
   const { cursorId } = useCursor();
   const { tokens } = useTheme();
 
-  // ✅ theme-aware: changes instantly when theme changes
   const style = useMemo(() => pickStyle(cursorId, tokens), [cursorId, tokens]);
 
   const [sparks, setSparks] = useState<Spark[]>([]);
@@ -105,7 +93,7 @@ export default function TouchCursorOverlay({ p, down }: Props) {
     const dx = p.x - last.current.x;
     const dy = p.y - last.current.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
-    return down && p.x >= 0 && p.y >= 0 && dist >= 6;
+    return down && p.x >= 0 && p.y >= 0 && dist >= 6; // emit every ~6px move
   }, [p, down]);
 
   const makeSpark = (x: number, y: number, seed = 0): Spark => {
@@ -117,6 +105,7 @@ export default function TouchCursorOverlay({ p, down }: Props) {
     const icon = style.icon;
     const color = style.color;
 
+    // rotate for sparkle/star, less for orb but still subtle
     Animated.timing(r, {
       toValue: 1,
       duration: style.kind === "orb" ? 900 : 650 + Math.floor(Math.random() * 250),
@@ -166,8 +155,10 @@ export default function TouchCursorOverlay({ p, down }: Props) {
     });
   };
 
+  // Emit while moving
   useEffect(() => {
     if (!shouldEmit) return;
+
     last.current = { x: p.x, y: p.y };
 
     const sp = makeSpark(p.x, p.y);
@@ -175,6 +166,7 @@ export default function TouchCursorOverlay({ p, down }: Props) {
     runAnim(sp, style.kind === "orb" ? 880 : 700);
   }, [shouldEmit, p.x, p.y, cursorId, style.kind]);
 
+  // Burst on touch-down
   useEffect(() => {
     if (!down || p.x < 0 || p.y < 0) return;
 
@@ -215,11 +207,29 @@ export default function TouchCursorOverlay({ p, down }: Props) {
             ]}
           >
             {sp.halo ? (
+              // ✅ ORB: distinct halo + core (feels “premium”)
               <View style={S.orbWrap}>
-                <View style={[S.orbHalo, { shadowColor: sp.color, backgroundColor: sp.color }]} />
-                <View style={[S.orbCore, { shadowColor: sp.color, borderColor: sp.color }]} />
+                <View
+                  style={[
+                    S.orbHalo,
+                    {
+                      shadowColor: sp.color,
+                      backgroundColor: sp.color,
+                    },
+                  ]}
+                />
+                <View
+                  style={[
+                    S.orbCore,
+                    {
+                      shadowColor: sp.color,
+                      borderColor: sp.color,
+                    },
+                  ]}
+                />
               </View>
             ) : (
+              // Glow/Star/default: icon particles
               <Ionicons name={sp.icon} size={sp.size} color={sp.color} />
             )}
           </Animated.View>
@@ -237,6 +247,8 @@ const S = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+
+  // Orb cursor visuals
   orbWrap: {
     width: 26,
     height: 26,
@@ -264,3 +276,4 @@ const S = StyleSheet.create({
     shadowOffset: { width: 0, height: 0 },
   },
 });
+

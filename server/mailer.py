@@ -1,39 +1,34 @@
 from __future__ import annotations
 
-import os
-import ssl
-import smtplib
+import os, ssl, smtplib, re
 from email.message import EmailMessage
-from typing import Any, Dict, Tuple
+from typing import Optional, Dict, Any, List
 
-try:
-    from dotenv import load_dotenv, find_dotenv
-    load_dotenv(find_dotenv(usecwd=True)) or load_dotenv()
-except Exception:
-    pass
+def _valid_email(s: str) -> bool:
+    return bool(re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", (s or "").strip()))
 
-
-def _env(name: str, default: str = "") -> str:
-    return (os.getenv(name) or default).strip()
-
+def _split_emails(s: str) -> List[str]:
+    raw = (s or "").replace(";", ",")
+    out = []
+    for x in raw.split(","):
+        x = x.strip()
+        if x and _valid_email(x):
+            out.append(x)
+    return out
 
 def send_email(to_email: str, subject: str, body: str) -> bool:
-    """
-    Sends a plain-text email using SMTP settings from env.
-    Falls back to printing if SMTP_HOST is not set.
-    """
-    smtp_host = _env("SMTP_HOST")
-    smtp_port = int(_env("SMTP_PORT", "587") or "587")
-    smtp_user = _env("SMTP_USER")
-    smtp_pass = _env("SMTP_PASS")
-    sender = _env("MAIL_FROM", smtp_user or "no-reply@localhost")
+    smtp_host = os.getenv("SMTP_HOST", "")
+    smtp_port = int(os.getenv("SMTP_PORT", "587"))
+    smtp_user = os.getenv("SMTP_USER", "")
+    smtp_pass = os.getenv("SMTP_PASS", "")
+    sender = os.getenv("MAIL_FROM", "") or smtp_user or "no-reply@localhost"
 
+    # Dev fallback: print if SMTP not configured
     if not smtp_host:
-        print("\n[mailer] SMTP_HOST not set — printing email instead of sending.")
+        print("[mailer] SMTP_HOST missing; printing email instead.")
         print("To:", to_email)
         print("Subject:", subject)
         print(body)
-        print()
         return True
 
     try:
@@ -43,11 +38,9 @@ def send_email(to_email: str, subject: str, body: str) -> bool:
         msg["To"] = to_email
         msg.set_content(body)
 
-        context = ssl.create_default_context()
-        with smtplib.SMTP(smtp_host, smtp_port, timeout=20) as server:
-            server.ehlo()
-            server.starttls(context=context)
-            server.ehlo()
+        ctx = ssl.create_default_context()
+        with smtplib.SMTP(smtp_host, smtp_port) as server:
+            server.starttls(context=ctx)
             if smtp_user:
                 server.login(smtp_user, smtp_pass)
             server.send_message(msg)
@@ -56,73 +49,37 @@ def send_email(to_email: str, subject: str, body: str) -> bool:
         print("[mailer] send_email error:", e)
         return False
 
-
-def _format_order(order: Dict[str, Any]) -> Tuple[str, str]:
-    title = order.get("title") or order.get("sku") or "Order"
-    oid = order.get("id") or "ord_unknown"
-    status = order.get("status") or "paid"
-    price_coins = order.get("priceCoins", 0)
-
-    sh = order.get("shipping") or {}
-    lines = [
-        f"Order ID: {oid}",
-        f"Status: {status}",
-        "",
-        f"Item: {title}",
-        f"SKU: {order.get('sku','')}",
-        f"Price (coins): {price_coins}",
-        "",
-        "Ship To:",
-        f"  {sh.get('name','')}",
-        f"  {sh.get('address1','')}",
-    ]
-    if sh.get("address2"):
-        lines.append(f"  {sh.get('address2')}")
-    lines += [
-        f"  {sh.get('city','')}, {sh.get('state','')} {sh.get('zip','')}",
-        f"  {sh.get('country','US')}",
-    ]
-    if sh.get("size"):
-        lines.append(f"  Size: {sh.get('size')}")
-    lines += [
-        "",
-        f"Buyer email: {sh.get('email','')}",
-    ]
-
-    subject = f"[Nova] Order {oid} — {title}"
-    body = "\n".join(lines)
-    return subject, body
-
-
-def send_admin_and_buyer(order: Dict[str, Any]) -> Dict[str, Any]:
+def send_admin_and_buyer(
+    *,
+    buyer_email: Optional[str],
+    admin_subject: str,
+    admin_body: str,
+    buyer_subject: Optional[str] = None,
+    buyer_body: Optional[str] = None,
+) -> Dict[str, bool]:
     """
     Sends:
-      - Admin notification to ADMIN_EMAIL (or ORDERS_TO_EMAIL if set)
-      - Buyer confirmation to shipping.email
-    """
-    admin_to = _env("ORDERS_TO_EMAIL") or _env("ADMIN_EMAIL")
-    sh = order.get("shipping") or {}
-    buyer_to = (sh.get("email") or "").strip()
+      - Admin email to ORDERS_TO_EMAIL (comma/semicolon list) else ADMIN_EMAIL
+      - Buyer email to buyer_email (if valid)
 
-    subj, body = _format_order(order)
+    Returns: { sentAdmin: bool, sentBuyer: bool }
+    """
+    admin_list = _split_emails(os.getenv("ORDERS_TO_EMAIL", "").strip())
+    if not admin_list:
+        admin_list = _split_emails(os.getenv("ADMIN_EMAIL", "").strip())
 
     sent_admin = False
-    if admin_to:
-        sent_admin = bool(send_email(admin_to, f"NEW ORDER: {subj}", body))
-    else:
-        print("[mailer] ADMIN_EMAIL not set; skipping admin email")
-
     sent_buyer = False
-    if buyer_to:
-        buyer_subj = f"[Nova] We received your order {order.get('id','')}"
-        buyer_body = (
-            "Thanks for your purchase!\n\n"
-            "Here are your order details:\n\n"
-            + body
-            + "\n\n— Nova Tutoring"
-        )
-        sent_buyer = bool(send_email(buyer_to, buyer_subj, buyer_body))
-    else:
-        print("[mailer] buyer email missing; skipping buyer email")
 
-    return {"sentAdmin": sent_admin, "sentBuyer": sent_buyer, "adminTo": admin_to, "buyerTo": buyer_to}
+    if admin_list:
+        sent_admin = True
+        for a in admin_list:
+            ok = send_email(a, admin_subject, admin_body)
+            sent_admin = sent_admin and bool(ok)
+
+    if buyer_email and _valid_email(buyer_email):
+        subj = buyer_subject or "Nova — Order confirmation"
+        body = buyer_body or "Thanks for your purchase!"
+        sent_buyer = bool(send_email(buyer_email, subj, body))
+
+    return {"sentAdmin": sent_admin, "sentBuyer": sent_buyer}

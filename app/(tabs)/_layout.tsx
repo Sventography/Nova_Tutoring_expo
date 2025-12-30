@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from "react";
-import "../_dev/seed_coins"; // ✅ dev-only seed, safe import
-
 import { View, Text, Pressable, StyleSheet, Platform } from "react-native";
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { ThemeProvider } from "../context/ThemeContext";
 import { CursorProvider } from "../context/CursorContext";
@@ -15,17 +14,34 @@ import HeaderBar from "../components/HeaderBar";
 import StarTrailOverlay from "../components/StarTrailOverlay";
 import { AchieveEmitter } from "../context/AchievementsContext";
 import { CollectionsProvider } from "../context/CollectionsContext";
-import "../utils/_streak-autoboot";
-import "../utils/streak-achievements-autoboot";
 import ToastHost from "../components/ToastHost";
-import "../utils/dev-expose";
-import "../utils/achievements-smoketest";
 import AchievementsAutoTracker from "../context/AchievementsAutoTracker";
 import AchievementsCoinsBridge from "../context/AchievementsCoinsBridge";
 import FxOverlay from "../components/FxOverlay";
 import GlobalTextDefaults from "../components/GlobalTextDefaults";
 
+// --------------------
+// DEV-ONLY imports
+// --------------------
+if (__DEV__) {
+  try {
+    require("../_dev/seed_coins"); // ✅ dev-only seed
+  } catch {}
+  try {
+    require("../utils/_streak-autoboot");
+    require("../utils/streak-achievements-autoboot");
+  } catch {}
+  try {
+    require("../utils/dev-expose");
+  } catch {}
+  try {
+    require("../utils/achievements-smoketest");
+  } catch {}
+}
+
 type Pt = { x: number; y: number };
+
+const CURSOR_EQUIPPED_KEY = "cursor.equipped.v1";
 
 function CelebrateToast({
   message,
@@ -54,7 +70,7 @@ function CelebrateToast({
 export default function TabsLayout() {
   const [celebrate, setCelebrate] = useState<string | null>(null);
 
-  // ✅ global touch tracking for mobile cursor (safe: capture only)
+  // ✅ global touch tracking for mobile cursor trail
   const [p, setP] = useState<Pt>({ x: -1, y: -1 });
   const [down, setDown] = useState(false);
 
@@ -69,6 +85,25 @@ export default function TabsLayout() {
     return () => listener?.remove?.();
   }, []);
 
+  // ✅ ensure mobile has a default cursor trail (star) if none is set yet
+  useEffect(() => {
+    if (Platform.OS === "web") return;
+    let alive = true;
+    (async () => {
+      try {
+        const cur = await AsyncStorage.getItem(CURSOR_EQUIPPED_KEY);
+        if (!alive) return;
+        if (!cur) {
+          await AsyncStorage.setItem(CURSOR_EQUIPPED_KEY, "star");
+          if (__DEV__) console.log("[cursor] seeded default cursor.equipped.v1=star");
+        }
+      } catch {}
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   return (
     <ThemeProvider>
       <GlobalTextDefaults />
@@ -77,15 +112,24 @@ export default function TabsLayout() {
         <CollectionsProvider>
           <View
             style={{ flex: 1, position: "relative" }}
-            onTouchStartCapture={(e) => {
-              setDown(true);
-              setP({ x: e.nativeEvent.pageX, y: e.nativeEvent.pageY });
-            }}
-            onTouchMoveCapture={(e) => {
-              setP({ x: e.nativeEvent.pageX, y: e.nativeEvent.pageY });
-            }}
-            onTouchEndCapture={() => setDown(false)}
-            onTouchCancelCapture={() => setDown(false)}
+            // only track touch on native
+            onTouchStartCapture={
+              Platform.OS === "web"
+                ? undefined
+                : (e) => {
+                    setDown(true);
+                    setP({ x: e.nativeEvent.pageX, y: e.nativeEvent.pageY });
+                  }
+            }
+            onTouchMoveCapture={
+              Platform.OS === "web"
+                ? undefined
+                : (e) => {
+                    setP({ x: e.nativeEvent.pageX, y: e.nativeEvent.pageY });
+                  }
+            }
+            onTouchEndCapture={Platform.OS === "web" ? undefined : () => setDown(false)}
+            onTouchCancelCapture={Platform.OS === "web" ? undefined : () => setDown(false)}
           >
             <HeaderBar />
             <AchievementsCoinsBridge />
@@ -118,11 +162,7 @@ export default function TabsLayout() {
                 options={{
                   title: "ASK",
                   tabBarIcon: ({ color, size }) => (
-                    <Ionicons
-                      name="chatbubbles-outline"
-                      color={color}
-                      size={size}
-                    />
+                    <Ionicons name="chatbubbles-outline" color={color} size={size} />
                   ),
                 }}
               />
@@ -141,11 +181,7 @@ export default function TabsLayout() {
                 options={{
                   title: "QUIZ",
                   tabBarIcon: ({ color, size }) => (
-                    <Ionicons
-                      name="help-circle-outline"
-                      color={color}
-                      size={size}
-                    />
+                    <Ionicons name="help-circle-outline" color={color} size={size} />
                   ),
                 }}
               />
@@ -163,11 +199,7 @@ export default function TabsLayout() {
                 options={{
                   title: "SHOP",
                   tabBarIcon: ({ color, size }) => (
-                    <Ionicons
-                      name="bag-handle-outline"
-                      color={color}
-                      size={size}
-                    />
+                    <Ionicons name="bag-handle-outline" color={color} size={size} />
                   ),
                 }}
               />
@@ -176,11 +208,7 @@ export default function TabsLayout() {
                 options={{
                   title: "ACHIEVEMENTS",
                   tabBarIcon: ({ color, size }) => (
-                    <Ionicons
-                      name="trophy-outline"
-                      color={color}
-                      size={size}
-                    />
+                    <Ionicons name="trophy-outline" color={color} size={size} />
                   ),
                 }}
               />
@@ -198,11 +226,7 @@ export default function TabsLayout() {
                 options={{
                   title: "RELAX",
                   tabBarIcon: ({ color, size }) => (
-                    <Ionicons
-                      name="sparkles-outline"
-                      color={color}
-                      size={size}
-                    />
+                    <Ionicons name="sparkles-outline" color={color} size={size} />
                   ),
                 }}
               />
@@ -211,11 +235,7 @@ export default function TabsLayout() {
                 options={{
                   title: "ACCOUNT",
                   tabBarIcon: ({ color, size }) => (
-                    <Ionicons
-                      name="person-circle-outline"
-                      color={color}
-                      size={size}
-                    />
+                    <Ionicons name="person-circle-outline" color={color} size={size} />
                   ),
                 }}
               />
@@ -233,11 +253,7 @@ export default function TabsLayout() {
                 options={{
                   title: "COLLECTIONS",
                   tabBarIcon: ({ color, size }) => (
-                    <Ionicons
-                      name="bookmarks-outline"
-                      color={color}
-                      size={size}
-                    />
+                    <Ionicons name="bookmarks-outline" color={color} size={size} />
                   ),
                 }}
               />
@@ -245,9 +261,7 @@ export default function TabsLayout() {
                 name="purchases"
                 options={{
                   title: "PURCHASES",
-                  tabBarIcon: ({ color, size }) => (
-                    <Ionicons name="bag" color={color} size={size} />
-                  ),
+                  tabBarIcon: ({ color, size }) => <Ionicons name="bag" color={color} size={size} />,
                 }}
               />
             </Tabs>
@@ -256,16 +270,11 @@ export default function TabsLayout() {
             <View pointerEvents="none" style={StyleSheet.absoluteFill}>
               <FxOverlay />
               {Platform.OS === "web" ? <StarTrailOverlay /> : null}
-              {Platform.OS !== "web" ? (
-                <TouchCursorOverlay p={p} down={down} />
-              ) : null}
+              {Platform.OS !== "web" ? <TouchCursorOverlay p={p} down={down} /> : null}
             </View>
 
             {celebrate ? (
-              <CelebrateToast
-                message={celebrate}
-                onClose={() => setCelebrate(null)}
-              />
+              <CelebrateToast message={celebrate} onClose={() => setCelebrate(null)} />
             ) : null}
           </View>
 
