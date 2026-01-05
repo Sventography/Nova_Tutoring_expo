@@ -1,36 +1,62 @@
-// app.config.js
-import 'dotenv/config';
+export default ({ config }) => ({
+  ...config,
 
-export default {
-  expo: {
-    name: "Nova_Tutoring",
-    slug: "Nova_Tutoring_expo_3",
-    scheme: "nova",
+  name: "Nova Tutoring",
+  slug: "Nova_Tutoring_expo_3",
+  scheme: "nova",
 
-    extra: {
-      EXPO_PUBLIC_BACKEND_URL: process.env.EXPO_PUBLIC_BACKEND_URL,
-      EXPO_PUBLIC_BACKEND_URL_VERCEL: process.env.EXPO_PUBLIC_BACKEND_URL_VERCEL,
-      EXPO_PUBLIC_OPENAI_API_KEY: process.env.EXPO_PUBLIC_OPENAI_API_KEY,
-      EXPO_PUBLIC_STRIPE_PK: process.env.EXPO_PUBLIC_STRIPE_PK,
-    },
+  version: "1.0.0",
+  orientation: "portrait",
 
-    plugins: [
-      "expo-router", // ✅ needed so `import 'expo-router/entry'` resolves
-      "expo-mail-composer",
-      "expo-web-browser",
-      [
-        "@stripe/stripe-react-native",
-        {
-          merchantIdentifier: "merchant.com.novatutoring", // required for iOS
-          enableGooglePay: false,                          // set true later if needed
-          merchantCountryCode: "US",
-          androidPayMode: "test",                          // "production" when live
-        },
-      ],
-    ],
+  icon: "./assets/icon.png",
+  userInterfaceStyle: "dark",
 
-    web: {
-      favicon: "./app/assets/favicon.png", // ✅ favicon restored
+  splash: {
+    image: "./assets/splash.png",
+    resizeMode: "contain",
+    backgroundColor: "#000000",
+  },
+
+  ios: {
+    supportsTablet: true,
+    bundleIdentifier: "com.sventography.novatutoring",
+    buildNumber: "1",
+  },
+
+  android: {
+    package: "com.sventography.novatutoring",
+    adaptiveIcon: {
+      foregroundImage: "./assets/adaptive-icon.png",
+      backgroundColor: "#000000",
     },
   },
-};
+
+  web: {
+    bundler: "metro",
+    output: "static",
+    favicon: "./assets/favicon.png",
+  },
+
+  plugins: [
+    "expo-router",
+    [
+      "expo-build-properties",
+      {
+        ios: {
+          useFrameworks: "static",
+        },
+      },
+    ],
+  ],
+
+  experiments: {
+    typedRoutes: true,
+  },
+
+  extra: {
+    ...(config.extra || {}),
+    eas: {
+      projectId: "34a00115-306a-4cb6-b58b-97e26409a781",
+    },
+  },
+});

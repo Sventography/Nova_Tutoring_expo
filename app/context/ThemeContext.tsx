@@ -1,10 +1,5 @@
-import React, {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+// app/context/ThemeContext.tsx
+import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export type ProviderThemeId =
@@ -24,15 +19,33 @@ export type Tokens = {
   id: ProviderThemeId;
   name: string;
   isDark: boolean;
+
   bg: string;
   text: string;
+
   card: string;
   cardText: string;
+
   border: string;
   accent: string;
+
   gradient: [string, string];
   barStyle: "light-content" | "dark-content";
+
+  // ✅ NEW: readability helpers for headers + pills
+  titleText: string;
+
+  pillBg: string;
+  pillText: string;
+  pillBorder: string;
+
+  // optional subtle shadow helper for light themes
+  softShadow: string; // e.g. "rgba(0,0,0,0.18)"
 };
+
+const THEME_KEY = "@nova/themeId";
+
+/* ------------------------------- Canon IDs -------------------------------- */
 
 const canonMap: Record<string, ProviderThemeId> = {
   "theme:neon": "theme:neon",
@@ -40,19 +53,25 @@ const canonMap: Record<string, ProviderThemeId> = {
   "theme:starry-night": "theme:starry",
   theme_starry: "theme:starry",
   starry_night: "theme:starry",
+
   "theme:pink": "theme:pink",
   "theme:dark": "theme:dark",
   "theme:mint": "theme:mint",
   "theme:glitter": "theme:glitter",
+
   "theme:blackgold": "theme:blackgold",
   "theme:black_gold": "theme:blackgold",
+
   "theme:neonpurple": "theme:neonpurple",
   "theme:neon_purple": "theme:neonpurple",
+
   "theme:silver": "theme:silver",
   "theme:silver_frost": "theme:silver",
+
   "theme:emerald": "theme:emerald",
   "theme:emerald-wave": "theme:emerald",
   "theme:emerald_wave": "theme:emerald",
+
   "theme:crimson": "theme:crimson",
   "theme:crimson-dream": "theme:crimson",
   "theme:crimson_dream": "theme:crimson",
@@ -60,17 +79,47 @@ const canonMap: Record<string, ProviderThemeId> = {
 
 function canonId(id?: string | null): ProviderThemeId {
   const raw = (id ?? "theme:neon").trim().toLowerCase();
-  if (canonMap[raw as keyof typeof canonMap]) {
-    return canonMap[raw as keyof typeof canonMap];
-  }
-  if (!raw.includes(":")) {
-    return canonMap[`theme:${raw}`] ?? "theme:neon";
-  }
-  return (canonMap[raw] ?? "theme:neon") as ProviderThemeId;
+  if (canonMap[raw]) return canonMap[raw];
+  if (!raw.includes(":")) return canonMap[`theme:${raw}`] ?? "theme:neon";
+  return canonMap[raw] ?? "theme:neon";
 }
 
+/* -------------------------- Token helper defaults ------------------------- */
+
+function withReadability(t: Omit<Tokens, "titleText" | "pillBg" | "pillText" | "pillBorder" | "softShadow"> & Partial<Pick<Tokens, "titleText" | "pillBg" | "pillText" | "pillBorder" | "softShadow">>): Tokens {
+  const isDark = !!t.isDark;
+
+  // Good defaults if caller didn't specify
+  const titleText = t.titleText ?? t.text;
+
+  const pillText = t.pillText ?? t.text;
+
+  // If no pill bg given, use a glassy overlay that contrasts with the theme
+  const pillBg =
+    t.pillBg ??
+    (isDark ? "rgba(232,245,255,0.10)" : "rgba(13,27,42,0.08)");
+
+  const pillBorder =
+    t.pillBorder ??
+    (isDark ? "rgba(232,245,255,0.18)" : "rgba(13,27,42,0.20)");
+
+  const softShadow =
+    t.softShadow ?? (isDark ? "rgba(0,0,0,0.0)" : "rgba(0,0,0,0.18)");
+
+  return {
+    ...t,
+    titleText,
+    pillBg,
+    pillText,
+    pillBorder,
+    softShadow,
+  } as Tokens;
+}
+
+/* --------------------------------- Themes -------------------------------- */
+
 export const THEMES: Record<ProviderThemeId, Tokens> = {
-  "theme:neon": {
+  "theme:neon": withReadability({
     id: "theme:neon",
     name: "Neon Nova",
     isDark: true,
@@ -82,8 +131,12 @@ export const THEMES: Record<ProviderThemeId, Tokens> = {
     accent: "#00C8FF",
     gradient: ["#00E5FF", "#00121A"],
     barStyle: "light-content",
-  },
-  "theme:starry": {
+    // optional: stronger header readability
+    pillBg: "rgba(0,229,255,0.12)",
+    pillBorder: "rgba(30,227,255,0.35)",
+  }),
+
+  "theme:starry": withReadability({
     id: "theme:starry",
     name: "Starry Night",
     isDark: true,
@@ -95,8 +148,12 @@ export const THEMES: Record<ProviderThemeId, Tokens> = {
     accent: "#3D7EFF",
     gradient: ["#1E3A8A", "#0B1020"],
     barStyle: "light-content",
-  },
-  "theme:pink": {
+    pillBg: "rgba(230,237,255,0.10)",
+    pillBorder: "rgba(107,167,255,0.28)",
+  }),
+
+  // ✅ Light themes need deliberate pill/title contrast
+  "theme:pink": withReadability({
     id: "theme:pink",
     name: "Pink Dawn",
     isDark: false,
@@ -108,8 +165,15 @@ export const THEMES: Record<ProviderThemeId, Tokens> = {
     accent: "#FF4FA0",
     gradient: ["#FFD1E1", "#FFFFFF"],
     barStyle: "dark-content",
-  },
-  "theme:dark": {
+
+    titleText: "#1D0A12",
+    pillBg: "rgba(42,15,24,0.10)",
+    pillText: "#1D0A12",
+    pillBorder: "rgba(42,15,24,0.22)",
+    softShadow: "rgba(0,0,0,0.18)",
+  }),
+
+  "theme:dark": withReadability({
     id: "theme:dark",
     name: "Dark Nova",
     isDark: true,
@@ -121,8 +185,11 @@ export const THEMES: Record<ProviderThemeId, Tokens> = {
     accent: "#888888",
     gradient: ["#0A0A0A", "#000000"],
     barStyle: "light-content",
-  },
-  "theme:mint": {
+    pillBg: "rgba(255,255,255,0.08)",
+    pillBorder: "rgba(255,255,255,0.16)",
+  }),
+
+  "theme:mint": withReadability({
     id: "theme:mint",
     name: "Mint Breeze",
     isDark: false,
@@ -134,8 +201,15 @@ export const THEMES: Record<ProviderThemeId, Tokens> = {
     accent: "#3ED3A2",
     gradient: ["#C9FFE9", "#FFFFFF"],
     barStyle: "dark-content",
-  },
-  "theme:glitter": {
+
+    titleText: "#041A14",
+    pillBg: "rgba(6,35,27,0.10)",
+    pillText: "#041A14",
+    pillBorder: "rgba(6,35,27,0.22)",
+    softShadow: "rgba(0,0,0,0.18)",
+  }),
+
+  "theme:glitter": withReadability({
     id: "theme:glitter",
     name: "Glitter",
     isDark: true,
@@ -147,8 +221,11 @@ export const THEMES: Record<ProviderThemeId, Tokens> = {
     accent: "#F06BFF",
     gradient: ["#3B0B45", "#0E0A12"],
     barStyle: "light-content",
-  },
-  "theme:blackgold": {
+    pillBg: "rgba(255,246,255,0.10)",
+    pillBorder: "rgba(255,183,255,0.25)",
+  }),
+
+  "theme:blackgold": withReadability({
     id: "theme:blackgold",
     name: "Black & Gold",
     isDark: true,
@@ -160,8 +237,12 @@ export const THEMES: Record<ProviderThemeId, Tokens> = {
     accent: "#F2C200",
     gradient: ["#2B2100", "#0B0900"],
     barStyle: "light-content",
-  },
-  "theme:neonpurple": {
+    pillBg: "rgba(242,194,0,0.10)",
+    pillBorder: "rgba(230,184,0,0.30)",
+    pillText: "#FFF9E6",
+  }),
+
+  "theme:neonpurple": withReadability({
     id: "theme:neonpurple",
     name: "Neon Purple",
     isDark: true,
@@ -173,8 +254,11 @@ export const THEMES: Record<ProviderThemeId, Tokens> = {
     accent: "#A855F7",
     gradient: ["#3B1A6D", "#0A0610"],
     barStyle: "light-content",
-  },
-  "theme:silver": {
+    pillBg: "rgba(192,132,252,0.10)",
+    pillBorder: "rgba(192,132,252,0.26)",
+  }),
+
+  "theme:silver": withReadability({
     id: "theme:silver",
     name: "Silver Frost",
     isDark: false,
@@ -186,8 +270,15 @@ export const THEMES: Record<ProviderThemeId, Tokens> = {
     accent: "#5C7A99",
     gradient: ["#FFFFFF", "#E9EEF5"],
     barStyle: "dark-content",
-  },
-  "theme:emerald": {
+
+    titleText: "#0B1220",
+    pillBg: "rgba(13,27,42,0.08)",
+    pillText: "#0B1220",
+    pillBorder: "rgba(13,27,42,0.20)",
+    softShadow: "rgba(0,0,0,0.18)",
+  }),
+
+  "theme:emerald": withReadability({
     id: "theme:emerald",
     name: "Emerald Wave",
     isDark: true,
@@ -199,8 +290,11 @@ export const THEMES: Record<ProviderThemeId, Tokens> = {
     accent: "#00C28A",
     gradient: ["#046C54", "#03120E"],
     barStyle: "light-content",
-  },
-  "theme:crimson": {
+    pillBg: "rgba(0,230,168,0.10)",
+    pillBorder: "rgba(0,230,168,0.28)",
+  }),
+
+  "theme:crimson": withReadability({
     id: "theme:crimson",
     name: "Crimson Dream",
     isDark: true,
@@ -212,14 +306,15 @@ export const THEMES: Record<ProviderThemeId, Tokens> = {
     accent: "#FF5162",
     gradient: ["#7A1320", "#180607"],
     barStyle: "light-content",
-  },
+    pillBg: "rgba(255,132,143,0.10)",
+    pillBorder: "rgba(255,132,143,0.26)",
+  }),
 };
 
-// --- Runtime theme token snapshot for non-hook callers (analytics, etc.)
+// runtime snapshot (for non-hook callers)
 let __themeTokensSnapshot: Tokens | null = null;
-
 export function getTokensSnapshot(): Tokens {
-  return (__themeTokensSnapshot as Tokens) || (THEMES["theme:neon"] as Tokens);
+  return (__themeTokensSnapshot as Tokens) || THEMES["theme:neon"];
 }
 
 type ThemeContextValue = {
@@ -233,47 +328,34 @@ const ThemeCtx = createContext<ThemeContextValue | null>(null);
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [themeId, setThemeId] = useState<ProviderThemeId>("theme:neon");
 
-  // restore on mount
   useEffect(() => {
     (async () => {
       try {
-        const saved = await AsyncStorage.getItem("@nova/themeId");
-        if (saved) {
-          setThemeId(canonId(saved));
-        }
-      } catch {
-        // ignore
-      }
+        const saved = await AsyncStorage.getItem(THEME_KEY);
+        if (saved) setThemeId(canonId(saved));
+      } catch {}
     })();
   }, []);
 
   const setThemeById = (id: string | null | undefined) => {
     const c = canonId(id ?? undefined);
     setThemeId(c);
-    AsyncStorage.setItem("@nova/themeId", c).catch(() => {});
+    AsyncStorage.setItem(THEME_KEY, c).catch(() => {});
   };
 
-  const tokens = useMemo(
-    () => THEMES[themeId] ?? THEMES["theme:neon"],
-    [themeId]
-  );
+  const tokens = useMemo(() => THEMES[themeId] ?? THEMES["theme:neon"], [themeId]);
 
   useEffect(() => {
     __themeTokensSnapshot = tokens;
   }, [tokens]);
 
-  const value = useMemo(
-    () => ({ themeId, tokens, setThemeById }),
-    [themeId, tokens]
-  );
+  const value = useMemo(() => ({ themeId, tokens, setThemeById }), [themeId, tokens]);
 
   return <ThemeCtx.Provider value={value}>{children}</ThemeCtx.Provider>;
 }
 
 export function useTheme() {
   const v = useContext(ThemeCtx);
-  if (!v) {
-    throw new Error("useTheme must be used inside ThemeProvider");
-  }
+  if (!v) throw new Error("useTheme must be used inside ThemeProvider");
   return v;
 }
