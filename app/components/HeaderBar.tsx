@@ -197,7 +197,7 @@ export default function HeaderBar() {
 
   const hit = 8;
   const iconSize = 18;
-  const heartSize = 18;
+  const heartSize = 16;
 
   return (
     <View style={[S.wrap, { paddingTop: topPad, paddingBottom: 8 }]}>
@@ -260,16 +260,6 @@ export default function HeaderBar() {
           />
         </Pressable>
 
-        <Pressable
-          onPress={onShare}
-          hitSlop={hit}
-          style={S.iconBtn}
-          accessibilityRole="button"
-          accessibilityLabel="Share"
-        >
-          <Ionicons name="share-social-outline" size={iconSize} color="#8ecae6" />
-        </Pressable>
-
         <Animated.View style={{ transform: [{ scale: pulse }] }}>
           <Pressable onPress={openDonate} accessibilityRole="button" accessibilityLabel="Donate">
             <View style={{ position: "relative" }}>
@@ -313,7 +303,7 @@ const S = StyleSheet.create({
     position: "relative",
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingBottom: 8,
     backgroundColor: "#06121a",
   },
@@ -350,7 +340,7 @@ const S = StyleSheet.create({
   coinPill: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 6,
+    paddingVertical: 5,
     paddingHorizontal: 10,
     borderRadius: 999,
     backgroundColor: "#0b2030",
