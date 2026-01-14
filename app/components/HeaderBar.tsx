@@ -12,6 +12,7 @@ import {
   Animated,
   Linking,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -24,6 +25,9 @@ const COIN_IMG = require("../assets/coin.png");
 const ACCOUNT_ROUTE = "/(tabs)/account";
 
 export default function HeaderBar() {
+  const insets = useSafeAreaInsets();
+  const topPad = (insets?.top ?? 0) + 6;
+
   const router = useRouter();
 
   const { enabled: fxOn, toggle: toggleFx } = useFx();
@@ -196,7 +200,7 @@ export default function HeaderBar() {
   const heartSize = 18;
 
   return (
-    <View style={S.wrap}>
+    <View style={[S.wrap, { paddingTop: topPad, paddingBottom: 8 }]}>
       {/* Left: avatar + name + coins + streak */}
       <Pressable
         onPress={goAccount}
@@ -310,7 +314,7 @@ const S = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingBottom: 8,
     backgroundColor: "#06121a",
   },
   left: {
