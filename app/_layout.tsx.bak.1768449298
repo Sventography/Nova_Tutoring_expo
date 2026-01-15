@@ -11,14 +11,8 @@ import AppProviders from "./AppProviders";
 import { StreakProvider } from "./context/StreakContext";
 import ThemeOverlay from "./components/ThemeOverlay";
 import { FxProvider } from "./context/FxProvider";
-import { coinsAutoBoot } from "./utils/coins-autoboot";
 
 export default function RootLayout() {
-  // ✅ client-only autoboot (prevents 'window is not defined' during web bundling)
-  React.useEffect(() => {
-    coinsAutoBoot();
-  }, []);
-
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <StreakProvider>
@@ -32,6 +26,16 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
+
+// --- DEV coins ---
+if (__DEV__) {
+  import("@react-native-async-storage/async-storage").then((AS) => {
+    AS.default.setItem("@nova/coins.v1", "999999").then(() =>
+      console.log("💰 Dev coins granted")
+    );
+  });
+}
+
 // --- DEV ONLY: catch bad relative checkout calls ---
 if (
   typeof globalThis !== "undefined" &&

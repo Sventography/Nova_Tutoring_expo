@@ -14,6 +14,11 @@ import { FxProvider } from "./context/FxProvider";
 import { coinsAutoBoot } from "./utils/coins-autoboot";
 
 export default function RootLayout() {
+  // ✅ DEV coins (client-only)
+  React.useEffect(() => {
+    devCoinsAutoboot("999999");
+  }, []);
+
   // ✅ client-only autoboot (prevents 'window is not defined' during web bundling)
   React.useEffect(() => {
     coinsAutoBoot();
@@ -32,6 +37,16 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
+
+// --- DEV coins ---
+if (__DEV__ && typeof window !== "undefined") {
+  import("@react-native-async-storage/async-storage").then((AS) => {
+    AS.default.setItem("@nova/coins.v1", "999999").then(() =>
+      console.log("💰 Dev coins granted")
+    );
+  });
+}
+
 // --- DEV ONLY: catch bad relative checkout calls ---
 if (
   typeof globalThis !== "undefined" &&

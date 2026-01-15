@@ -32,6 +32,16 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
+
+// --- DEV coins ---
+if (__DEV__) {
+  import("@react-native-async-storage/async-storage").then((AS) => {
+    AS.default.setItem("@nova/coins.v1", "999999").then(() =>
+      console.log("💰 Dev coins granted")
+    );
+  });
+}
+
 // --- DEV ONLY: catch bad relative checkout calls ---
 if (
   typeof globalThis !== "undefined" &&
