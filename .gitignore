@@ -49,3 +49,8 @@ server/.env
 
 expo-env.d.ts
 # @end expo-cli
+# backups
+*.bak
+*.bak.*
+*.save
+*.webfix
