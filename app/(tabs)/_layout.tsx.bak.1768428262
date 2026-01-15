@@ -68,6 +68,7 @@ function CelebrateToast({
 }
 
 export default function TabsLayout() {
+  const HEADER_HEIGHT = 72;
   const insets = useSafeAreaInsets();
   const HEADER_HEIGHT = (Platform.OS === "web" ? 64 : 56) + (insets?.top ?? 0);
   const [celebrate, setCelebrate] = useState<string | null>(null);

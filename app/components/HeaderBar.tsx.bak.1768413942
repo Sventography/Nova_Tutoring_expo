@@ -12,7 +12,6 @@ import {
   Animated,
   Linking,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -25,9 +24,6 @@ const COIN_IMG = require("../assets/coin.png");
 const ACCOUNT_ROUTE = "/(tabs)/account";
 
 export default function HeaderBar() {
-  const insets = useSafeAreaInsets();
-  const topPad = (Platform.OS === "web" ? 12 : ((insets?.top ?? 0) + 6));
-
   const router = useRouter();
 
   const { enabled: fxOn, toggle: toggleFx } = useFx();
@@ -197,10 +193,10 @@ export default function HeaderBar() {
 
   const hit = 8;
   const iconSize = 18;
-  const heartSize = 16;
+  const heartSize = 18;
 
   return (
-    <View style={[S.wrap, { paddingTop: topPad, paddingBottom: 8 }]}>
+    <View style={S.wrap}>
       {/* Left: avatar + name + coins + streak */}
       <Pressable
         onPress={goAccount}
@@ -260,6 +256,16 @@ export default function HeaderBar() {
           />
         </Pressable>
 
+        <Pressable
+          onPress={onShare}
+          hitSlop={hit}
+          style={S.iconBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Share"
+        >
+          <Ionicons name="share-social-outline" size={iconSize} color="#8ecae6" />
+        </Pressable>
+
         <Animated.View style={{ transform: [{ scale: pulse }] }}>
           <Pressable onPress={openDonate} accessibilityRole="button" accessibilityLabel="Donate">
             <View style={{ position: "relative" }}>
@@ -303,8 +309,8 @@ const S = StyleSheet.create({
     position: "relative",
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 10,
-    paddingBottom: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     backgroundColor: "#06121a",
   },
   left: {
@@ -340,7 +346,7 @@ const S = StyleSheet.create({
   coinPill: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 5,
+    paddingVertical: 6,
     paddingHorizontal: 10,
     borderRadius: 999,
     backgroundColor: "#0b2030",
@@ -353,7 +359,7 @@ const S = StyleSheet.create({
   streakPill: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 5,
+    paddingVertical: 6,
     paddingHorizontal: 10,
     borderRadius: 999,
     borderWidth: 1,
@@ -377,7 +383,7 @@ const S = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 6,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: "rgba(0,229,255,0.35)",

@@ -26,7 +26,7 @@ const ACCOUNT_ROUTE = "/(tabs)/account";
 
 export default function HeaderBar() {
   const insets = useSafeAreaInsets();
-  const topPad = (Platform.OS === "web" ? 12 : ((insets?.top ?? 0) + 6));
+  const topPad = (insets?.top ?? 0) + 6;
 
   const router = useRouter();
 
@@ -353,7 +353,7 @@ const S = StyleSheet.create({
   streakPill: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 5,
+    paddingVertical: 6,
     paddingHorizontal: 10,
     borderRadius: 999,
     borderWidth: 1,
@@ -377,7 +377,7 @@ const S = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 6,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: "rgba(0,229,255,0.35)",

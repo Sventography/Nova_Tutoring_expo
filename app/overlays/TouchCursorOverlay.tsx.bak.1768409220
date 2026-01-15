@@ -161,12 +161,8 @@ export default function TouchCursorOverlay({ p, down }: Props) {
         easing: Easing.out(Easing.quad),
         useNativeDriver: true,
       }),
-    ]).start(({ finished }) => {
-      if (finished === false) return;
-      // Defer state update to avoid nested render-update loops
-      requestAnimationFrame(() => {
-        setSparks((prev) => prev.filter((x) => x.id !== sp.id));
-      });
+    ]).start(() => {
+      setSparks((prev) => prev.filter((x) => x.id !== sp.id));
     });
   };
 

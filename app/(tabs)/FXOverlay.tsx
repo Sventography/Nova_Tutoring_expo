@@ -1,6 +1,5 @@
 // app/(tabs)/_layout.tsx
 import React, { useEffect, useState } from "react";
-import "../_dev/seed_coins";
 
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Tabs } from "expo-router";

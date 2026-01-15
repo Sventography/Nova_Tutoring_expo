@@ -265,17 +265,25 @@ const { user } = useUser();
       </View>
 
       <View style={{ alignItems: "center", marginBottom: 20 }}>
-      <View nativeID="cert-demo" style={{ width: "100%", alignItems: "center" }}>
-        <View style={{ width: "100%", transform: [{ scale: 0.60 }] }}>
-          <CertificateView
+      <View
+        nativeID="cert-demo"
+        style={[
+          {
+            alignSelf: "center",
+            transform: [{ scale: Platform.OS === "ios" ? 0.74 : 0.82 }],
+          },
+          // RN-web supports transformOrigin; center it so it doesn't shift right
+          Platform.OS === "web" ? ({ transformOrigin: "top center" } as any) : null,
+        ]}
+      >
+        <CertificateView
           username={user?.username || "Guest"}
           topic="Sample Quiz"
           date={new Date().toLocaleDateString()}
           scorePct={100}
           orgName="Nova Tutoring"
         />
-      
-        </View></View>
+      </View>
 
       <View style={{ flexDirection: "row", gap: 10, marginTop: 10 }}>
         <Pressable style={s.btnMuted} onPress={handlePreview}>
@@ -367,8 +375,7 @@ const { user } = useUser();
 
       <View style={{ height: 1, overflow: "hidden" }}>
         {rendering ? (
-          <View nativeID="cert-real-capture" ref={captureWrapperRef} style={{ width: "100%", alignItems: "center" }}>
-            <View style={{ width: "100%", transform: [{ scale: 0.60 }] }}>
+          <View nativeID="cert-real-capture" ref={captureWrapperRef}>
             <CertificateView
               username={rendering.name}
               topic={rendering.quizTitle}
@@ -376,8 +383,7 @@ const { user } = useUser();
               scorePct={Math.round(rendering.scorePct)}
               orgName="Nova Tutoring"
             />
-          
-          </View></View>
+          </View>
         ) : null}
       </View>
     </ScrollView>

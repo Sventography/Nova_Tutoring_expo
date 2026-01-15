@@ -266,7 +266,7 @@ const { user } = useUser();
 
       <View style={{ alignItems: "center", marginBottom: 20 }}>
       <View nativeID="cert-demo" style={{ width: "100%", alignItems: "center" }}>
-        <View style={{ width: "100%", transform: [{ scale: 0.60 }] }}>
+        <View style={{ width: "100%", transform: [{ scale: 0.75 }] }}>
           <CertificateView
           username={user?.username || "Guest"}
           topic="Sample Quiz"
@@ -368,7 +368,7 @@ const { user } = useUser();
       <View style={{ height: 1, overflow: "hidden" }}>
         {rendering ? (
           <View nativeID="cert-real-capture" ref={captureWrapperRef} style={{ width: "100%", alignItems: "center" }}>
-            <View style={{ width: "100%", transform: [{ scale: 0.60 }] }}>
+            <View style={{ width: "100%", transform: [{ scale: 0.75 }] }}>
             <CertificateView
               username={rendering.name}
               topic={rendering.quizTitle}

@@ -3,7 +3,6 @@ import "react-native-gesture-handler";
 import "react-native-reanimated";
 
 import React from "react";
-import "./_dev/seed_coins"; // ✅ FIXED path (was ../_dev/seed_coins)
 
 import { Slot } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -12,7 +11,6 @@ import AppProviders from "./AppProviders";
 import { StreakProvider } from "./context/StreakContext";
 import ThemeOverlay from "./components/ThemeOverlay";
 import { FxProvider } from "./context/FxProvider";
-import StripeProbe from "./_dev/StripeProbe"; // ✅ DEV Stripe env probe
 
 export default function RootLayout() {
   return (
@@ -21,7 +19,6 @@ export default function RootLayout() {
         <AppProviders>
           <FxProvider>
             <ThemeOverlay />
-            <StripeProbe />
             <Slot />
           </FxProvider>
         </AppProviders>

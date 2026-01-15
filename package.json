@@ -56,7 +56,7 @@
     "react-native-worklets": "0.5.1",
     "react-native-worklets-core": "^1.6.2",
     "typescript": "~5.9.2",
-    "vercel": "^48.9.1"
+    "vercel": "^50.1.6"
   },
   "overrides": {
     "react-native-worklets": "0.5.1"
