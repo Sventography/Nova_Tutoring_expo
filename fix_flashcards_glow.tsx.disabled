@@ -4,3 +4,11 @@
         <View style={sx.cardHeader}>
           <Text style={sx.cardLabel}>Question</Text>
           <Pressable onPress={() => addCardToCollection()} hitSlop={10}>
+      </Pressable>
+    </View>
+  </LinearGlow>
+</View>
+      </Pressable>
+    </View>
+  </LinearGlow>
+</View>
