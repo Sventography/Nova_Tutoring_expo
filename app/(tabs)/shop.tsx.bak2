@@ -1,5 +1,6 @@
 // app/(tabs)/shop.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useDevCoins } from "../utils/devCoins";
 import {
   View,
   Text,
@@ -9,7 +10,6 @@ import {
   LayoutAnimation,
   Animated,
   Modal,
-  Platform,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -55,9 +55,7 @@ type QuickItem = {
   owned: boolean;
   equipped: boolean;
 };
-
 type PurchaseMap = Record<string, true>;
-
 type Order = {
   id: string;
   sku: string;
@@ -84,10 +82,6 @@ function canonId(id: string | null | undefined): string {
   if (!id) return "";
   let v = String(id).trim();
 
-  // normalize separators and casing
-  v = v.toLowerCase();
-
-  // add namespace if missing
   if (!v.includes(":")) {
     if (v.startsWith("cursor_") || v.startsWith("cursor"))
       v = "cursor:" + v.replace(/^cursor[_:]?/, "");
@@ -95,15 +89,11 @@ function canonId(id: string | null | undefined): string {
       v = "theme:" + v.replace(/^theme[_:]?/, "");
   }
 
-  // unify hyphen/underscore to underscore for storage keys
   v = v.replace(/-/g, "_");
-
-  // known variants
   if (v === "cursor:startrail" || v === "cursor_startrail")
     v = "cursor:star_trail";
   if (v === "theme:black-gold") v = "theme:blackgold";
   if (v === "theme:neon-purple") v = "theme:neonpurple";
-
   return v;
 }
 
@@ -157,12 +147,12 @@ async function saveOrders(list: Order[]) {
 
 function normalizePurchases(obj: Record<string, any>): PurchaseMap {
   const out: Record<string, true> = {};
-  for (const [k, v] of Object.entries(obj || {})) {
-    if (!v) continue;
-    const ck = canonId(k);
-    out[k] = true;
-    if (ck && ck !== k) out[ck] = true;
-  }
+  const remap = (k: string) => {
+    if (k.startsWith("cursor_")) return "cursor:" + k.slice(7);
+    if (k.startsWith("theme_")) return "theme:" + k.slice(6);
+    return k;
+  };
+  for (const [k, v] of Object.entries(obj || {})) if (v) out[remap(k)] = true;
   return out;
 }
 
@@ -243,18 +233,14 @@ function Section({
             fontSize: 16,
             fontWeight: "800",
             marginBottom: 10,
-            textShadowColor: tokens.isDark
-              ? "transparent"
-              : (tokens.softShadow as any),
-            textShadowOffset: tokens.isDark
-              ? undefined
-              : ({ width: 0, height: 1 } as any),
+            // tiny lift on light themes so it doesn't fade on gradients
+            textShadowColor: tokens.isDark ? "transparent" : (tokens.softShadow as any),
+            textShadowOffset: tokens.isDark ? undefined : ({ width: 0, height: 1 } as any),
             textShadowRadius: tokens.isDark ? 0 : 2,
           }}
         >
           {title}
-        </Text>
-      </View>
+        </Text></View>
 
       <View
         style={{
@@ -286,9 +272,7 @@ function Card({
         padding: 12,
         borderWidth: 1,
         borderColor: color,
-        backgroundColor: tokens.isDark
-          ? "rgba(255,255,255,0.03)"
-          : "rgba(255,255,255,0.60)",
+        backgroundColor: tokens.isDark ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.60)",
       }}
     >
       {children}
@@ -314,16 +298,8 @@ function OrderSuccessModal({
     glow.setValue(0);
     const anim = Animated.loop(
       Animated.sequence([
-        Animated.timing(glow, {
-          toValue: 1,
-          duration: 900,
-          useNativeDriver: false,
-        }),
-        Animated.timing(glow, {
-          toValue: 0,
-          duration: 900,
-          useNativeDriver: false,
-        }),
+        Animated.timing(glow, { toValue: 1, duration: 900, useNativeDriver: false }),
+        Animated.timing(glow, { toValue: 0, duration: 900, useNativeDriver: false }),
       ])
     );
     anim.start();
@@ -420,22 +396,22 @@ function OrderSuccessModal({
                     : "rgba(0,229,255,0.15)",
                 })}
               >
-                <Text style={{ color: "#CFFFFF", fontWeight: "900" }}>
-                  Continue
-                </Text>
+                <Text style={{ color: "#CFFFFF", fontWeight: "900" }}>Continue</Text>
               </Pressable>
-            </View>
           </LinearGradient>
         </Animated.View>
       </View>
     </Modal>
   );
 }
+
 /* --------------------------------- Screen -------------------------------- */
 export default function Shop() {
   const { coins, setCoins } = useCoins();
   const { tokens, setThemeById } = useTheme();
   const router = useRouter();
+
+  const devCoins = useDevCoins();
 
   const cursorApi = (() => {
     try {
@@ -444,7 +420,6 @@ export default function Shop() {
       return null as any;
     }
   })();
-
   const setCursorById = cursorApi?.setCursorById as
     | undefined
     | ((id: string | null) => void);
@@ -472,7 +447,6 @@ export default function Shop() {
 
   const devTapCount = useRef(0);
   const devTapTimer = useRef<any>(null);
-
   useEffect(() => {
     coinsRef.current = coins ?? 0;
   }, [coins]);
@@ -508,56 +482,10 @@ export default function Shop() {
     };
   }, []);
 
-  /* --------------------------- 5-tap dev cheat ---------------------------- */
-  function handleDevTap() {
-    if (!__DEV__) return;
-
-    devTapCount.current += 1;
-
-    if (devTapTimer.current) clearTimeout(devTapTimer.current);
-
-    devTapTimer.current = setTimeout(() => {
-      devTapCount.current = 0;
-    }, 1500);
-
-    if (devTapCount.current >= 5) {
-      devTapCount.current = 0;
-      if (devTapTimer.current) clearTimeout(devTapTimer.current);
-
-      const bonus = 500_000;
-      const next = (coinsRef.current ?? 0) + bonus;
-
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      setCoins(next);
-      void saveCoins(next);
-
-      track("dev_coins_awarded", { amount: bonus, via: "shop_title_tap" });
-    }
-  }
-
-  function toThemeCtxId(id: string | null) {
-    if (!id) return null;
-    const cid = canonId(id);
-    const map: Record<string, string> = {
-      "theme:neon": "neon",
-      "theme:starry": "theme:starry",
-      "theme:pink": "pink",
-      "theme:dark": "dark",
-      "theme:mint": "mint",
-      "theme:glitter": "glitter",
-      "theme:blackgold": "theme:blackgold",
-      "theme:crimson": "crimson",
-      "theme:emerald": "emerald",
-      "theme:neonpurple": "theme:neonpurple",
-      "theme:silver": "silver",
-    };
-    return map[cid] ?? (cid.startsWith("theme:") ? cid.slice(6) : cid);
-  }
-
   /* --------------------------- Initial data load -------------------------- */
   useEffect(() => {
     (async () => {
-      const [c, pRaw, curRaw, thRaw, ord] = await Promise.all([
+      const [c, pRaw, cur, th, ord] = await Promise.all([
         loadCoins(),
         loadPurchases(),
         loadCursor(),
@@ -570,17 +498,13 @@ export default function Shop() {
         await savePurchases(p);
       }
 
-      const cur = curRaw ? canonId(curRaw) : null;
-      const th = thRaw ? canonId(thRaw) : null;
-
       setCoins(c);
       setPurchases(p);
       setEquippedCursor(cur);
       setEquippedTheme(th);
       setOrders(ord);
 
-      // IMPORTANT: ensure the CursorContext receives canonical id
-      if (typeof setCursorById === "function") setCursorById(cur ? cur : null);
+      if (typeof setCursorById === "function") setCursorById(cur);
 
       const mappedTheme = toThemeCtxId(th);
       if (typeof setThemeById === "function") setThemeById(mappedTheme);
@@ -597,9 +521,7 @@ export default function Shop() {
   }, []);
 
   useEffect(() => {
-    // IMPORTANT: canonicalize what we send to CursorContext
-    const cur = equippedCursor ? canonId(equippedCursor) : null;
-    if (typeof setCursorById === "function") setCursorById(cur);
+    if (typeof setCursorById === "function") setCursorById(equippedCursor);
   }, [equippedCursor, setCursorById]);
 
   useEffect(() => {
@@ -618,21 +540,13 @@ export default function Shop() {
       const it = catalog.find((x) => x.id === sku);
       if (!it) return;
 
-      if (
-        it.category === "theme" ||
-        it.category === "cursor" ||
-        it.category === "bundle"
-      ) {
+      if (it.category === "theme" || it.category === "cursor" || it.category === "bundle") {
         setPurchases((prev) => {
           const cid = canonId(it.id);
           const next = { ...prev, [it.id]: true } as PurchaseMap;
           if (cid && cid !== it.id) (next as any)[cid] = true;
           void savePurchases(next);
-          track("shop_purchase_complete", {
-            sku: it.id,
-            category: it.category,
-            mode: "stripe",
-          });
+          track("shop_purchase_complete", { sku: it.id, category: it.category, mode: "stripe" });
           return next;
         });
 
@@ -644,7 +558,6 @@ export default function Shop() {
       if (it.category === "coin_pack") {
         const addAmt = dollarsToCoins(it.priceUSD ?? 0);
         const nextCoins = (coinsRef.current ?? 0) + addAmt;
-        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
         setCoins(nextCoins);
         await saveCoins(nextCoins);
         track("shop_coins_added", { amount: addAmt, via: "stripe", sku: it.id });
@@ -658,7 +571,6 @@ export default function Shop() {
         status: "paid",
         createdAt: Date.now(),
       };
-
       setOrders((prev) => {
         const next = [order, ...prev];
         void saveOrders(next);
@@ -676,6 +588,52 @@ export default function Shop() {
   }, [setCoins]);
 
   /* -------------------------- Equip helpers ------------------------------- */
+
+      }
+
+function handleDevTap() {
+  if (!__DEV__) return;
+
+  devTapCount.current += 1;
+
+  if (devTapTimer.current) clearTimeout(devTapTimer.current);
+
+  devTapTimer.current = setTimeout(() => {
+    devTapCount.current = 0;
+  }, 1500);
+
+  if (devTapCount.current >= 5) {
+    devTapCount.current = 0;
+    if (devTapTimer.current) clearTimeout(devTapTimer.current);
+
+    const bonus = 500_000;
+    const next = (coinsRef.current ?? 0) + bonus;
+
+    setCoins(next);
+    saveCoins(next);
+
+    track("dev_coins_awarded", { amount: bonus, via: "shop_title_tap" });
+  }
+}
+
+function toThemeCtxId(id: string | null) {
+    if (!id) return null;
+    const map: Record<string, string> = {
+      "theme:neon": "neon",
+      "theme:starry": "theme:starry",
+      "theme:pink": "pink",
+      "theme:dark": "dark",
+      "theme:mint": "mint",
+      "theme:glitter": "glitter",
+      "theme:blackgold": "theme:blackgold",
+      "theme:crimson": "crimson",
+      "theme:emerald": "emerald",
+      "theme:neonpurple": "theme:neonpurple",
+      "theme:silver": "silver",
+    };
+    return map[id] ?? (id.startsWith("theme:") ? id.slice(6) : id);
+  }
+
   function markOwned(id: string) {
     const cid = canonId(id);
     setPurchases((prev) => {
@@ -688,12 +646,11 @@ export default function Shop() {
   }
 
   function equipThemeImmediate(shopThemeId: string, meta?: Record<string, any>) {
-    const cid = canonId(shopThemeId);
-    setEquippedTheme(cid);
-    void saveTheme(cid);
-    const mapped = toThemeCtxId(cid);
+    setEquippedTheme(shopThemeId);
+    void saveTheme(shopThemeId);
+    const mapped = toThemeCtxId(shopThemeId);
     if (typeof setThemeById === "function") setThemeById(mapped);
-    track("shop_equip", { kind: "theme", id: cid, mapped, ...meta });
+    track("shop_equip", { kind: "theme", id: shopThemeId, mapped, ...meta });
   }
 
   function unequipThemeImmediate(meta?: Record<string, any>) {
@@ -705,12 +662,10 @@ export default function Shop() {
   }
 
   async function equipCursorImmediate(shopId: string, meta?: Record<string, any>) {
-    // IMPORTANT: canonicalize for overlay + cursor map keys
-    const cid = canonId(shopId);
-    setEquippedCursor(cid);
-    await saveCursor(cid);
-    if (typeof setCursorById === "function") setCursorById(cid);
-    track("shop_equip", { kind: "cursor", id: cid, mapped: cid, ...meta });
+    setEquippedCursor(shopId);
+    await saveCursor(shopId);
+    if (typeof setCursorById === "function") setCursorById(shopId);
+    track("shop_equip", { kind: "cursor", id: shopId, mapped: shopId, ...meta });
   }
 
   async function unequipCursorImmediate(meta?: Record<string, any>) {
@@ -723,7 +678,7 @@ export default function Shop() {
 
   /* ----------------------------- Quick menus ------------------------------ */
   const THEMES_MENU: QuickItem[] = useMemo(() => {
-    const eq = equippedTheme ? canonId(equippedTheme) : null;
+    const eq = equippedTheme;
     return [
       { id: "theme:neon", name: "Neon Nova", kind: "theme", owned: isOwned("theme:neon"), equipped: eq === "theme:neon" },
       { id: "theme:starry", name: "Starry Night", kind: "theme", owned: isOwned("theme:starry"), equipped: eq === "theme:starry" },
@@ -741,7 +696,7 @@ export default function Shop() {
   }, [purchases, equippedTheme]);
 
   const CURSORS_MENU: QuickItem[] = useMemo(() => {
-    const eq = equippedCursor ? canonId(equippedCursor) : null;
+    const eq = equippedCursor;
     return [
       { id: "cursor:glow", name: "Glow Cursor", kind: "cursor", owned: isOwned("cursor:glow"), equipped: eq === "cursor:glow" },
       { id: "cursor:orb", name: "Orb Glow", kind: "cursor", owned: isOwned("cursor:orb"), equipped: eq === "cursor:orb" },
@@ -751,50 +706,38 @@ export default function Shop() {
   }, [purchases, equippedCursor]);
 
   function quickEquip(id: string, kind: "theme" | "cursor") {
-    const cid = canonId(id);
-    const isCurrentlyEq =
-      kind === "theme" ? canonId(equippedTheme) === cid : canonId(equippedCursor) === cid;
+    const isCurrentlyEq = kind === "theme" ? equippedTheme === id : equippedCursor === id;
 
     track("shop_quick_action", {
       action: isCurrentlyEq ? "unequip" : "equip",
-      id: cid,
+      id,
       kind,
       source: "quick_row",
     });
 
     if (kind === "theme") {
-      isCurrentlyEq
-        ? unequipThemeImmediate({ source: "quick_row" })
-        : equipThemeImmediate(cid, { source: "quick_row" });
+      isCurrentlyEq ? unequipThemeImmediate({ source: "quick_row" }) : equipThemeImmediate(id, { source: "quick_row" });
     } else {
-      isCurrentlyEq
-        ? void unequipCursorImmediate({ source: "quick_row" })
-        : void equipCursorImmediate(cid, { source: "quick_row" });
+      isCurrentlyEq ? void unequipCursorImmediate({ source: "quick_row" }) : void equipCursorImmediate(id, { source: "quick_row" });
     }
   }
 
   function quickBuy(id: string) {
-    const cid = canonId(id);
-    const kindGuess: "theme" | "cursor" | "other" = cid.startsWith("theme:")
+    const kindGuess: "theme" | "cursor" | "other" = id.startsWith("theme:")
       ? "theme"
-      : cid.startsWith("cursor:")
+      : id.startsWith("cursor:")
       ? "cursor"
       : "other";
 
-    track("shop_quick_action", {
-      action: "unlock_click",
-      id: cid,
-      kind: kindGuess,
-      source: "quick_row",
-    });
+    track("shop_quick_action", { action: "unlock_click", id, kind: kindGuess, source: "quick_row" });
 
     if (kindGuess === "theme") return scrollTo(themeSectionY.current, { section: "themes" });
     if (kindGuess === "cursor") return scrollTo(cursorSectionY.current, { section: "cursors" });
 
-    const it = catalog.find((x) => canonId(x.id) === cid || x.id === id);
+    const it = catalog.find((x) => x.id === id);
     if (it?.priceUSD) {
       const amount = Math.round((it.priceUSD ?? 1) * 100);
-      const success = Linking.createURL("/", { queryParams: { sku: it.id } });
+      const success = Linking.createURL("/", { queryParams: { sku: id } });
       void startCheckoutRequest({ amount, currency: "usd", success_url: success, cancel_url: success });
       return;
     }
@@ -819,6 +762,7 @@ export default function Shop() {
     for (const it of catalog) byCat[it.category].push(it);
     return byCat;
   }, []);
+
   /* ---------------------------- Purchase flows ---------------------------- */
 
   function buyWithCoins(it: any, meta?: { size?: string }) {
@@ -856,21 +800,13 @@ export default function Shop() {
     if (curCoins < price) {
       setNeed(price - curCoins);
       setShowInsufficient(true);
-      track("shop_modal_insufficient_shown", {
-        needed: price - curCoins,
-        sku: it.id,
-        via: "coins",
-      });
+      track("shop_modal_insufficient_shown", { needed: price - curCoins, sku: it.id, via: "coins" });
       return;
     }
 
     const nextCoins = curCoins - price;
     const cid = canonId(it.id);
-    const nextPurch = {
-      ...purchases,
-      [it.id]: true,
-      ...(cid ? { [cid]: true } : {}),
-    } as PurchaseMap;
+    const nextPurch = { ...purchases, [it.id]: true, ...(cid ? { [cid]: true } : {}) } as PurchaseMap;
 
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setCoins(nextCoins);
@@ -879,12 +815,7 @@ export default function Shop() {
     setPurchases(nextPurch);
     void savePurchases(nextPurch);
 
-    track("shop_purchase_complete", {
-      sku: it.id,
-      category: it.category,
-      mode: "coins",
-      price,
-    });
+    track("shop_purchase_complete", { sku: it.id, category: it.category, mode: "coins", price });
 
     if (it.category === "theme") equipThemeImmediate(it.id, { source: "coins_purchase" });
     if (it.category === "cursor") void equipCursorImmediate(it.id, { source: "coins_purchase" });
@@ -892,21 +823,13 @@ export default function Shop() {
 
   async function moneyBuy(it: any, meta?: { size?: string }) {
     const amount = Math.round((it.priceUSD ?? 1) * 100);
-    const success = Linking.createURL("/", {
-      queryParams: { sku: it.id, size: meta?.size || "" },
-    });
+    const success = Linking.createURL("/", { queryParams: { sku: it.id, size: meta?.size || "" } });
 
     track("shop_money_buy", { sku: it.id, amount_cents: amount, meta });
 
-    await startCheckoutRequest({
-      amount,
-      currency: "usd",
-      success_url: success,
-      cancel_url: success,
-    });
+    await startCheckoutRequest({ amount, currency: "usd", success_url: success, cancel_url: success });
 
-    if (it.category === "theme" || it.category === "cursor" || it.category === "bundle")
-      markOwned(it.id);
+    if (it.category === "theme" || it.category === "cursor" || it.category === "bundle") markOwned(it.id);
   }
 
   function equipTheme(it: any) {
@@ -927,7 +850,10 @@ export default function Shop() {
     const src = showAlt ? altImages[it.altImageKey!] : it.image;
 
     const sizeKey =
-      it.stripeProductId || it.productId || (it.stripe && it.stripe.productId) || it.id;
+      it.stripeProductId ||
+      it.productId ||
+      (it.stripe && it.stripe.productId) ||
+      it.id;
 
     let sizes = getSizesFor(sizeKey);
     if (!sizes.length && it.category === "clothing") sizes = ["S", "M", "L", "XL"];
@@ -935,9 +861,9 @@ export default function Shop() {
 
     const equipped =
       equipable === "theme"
-        ? canonId(equippedTheme) === canonId(it.id)
+        ? equippedTheme === it.id
         : equipable === "cursor"
-        ? canonId(equippedCursor) === canonId(it.id)
+        ? equippedCursor === it.id
         : false;
 
     return (
@@ -961,27 +887,14 @@ export default function Shop() {
               borderWidth: 1,
               borderColor: color,
               marginBottom: 8,
-              backgroundColor: tokens.isDark
-                ? "rgba(255,255,255,0.02)"
-                : "rgba(255,255,255,0.55)",
+              backgroundColor: tokens.isDark ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.55)",
             }}
           >
-            <Image
-              source={src}
-              style={{ width: "100%", height: "100%" }}
-              resizeMode="contain"
-            />
+            <Image source={src} style={{ width: "100%", height: "100%" }} resizeMode="contain" />
           </Pressable>
         ) : null}
 
-        <Text
-          style={{
-            color: tokens.text as any,
-            fontSize: 14,
-            fontWeight: "700",
-            textAlign: "center",
-          }}
-        >
+        <Text style={{ color: tokens.text as any, fontSize: 14, fontWeight: "700", textAlign: "center" }}>
           {it.title}
         </Text>
 
@@ -992,9 +905,8 @@ export default function Shop() {
               fontSize: 12,
               lineHeight: 16,
               textAlign: "center",
-              marginTop: 6,
+              marginTop: 16,
               paddingHorizontal: 8,
-              opacity: 0.9,
             }}
             numberOfLines={3}
           >
@@ -1004,9 +916,7 @@ export default function Shop() {
 
         {sizes.length > 0 ? (
           <View style={{ marginTop: 10 }}>
-            <Text style={{ color: tokens.text as any, fontSize: 12, marginBottom: 6 }}>
-              Size
-            </Text>
+            <Text style={{ color: tokens.text as any, fontSize: 12, marginBottom: 6 }}>Size</Text>
             <SizeSelector
               sizes={sizes}
               value={selected}
@@ -1023,11 +933,7 @@ export default function Shop() {
         {equipable === "theme" ? (
           owned ? (
             <Pressable
-              onPress={() =>
-                equipped
-                  ? unequipThemeImmediate({ source: "card_button" })
-                  : equipTheme(it)
-              }
+              onPress={() => (equipped ? unequipThemeImmediate({ source: "card_button" }) : equipTheme(it))}
               style={({ pressed }) => ({
                 alignItems: "center",
                 paddingVertical: 10,
@@ -1035,27 +941,15 @@ export default function Shop() {
                 borderWidth: 1,
                 borderColor: tokens.border as any,
                 backgroundColor: pressed
-                  ? tokens.isDark
-                    ? "rgba(92,252,200,0.15)"
-                    : "rgba(62,211,162,0.15)"
-                  : tokens.isDark
-                  ? "rgba(92,252,200,0.08)"
-                  : "rgba(62,211,162,0.08)",
+                  ? (tokens.isDark ? "rgba(92,252,200,0.15)" : "rgba(62,211,162,0.15)")
+                  : (tokens.isDark ? "rgba(92,252,200,0.08)" : "rgba(62,211,162,0.08)"),
               })}
             >
               <Text style={{ color: tokens.text as any, fontWeight: "800" }}>
                 {equipped ? "Equipped ✓" : "Equip"}
               </Text>
-            </Pressable>
           ) : (
-            <View
-              style={{
-                flexDirection: "row",
-                justifyContent: "space-between",
-                columnGap: 8,
-                marginTop: 4,
-              }}
-            >
+            <View style={{ flexDirection: "row", justifyContent: "space-between", columnGap: 8 }}>
               <Pressable
                 onPress={() => buyWithCoins(it)}
                 style={({ pressed }) => ({
@@ -1069,10 +963,7 @@ export default function Shop() {
                   opacity: pressed ? 0.9 : 1,
                 })}
               >
-                <Text style={{ color: color, fontWeight: "800" }}>
-                  {(it.priceCoins ?? 0).toLocaleString()} coins
-                </Text>
-              </Pressable>
+                <Text style={{ color: color, fontWeight: "800" }}>{(it.priceCoins ?? 0).toLocaleString()} coins</Text>
 
               <Pressable
                 onPress={() => moneyBuy(it)}
@@ -1087,20 +978,13 @@ export default function Shop() {
                   opacity: pressed ? 0.9 : 1,
                 })}
               >
-                <Text style={{ color: color, fontWeight: "800" }}>
-                  ${it.priceUSD?.toFixed(0)}
-                </Text>
+                <Text style={{ color: color, fontWeight: "800" }}>${it.priceUSD?.toFixed(0)}</Text>
               </Pressable>
-            </View>
           )
         ) : equipable === "cursor" ? (
           owned ? (
             <Pressable
-              onPress={() =>
-                equipped
-                  ? void unequipCursorImmediate({ source: "card_button" })
-                  : void equipCursor(it)
-              }
+              onPress={() => (equipped ? void unequipCursorImmediate({ source: "card_button" }) : void equipCursor(it))}
               style={({ pressed }) => ({
                 alignItems: "center",
                 paddingVertical: 10,
@@ -1108,27 +992,15 @@ export default function Shop() {
                 borderWidth: 1,
                 borderColor: tokens.border as any,
                 backgroundColor: pressed
-                  ? tokens.isDark
-                    ? "rgba(92,252,200,0.15)"
-                    : "rgba(62,211,162,0.15)"
-                  : tokens.isDark
-                  ? "rgba(92,252,200,0.08)"
-                  : "rgba(62,211,162,0.08)",
+                  ? (tokens.isDark ? "rgba(92,252,200,0.15)" : "rgba(62,211,162,0.15)")
+                  : (tokens.isDark ? "rgba(92,252,200,0.08)" : "rgba(62,211,162,0.08)"),
               })}
             >
               <Text style={{ color: tokens.text as any, fontWeight: "800" }}>
                 {equipped ? "Equipped ✓" : "Equip"}
               </Text>
-            </Pressable>
           ) : (
-            <View
-              style={{
-                flexDirection: "row",
-                justifyContent: "space-between",
-                columnGap: 8,
-                marginTop: 4,
-              }}
-            >
+            <View style={{ flexDirection: "row", justifyContent: "space-between", columnGap: 8 }}>
               <Pressable
                 onPress={() => buyWithCoins(it)}
                 style={({ pressed }) => ({
@@ -1142,10 +1014,7 @@ export default function Shop() {
                   opacity: pressed ? 0.9 : 1,
                 })}
               >
-                <Text style={{ color: color, fontWeight: "800" }}>
-                  {(it.priceCoins ?? 0).toLocaleString()} coins
-                </Text>
-              </Pressable>
+                <Text style={{ color: color, fontWeight: "800" }}>{(it.priceCoins ?? 0).toLocaleString()} coins</Text>
 
               <Pressable
                 onPress={() => moneyBuy(it)}
@@ -1160,11 +1029,8 @@ export default function Shop() {
                   opacity: pressed ? 0.9 : 1,
                 })}
               >
-                <Text style={{ color: color, fontWeight: "800" }}>
-                  ${it.priceUSD?.toFixed(0)}
-                </Text>
+                <Text style={{ color: color, fontWeight: "800" }}>${it.priceUSD?.toFixed(0)}</Text>
               </Pressable>
-            </View>
           )
         ) : it.category === "coin_pack" ? (
           <Pressable
@@ -1175,28 +1041,15 @@ export default function Shop() {
               borderRadius: 10,
               borderWidth: 1,
               borderColor: color,
-              backgroundColor: pressed
-                ? "rgba(245,158,11,0.15)"
-                : "rgba(245,158,11,0.08)",
+              backgroundColor: pressed ? "rgba(245,158,11,0.15)" : "rgba(245,158,11,0.08)",
             })}
           >
-            <Text style={{ color: color, fontWeight: "800" }}>
-              ${it.priceUSD?.toFixed(0)}
-            </Text>
-          </Pressable>
+            <Text style={{ color: color, fontWeight: "800" }}>${it.priceUSD?.toFixed(0)}</Text>
         ) : (
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              columnGap: 8,
-              marginTop: 4,
-            }}
-          >
+          <View style={{ flexDirection: "row", justifyContent: "space-between", columnGap: 8 }}>
             <Pressable
               onPress={() => {
-                const chosen =
-                  sizeCtl.get(sizeKey) || (getSizesFor(sizeKey)[0] ?? null);
+                const chosen = sizeCtl.get(sizeKey) || (getSizesFor(sizeKey)[0] ?? null);
                 buyWithCoins(it, { size: chosen as any });
               }}
               style={({ pressed }) => ({
@@ -1210,15 +1063,11 @@ export default function Shop() {
                 opacity: pressed ? 0.9 : 1,
               })}
             >
-              <Text style={{ color: color, fontWeight: "800" }}>
-                {(it.priceCoins ?? 0).toLocaleString()} coins
-              </Text>
-            </Pressable>
+              <Text style={{ color: color, fontWeight: "800" }}>{(it.priceCoins ?? 0).toLocaleString()} coins</Text>
 
             <Pressable
               onPress={() => {
-                const chosen =
-                  sizeCtl.get(sizeKey) || (getSizesFor(sizeKey)[0] ?? null);
+                const chosen = sizeCtl.get(sizeKey) || (getSizesFor(sizeKey)[0] ?? null);
                 void moneyBuy(it, { size: chosen as any });
               }}
               style={({ pressed }) => ({
@@ -1232,11 +1081,8 @@ export default function Shop() {
                 opacity: pressed ? 0.9 : 1,
               })}
             >
-              <Text style={{ color: color, fontWeight: "800" }}>
-                ${it.priceUSD?.toFixed(0)}
-              </Text>
-            </Pressable>
-          </View>
+              <Text style={{ color: color, fontWeight: "800" }}>${it.priceUSD?.toFixed(0)}</Text>
+              </Pressable>
         )}
       </Card>
     );
@@ -1260,36 +1106,29 @@ export default function Shop() {
           marginTop: 16,
         }}
       >
-        {/* Header */}
         <View
           data-shop-top-header
           style={{
             flexDirection: "row",
             alignItems: "center",
             justifyContent: "space-between",
-            paddingHorizontal: 0,
+            paddingHorizontal: 16,
             paddingTop: 8,
             marginBottom: 12,
           }}
         >
-          <Pressable onPress={handleDevTap} hitSlop={10}>
-            <Text
+          <Pressable onPress={handleDevTap}><Text
               style={{
                 color: tokens.titleText as any,
                 fontSize: 24,
                 fontWeight: "800",
-                textShadowColor: tokens.isDark
-                  ? "transparent"
-                  : (tokens.softShadow as any),
-                textShadowOffset: tokens.isDark
-                  ? undefined
-                  : ({ width: 0, height: 1 } as any),
+                textShadowColor: tokens.isDark ? "transparent" : (tokens.softShadow as any),
+                textShadowOffset: tokens.isDark ? undefined : ({ width: 0, height: 1 } as any),
                 textShadowRadius: tokens.isDark ? 0 : 2,
               }}
             >
               Shop
-            </Text>
-          </Pressable>
+            </Text></Pressable>
 
           <View
             style={{
@@ -1302,38 +1141,22 @@ export default function Shop() {
               borderColor: tokens.pillBorder as any,
               backgroundColor: tokens.pillBg as any,
               shadowColor: "#000",
-              shadowOpacity: tokens.isDark ? 0.12 : 0.1,
+              shadowOpacity: tokens.isDark ? 0.12 : 0.10,
               shadowRadius: 6,
               shadowOffset: { width: 0, height: 2 },
               elevation: 2,
             }}
           >
-            <Text
-              style={{
-                color: tokens.pillText as any,
-                fontSize: 14,
-                fontWeight: "800",
-              }}
-            >
+            <Text style={{ color: tokens.pillText as any, fontSize: 14, fontWeight: "800" }}>
               {(coins ?? 0).toLocaleString()} coins
             </Text>
           </View>
         </View>
+        </View>
 
-        {/* Quick rows */}
         <View data-quick-rows style={{ marginBottom: 16 }}>
-          <QuickRow
-            title="Themes"
-            items={THEMES_MENU}
-            onEquip={quickEquip}
-            onBuy={quickBuy}
-          />
-          <QuickRow
-            title="Cursors"
-            items={CURSORS_MENU}
-            onEquip={quickEquip}
-            onBuy={quickBuy}
-          />
+          <QuickRow title="Themes" items={THEMES_MENU} onEquip={quickEquip} onBuy={quickBuy} />
+          <QuickRow title="Cursors" items={CURSORS_MENU} onEquip={quickEquip} onBuy={quickBuy} />
         </View>
 
         <Section title="Plushies">
@@ -1366,17 +1189,9 @@ export default function Shop() {
           {groups.coin_pack.map((it) => renderItem(it, CATEGORY_BORDER.coin_pack))}
         </Section>
 
-        {/* Orders */}
         {orders.length > 0 && (
           <View style={{ marginTop: 24 }}>
-            <Text
-              style={{
-                color: tokens.titleText as any,
-                fontSize: 16,
-                fontWeight: "800",
-                marginBottom: 10,
-              }}
-            >
+            <Text style={{ color: tokens.titleText as any, fontSize: 16, fontWeight: "800", marginBottom: 10 }}>
               Orders
             </Text>
 
@@ -1389,98 +1204,27 @@ export default function Shop() {
                   borderRadius: 12,
                   padding: 12,
                   marginBottom: 8,
-                  backgroundColor: tokens.isDark
-                    ? "rgba(255,255,255,0.03)"
-                    : "rgba(255,255,255,0.60)",
+                  backgroundColor: tokens.isDark ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.60)",
                 }}
               >
-                <Text style={{ color: tokens.text as any, fontWeight: "700" }}>
-                  {o.title}
+                <Text style={{ color: tokens.text as any, fontWeight: "700" }}>{o.title}</Text>
+                <Text style={{ color: tokens.text as any, fontSize: 12, marginTop: 16 }}>
+                  {new Date(o.createdAt).toLocaleString()} · {o.status.toUpperCase()}
                 </Text>
-                <Text
-                  style={{
-                    color: tokens.text as any,
-                    fontSize: 12,
-                    marginTop: 6,
-                    opacity: 0.85,
-                  }}
-                >
-                  {new Date(o.createdAt).toLocaleString()} ·{" "}
-                  {o.status.toUpperCase()}
-                </Text>
-              </View>
+              </Pressable>
             ))}
           </View>
         )}
+      
+{__DEV__ && (
+  <View style={{ padding: 16 }}>
+    <Text style={{ color: "#aaa", marginBottom: 8 }}>DEV COINS</Text>
+    <Pressable onPress={devCoins.add10k}><Text>+10k</Text></Pressable>
+    <Pressable onPress={devCoins.add50k}><Text>+50k</Text></Pressable>
+    <Pressable onPress={devCoins.add100k}><Text>+100k</Text></Pressable>
+)}
+</ScrollView>
 
-        {/* Optional DEV buttons */}
-        {__DEV__ && (
-          <View style={{ paddingVertical: 16 }}>
-            <Text style={{ color: tokens.text as any, opacity: 0.7, marginBottom: 8 }}>
-              DEV COINS
-            </Text>
-
-            <View style={{ flexDirection: "row", columnGap: 10 }}>
-              <Pressable
-                onPress={() => {
-                  const next = (coinsRef.current ?? 0) + 10_000;
-                  setCoins(next);
-                  void saveCoins(next);
-                }}
-                style={{
-                  paddingVertical: 10,
-                  paddingHorizontal: 12,
-                  borderRadius: 12,
-                  borderWidth: 1,
-                  borderColor: tokens.border as any,
-                }}
-              >
-                <Text style={{ color: tokens.text as any, fontWeight: "800" }}>
-                  +10k
-                </Text>
-              </Pressable>
-
-              <Pressable
-                onPress={() => {
-                  const next = (coinsRef.current ?? 0) + 50_000;
-                  setCoins(next);
-                  void saveCoins(next);
-                }}
-                style={{
-                  paddingVertical: 10,
-                  paddingHorizontal: 12,
-                  borderRadius: 12,
-                  borderWidth: 1,
-                  borderColor: tokens.border as any,
-                }}
-              >
-                <Text style={{ color: tokens.text as any, fontWeight: "800" }}>
-                  +50k
-                </Text>
-              </Pressable>
-
-              <Pressable
-                onPress={() => {
-                  const next = (coinsRef.current ?? 0) + 100_000;
-                  setCoins(next);
-                  void saveCoins(next);
-                }}
-                style={{
-                  paddingVertical: 10,
-                  paddingHorizontal: 12,
-                  borderRadius: 12,
-                  borderWidth: 1,
-                  borderColor: tokens.border as any,
-                }}
-              >
-                <Text style={{ color: tokens.text as any, fontWeight: "800" }}>
-                  +100k
-                </Text>
-              </Pressable>
-            </View>
-          </View>
-        )}
-      </ScrollView>
 
       <InsufficientCoinsModal
         visible={showInsufficient}
@@ -1504,7 +1248,9 @@ export default function Shop() {
           try {
             router.replace("/(tabs)/shop");
           } catch {}
-          requestAnimationFrame(() => scrollRef.current?.scrollTo({ y: 0, animated: true }));
+          requestAnimationFrame(() =>
+            scrollRef.current?.scrollTo({ y: 0, animated: true })
+          );
         }}
       />
     </LinearGradient>
