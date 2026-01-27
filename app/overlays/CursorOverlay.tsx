@@ -7,8 +7,11 @@ import { useTheme } from "../context/ThemeContext";
 // Canonicalize a cursor ID (matches Shop and context)
 function canonId(id?: string | null) {
   if (!id) return "";
-  let v = id.replace(/-/g, "_").toLowerCase();
-  if (!v.includes(":") && v.startsWith("cursor")) v = "cursor:" + v.replace(/^cursor[_:]?/, "");
+  let v = String(id).trim().toLowerCase();
+  v = v.replace(/-/g, "_");
+  if (!v.includes(":") && v.startsWith("cursor")) {
+    v = "cursor:" + v.replace(/^cursor[_:]?/, "");
+  }
   if (v === "cursor:startrail") v = "cursor:star_trail";
   return v;
 }
@@ -27,7 +30,9 @@ function useMousePos() {
     w.addEventListener("mousemove", onMove, { passive: true });
 
     return () => {
-      try { w.removeEventListener("mousemove", onMove); } catch {}
+      try {
+        w.removeEventListener("mousemove", onMove);
+      } catch {}
     };
   }, []);
 
@@ -35,9 +40,9 @@ function useMousePos() {
 }
 
 export default function CursorOverlay() {
-  const { cursorId: rawCursorId } = useCursor?.() || {};
-  const { tokens } = useTheme?.() || {};
-  const cursorId = canonId(rawCursorId);
+  const { cursorId } = useCursor();
+  const { tokens } = useTheme();
+  const canon = canonId(cursorId);
 
   const isWeb =
     Platform.OS === "web" &&
@@ -49,8 +54,7 @@ export default function CursorOverlay() {
   // Hide native cursor ONLY for orb & star_trail.
   useEffect(() => {
     if (!isWeb) return;
-    const shouldHide =
-      cursorId === "cursor:orb" || cursorId === "cursor:star_trail";
+    const shouldHide = canon === "cursor:orb" || canon === "cursor:star_trail";
     try {
       document.body.style.cursor = shouldHide ? "none" : "auto";
     } catch {}
@@ -59,11 +63,11 @@ export default function CursorOverlay() {
         document.body.style.cursor = "auto";
       } catch {}
     };
-  }, [isWeb, cursorId]);
+  }, [isWeb, canon]);
 
   if (!isWeb) return null;
 
-  if (cursorId === "cursor:glow") {
+  if (canon === "cursor:glow") {
     // Show a neon halo (pointer still visible)
     const size = 28;
     const halo: React.CSSProperties = {
@@ -74,8 +78,8 @@ export default function CursorOverlay() {
       height: size,
       borderRadius: size,
       pointerEvents: "none",
-      boxShadow: `0 0 12px ${tokens?.accent ?? "#00e5ff"}, 0 0 28px ${
-        tokens?.accent ?? "#00e5ff"
+      boxShadow: `0 0 12px ${tokens.accent}, 0 0 28px ${
+        tokens.accent
       }`,
       opacity: 0.85,
       zIndex: 2147483647,
@@ -84,7 +88,7 @@ export default function CursorOverlay() {
     return <div style={halo} />;
   }
 
-  if (cursorId === "cursor:orb") {
+  if (canon === "cursor:orb") {
     const size = 36;
     const style: React.CSSProperties = {
       position: "fixed",
@@ -95,9 +99,9 @@ export default function CursorOverlay() {
       borderRadius: size,
       pointerEvents: "none",
       background: `radial-gradient(circle at 30% 30%, ${
-        tokens?.accent ?? "#00e5ff"
+        tokens.accent
       }, transparent 60%)`,
-      boxShadow: tokens?.glow ?? "0 0 18px rgba(0,229,255,0.35)",
+      boxShadow: tokens.glow,
       opacity: 0.95,
       zIndex: 2147483647,
       mixBlendMode: "screen",
@@ -105,7 +109,7 @@ export default function CursorOverlay() {
     return <div style={style} />;
   }
 
-  if (cursorId === "cursor:star_trail") {
+  if (canon === "cursor:star_trail") {
     return <NeonStarTrail />;
   }
 
@@ -200,7 +204,9 @@ function NeonStarTrail() {
     };
     raf = w.requestAnimationFrame(loop);
     return () => {
-      try { w.cancelAnimationFrame(raf); } catch {}
+      try {
+        w.cancelAnimationFrame(raf);
+      } catch {}
     };
   }, [isWeb]);
 
