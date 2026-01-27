@@ -10,6 +10,8 @@ import {
   LayoutAnimation,
   Animated,
   Modal,
+  Dimensions,
+  PanResponder,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -43,6 +45,8 @@ import * as InsufficientCoinsModalNS from "../components/InsufficientCoinsModal"
 const InsufficientCoinsModal =
   (InsufficientCoinsModalNS as any).default ??
   (InsufficientCoinsModalNS as any).InsufficientCoinsModal;
+
+import { COMPANIONS } from "../_lib/companionsCatalog";
 
 import { startCheckout } from "../utils/checkout";
 import { startCoinCheckout } from "../utils/coinCheckout";
@@ -101,11 +105,6 @@ function canonId(raw: string | null | undefined): string {
   // theme aliases (underscore/hyphen versions)
   if (v === "theme:black_gold") v = "theme:blackgold";
   if (v === "theme:neon_purple") v = "theme:neonpurple";
-
-  // 🔴 alias long names to the short IDs used in quick row / context
-  if (v === "theme:crimson_dream") v = "theme:crimson";
-  if (v === "theme:emerald_wave") v = "theme:emerald";
-  if (v === "theme:silver_frost") v = "theme:silver";
 
   return v;
 }
@@ -493,6 +492,74 @@ export default function Shop() {
   const cursorPulse = useRef(new Animated.Value(0)).current;
 
   const coinsRef = useRef<number>(coins ?? 0);
+
+  // companions strip bounce state
+  const [activeCompanionId, setActiveCompanionId] = useState<string | null>(
+    null
+  );
+  const companionAnim = useRef(new Animated.Value(0)).current;
+  const companionScale = companionAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 1.12],
+  });
+
+  // floating companion (bottom-right, draggable, with multiple tap actions)
+  const [floatingCompanion, setFloatingCompanion] = useState<any | null>(null);
+  const windowDims = Dimensions.get("window");
+  const FLOAT_SIZE = 80;
+
+  const floatBasePos = useRef({
+    x: windowDims.width - FLOAT_SIZE - 16,
+    y: windowDims.height - FLOAT_SIZE - 160, // higher so it's not cut by tab bar
+  });
+  const floatPos = useRef(
+    new Animated.ValueXY({
+      x: floatBasePos.current.x,
+      y: floatBasePos.current.y,
+    })
+  ).current;
+
+  const floatScale = useRef(new Animated.Value(1)).current;
+  const floatHop = useRef(new Animated.Value(0)).current;
+  const floatShake = useRef(new Animated.Value(0)).current;
+  const floatRotate = useRef(new Animated.Value(0)).current;
+
+  const floatRotation = floatRotate.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0deg", "360deg"],
+  });
+
+  const clickModeRef = useRef(0);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        // nothing, we use basePos + dx/dy
+      },
+      onPanResponderMove: (_evt, gesture) => {
+        const newX = floatBasePos.current.x + gesture.dx;
+        const newY = floatBasePos.current.y + gesture.dy;
+        floatPos.setValue({ x: newX, y: newY });
+      },
+      onPanResponderRelease: (_evt, gesture) => {
+        const minX = 8;
+        const maxX = windowDims.width - FLOAT_SIZE - 8;
+        const minY = 60;
+        const maxY = windowDims.height - FLOAT_SIZE - 40;
+
+        let newX = floatBasePos.current.x + gesture.dx;
+        let newY = floatBasePos.current.y + gesture.dy;
+
+        newX = Math.min(Math.max(newX, minX), maxX);
+        newY = Math.min(Math.max(newY, minY), maxY);
+
+        floatBasePos.current = { x: newX, y: newY };
+        floatPos.setValue({ x: newX, y: newY });
+      },
+    })
+  ).current;
 
   // dev cheat tap state
   const devTapCount = useRef(0);
@@ -890,6 +957,11 @@ export default function Shop() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [purchases, equippedCursor]);
 
+  const ownedCompanions = useMemo(
+    () => COMPANIONS.filter((c: any) => isOwned(c.id)),
+    [purchases]
+  );
+
   function quickEquip(id: string, kind: "theme" | "cursor") {
     const cid = canonId(id);
     const isCurrentlyEq =
@@ -1083,8 +1155,158 @@ export default function Shop() {
     await equipCursorImmediate(it.id, { source: "card_equip" });
   }
 
+  /* ------------------------- Companion trigger logic ---------------------- */
+
+  function wiggleAction() {
+    floatScale.setValue(1);
+    Animated.sequence([
+      Animated.timing(floatScale, {
+        toValue: 1.18,
+        duration: 120,
+        useNativeDriver: true,
+      }),
+      Animated.timing(floatScale, {
+        toValue: 0.95,
+        duration: 110,
+        useNativeDriver: true,
+      }),
+      Animated.timing(floatScale, {
+        toValue: 1.05,
+        duration: 110,
+        useNativeDriver: true,
+      }),
+      Animated.timing(floatScale, {
+        toValue: 1,
+        duration: 110,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }
+
+  function hopAction() {
+    floatHop.setValue(0);
+    Animated.sequence([
+      Animated.timing(floatHop, {
+        toValue: -14,
+        duration: 120,
+        useNativeDriver: true,
+      }),
+      Animated.timing(floatHop, {
+        toValue: 0,
+        duration: 160,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }
+
+  function spinAction() {
+    floatRotate.setValue(0);
+    Animated.sequence([
+      Animated.timing(floatRotate, {
+        toValue: 1,
+        duration: 260,
+        useNativeDriver: true,
+      }),
+      Animated.timing(floatRotate, {
+        toValue: 0,
+        duration: 0,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }
+
+  function shimmyAction() {
+    floatShake.setValue(0);
+    Animated.sequence([
+      Animated.timing(floatShake, {
+        toValue: 1,
+        duration: 70,
+        useNativeDriver: true,
+      }),
+      Animated.timing(floatShake, {
+        toValue: -1,
+        duration: 70,
+        useNativeDriver: true,
+      }),
+      Animated.timing(floatShake, {
+        toValue: 0.5,
+        duration: 60,
+        useNativeDriver: true,
+      }),
+      Animated.timing(floatShake, {
+        toValue: 0,
+        duration: 60,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }
+
+  function handleFloatingPress() {
+    clickModeRef.current = (clickModeRef.current + 1) % 4;
+    const mode = clickModeRef.current;
+
+    track("companion_click", { mode, id: floatingCompanion?.id });
+
+    switch (mode) {
+      case 0:
+        wiggleAction();
+        break;
+      case 1:
+        hopAction();
+        break;
+      case 2:
+        spinAction();
+        break;
+      case 3:
+        shimmyAction();
+        break;
+      default:
+        wiggleAction();
+    }
+  }
+
+  function triggerCompanion(id: string) {
+    const comp = COMPANIONS.find((c: any) => c.id === id);
+    if (comp) {
+      setFloatingCompanion(comp);
+
+      // reset starting position bottom-right, but above tab bar
+      const dims = Dimensions.get("window");
+      const startX = dims.width - FLOAT_SIZE - 16;
+      const startY = dims.height - FLOAT_SIZE - 160;
+
+      floatBasePos.current = { x: startX, y: startY };
+      floatPos.setValue({ x: startX, y: startY });
+
+      wiggleAction();
+    }
+
+    setActiveCompanionId(id);
+    companionAnim.setValue(0);
+    track("companion_triggered", { id });
+
+    Animated.sequence([
+      Animated.timing(companionAnim, {
+        toValue: 1,
+        duration: 160,
+        useNativeDriver: true,
+      }),
+      Animated.timing(companionAnim, {
+        toValue: 0,
+        duration: 220,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setActiveCompanionId(null);
+    });
+  }
+
   /* ----------------------------- Render helpers --------------------------- */
-  const renderItem = (it: any, color: string, equipable?: "theme" | "cursor") => {
+  const renderItem = (
+    it: any,
+    color: string,
+    equipable?: "theme" | "cursor"
+  ) => {
     const owned = isOwned(it.id);
 
     const showAlt =
@@ -1458,7 +1680,7 @@ export default function Shop() {
           style={{
             flexDirection: "row",
             alignItems: "center",
-            justifyContent: "space_between",
+            justifyContent: "space-between",
           }}
         >
           <Pressable onPress={handleDevTap}>
@@ -1509,6 +1731,93 @@ export default function Shop() {
           </View>
         </View>
 
+        {/* Owned companions quick access strip */}
+        {ownedCompanions.length > 0 && (
+          <View style={{ marginTop: 16, marginBottom: 12 }}>
+            <Text
+              style={{
+                color: tokens.titleText as any,
+                fontSize: 14,
+                fontWeight: "800",
+                marginBottom: 6,
+              }}
+            >
+              My Companions
+            </Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+            >
+              {ownedCompanions.map((it: any) => {
+                const isActive = activeCompanionId === it.id;
+                const scale = isActive ? companionScale : 1;
+
+                return (
+                  <Animated.View
+                    key={it.id}
+                    style={{
+                      transform: [{ scale }],
+                      marginRight: 12,
+                    }}
+                  >
+                    <Pressable
+                      onPress={() => triggerCompanion(it.id)}
+                      style={({ pressed }) => ({
+                        width: 72,
+                        height: 72,
+                        borderRadius: 16,
+                        borderWidth: 1,
+                        borderColor: CATEGORY_BORDER.tangibles,
+                        overflow: "hidden",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        backgroundColor: pressed
+                          ? "rgba(96,165,250,0.24)"
+                          : tokens.isDark
+                          ? "rgba(15,23,42,0.9)"
+                          : "rgba(255,255,255,0.9)",
+                      })}
+                    >
+                      {it.image ? (
+                        <Image
+                          source={it.image}
+                          style={{ width: "100%", height: "100%" }}
+                          resizeMode="contain"
+                        />
+                      ) : (
+                        <Text
+                          style={{
+                            color: tokens.text as any,
+                            fontSize: 11,
+                            fontWeight: "700",
+                            textAlign: "center",
+                            paddingHorizontal: 4,
+                          }}
+                          numberOfLines={2}
+                        >
+                          {it.title}
+                        </Text>
+                      )}
+                    </Pressable>
+                    <Text
+                      style={{
+                        color: tokens.text as any,
+                        fontSize: 11,
+                        fontWeight: "600",
+                        marginTop: 4,
+                        maxWidth: 80,
+                      }}
+                      numberOfLines={1}
+                    >
+                      {it.shortLabel || it.title}
+                    </Text>
+                  </Animated.View>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
+
         <View data-quick-rows style={{ marginVertical: 16 }}>
           <QuickRow
             title="Themes"
@@ -1540,6 +1849,119 @@ export default function Shop() {
           {groups.tangibles.map((it) =>
             renderItem(it, CATEGORY_BORDER.tangibles)
           )}
+        </Section>
+
+        {/* Companions – coin-only, digital pals (25k default) */}
+        <Section title="Companions">
+          {COMPANIONS.map((it: any) => {
+            const owned = isOwned(it.id);
+            const src = it.image;
+            const priceCoins = it.priceCoins ?? 25_000;
+
+            return (
+              <Card
+                key={it.id}
+                color={CATEGORY_BORDER.tangibles}
+              >
+                {src ? (
+                  <Pressable
+                    style={{
+                      width: "100%",
+                      height: 110,
+                      borderRadius: 10,
+                      overflow: "hidden",
+                      borderWidth: 1,
+                      borderColor: CATEGORY_BORDER.tangibles,
+                      marginBottom: 8,
+                    }}
+                  >
+                    <Image
+                      source={src}
+                      style={{ width: "100%", height: "100%" }}
+                      resizeMode="contain"
+                    />
+                  </Pressable>
+                ) : null}
+
+                <Text
+                  style={{
+                    color: tokens.text as any,
+                    fontSize: 14,
+                    fontWeight: "700",
+                    textAlign: "center",
+                  }}
+                >
+                  {it.title}
+                </Text>
+
+                {it.desc ? (
+                  <Text
+                    style={{
+                      color: tokens.text as any,
+                      fontSize: 12,
+                      lineHeight: 16,
+                      textAlign: "center",
+                      marginTop: 16,
+                      paddingHorizontal: 8,
+                    }}
+                    numberOfLines={3}
+                  >
+                    {it.desc}
+                  </Text>
+                ) : null}
+
+                <View style={{ height: 8 }} />
+
+                {owned ? (
+                  <Pressable
+                    disabled
+                    style={{
+                      alignItems: "center",
+                      paddingVertical: 10,
+                      borderRadius: 10,
+                      borderWidth: 1,
+                      borderColor: tokens.border as any,
+                      backgroundColor: tokens.isDark
+                        ? "rgba(148,163,184,0.16)"
+                        : "rgba(148,163,184,0.12)",
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: tokens.text as any,
+                        fontWeight: "800",
+                      }}
+                    >
+                      Owned ✓
+                    </Text>
+                  </Pressable>
+                ) : (
+                  <Pressable
+                    onPress={() => buyWithCoins({ ...it, priceCoins })}
+                    style={({ pressed }) => ({
+                      alignItems: "center",
+                      paddingVertical: 10,
+                      borderRadius: 10,
+                      borderWidth: 1,
+                      borderColor: CATEGORY_BORDER.tangibles,
+                      backgroundColor: pressed
+                        ? "rgba(96,165,250,0.15)"
+                        : "rgba(96,165,250,0.08)",
+                    })}
+                  >
+                    <Text
+                      style={{
+                        color: CATEGORY_BORDER.tangibles,
+                        fontWeight: "800",
+                      }}
+                    >
+                      {priceCoins.toLocaleString()} coins
+                    </Text>
+                  </Pressable>
+                )}
+              </Card>
+            );
+          })}
         </Section>
 
         <View
@@ -1641,6 +2063,79 @@ export default function Shop() {
           </View>
         )}
       </ScrollView>
+
+      {/* Floating companion in bottom-right, draggable & animated */}
+      {floatingCompanion && (
+        <Animated.View
+          {...panResponder.panHandlers}
+          style={{
+            position: "absolute",
+            left: floatPos.x,
+            top: floatPos.y,
+            width: FLOAT_SIZE,
+            height: FLOAT_SIZE,
+            transform: [
+              { scale: floatScale },
+              { translateY: floatHop },
+              {
+                translateX: floatShake.interpolate({
+                  inputRange: [-1, 0, 1],
+                  outputRange: [-5, 0, 5],
+                }),
+              },
+              { rotate: floatRotation },
+            ],
+            borderRadius: 24,
+            overflow: "hidden",
+            borderWidth: 1,
+            borderColor: CATEGORY_BORDER.tangibles,
+            backgroundColor: tokens.isDark
+              ? "rgba(15,23,42,0.95)"
+              : "rgba(255,255,255,0.95)",
+            alignItems: "center",
+            justifyContent: "center",
+            shadowColor: "#000",
+            shadowOpacity: 0.25,
+            shadowRadius: 10,
+            shadowOffset: { width: 0, height: 4 },
+            elevation: 6,
+          }}
+        >
+          <Pressable
+            onPress={handleFloatingPress}
+            style={{ flex: 1, width: "100%", height: "100%" }}
+          >
+            {floatingCompanion.image ? (
+              <Image
+                source={floatingCompanion.image}
+                style={{ width: "100%", height: "100%" }}
+                resizeMode="contain"
+              />
+            ) : (
+              <View
+                style={{
+                  flex: 1,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  paddingHorizontal: 4,
+                }}
+              >
+                <Text
+                  style={{
+                    color: tokens.text as any,
+                    fontSize: 11,
+                    fontWeight: "700",
+                    textAlign: "center",
+                  }}
+                  numberOfLines={2}
+                >
+                  {floatingCompanion.title}
+                </Text>
+              </View>
+            )}
+          </Pressable>
+        </Animated.View>
+      )}
 
       <InsufficientCoinsModal
         visible={showInsufficient}
