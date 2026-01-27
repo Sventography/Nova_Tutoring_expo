@@ -1,153 +1,127 @@
+// app/components/QuickRow.tsx
 import React from "react";
-import { View, Text, Pressable, FlatList } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { View, Text, Pressable, ScrollView } from "react-native";
+import { useTheme } from "../context/ThemeContext";
 
-export type QuickItem = {
+type QuickItem = {
   id: string;
   name: string;
   kind: "theme" | "cursor";
-  owned: boolean;
-  equipped: boolean;
+  owned?: boolean;
+  equipped?: boolean;
 };
 
-function Card({
-  it,
-  onEquip,
-  onBuy,
-}: {
-  it: QuickItem;
-  onEquip: (id: string, kind: "theme" | "cursor") => void;
-  onBuy?: (id: string) => void;
-}) {
-  const iconName = it.kind === "theme" ? "color-palette" : "sparkles";
-  return (
-    <View
-      style={{
-        width: 140,
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: it.equipped ? "#5cfcc8" : "rgba(0,229,255,0.5)",
-        backgroundColor: "rgba(0,229,255,0.08)",
-        padding: 12,
-        marginRight: 12,
-      }}
-    >
-      <View
-        style={{
-          height: 80,
-          borderRadius: 12,
-          backgroundColor: "rgba(0,0,0,0.25)",
-          alignItems: "center",
-          justifyContent: "center",
-          marginBottom: 8,
-        }}
-      >
-        <Ionicons name={iconName} size={28} color="#00e5ff" />
-        {!it.owned && (
-          <Ionicons
-            name="lock-closed"
-            size={18}
-            color="#8aa7af"
-            style={{ position: "absolute", top: 8, right: 8 }}
-          />
-        )}
-      </View>
-
-      <Text numberOfLines={1} style={{ color: "#e6f7ff", fontSize: 14, fontWeight: "700" }}>
-        {it.name}
-      </Text>
-
-      {it.owned ? (
-        <Pressable
-          onPress={() => onEquip(it.id, it.kind)}
-          style={({ pressed }) => ({
-            marginTop: 8,
-            paddingVertical: 8,
-            borderRadius: 10,
-            borderWidth: 1,
-            borderColor: "#5cfcc8",
-            backgroundColor: pressed ? "rgba(92,252,200,0.15)" : "rgba(92,252,200,0.08)",
-          })}
-        >
-          <Text style={{ color: "#5cfcc8", fontWeight: "800", textAlign: "center" }}>
-            {it.equipped ? "Equipped" : "Equip"}
-          </Text>
-        </Pressable>
-      ) : onBuy ? (
-        <Pressable
-          onPress={() => onBuy(it.id)}
-          style={({ pressed }) => ({
-            marginTop: 8,
-            paddingVertical: 8,
-            borderRadius: 10,
-            borderWidth: 1,
-            borderColor: "#00e5ff",
-            backgroundColor: pressed ? "rgba(0,229,255,0.18)" : "rgba(0,229,255,0.10)",
-          })}
-        >
-          <Text style={{ color: "#00e5ff", fontWeight: "800", textAlign: "center" }}>Unlock</Text>
-        </Pressable>
-      ) : (
-        <View
-          style={{
-            marginTop: 8,
-            paddingVertical: 8,
-            borderRadius: 10,
-            borderWidth: 1,
-            borderColor: "rgba(255,255,255,0.15)",
-            backgroundColor: "rgba(255,255,255,0.05)",
-          }}
-        >
-          <Text style={{ color: "#8aa7af", fontWeight: "700", textAlign: "center" }}>Locked</Text>
-        </View>
-      )}
-    </View>
-  );
-}
-
-export default function QuickRow({
-  title,
-  items,
-  onEquip,
-  onBuy,
-}: {
+type Props = {
   title: string;
   items: QuickItem[];
   onEquip: (id: string, kind: "theme" | "cursor") => void;
-  onBuy?: (id: string) => void;
-}) {
+  onBuy: (id: string) => void;
+};
+
+export default function QuickRow({ title, items, onEquip, onBuy }: Props) {
+  const { tokens } = useTheme();
+
   return (
-    <View style={{ marginBottom: 16 }}>
-      <View
+    <View style={{ marginBottom: 12 }}>
+      <Text
         style={{
-          flexDirection: "row",
-          justifyContent: "space-between",
-          alignItems: "center",
-          paddingHorizontal: 16,
-          marginBottom: 8,
+          color: tokens.titleText as any,
+          fontSize: 14,
+          fontWeight: "800",
+          marginBottom: 6,
         }}
       >
-        <Text style={{ color: "#cfeaf0", fontSize: 18, fontWeight: "800" }}>
-          {title}
-        </Text>
-      </View>
+        {title}
+      </Text>
 
-      <FlatList
-        data={items}
-        keyExtractor={(it) => it.id}
-        renderItem={({ item }) => <Card it={item} onEquip={onEquip} onBuy={onBuy} />}
-        horizontal
-        // important bits for scrolling in vertical ScrollView (native + web)
-        scrollEnabled
-        nestedScrollEnabled
-        showsHorizontalScrollIndicator={false}
-        style={{ flexGrow: 0 }}                 // prevents taking vertical space
-        contentContainerStyle={{ paddingHorizontal: 16, paddingRight: 4 }} // small tail pad so last card isn't clipped
-        // performance niceties:
-        initialNumToRender={6}
-        maxToRenderPerBatch={10}
-        windowSize={5}
-      />
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        {items.map((item) => {
+          const owned = !!item.owned;
+          const equipped = !!item.equipped;
+
+          return (
+            <View
+              key={item.id}
+              style={{
+                borderWidth: 1,
+                borderColor: tokens.accent,
+                borderRadius: 14,
+                padding: 10,
+                marginRight: 10,
+                minWidth: 130,
+                alignItems: "center",
+                backgroundColor: tokens.isDark
+                  ? "rgba(0,0,0,0.4)"
+                  : "rgba(255,255,255,0.7)",
+              }}
+            >
+              <Text
+                style={{
+                  color: tokens.cardText,
+                  fontWeight: "700",
+                  marginBottom: 6,
+                  textAlign: "center",
+                }}
+                numberOfLines={2}
+              >
+                {item.name}
+              </Text>
+
+              {owned ? (
+                <Pressable
+                  onPress={() => onEquip(item.id, item.kind)}
+                  style={({ pressed }) => ({
+                    paddingVertical: 6,
+                    paddingHorizontal: 12,
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    borderColor: tokens.accent,
+                    backgroundColor: pressed
+                      ? tokens.isDark
+                        ? "rgba(92,252,200,0.2)"
+                        : "rgba(62,211,162,0.2)"
+                      : tokens.isDark
+                      ? "rgba(92,252,200,0.12)"
+                      : "rgba(62,211,162,0.12)",
+                  })}
+                >
+                  <Text
+                    style={{
+                      color: tokens.cardText,
+                      fontWeight: "800",
+                    }}
+                  >
+                    {equipped ? "Equipped ✓" : "Equip"}
+                  </Text>
+                </Pressable>
+              ) : (
+                <Pressable
+                  onPress={() => onBuy(item.id)}
+                  style={({ pressed }) => ({
+                    paddingVertical: 6,
+                    paddingHorizontal: 12,
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    borderColor: tokens.muted as any,
+                    backgroundColor: pressed
+                      ? "rgba(148,163,184,0.15)"
+                      : "transparent",
+                  })}
+                >
+                  <Text
+                    style={{
+                      color: tokens.muted as any,
+                      fontWeight: "700",
+                    }}
+                  >
+                    🔒 Unlock
+                  </Text>
+                </Pressable>
+              )}
+            </View>
+          );
+        })}
+      </ScrollView>
     </View>
   );
 }
