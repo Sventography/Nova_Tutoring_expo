@@ -4,14 +4,22 @@ import { Platform } from "react-native";
 import { useCursor } from "../context/CursorContext";
 import { useTheme } from "../context/ThemeContext";
 
-// Canonicalize a cursor ID (matches Shop and context)
+// Canonicalize a cursor ID (matches Shop + Context)
 function canonId(id?: string | null) {
   if (!id) return "";
   let v = String(id).trim().toLowerCase();
   v = v.replace(/-/g, "_");
+
+  // prefix cursor:
   if (!v.includes(":") && v.startsWith("cursor")) {
     v = "cursor:" + v.replace(/^cursor[_:]?/, "");
   }
+
+  // alias bare names too (just in case)
+  if (v === "glow") v = "cursor:glow";
+  if (v === "orb") v = "cursor:orb";
+  if (v === "startrail" || v === "star_trail") v = "cursor:star_trail";
+
   if (v === "cursor:startrail") v = "cursor:star_trail";
   return v;
 }
@@ -51,43 +59,67 @@ export default function CursorOverlay() {
 
   const pos = useMousePos();
 
-  // Hide native cursor ONLY for orb & star_trail.
+  // IMPORTANT: we NEVER hide the native cursor anymore.
+  // We just draw pretty things on top.
   useEffect(() => {
     if (!isWeb) return;
-    const shouldHide = canon === "cursor:orb" || canon === "cursor:star_trail";
     try {
-      document.body.style.cursor = shouldHide ? "none" : "auto";
+      document.body.style.cursor = "auto";
     } catch {}
     return () => {
       try {
         document.body.style.cursor = "auto";
       } catch {}
     };
-  }, [isWeb, canon]);
+  }, [isWeb]);
 
   if (!isWeb) return null;
 
+  /* ---------- GLOW CURSOR: bright halo around the mouse pointer ---------- */
   if (canon === "cursor:glow") {
-    // Show a neon halo (pointer still visible)
-    const size = 28;
-    const halo: React.CSSProperties = {
+    const outerSize = 46;
+    const innerSize = 22;
+
+    const outer: React.CSSProperties = {
       position: "fixed",
-      left: pos.x - size / 2,
-      top: pos.y - size / 2,
-      width: size,
-      height: size,
-      borderRadius: size,
+      left: pos.x - outerSize / 2,
+      top: pos.y - outerSize / 2,
+      width: outerSize,
+      height: outerSize,
+      borderRadius: outerSize,
       pointerEvents: "none",
-      boxShadow: `0 0 12px ${tokens.accent}, 0 0 28px ${
-        tokens.accent
-      }`,
-      opacity: 0.85,
+      border: `1px solid ${tokens.accent}`,
+      background:
+        "radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%)",
+      boxShadow: `0 0 14px ${tokens.accent}, 0 0 30px ${tokens.accent}, 0 0 60px ${tokens.accent}`,
+      opacity: 0.9,
       zIndex: 2147483647,
       mixBlendMode: "screen",
     };
-    return <div style={halo} />;
+
+    const inner: React.CSSProperties = {
+      position: "fixed",
+      left: pos.x - innerSize / 2,
+      top: pos.y - innerSize / 2,
+      width: innerSize,
+      height: innerSize,
+      borderRadius: innerSize,
+      pointerEvents: "none",
+      background: tokens.accent as any,
+      opacity: 0.25,
+      zIndex: 2147483647,
+      mixBlendMode: "screen",
+    };
+
+    return (
+      <>
+        <div style={outer} />
+        <div style={inner} />
+      </>
+    );
   }
 
+  /* ---------------- ORB CURSOR: glowing blob that follows ---------------- */
   if (canon === "cursor:orb") {
     const size = 36;
     const style: React.CSSProperties = {
@@ -100,7 +132,7 @@ export default function CursorOverlay() {
       pointerEvents: "none",
       background: `radial-gradient(circle at 30% 30%, ${
         tokens.accent
-      }, transparent 60%)`,
+      }, transparent 65%)`,
       boxShadow: tokens.glow,
       opacity: 0.95,
       zIndex: 2147483647,
@@ -109,6 +141,7 @@ export default function CursorOverlay() {
     return <div style={style} />;
   }
 
+  /* ----------------- STAR TRAIL: same sparkling tail as before ----------- */
   if (canon === "cursor:star_trail") {
     return <NeonStarTrail />;
   }
@@ -153,7 +186,8 @@ function NeonStarTrail() {
     if (dist >= spawnEveryPx) {
       const count = Math.max(1, Math.min(3, Math.floor(dist / spawnEveryPx)));
       const now =
-        typeof performance !== "undefined" && typeof performance.now === "function"
+        typeof performance !== "undefined" &&
+        typeof performance.now === "function"
           ? performance.now()
           : Date.now();
       const newStars: Star[] = [];
@@ -195,7 +229,8 @@ function NeonStarTrail() {
     let raf = 0;
     const loop = () => {
       const now =
-        typeof performance !== "undefined" && typeof performance.now === "function"
+        typeof performance !== "undefined" &&
+        typeof performance.now === "function"
           ? performance.now()
           : Date.now();
       setStars((prev) => prev.filter((s) => now - s.bornAt < s.life));
@@ -216,7 +251,8 @@ function NeonStarTrail() {
     <>
       {stars.map((s) => {
         const now =
-          typeof performance !== "undefined" && typeof performance.now === "function"
+          typeof performance !== "undefined" &&
+          typeof performance.now === "function"
             ? performance.now()
             : Date.now();
         const age = now - s.bornAt;

@@ -90,9 +90,42 @@ function canonId(raw: string | null | undefined): string {
   // normalize separators
   v = v.replace(/-/g, "_");
 
-  // ensure prefix
   if (!v.includes(":")) {
-    if (v.startsWith("cursor")) {
+    // known cursors (handles old saves like "glow", "cursor_glow", etc.)
+    if (v === "glow" || v === "cursor_glow") {
+      v = "cursor:glow";
+    } else if (v === "orb" || v === "cursor_orb") {
+      v = "cursor:orb";
+    } else if (
+      v === "startrail" ||
+      v === "star_trail" ||
+      v === "cursor_startrail" ||
+      v === "cursor_star_trail"
+    ) {
+      v = "cursor:star_trail";
+    }
+    // known themes
+    else if (
+      [
+        "neon",
+        "starry",
+        "pink",
+        "dark",
+        "mint",
+        "glitter",
+        "blackgold",
+        "black_gold",
+        "crimson",
+        "emerald",
+        "neonpurple",
+        "neon_purple",
+        "silver",
+      ].includes(v)
+    ) {
+      v = "theme:" + v;
+    }
+    // generic "cursorX" / "themeX" strings
+    else if (v.startsWith("cursor")) {
       v = "cursor:" + v.replace(/^cursor[_:]?/, "");
     } else if (v.startsWith("theme")) {
       v = "theme:" + v.replace(/^theme[_:]?/, "");

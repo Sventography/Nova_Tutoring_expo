@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Alert,
   Platform,
+  Modal,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
@@ -24,6 +25,7 @@ export default function AccountScreen() {
     updateProfile,
     signIn,
     signOut,
+    deleteAccount,
   } = useUser() as any;
 
   const { tokens } = useTheme();
@@ -31,6 +33,7 @@ export default function AccountScreen() {
   const [name, setName] = useState("");
   const [contactEmail, setContactEmail] = useState("");
   const [avatarLocal, setAvatarLocal] = useState<string | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const currentAvatar = useMemo(() => {
     return (
@@ -41,7 +44,13 @@ export default function AccountScreen() {
       user?.imageUrl ??
       null
     );
-  }, [user?.avatarUri, user?.avatarUrl, user?.avatar, user?.photoURL, user?.imageUrl]);
+  }, [
+    user?.avatarUri,
+    user?.avatarUrl,
+    user?.avatar,
+    user?.photoURL,
+    user?.imageUrl,
+  ]);
 
   useEffect(() => {
     if (ready) {
@@ -114,7 +123,10 @@ export default function AccountScreen() {
       showToast("Avatar updated");
     } catch (e: any) {
       console.log("onPickAvatar error:", e);
-      Alert.alert("Avatar error", e?.message ? String(e.message) : String(e));
+      Alert.alert(
+        "Avatar error",
+        e?.message ? String(e.message) : String(e)
+      );
     }
   }
 
@@ -167,6 +179,30 @@ export default function AccountScreen() {
     showToast("Signed out");
   }
 
+  function onDeleteAccountPress() {
+    setShowDeleteModal(true);
+  }
+
+  async function handleConfirmDelete() {
+    try {
+      await deleteAccount?.();
+
+      // Clear local UI state
+      setName("");
+      setContactEmail("");
+      setAvatarLocal(null);
+      setShowDeleteModal(false);
+
+      showToast("Account deleted");
+    } catch (e: any) {
+      setShowDeleteModal(false);
+      Alert.alert(
+        "Error",
+        e?.message ? String(e.message) : "Could not delete account"
+      );
+    }
+  }
+
   return (
     <LinearGradient colors={tokens.gradient} style={{ flex: 1 }}>
       <View style={S.wrap}>
@@ -195,12 +231,16 @@ export default function AccountScreen() {
           </Pressable>
 
           <View style={{ flex: 1 }}>
-            <Text style={[S.label, { color: tokens.cardText }]}>Username</Text>
+            <Text style={[S.label, { color: tokens.cardText }]}>
+              Username
+            </Text>
             <TextInput
               value={name}
               onChangeText={setName}
               placeholder="Your name"
-              placeholderTextColor={tokens.isDark ? "#678a94" : "#6b7685"}
+              placeholderTextColor={
+                tokens.isDark ? "#678a94" : "#6b7685"
+              }
               style={[
                 S.input,
                 {
@@ -211,7 +251,12 @@ export default function AccountScreen() {
               ]}
             />
 
-            <Text style={[S.label, { color: tokens.cardText, marginTop: 10 }]}>
+            <Text
+              style={[
+                S.label,
+                { color: tokens.cardText, marginTop: 10 },
+              ]}
+            >
               Contact Email (optional)
             </Text>
             <TextInput
@@ -219,8 +264,12 @@ export default function AccountScreen() {
               onChangeText={setContactEmail}
               placeholder="you@example.com"
               autoCapitalize="none"
-              keyboardType={Platform.OS === "web" ? "default" : "email-address"}
-              placeholderTextColor={tokens.isDark ? "#678a94" : "#6b7685"}
+              keyboardType={
+                Platform.OS === "web" ? "default" : "email-address"
+              }
+              placeholderTextColor={
+                tokens.isDark ? "#678a94" : "#6b7685"
+              }
               style={[
                 S.input,
                 {
@@ -261,7 +310,9 @@ export default function AccountScreen() {
             ]}
             onPress={onQuickLogin}
           >
-            <Text style={[S.btnt, { color: tokens.text }]}>Sign In</Text>
+            <Text style={[S.btnt, { color: tokens.text }]}>
+              Sign In
+            </Text>
           </Pressable>
 
           <Pressable
@@ -276,8 +327,39 @@ export default function AccountScreen() {
             ]}
             onPress={onSignOut}
           >
-            <Text style={[S.btnt, { color: tokens.text }]}>Sign Out</Text>
+            <Text style={[S.btnt, { color: tokens.text }]}>
+              Sign Out
+            </Text>
           </Pressable>
+        </View>
+
+        <View style={{ marginTop: 16 }}>
+          <Pressable
+            style={[
+              S.btn,
+              {
+                borderColor: "#ff2b2b",
+                backgroundColor: tokens.isDark
+                  ? "rgba(255,43,43,0.18)"
+                  : "rgba(255,43,43,0.10)",
+              },
+            ]}
+            onPress={onDeleteAccountPress}
+          >
+            <Text style={[S.btnt, { color: tokens.text }]}>
+              Delete Account
+            </Text>
+          </Pressable>
+          <Text
+            style={{
+              marginTop: 6,
+              fontSize: 11,
+              color: tokens.cardText,
+            }}
+          >
+            This will remove your profile and all saved local data on this
+            device.
+          </Text>
         </View>
 
         <View
@@ -295,11 +377,81 @@ export default function AccountScreen() {
           </Text>
           <Text style={[S.v, { color: tokens.text }]}>
             Contact Email: {user?.contactEmail || "—"}
-          </Text><Text style={[S.v, { color: tokens.text }]}>
+          </Text>
+          <Text style={[S.v, { color: tokens.text }]}>
             Avatar: {currentAvatar ? "Set" : "None"}
           </Text>
         </View>
       </View>
+
+      {/* Delete Account confirmation modal */}
+      <Modal
+        visible={showDeleteModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowDeleteModal(false)}
+      >
+        <View style={S.modalBackdrop}>
+          <View
+            style={[
+              S.modalCard,
+              {
+                backgroundColor: tokens.card,
+                borderColor: "#ff2b2b",
+              },
+            ]}
+          >
+            <Text style={[S.modalTitle, { color: tokens.text }]}>
+              Delete account?
+            </Text>
+            <Text style={[S.modalBody, { color: tokens.cardText }]}>
+              Are you sure? This will delete your name, avatar, coins,
+              achievements, purchases, and all other saved data on this
+              device. This cannot be undone.
+            </Text>
+
+            <View style={S.modalRowBtns}>
+              <Pressable
+                style={[
+                  S.modalBtn,
+                  {
+                    borderColor: tokens.border,
+                    backgroundColor: tokens.isDark
+                      ? "rgba(255,255,255,0.06)"
+                      : "rgba(0,0,0,0.04)",
+                  },
+                ]}
+                onPress={() => setShowDeleteModal(false)}
+              >
+                <Text
+                  style={[S.btnt, { color: tokens.text }]}
+                >
+                  Cancel
+                </Text>
+              </Pressable>
+
+              <Pressable
+                style={[
+                  S.modalBtn,
+                  {
+                    borderColor: "#ff2b2b",
+                    backgroundColor: tokens.isDark
+                      ? "rgba(255,43,43,0.25)"
+                      : "rgba(255,43,43,0.18)",
+                  },
+                ]}
+                onPress={handleConfirmDelete}
+              >
+                <Text
+                  style={[S.btnt, { color: tokens.text }]}
+                >
+                  Delete
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </LinearGradient>
   );
 }
@@ -346,4 +498,43 @@ export const S = StyleSheet.create({
   },
   k: { marginBottom: 6 },
   v: { fontWeight: "600", marginTop: 2 },
+
+  // Modal styles
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+  modalCard: {
+    width: "100%",
+    maxWidth: 420,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    padding: 18,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  modalBody: {
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: "center",
+  },
+  modalRowBtns: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 18,
+  },
+  modalBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 12,
+    alignItems: "center",
+    borderWidth: 1.5,
+  },
 });
