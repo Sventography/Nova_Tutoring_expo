@@ -26,7 +26,7 @@ const ACCOUNT_ROUTE = "/(tabs)/account";
 
 export default function HeaderBar() {
   const insets = useSafeAreaInsets();
-  const topPad = (Platform.OS === "web" ? 12 : ((insets?.top ?? 0) + 6));
+  const topPad = Platform.OS === "web" ? 12 : (insets?.top ?? 0) + 6;
 
   const router = useRouter();
 
@@ -36,7 +36,6 @@ export default function HeaderBar() {
   const { loaded, count, todayChecked, markToday } =
     (useStreak() || {}) as any;
 
-  // Helpful debug (you can remove later)
   useEffect(() => {
     try {
       console.log("HeaderBar useUser() shape:", userCtx);
@@ -230,18 +229,10 @@ export default function HeaderBar() {
 
         <Pressable onPress={markToday} hitSlop={hit} style={S.streakPill}>
           <Text style={S.streakText}>{streakLabel}</Text>
-          <Text
-            style={[
-              S.streakHint,
-              { color: todayChecked ? "#8fe39a" : "#b0c9cf" },
-            ]}
-          >
-            {todayChecked ? "✓" : "+"}
-          </Text>
         </Pressable>
       </Pressable>
 
-      {/* Right: FX, Share, Donate */}
+      {/* Right: FX + tiny heart donate button */}
       <View style={S.right}>
         <Pressable
           onPress={() => {
@@ -261,7 +252,11 @@ export default function HeaderBar() {
         </Pressable>
 
         <Animated.View style={{ transform: [{ scale: pulse }] }}>
-          <Pressable onPress={openDonate} accessibilityRole="button" accessibilityLabel="Donate">
+          <Pressable
+            onPress={openDonate}
+            accessibilityRole="button"
+            accessibilityLabel="Donate"
+          >
             <View style={{ position: "relative" }}>
               <Animated.View style={[S.donateGlow, { opacity: glowOpacity }]} />
               <LinearGradient
@@ -273,10 +268,8 @@ export default function HeaderBar() {
                 <Ionicons
                   name="heart"
                   size={heartSize}
-                  color="#9ad8ff"
-                  style={{ marginRight: 6 }}
+                  color="#ff9abf"
                 />
-                <Text style={S.donateText}>Donate</Text>
               </LinearGradient>
             </View>
           </Pressable>
@@ -361,8 +354,7 @@ const S = StyleSheet.create({
     backgroundColor: "rgba(255,165,0,0.08)",
     marginLeft: 6,
   },
-  streakText: { color: "#ffa500", fontWeight: "800", marginRight: 4 },
-  streakHint: { fontSize: 12, fontWeight: "600" },
+  streakText: { color: "#ffa500", fontWeight: "800" },
 
   iconBtn: {
     paddingVertical: 6,
@@ -377,12 +369,11 @@ const S = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 6,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: "rgba(0,229,255,0.35)",
   },
-  donateText: { color: "#cfeff6", fontWeight: "800" },
   donateGlow: {
     position: "absolute",
     left: -4,
