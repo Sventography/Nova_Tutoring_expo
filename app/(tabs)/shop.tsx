@@ -1,6 +1,5 @@
 // app/(tabs)/shop.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useDevCoins } from "../utils/devCoins";
 import {
   View,
   Text,
@@ -135,14 +134,9 @@ function canonId(raw: string | null | undefined): string {
   // cursor aliases
   if (v === "cursor:startrail") v = "cursor:star_trail";
 
-  // theme aliases (underscore/hyphen versions & long-name variants)
+  // theme aliases (underscore/hyphen versions)
   if (v === "theme:black_gold") v = "theme:blackgold";
   if (v === "theme:neon_purple") v = "theme:neonpurple";
-
-  // NEW: unify long names with their base color IDs
-  if (v === "theme:crimson_dream") v = "theme:crimson";
-  if (v === "theme:emerald_wave") v = "theme:emerald";
-  if (v === "theme:silver_frost") v = "theme:silver";
 
   return v;
 }
@@ -497,8 +491,6 @@ export default function Shop() {
   const { tokens, setThemeById } = useTheme();
   const router = useRouter();
 
-  const devCoins = useDevCoins();
-
   const cursorApi = (() => {
     try {
       return useCursor();
@@ -733,9 +725,9 @@ export default function Shop() {
         });
 
         if (it.category === "theme")
-          equipThemeImmediate(cid, { source: "deeplink" });
+          equipThemeImmediate(cid || it.id, { source: "deeplink" });
         if (it.category === "cursor")
-          void equipCursorImmediate(cid, { source: "deeplink" });
+          void equipCursorImmediate(cid || it.id, { source: "deeplink" });
         return;
       }
 
@@ -1400,37 +1392,31 @@ export default function Shop() {
           </Text>
         ) : null}
 
-        {(() => {
-          const sizeKeyInner = sizeKey;
-          return getSizesFor(sizeKeyInner).length > 0 ||
-            (it.category === "clothing" && !getSizesFor(sizeKeyInner).length)
-            ? (
-              <View style={{ marginTop: 10 }}>
-                <Text
-                  style={{
-                    color: tokens.text as any,
-                    fontSize: 12,
-                    marginBottom: 6,
-                  }}
-                >
-                  Size
-                </Text>
-                <SizeSelector
-                  sizes={sizes}
-                  value={selected}
-                  onChange={(s: any) => {
-                    sizeCtl.set(sizeKeyInner, s);
-                    track("shop_size_change", {
-                      sku: it.id,
-                      sizeKey: sizeKeyInner,
-                      size: s,
-                    });
-                  }}
-                />
-              </View>
-            )
-            : null;
-        })()}
+        {sizes.length > 0 ? (
+          <View style={{ marginTop: 10 }}>
+            <Text
+              style={{
+                color: tokens.text as any,
+                fontSize: 12,
+                marginBottom: 6,
+              }}
+            >
+              Size
+            </Text>
+            <SizeSelector
+              sizes={sizes}
+              value={selected}
+              onChange={(s: any) => {
+                sizeCtl.set(sizeKey, s);
+                track("shop_size_change", {
+                  sku: it.id,
+                  sizeKey,
+                  size: s,
+                });
+              }}
+            />
+          </View>
+        ) : null}
 
         <View style={{ height: 8 }} />
 
@@ -1457,7 +1443,9 @@ export default function Shop() {
                   : "rgba(62,211,162,0.08)",
               })}
             >
-              <Text style={{ color: tokens.text as any, fontWeight: "800" }}>
+              <Text
+                style={{ color: tokens.text as any, fontWeight: "800" }}
+              >
                 {equipped ? "Equipped ✓" : "Equip"}
               </Text>
             </Pressable>
@@ -1482,7 +1470,9 @@ export default function Shop() {
                   opacity: pressed ? 0.9 : 1,
                 })}
               >
-                <Text style={{ color: color, fontWeight: "800" }}>
+                <Text
+                  style={{ color: color, fontWeight: "800" }}
+                >
                   {(it.priceCoins ?? 0).toLocaleString()} coins
                 </Text>
               </Pressable>
@@ -1500,7 +1490,9 @@ export default function Shop() {
                   opacity: pressed ? 0.9 : 1,
                 })}
               >
-                <Text style={{ color: color, fontWeight: "800" }}>
+                <Text
+                  style={{ color: color, fontWeight: "800" }}
+                >
                   ${it.priceUSD?.toFixed(0)}
                 </Text>
               </Pressable>
@@ -1529,7 +1521,9 @@ export default function Shop() {
                   : "rgba(62,211,162,0.08)",
               })}
             >
-              <Text style={{ color: tokens.text as any, fontWeight: "800" }}>
+              <Text
+                style={{ color: tokens.text as any, fontWeight: "800" }}
+              >
                 {equipped ? "Equipped ✓" : "Equip"}
               </Text>
             </Pressable>
@@ -1554,7 +1548,9 @@ export default function Shop() {
                   opacity: pressed ? 0.9 : 1,
                 })}
               >
-                <Text style={{ color: color, fontWeight: "800" }}>
+                <Text
+                  style={{ color: color, fontWeight: "800" }}
+                >
                   {(it.priceCoins ?? 0).toLocaleString()} coins
                 </Text>
               </Pressable>
@@ -1572,7 +1568,9 @@ export default function Shop() {
                   opacity: pressed ? 0.9 : 1,
                 })}
               >
-                <Text style={{ color: color, fontWeight: "800" }}>
+                <Text
+                  style={{ color: color, fontWeight: "800" }}
+                >
                   ${it.priceUSD?.toFixed(0)}
                 </Text>
               </Pressable>
@@ -1607,7 +1605,8 @@ export default function Shop() {
             <Pressable
               onPress={() => {
                 const chosen =
-                  sizeCtl.get(sizeKey) || (getSizesFor(sizeKey)[0] ?? null);
+                  sizeCtl.get(sizeKey) ||
+                  (getSizesFor(sizeKey)[0] ?? null);
                 buyWithCoins(it, { size: chosen as any });
               }}
               style={({ pressed }) => ({
@@ -1629,7 +1628,8 @@ export default function Shop() {
             <Pressable
               onPress={() => {
                 const chosen =
-                  sizeCtl.get(sizeKey) || (getSizesFor(sizeKey)[0] ?? null);
+                  sizeCtl.get(sizeKey) ||
+                  (getSizesFor(sizeKey)[0] ?? null);
                 void moneyBuy(it, { size: chosen as any });
               }}
               style={({ pressed }) => ({
@@ -1679,32 +1679,23 @@ export default function Shop() {
             justifyContent: "space-between",
           }}
         >
-          {/* Shop title – tap to add dev coins in dev builds */}
-          <Pressable
-            onPress={() => {
-              if (__DEV__ && devCoins && typeof devCoins.add50k === "function") {
-                devCoins.add50k();
-              }
+          {/* Shop title – no dev tap cheat */}
+          <Text
+            style={{
+              color: tokens.titleText as any,
+              fontSize: 24,
+              fontWeight: "800",
+              textShadowColor: tokens.isDark
+                ? "transparent"
+                : (tokens.softShadow as any),
+              textShadowOffset: tokens.isDark
+                ? undefined
+                : ({ width: 0, height: 1 } as any),
+              textShadowRadius: tokens.isDark ? 0 : 2,
             }}
-            hitSlop={8}
           >
-            <Text
-              style={{
-                color: tokens.titleText as any,
-                fontSize: 24,
-                fontWeight: "800",
-                textShadowColor: tokens.isDark
-                  ? "transparent"
-                  : (tokens.softShadow as any),
-                textShadowOffset: tokens.isDark
-                  ? undefined
-                  : ({ width: 0, height: 1 } as any),
-                textShadowRadius: tokens.isDark ? 0 : 2,
-              }}
-            >
-              Shop
-            </Text>
-          </Pressable>
+            Shop
+          </Text>
 
           <View
             style={{
@@ -1748,7 +1739,10 @@ export default function Shop() {
             >
               My Companions
             </Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+            >
               {ownedCompanions.map((it: any) => {
                 const isActive = activeCompanionId === it.id;
                 const scale = isActive ? companionScale : 1;
@@ -1860,7 +1854,10 @@ export default function Shop() {
             const priceCoins = it.priceCoins ?? 25_000;
 
             return (
-              <Card key={it.id} color={CATEGORY_BORDER.tangibles}>
+              <Card
+                key={it.id}
+                color={CATEGORY_BORDER.tangibles}
+              >
                 {src ? (
                   <Pressable
                     style={{
@@ -2043,21 +2040,6 @@ export default function Shop() {
                 </Text>
               </View>
             ))}
-          </View>
-        )}
-
-        {__DEV__ && devCoins && (
-          <View style={{ padding: 16 }}>
-            <Text style={{ color: "#aaa", marginBottom: 8 }}>DEV COINS</Text>
-            <Pressable onPress={devCoins.add10k}>
-              <Text style={{ color: "#ccc", marginBottom: 4 }}>+10k</Text>
-            </Pressable>
-            <Pressable onPress={devCoins.add50k}>
-              <Text style={{ color: "#ccc", marginBottom: 4 }}>+50k</Text>
-            </Pressable>
-            <Pressable onPress={devCoins.add100k}>
-              <Text style={{ color: "#ccc", marginBottom: 4 }}>+100k</Text>
-            </Pressable>
           </View>
         )}
       </ScrollView>
