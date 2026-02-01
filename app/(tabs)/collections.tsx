@@ -1,3 +1,4 @@
+// app/(tabs)/collections.tsx
 import React, { useMemo, useRef, useState } from "react";
 import {
   View,
@@ -343,6 +344,22 @@ export default function CollectionsTab() {
         {totals.cards} cards
       </Text>
 
+      {/* ❤️ banner based on total saved cards */}
+      <Text
+        style={[
+          S.note,
+          { color: tokens.cardText, marginBottom: 4 },
+        ]}
+      >
+        {totals.cards === 0
+          ? "No saved cards yet — tap the bookmark on any flashcard to send cards here."
+          : totals.cards < 10
+          ? "Great start — you’ve begun building your personal deck."
+          : totals.cards < 30
+          ? "Nice work — your collection is really taking shape."
+          : "You’ve built a powerful deck. Keep going!"}
+      </Text>
+
       {/* 🔎 Search */}
       <TextInput
         value={query}
@@ -378,7 +395,8 @@ export default function CollectionsTab() {
               { color: tokens.cardText },
             ]}
           >
-            No sets yet — add a card below to create your first set.
+            No saved cards yet — tap the bookmark on any flashcard
+            to send cards here, or create your first set below.
           </Text>
         }
         renderItem={({ item }) => {
@@ -552,7 +570,11 @@ export default function CollectionsTab() {
             <CardRow
               item={item}
               onRemove={() =>
-                active && coll.removeCard(item.id, active.id)
+                active &&
+                coll.removeCard(
+                  String(active.id),
+                  String(item.id)
+                )
               }
               tokens={tokens}
             />

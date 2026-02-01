@@ -7,9 +7,11 @@ import {
   Pressable,
   StyleSheet,
   TextInput,
+  Modal,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
 
 import type { Card } from "../_lib/flashcards";
 import {
@@ -23,15 +25,25 @@ import { useAchievements } from "../context/AchievementsContext";
 
 type Topic = { id: string; title: string; count?: number };
 
+function normalizeTitle(title: string) {
+  return String(title || "").trim().toLowerCase();
+}
+
 function TopicChip({
   t,
   active,
   onPress,
+  savedCount = 0,
 }: {
   t: Topic;
   active: boolean;
   onPress: () => void;
+  savedCount?: number;
 }) {
+  const countLine = `${t.count ?? 0} cards${
+    savedCount > 0 ? ` • ${savedCount} saved` : ""
+  }`;
+
   return (
     <Pressable
       onPress={onPress}
@@ -41,7 +53,7 @@ function TopicChip({
         {t.title}
       </Text>
       <Text style={[styles.topicCount, active && styles.topicCountActive]}>
-        {t.count ?? 0} cards
+        {countLine}
       </Text>
     </Pressable>
   );
@@ -78,6 +90,7 @@ function CardRow({
 }
 
 export default function Flashcards() {
+  const router = useRouter();
   const { tokens } = useTheme();
   const gradient = tokens.gradient;
   const headerTextColor = tokens.text;
@@ -87,7 +100,10 @@ export default function Flashcards() {
   const inputBorder = tokens.border;
   const placeholderColor = tokens.isDark ? "#678a94" : "#6b7685";
 
-  const { addCard } = useCollections();
+  const coll = useCollections();
+  const { addCard } = coll;
+  const collectionTopics = (coll.topics as any) ?? [];
+
   const { onFlashcardSaved } = useAchievements();
 
   const allTopics = useMemo<Topic[]>(() => getTopics(), []);
@@ -97,6 +113,32 @@ export default function Flashcards() {
   );
   const [cards, setCards] = useState<Card[]>(
     allTopics[0]?.id ? getTwentyCardsById(allTopics[0].id) : []
+  );
+
+  const [showSavedModal, setShowSavedModal] = useState(false);
+
+  // 🔢 Build a map: topic title -> saved card count from Collections (best-effort)
+  const savedCountsByTitle = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const t of collectionTopics) {
+      const key = normalizeTitle(t?.title ?? "");
+      const n = (t?.cards?.length ?? 0) as number;
+      if (!key) continue;
+      map.set(key, (map.get(key) ?? 0) + n);
+    }
+    return map;
+  }, [collectionTopics]);
+
+  // 🧮 Global totals for banner text
+  const collectionTotals = useMemo(
+    () => ({
+      sets: collectionTopics.length,
+      cards: collectionTopics.reduce(
+        (n: number, t: any) => n + (t?.cards?.length ?? 0),
+        0
+      ),
+    }),
+    [collectionTopics]
   );
 
   const filteredTopics = useMemo(() => {
@@ -123,6 +165,7 @@ export default function Flashcards() {
       try {
         await addCard(card);
         if (onFlashcardSaved) onFlashcardSaved();
+        setShowSavedModal(true);
       } catch (e) {
         console.warn("[flashcards] addCard failed", e);
       }
@@ -130,13 +173,45 @@ export default function Flashcards() {
     [addCard, onFlashcardSaved]
   );
 
+  // Friendly text about saved sets/cards
+  const savedSummaryText =
+    collectionTotals.cards === 0
+      ? "No saved cards yet — your Collections tab will fill up as you bookmark cards."
+      : collectionTotals.sets === 1
+      ? `You have ${collectionTotals.cards} saved card${
+          collectionTotals.cards === 1 ? "" : "s"
+        } in 1 set in Collections.`
+      : `You have ${collectionTotals.cards} saved card${
+          collectionTotals.cards === 1 ? "" : "s"
+        } across ${collectionTotals.sets} sets in Collections.`;
+
   return (
     <LinearGradient colors={gradient} style={{ flex: 1 }}>
       {/* header */}
       <View style={styles.header}>
-        <Text style={[styles.headerTitle, { color: headerTextColor }]}>
-          Flashcards
-        </Text>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.headerTitle, { color: headerTextColor }]}>
+            Flashcards
+          </Text>
+          <Text
+            style={{
+              marginTop: 2,
+              fontSize: 12,
+              color: tokens.cardText,
+            }}
+          >
+            Tap a card to flip. Tap the bookmark to save it to Collections.
+          </Text>
+          <Text
+            style={{
+              marginTop: 2,
+              fontSize: 11,
+              color: tokens.cardText,
+            }}
+          >
+            {savedSummaryText}
+          </Text>
+        </View>
       </View>
 
       {/* search + topics */}
@@ -178,13 +253,18 @@ export default function Flashcards() {
           keyExtractor={(t) => t.id}
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingVertical: 4 }}
-          renderItem={({ item }) => (
-            <TopicChip
-              t={item}
-              active={item.id === activeId}
-              onPress={() => handleSelectTopic(item.id)}
-            />
-          )}
+          renderItem={({ item }) => {
+            const key = normalizeTitle(item.title);
+            const savedCount = savedCountsByTitle.get(key) ?? 0;
+            return (
+              <TopicChip
+                t={item}
+                active={item.id === activeId}
+                onPress={() => handleSelectTopic(item.id)}
+                savedCount={savedCount}
+              />
+            );
+          }}
         />
       </View>
 
@@ -209,6 +289,96 @@ export default function Flashcards() {
           contentContainerStyle={{ paddingBottom: 24 }}
         />
       </View>
+
+      {/* Saved modal */}
+      <Modal
+        visible={showSavedModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowSavedModal(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View
+            style={[
+              styles.modalCard,
+              {
+                backgroundColor: tokens.card,
+                borderColor: tokens.accent,
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.modalTitle,
+                { color: tokens.text },
+              ]}
+            >
+              Flashcard Saved
+            </Text>
+            <Text
+              style={[
+                styles.modalBody,
+                { color: tokens.cardText },
+              ]}
+            >
+              This flashcard has been saved to the Collections tab.
+            </Text>
+            <View
+              style={{
+                flexDirection: "row",
+                marginTop: 16,
+              }}
+            >
+              <Pressable
+                style={[
+                  styles.modalBtn,
+                  {
+                    borderColor: tokens.border,
+                    backgroundColor: tokens.isDark
+                      ? "rgba(255,255,255,0.04)"
+                      : "rgba(0,0,0,0.03)",
+                  },
+                ]}
+                onPress={() => setShowSavedModal(false)}
+              >
+                <Text
+                  style={[
+                    styles.modalBtnTxt,
+                    { color: tokens.text },
+                  ]}
+                >
+                  Close
+                </Text>
+              </Pressable>
+              <View style={{ width: 10 }} />
+              <Pressable
+                style={[
+                  styles.modalBtn,
+                  {
+                    borderColor: tokens.accent,
+                    backgroundColor: tokens.isDark
+                      ? "rgba(0,229,255,0.18)"
+                      : "rgba(0,229,255,0.12)",
+                  },
+                ]}
+                onPress={() => {
+                  setShowSavedModal(false);
+                  router.push("/collections");
+                }}
+              >
+                <Text
+                  style={[
+                    styles.modalBtnTxt,
+                    { color: tokens.text },
+                  ]}
+                >
+                  Go to Collections
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </LinearGradient>
   );
 }
@@ -290,5 +460,38 @@ const styles = StyleSheet.create({
     marginLeft: 10,
     alignSelf: "center",
     padding: 4,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 24,
+  },
+  modalCard: {
+    width: "100%",
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1.5,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    marginBottom: 6,
+  },
+  modalBody: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  modalBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    alignItems: "center",
+  },
+  modalBtnTxt: {
+    fontSize: 14,
+    fontWeight: "700",
   },
 });
