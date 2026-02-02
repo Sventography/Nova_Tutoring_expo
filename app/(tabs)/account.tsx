@@ -193,21 +193,14 @@ export default function AccountScreen() {
 
   async function handleConfirmDelete() {
     try {
-      // 1) Nuke all persisted data (user, coins, purchases, achievements, etc.)
       await deleteAccount?.();
-
-      // 2) Reset coins in memory so the UI updates immediately
       setCoins?.(0);
-
-      // 3) Clear local Account-screen state
       setName("");
       setContactEmail("");
       setAvatarLocal(null);
       setShowDeleteModal(false);
-
       showToast("Account deleted");
 
-      // 4) "Restart" experience: send them back to the splash / home screen
       try {
         router.replace("/");
       } catch {
@@ -225,8 +218,12 @@ export default function AccountScreen() {
   return (
     <LinearGradient colors={tokens.gradient} style={{ flex: 1 }}>
       <View style={S.wrap}>
-        <Text style={[S.h1, { color: tokens.accent }]}>Account</Text>
+        {/* Header */}
+        <Text style={[S.h1, { color: tokens.accent }]}>
+          Account Settings
+        </Text>
 
+        {/* Avatar + fields */}
         <View style={S.row}>
           <Pressable
             onPress={onPickAvatar}
@@ -301,6 +298,7 @@ export default function AccountScreen() {
           </View>
         </View>
 
+        {/* Top buttons */}
         <View style={S.rowBtns}>
           <Pressable
             style={[
@@ -352,22 +350,21 @@ export default function AccountScreen() {
           </Pressable>
         </View>
 
-        <View style={{ marginTop: 16 }}>
+        {/* 🔴 DELETE ACCOUNT – slimmer, like the other buttons */}
+        <View style={{ marginTop: 24 }}>
           <Pressable
             style={[
-              S.btn,
+              S.deleteBtn,
               {
                 borderColor: "#ff2b2b",
                 backgroundColor: tokens.isDark
-                  ? "rgba(255,43,43,0.18)"
-                  : "rgba(255,43,43,0.10)",
+                  ? "rgba(255,43,43,0.28)"
+                  : "rgba(255,43,43,0.18)",
               },
             ]}
             onPress={onDeleteAccountPress}
           >
-            <Text style={[S.btnt, { color: tokens.text }]}>
-              Delete Account
-            </Text>
+            <Text style={S.deleteText}>Delete Account</Text>
           </Pressable>
           <Text
             style={{
@@ -381,6 +378,7 @@ export default function AccountScreen() {
           </Text>
         </View>
 
+        {/* Current info card */}
         <View
           style={[
             S.card,
@@ -581,6 +579,7 @@ export const S = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 12,
     alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1.5,
   },
   btnt: { fontWeight: "800" },
@@ -592,6 +591,21 @@ export const S = StyleSheet.create({
   },
   k: { marginBottom: 6 },
   v: { fontWeight: "600", marginTop: 2 },
+
+  // Delete Account – like other buttons but full-width + red
+  deleteBtn: {
+    width: "100%",
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+  },
+  deleteText: {
+    fontWeight: "900",
+    fontSize: 16,
+    color: "#000000",
+  },
 
   // Privacy link
   privacyRow: {

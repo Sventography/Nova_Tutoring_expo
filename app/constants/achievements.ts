@@ -30,25 +30,12 @@ export const SUBJECTS = ["math", "science", "history", "language"]; // add more 
 export function buildAchievements() {
   const list: Achievement[] = [];
 
-  // ────────── ONBOARDING ──────────
-  list.push(
-    make(
-      "first_login",
-      "Welcome!",
-      25,
-      "onboarding",
-      "First successful login."
-    )
-  );
-  list.push(
-    make(
-      "set_avatar",
-      "New Look!",
-      25,
-      "onboarding",
-      "You set a profile avatar."
-    )
-  );
+  // ────────── ONBOARDING (removed) ──────────
+  // We used to have:
+  //   - first_login ("Welcome!")
+  //   - set_avatar ("New Look!")
+  // Those are removed so the app doesn’t show onboarding items
+  // that don’t match the current flow anymore.
 
   // ────────── ASK milestones (1→1000) ──────────
   for (let n of [

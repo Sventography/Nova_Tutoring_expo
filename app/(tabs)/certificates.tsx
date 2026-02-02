@@ -4,7 +4,6 @@ import React, {
   useState,
   useEffect,
   useCallback,
-  useEffect as ReactUseEffect,
 } from "react";
 import {
   View,
@@ -27,8 +26,11 @@ import { useFocusEffect } from "expo-router";
 import { captureRef } from "react-native-view-shot";
 
 type SavedImage = { title: string; image: string; fileUri: string };
+
+// Allow both name and username; data may have either
 type CertificateMeta = {
-  name: string;
+  name?: string;
+  username?: string;
   quizTitle: string;
   scorePct: number;
   dateISO?: string;
@@ -60,6 +62,34 @@ export default function CertificatesScreen() {
     rec: CertificateMeta;
     mode: "share" | "print";
   } | null>(null);
+
+  // Helper: get the name we should actually show/use on the cert
+  // 🔧 CHANGED: now always prefers current user first, THEN record
+  const getDisplayName = useCallback(
+    (rec: CertificateMeta | null): string => {
+      // 1) Prefer current logged-in user
+      const fromUser =
+        (user?.username && user.username.trim()) ||
+        (user?.name && user.name.trim());
+      if (fromUser) {
+        return fromUser;
+      }
+
+      // 2) Fall back to whatever is stored on the record
+      if (rec) {
+        const fromRec =
+          (rec.name && rec.name.trim()) ||
+          (rec.username && rec.username.trim());
+        if (fromRec) {
+          return fromRec;
+        }
+      }
+
+      // 3) Final fallback
+      return "Nova Student";
+    },
+    [user]
+  );
 
   const refreshUnlocked = useCallback(async () => {
     try {
@@ -221,7 +251,7 @@ export default function CertificatesScreen() {
     }
   }
 
-  // NEW: defer capture to an effect so the hidden view is fully mounted
+  // Defer capture to an effect so the hidden view is fully mounted
   useEffect(() => {
     if (!pendingExport) return;
 
@@ -281,7 +311,9 @@ export default function CertificatesScreen() {
 
   // Called by buttons
   function exportRealCert(rec: CertificateMeta, mode: "share" | "print") {
-    setPendingExport({ rec, mode });
+    // Make sure the record we pass along has a solid name
+    const displayName = getDisplayName(rec);
+    setPendingExport({ rec: { ...rec, name: displayName }, mode });
   }
 
   // PDF: don't fetch/download on native; just open the URL
@@ -294,7 +326,7 @@ export default function CertificatesScreen() {
       const url =
         base +
         "/api/certificate.pdf?user=" +
-        encodeURIComponent(rec.name) +
+        encodeURIComponent(getDisplayName(rec)) +
         "&topic=" +
         encodeURIComponent(rec.quizTitle) +
         "&score=" +
@@ -403,42 +435,45 @@ export default function CertificatesScreen() {
           No unlocked certificates yet. Finish a quiz with 80%+ to unlock one.
         </Text>
       ) : (
-        unlocked.map((rec, i) => (
-          <View
-            key={`${rec.quizTitle}-${rec.dateISO ?? i}`}
-            style={s.card}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={s.certTitle}>{rec.quizTitle}</Text>
-              <Text style={s.certMeta}>
-                {rec.name} • {Math.round(rec.scorePct)}%
-              </Text>
-              <Text style={s.certMetaDim}>
-                {new Date(rec.dateISO || Date.now()).toLocaleDateString()}
-              </Text>
-            </View>
-
-            <View style={{ gap: 8 }}>
-              <Pressable
-                style={[s.btn, { minWidth: 170 }]}
-                onPress={() => exportRealCert(rec, "share")}
-              >
-                <Text style={s.btnTxt}>
-                  {Platform.OS === "web"
-                    ? "Generate & Download"
-                    : "Generate & Share"}
+        unlocked.map((rec, i) => {
+          const displayName = getDisplayName(rec);
+          return (
+            <View
+              key={`${rec.quizTitle}-${rec.dateISO ?? i}`}
+              style={s.card}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={s.certTitle}>{rec.quizTitle}</Text>
+                <Text style={s.certMeta}>
+                  {displayName} • {Math.round(rec.scorePct)}%
                 </Text>
-              </Pressable>
+                <Text style={s.certMetaDim}>
+                  {new Date(rec.dateISO || Date.now()).toLocaleDateString()}
+                </Text>
+              </View>
 
-              <Pressable
-                style={[s.btnOutline, { minWidth: 170 }]}
-                onPress={() => exportRealCert(rec, "print")}
-              >
-                <Text style={s.btnOutlineTxt}>Generate & Print</Text>
-              </Pressable>
+              <View style={{ gap: 8 }}>
+                <Pressable
+                  style={[s.btn, { minWidth: 170 }]}
+                  onPress={() => exportRealCert(rec, "share")}
+                >
+                  <Text style={s.btnTxt}>
+                    {Platform.OS === "web"
+                      ? "Generate & Download"
+                      : "Generate & Share"}
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  style={[s.btnOutline, { minWidth: 170 }]}
+                  onPress={() => exportRealCert(rec, "print")}
+                >
+                  <Text style={s.btnOutlineTxt}>Generate & Print</Text>
+                </Pressable>
+              </View>
             </View>
-          </View>
-        ))
+          );
+        })
       )}
 
       {images.length > 0 && (
@@ -506,7 +541,7 @@ export default function CertificatesScreen() {
             style={{ width: "100%" }}
           >
             <CertificateView
-              username={rendering.name}
+              username={getDisplayName(rendering)}
               topic={rendering.quizTitle}
               date={new Date(
                 rendering.dateISO || Date.now()
