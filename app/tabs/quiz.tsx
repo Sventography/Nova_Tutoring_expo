@@ -26,6 +26,113 @@ const QUIZ_LEN = 20;
 const TOTAL_TIME = 300;
 const ADVANCE_DELAY = 650;
 
+/**
+ * BIG fake distractor bank.
+ * These are intentionally generic / academic-ish so they work for any topic.
+ * We never use real answers from other cards as distractors anymore.
+ */
+const DISTRACTOR_BANK: string[] = [
+  "Incorrect transformation",
+  "Unrelated definition",
+  "Misapplied rule",
+  "Opposite relationship",
+  "Not defined in this context",
+  "Unverified assumption",
+  "Contradictory statement",
+  "Irrelevant detail",
+  "Incomplete explanation",
+  "Inconsistent example",
+  "Wrong comparison",
+  "Misread notation",
+  "False equivalence",
+  "Reversed cause and effect",
+  "Ignored key condition",
+  "Approximation only",
+  "Out of domain",
+  "Misaligned units",
+  "Calculation shortcut error",
+  "Reordered steps incorrectly",
+  "Confused variables",
+  "Swapped numerator and denominator",
+  "Used wrong operation",
+  "Misplaced decimal",
+  "Rounded too early",
+  "Ignored negative sign",
+  "Incorrect base case",
+  "Wrong boundary value",
+  "Overgeneralization",
+  "Special case only",
+  "Does not always hold",
+  "Ambiguous statement",
+  "Undefined for this input",
+  "Not supported by data",
+  "Uses the wrong symbol",
+  "Contradicts earlier step",
+  "Not logically necessary",
+  "Extra term added",
+  "Missing required term",
+  "Mixed up order of operations",
+  "Off by one error",
+  "Assumes symmetry incorrectly",
+  "Confuses correlation and causation",
+  "Reversed inequality",
+  "Treats estimate as exact",
+  "Uses outdated definition",
+  "Applies rule to wrong side",
+  "Combines unlike terms",
+  "Uses wrong reference point",
+  "Ignores direction",
+  "Not scaled correctly",
+  "Treats variable as constant",
+  "Mislabels the result",
+  "Incorrect simplification",
+  "Wrong domain assumption",
+  "Applies 2D rule to 3D case",
+  "Swapped independent and dependent",
+  "Not normalized",
+  "Missing justification",
+  "Conclusion does not follow",
+  "Reverses hypothesis and result",
+  "Applies rule backwards",
+  "Uses wrong formula family",
+  "Treats example as proof",
+  "Assumes linear when not",
+  "Incorrect sign convention",
+  "Misinterprets diagram",
+  "Partial result only",
+  "Leaves out constraints",
+  "Overlooks special values",
+  "Uses incompatible units",
+  "Ignores remainder",
+  "Not reduced to simplest form",
+  "Confuses area and perimeter",
+  "Incorrect factorization",
+  "Wrong substitution",
+  "Confuses mean and median",
+  "Misreads percentage",
+  "Uses sample as population",
+  "Wrong reference frame",
+  "Breaks conservation rule",
+  "Not invariant under change",
+  "Applies property to sum incorrectly",
+  "Drops absolute value",
+  "Flips fraction incorrectly",
+  "Assumes zero where not given",
+  "Treats discrete as continuous",
+  "Misreads exponent",
+  "Incorrect limit behavior",
+  "Chooses wrong axis",
+  "Out of order reasoning",
+  "Not enough information",
+  "Applies pattern where none exists",
+  "Forgets initial condition",
+  "Ignores edge cases",
+  "Treats guess as proof",
+  "Uses wrong coordinate system",
+];
+
+// ---------- helpers ----------
+
 function shuffle<T>(arr: T[]) {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -49,6 +156,48 @@ function uniqStrings(xs: string[]) {
   return out;
 }
 
+/**
+ * Pick N distractors from the bank that are:
+ *  - not equal to the correct answer (case-insensitive)
+ *  - unique within this question
+ */
+function pickDistractorsFromBank(correct: string, count: number): string[] {
+  const out: string[] = [];
+  const used = new Set<string>();
+  const correctNorm = String(correct || "").toLowerCase().trim();
+  if (correctNorm) used.add(correctNorm);
+
+  const pool = shuffle(DISTRACTOR_BANK);
+
+  for (const label of pool) {
+    if (out.length >= count) break;
+    const k = label.toLowerCase().trim();
+    if (!k || used.has(k)) continue;
+    out.push(label);
+    used.add(k);
+  }
+
+  // Safety fallback if somehow the bank wasn't enough
+  while (out.length < count) {
+    const fallback = `Option ${out.length + 1}`;
+    const kk = fallback.toLowerCase();
+    if (!used.has(kk)) {
+      out.push(fallback);
+      used.add(kk);
+    } else {
+      break;
+    }
+  }
+
+  return out;
+}
+
+/**
+ * Build quiz:
+ *  - uses the real card answer as the *one* correct option
+ *  - ALL wrong options come from DISTRACTOR_BANK
+ *    (we DO NOT reuse real answers from other cards anymore)
+ */
 function buildQuizLocal(qas: QA[], len: number): QItem[] {
   const pool = qas
     .map((x) => ({
@@ -60,24 +209,29 @@ function buildQuizLocal(qas: QA[], len: number): QItem[] {
   if (!pool.length) return [];
 
   const picked = shuffle(pool).slice(0, Math.min(len, pool.length));
-  const allAnswers = uniqStrings(pool.map((p) => p.answer));
 
-  return picked.map((p) => {
-    const distractors = shuffle(
-      allAnswers.filter((a) => a.toLowerCase() !== p.answer.toLowerCase())
-    ).slice(0, 3);
+  return picked.map((p, idx) => {
+    const correct = p.answer || "Correct answer";
 
-    const choices = uniqStrings([p.answer, ...distractors]);
-    // if we still have < 2 choices, pad with safe placeholders
+    // Always take 3 distractors from the global bank
+    const distractors = pickDistractorsFromBank(correct, 3);
+
+    const choices = shuffle(
+      uniqStrings([correct, ...distractors])
+    ).slice(0, 4);
+
+    // Just in case something goes weird, pad to at least 2 choices
     while (choices.length < 2) choices.push("—");
 
     return {
       question: p.question,
-      answer: p.answer,
-      choices: shuffle(choices).slice(0, 4),
+      answer: correct,
+      choices,
     };
   });
 }
+
+// ---------- component ----------
 
 export default function QuizScreen() {
   const router = useRouter();
