@@ -1,4 +1,3 @@
-// app/(tabs)/shop.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
@@ -1846,12 +1845,12 @@ export default function Shop() {
           )}
         </Section>
 
-        {/* Companions – coin-only, digital pals (25k default) */}
+        {/* Companions – coin-only, digital pals (1k each) */}
         <Section title="Companions">
           {COMPANIONS.map((it: any) => {
             const owned = isOwned(it.id);
             const src = it.image;
-            const priceCoins = it.priceCoins ?? 25_000;
+            const priceCoins = 1_000; // 🔥 all companions cost 1,000 coins now
 
             return (
               <Card

@@ -12,6 +12,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import * as Haptics from "expo-haptics";
 
 import type { Card } from "../_lib/flashcards";
 import {
@@ -27,6 +28,14 @@ type Topic = { id: string; title: string; count?: number };
 
 function normalizeTitle(title: string) {
   return String(title || "").trim().toLowerCase();
+}
+
+// 🔑 Use front+back text as a stable key to detect saved cards
+function makeCardKey(c: { front?: string; back?: string }) {
+  const f = normalizeTitle(c.front || "");
+  const b = normalizeTitle(c.back || "");
+  if (!f && !b) return "";
+  return `${f}:::${b}`;
 }
 
 function TopicChip({
@@ -61,17 +70,29 @@ function TopicChip({
 
 function CardRow({
   c,
+  saved,
   onSave,
 }: {
   c: Card;
+  saved: boolean;
   onSave: () => void;
 }) {
   const [flip, setFlip] = useState(false);
   const side = flip ? c.back : c.front;
 
+  const handleFlip = () => {
+    Haptics.selectionAsync();
+    setFlip((v) => !v);
+  };
+
+  const handleSavePress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onSave();
+  };
+
   return (
     <Pressable
-      onPress={() => setFlip((v) => !v)}
+      onPress={handleFlip}
       style={styles.cardRowOuter}
     >
       <View style={styles.cardRowInner}>
@@ -81,8 +102,12 @@ function CardRow({
           </Text>
           <Text style={styles.cardText}>{side}</Text>
         </View>
-        <Pressable onPress={onSave} style={styles.saveBtn}>
-          <Ionicons name="bookmark" size={22} color="#9ff2ff" />
+        <Pressable onPress={handleSavePress} style={styles.saveBtn}>
+          <Ionicons
+            name={saved ? "bookmark" : "bookmark-outline"}
+            size={22}
+            color="#9ff2ff"
+          />
         </Pressable>
       </View>
     </Pressable>
@@ -106,7 +131,36 @@ export default function Flashcards() {
 
   const { onFlashcardSaved } = useAchievements();
 
-  const allTopics = useMemo<Topic[]>(() => getTopics(), []);
+  // 🔢 Ensure each topic has a reliable `count`
+  const allTopics = useMemo<Topic[]>(() => {
+    const base: any[] = (getTopics() as any[]) || [];
+    return base.map((t) => {
+      const id = String(t.id);
+      let count: number;
+
+      if (typeof t.count === "number") {
+        count = t.count;
+      } else if (typeof (t as any).cardCount === "number") {
+        count = (t as any).cardCount;
+      } else if (Array.isArray((t as any).cards)) {
+        count = (t as any).cards.length;
+      } else {
+        // Fallback: show how many we can pull in this 20-card slice
+        try {
+          count = getTwentyCardsById(id)?.length ?? 0;
+        } catch {
+          count = 0;
+        }
+      }
+
+      return {
+        id,
+        title: String(t.title || "Untitled"),
+        count,
+      };
+    });
+  }, []);
+
   const [query, setQuery] = useState("");
   const [activeId, setActiveId] = useState<string | null>(
     allTopics[0]?.id ?? null
@@ -117,7 +171,7 @@ export default function Flashcards() {
 
   const [showSavedModal, setShowSavedModal] = useState(false);
 
-  // 🔢 Build a map: topic title -> saved card count from Collections (best-effort)
+  // 🔢 Build a map: topic title -> saved card count from Collections
   const savedCountsByTitle = useMemo(() => {
     const map = new Map<string, number>();
     for (const t of collectionTopics) {
@@ -127,6 +181,19 @@ export default function Flashcards() {
       map.set(key, (map.get(key) ?? 0) + n);
     }
     return map;
+  }, [collectionTopics]);
+
+  // ✅ Set of saved card keys so we can fill/empty the bookmark icon
+  const savedCardKeys = useMemo(() => {
+    const set = new Set<string>();
+    for (const t of collectionTopics) {
+      const cards = (t?.cards ?? []) as any[];
+      for (const c of cards) {
+        const key = makeCardKey(c);
+        if (key) set.add(key);
+      }
+    }
+    return set;
   }, [collectionTopics]);
 
   // 🧮 Global totals for banner text
@@ -143,13 +210,14 @@ export default function Flashcards() {
 
   const filteredTopics = useMemo(() => {
     if (!query.trim()) return allTopics;
-    return searchTopics(allTopics, query.trim());
+    return searchTopics(allTopics as any, query.trim());
   }, [allTopics, query]);
 
   const activeTitle =
     allTopics.find((t) => t.id === activeId)?.title ?? "Choose a Topic";
 
   const handleSelectTopic = useCallback((id: string) => {
+    Haptics.selectionAsync();
     setActiveId(id);
     try {
       const next = getTwentyCardsById(id);
@@ -163,14 +231,30 @@ export default function Flashcards() {
   const handleSaveCard = useCallback(
     async (card: Card) => {
       try {
-        await addCard(card);
+        const key = makeCardKey(card as any);
+        if (key && savedCardKeys.has(key)) {
+          // Already saved: still show the "Saved" modal for reassurance
+          setShowSavedModal(true);
+          return;
+        }
+
+        const topic =
+          activeId != null
+            ? allTopics.find((t) => t.id === activeId) || null
+            : null;
+        const topicId = topic?.id ?? activeId ?? "flashcards";
+        const topicTitle = topic?.title ?? activeTitle;
+
+        // @ts-ignore CollectionsContext supports (card, topicId, topicTitle)
+        await addCard(card, topicId, topicTitle);
+
         if (onFlashcardSaved) onFlashcardSaved();
         setShowSavedModal(true);
       } catch (e) {
         console.warn("[flashcards] addCard failed", e);
       }
     },
-    [addCard, onFlashcardSaved]
+    [addCard, onFlashcardSaved, savedCardKeys, activeId, allTopics, activeTitle]
   );
 
   // Friendly text about saved sets/cards
@@ -282,10 +366,18 @@ export default function Flashcards() {
         </Text>
         <FlatList
           data={cards}
-          keyExtractor={(c, idx) => `${c.id ?? c.front}-${idx}`}
-          renderItem={({ item }) => (
-            <CardRow c={item} onSave={() => handleSaveCard(item)} />
-          )}
+          keyExtractor={(c, idx) => `${(c as any).id ?? c.front}-${idx}`}
+          renderItem={({ item }) => {
+            const key = makeCardKey(item as any);
+            const isSaved = key ? savedCardKeys.has(key) : false;
+            return (
+              <CardRow
+                c={item}
+                saved={isSaved}
+                onSave={() => handleSaveCard(item)}
+              />
+            );
+          }}
           contentContainerStyle={{ paddingBottom: 24 }}
         />
       </View>

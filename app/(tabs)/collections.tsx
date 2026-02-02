@@ -11,6 +11,7 @@ import {
   Easing,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import * as Haptics from "expo-haptics";
 import { useCollections } from "../context/CollectionsContext";
 import { useTheme } from "../context/ThemeContext";
 
@@ -89,6 +90,7 @@ function CardRow({
   });
 
   const flip = () => {
+    Haptics.selectionAsync();
     Animated.timing(p, {
       toValue: flipped ? 0 : 1,
       duration: 300,
@@ -96,6 +98,11 @@ function CardRow({
       useNativeDriver: true,
     }).start();
     setFlipped((v) => !v);
+  };
+
+  const handleRemove = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    onRemove();
   };
 
   return (
@@ -189,7 +196,7 @@ function CardRow({
                 : "rgba(255,107,107,0.12)",
             },
           ]}
-          onPress={onRemove}
+          onPress={handleRemove}
         >
           <Text style={[S.smallTxt, { color: tokens.text }]}>
             Remove
@@ -313,6 +320,7 @@ export default function CollectionsTab() {
     if (!f || !b) return;
     const targetId = active?.id || "user-my-flashcards";
     const targetTitle = active?.title || "My Flashcards";
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     coll.addCard(
       { front: f, back: b } as any,
       targetId,
@@ -401,6 +409,10 @@ export default function CollectionsTab() {
         }
         renderItem={({ item }) => {
           const isActive = active?.id === item.id;
+          const handlePress = () => {
+            Haptics.selectionAsync();
+            setActiveId(item.id);
+          };
           return (
             <Pressable
               style={[
@@ -416,7 +428,7 @@ export default function CollectionsTab() {
                     : tokens.card,
                 },
               ]}
-              onPress={() => setActiveId(item.id)}
+              onPress={handlePress}
             >
               <Text
                 style={[
@@ -532,6 +544,7 @@ export default function CollectionsTab() {
               },
             ]}
             onPress={() => {
+              Haptics.selectionAsync();
               setFront("");
               setBack("");
             }}

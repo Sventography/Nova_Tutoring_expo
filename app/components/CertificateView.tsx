@@ -14,95 +14,109 @@ type Props = {
   orgName?: string;    // e.g., "Nova Tutoring"
 };
 
-const CertificateView = forwardRef<View, Props>(({
-  username = "Student",
-  topic = "Algebra",
-  date,
-  scorePct,
-  orgName = "Nova Tutoring",
-}, ref) => {
-  const scoreText = typeof scorePct === "number" ? `with a score of ${scorePct}%` : "with distinction";
+const CertificateView = forwardRef<View, Props>(
+  (
+    {
+      username = "Student",
+      topic = "Algebra",
+      date,
+      scorePct,
+      orgName = "Nova Tutoring",
+    },
+    ref
+  ) => {
+    // BIG middle line text
+    const scoreHeadline =
+      typeof scorePct === "number"
+        ? `Received a score of ${scorePct}% in ${topic}`
+        : `Completed ${topic} with distinction`;
 
-  return (
-    <View ref={ref} style={S.wrap}>
+    return (
+      <View ref={ref} style={S.wrap}>
+        {/* Neon shimmer around the whole frame */}
+        <LinearGradient
+          colors={["#031019", "#27e6ff", "#031019"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={S.shimmerBorder}
+        >
+          {/* Outer neon frame (your original look) */}
+          <View style={S.outerFrame}>
+            <View style={S.innerFrame}>
+              {/* Dark panel gradient */}
+              <LinearGradient
+                colors={["#0b1320", "#08121b", "#070d14"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={S.panel}
+              >
+                {/* Title */}
+                <Text style={S.title}>Certificate of Achievement</Text>
 
-      {/* Outer neon frame */}
-      <View style={S.outerFrame}>
-        <View style={S.innerFrame}>
+                {/* Subtitle */}
+                <Text style={S.subtitle}>This certifies that</Text>
 
-          {/* Dark panel gradient */}
-          <LinearGradient
-            colors={["#0b1320", "#08121b", "#070d14"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={S.panel}
-          >
+                {/* Name (gold pop) */}
+                <Text style={S.name}>{username}</Text>
 
-            {/* Title */}
-            <Text style={S.title}>Certificate of Achievement</Text>
+                {/* Body line */}
+                <Text style={S.body}>has successfully completed the quiz on</Text>
 
-            {/* Subtitle */}
-            <Text style={S.subtitle}>This certifies that</Text>
+                {/* Topic (cyan) */}
+                <Text style={S.topic}>{topic}</Text>
 
-            {/* Name (gold pop) */}
-            <Text style={S.name}>{username}</Text>
+                {/* BIG centered score line in the middle */}
+                <Text style={S.scoreHeadline}>{scoreHeadline}</Text>
 
-            {/* Body line */}
-            <Text style={S.body}>has successfully completed the quiz on</Text>
+                {/* Logo (optional) */}
+                <View style={{ height: 20 }} />
+                {LOGO ? (
+                  <Image source={LOGO} style={S.logo} resizeMode="contain" />
+                ) : null}
 
-            {/* Topic (cyan) */}
-            <Text style={S.topic}>{topic}</Text>
+                {/* Footer strip */}
+                <View style={{ flex: 1 }} />
+                <View style={S.footer}>
+                  {/* Spacer to push signature/QR into place */}
+                  <View style={{ flex: 1 }} />
 
-            {/* Score / distinction */}
-            <Text style={S.body}>{scoreText}</Text>
+                  {/* Signature block with org + date above the line */}
+                  <View style={S.sigBlock}>
+                    <Text style={S.footerOrg}>{orgName}</Text>
+                    <Text style={S.footerDate}>Issued on {date}</Text>
 
-            {/* Logo (optional) */}
-            <View style={{ height: 20 }} />
-            {LOGO ? (
-              <Image source={LOGO} style={S.logo} resizeMode="contain" />
-            ) : null}
+                    <View style={S.sigLine} />
+                    <Text style={S.sigLabel}>Eric Svenningson</Text>
+                    <Text style={S.sigLabelDim}>Founder, {orgName}</Text>
+                  </View>
 
-            {/* Footer strip */}
-            <View style={{ flex: 1 }} />
-            <View style={S.footer}>
-              <View style={{ flex: 1 }}>
-                <Text style={S.footerOrg}>{orgName}</Text>
-                <Text style={S.footerDate}>Issued on {date}</Text>
-              </View>
-
-              {/* Signature block */}
-              <View style={S.sigBlock}>
-                <View style={S.sigLine} />
-                <Text style={S.sigLabel}>Eric Svenningson</Text>
-                <Text style={S.sigLabelDim}>Founder, {orgName}</Text>
-              </View>
-
-              {/* QR code */}
-              <View style={S.qrWrap}>
-                <QRCode
-                  value={`${orgName}|${username}|${topic}|${date}`}
-                  size={72}
-                  backgroundColor="transparent"
-                  color="#5df2ff"
-                />
-              </View>
+                  {/* QR code */}
+                  <View style={S.qrWrap}>
+                    <QRCode
+                      value={`${orgName}|${username}|${topic}|${date}`}
+                      size={72}
+                      backgroundColor="transparent"
+                      color="#5df2ff"
+                    />
+                  </View>
+                </View>
+              </LinearGradient>
             </View>
-
-          </LinearGradient>
-        </View>
+          </View>
+        </LinearGradient>
       </View>
-    </View>
-  );
-});
+    );
+  }
+);
 
 export default CertificateView;
 
-/** 
+/**
  * Fixed canvas size for reliable capture:
- *  - 700 x 990 looks crisp at 2x scale via view-shot/html2canvas
- * Scale visually via parent if you want smaller render.
+ *  - Width matches the CERT_BASE_W (520) used in certificates.tsx
+ *  - Height is tall enough so nothing is cramped
  */
-const CANVAS_W = 700;
+const CANVAS_W = 520;  // was 700; now matches Certificates screen width
 const CANVAS_H = 990;
 
 export const S = StyleSheet.create({
@@ -111,6 +125,25 @@ export const S = StyleSheet.create({
     height: CANVAS_H,
     alignSelf: "center",
   },
+
+  // shimmer border right on the edges
+  shimmerBorder: {
+    flex: 1,
+    borderRadius: 16,
+    padding: 4,
+    ...(Platform.OS === "web"
+      ? {
+          boxShadow:
+            "0 0 24px rgba(39,230,255,0.6), 0 0 40px rgba(39,230,255,0.35)",
+        }
+      : {
+          shadowColor: "#27e6ff",
+          shadowOpacity: 0.65,
+          shadowRadius: 20,
+          shadowOffset: { width: 0, height: 0 },
+        }),
+  },
+
   outerFrame: {
     flex: 1,
     padding: 18,
@@ -118,9 +151,6 @@ export const S = StyleSheet.create({
     borderWidth: 4,
     borderColor: "#27e6ff",
     backgroundColor: "#071018",
-    ...(Platform.OS === "web"
-      ? { boxShadow: "0 0 20px rgba(39,230,255,0.35), inset 0 0 14px rgba(39,230,255,0.08)" }
-      : { shadowColor: "#27e6ff", shadowOpacity: 0.45, shadowRadius: 18, shadowOffset: { width: 0, height: 0 } }),
   },
   innerFrame: {
     flex: 1,
@@ -171,6 +201,18 @@ export const S = StyleSheet.create({
     fontSize: 22,
     fontWeight: "800",
   },
+
+  // BIG middle text, so the certificate doesn’t feel empty
+  scoreHeadline: {
+    color: "#ffd166",
+    textAlign: "center",
+    marginTop: 28,
+    marginBottom: 28,
+    fontSize: 22,
+    fontWeight: "900",
+    paddingHorizontal: 16,
+  },
+
   logo: {
     alignSelf: "center",
     width: 140,
@@ -184,16 +226,20 @@ export const S = StyleSheet.create({
     gap: 16,
     marginTop: 18,
   },
+
   footerOrg: {
     color: "#70f5ff",
     fontWeight: "900",
-    fontSize: 16,
+    fontSize: 13,
+    textAlign: "center",
   },
   footerDate: {
     color: "#bfefff",
-    marginTop: 4,
-    fontSize: 12,
+    marginTop: 2,
+    fontSize: 11,
+    textAlign: "center",
   },
+
   sigBlock: {
     alignItems: "center",
     justifyContent: "flex-end",
@@ -202,6 +248,7 @@ export const S = StyleSheet.create({
     width: 220,
     height: 1.5,
     backgroundColor: "rgba(255,255,255,0.7)",
+    marginTop: 8,
     marginBottom: 6,
   },
   sigLabel: {

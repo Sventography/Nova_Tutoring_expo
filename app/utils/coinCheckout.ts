@@ -11,7 +11,8 @@ type CoinCheckoutOpts = {
 };
 
 export function startCoinCheckout(opts: CoinCheckoutOpts) {
-  const url = Linking.createURL("/checkout/coin", {
+  // NOTE: route changed to "/coin" so it hits app/(checkout)/coin.tsx
+  const url = Linking.createURL("/coin", {
     queryParams: {
       sku: opts.id,
       title: opts.title,

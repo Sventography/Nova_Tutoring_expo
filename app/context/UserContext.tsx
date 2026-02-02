@@ -1,3 +1,4 @@
+// app/context/UserContext.tsx
 import React, {
   createContext,
   useCallback,
@@ -14,7 +15,6 @@ export type User = {
   username?: string;
   email?: string;
   contactEmail?: string;
-  displayName?: string;
   avatarUri?: string;
   avatarUrl?: string;
   avatar?: string;
@@ -28,8 +28,8 @@ type Ctx = {
   setUser: (u: User | null) => void;
   updateUser: (patch: Partial<User>) => void;
   updateProfile: (patch: Partial<User>) => Promise<void>;
-  setUsername: (name: string) => void;
-  setAvatar: (uri: string | null) => void;
+  setUsername: (name: string) => Promise<void>;
+  setAvatar: (uri: string | null) => Promise<void>;
   signIn: (u: Partial<User>) => Promise<void>;
   signOut: () => Promise<void>;
   deleteAccount: () => Promise<void>;
@@ -43,14 +43,12 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [user, setUserState] = useState<User | null>(null);
   const [ready, setReady] = useState(false);
 
-  // Initial load
+  // initial load from AsyncStorage
   useEffect(() => {
-    let cancelled = false;
-
     (async () => {
       try {
         const raw = await AsyncStorage.getItem(USER_STORAGE_KEY);
-        if (raw && !cancelled) {
+        if (raw) {
           const parsed = JSON.parse(raw);
           if (parsed && typeof parsed === "object") {
             setUserState(parsed as User);
@@ -59,29 +57,19 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       } catch {
         // ignore
       } finally {
-        if (!cancelled) setReady(true);
+        setReady(true);
       }
     })();
-
-    return () => {
-      cancelled = true;
-    };
   }, []);
 
-  // Persist on change (account is always saved)
+  // persist user changes once ready
   useEffect(() => {
-    (async () => {
-      try {
-        if (user) {
-          await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
-        } else {
-          await AsyncStorage.removeItem(USER_STORAGE_KEY);
-        }
-      } catch {
-        // ignore
-      }
-    })();
-  }, [user]);
+    if (!ready) return;
+    AsyncStorage.setItem(
+      USER_STORAGE_KEY,
+      JSON.stringify(user ?? {})
+    ).catch(() => {});
+  }, [user, ready]);
 
   const setUser = useCallback((u: User | null) => {
     setUserState(u);
@@ -93,7 +81,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
   const updateProfile = useCallback(async (patch: Partial<User>) => {
     setUserState((prev) => {
-      const next: User = { ...(prev ?? {}), ...patch };
+      const next = { ...(prev ?? {}), ...patch };
       AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(next)).catch(
         () => {}
       );
@@ -101,14 +89,13 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const setUsername = useCallback((name: string) => {
-    const trimmed = name.trim();
+  const setUsername = useCallback(async (name: string) => {
     setUserState((prev) => {
+      const base: User = { id: "local" };
       const next: User = {
-        ...(prev ?? {}),
-        username: trimmed,
-        name: trimmed,
-        displayName: trimmed,
+        ...(prev ?? base),
+        username: name,
+        name,
       };
       AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(next)).catch(
         () => {}
@@ -117,15 +104,16 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const setAvatar = useCallback((uri: string | null) => {
+  const setAvatar = useCallback(async (uri: string | null) => {
     setUserState((prev) => {
+      const base: User = { id: "local" };
       const next: User = {
-        ...(prev ?? {}),
-        avatarUri: uri ?? undefined,
-        avatarUrl: uri ?? undefined,
-        avatar: uri ?? undefined,
-        photoURL: uri ?? undefined,
-        imageUrl: uri ?? undefined,
+        ...(prev ?? base),
+        avatarUri: uri || undefined,
+        avatarUrl: uri || undefined,
+        avatar: uri || undefined,
+        photoURL: uri || undefined,
+        imageUrl: uri || undefined,
       };
       AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(next)).catch(
         () => {}
@@ -161,16 +149,8 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  /**
-   * Hard delete of local account & ALL saved data on this device.
-   * Uses AsyncStorage.clear(), which wipes:
-   * - user profile
-   * - coins
-   * - achievements
-   * - purchases
-   * - themes / cursors, etc.
-   */
   const deleteAccount = useCallback(async () => {
+    // hard nuke: user + coins + achievements + purchases + everything AsyncStorage
     setUserState(null);
     try {
       await AsyncStorage.clear();
@@ -186,16 +166,12 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         const parsed = JSON.parse(raw);
         if (parsed && typeof parsed === "object") {
           setUserState(parsed as User);
-        } else {
-          setUserState(null);
         }
       } else {
         setUserState(null);
       }
     } catch {
       // ignore
-    } finally {
-      setReady(true);
     }
   }, []);
 

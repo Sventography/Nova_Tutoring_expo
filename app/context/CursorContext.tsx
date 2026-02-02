@@ -1,4 +1,11 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+// app/context/CursorContext.tsx
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 /**
@@ -14,7 +21,8 @@ const KEY_PURCHASES = "@nova/purchases";
 type OwnedMap = Record<string, boolean>;
 
 type Ctx = {
-  cursorId: string; // canonical cursor id: "cursor:glow" | "cursor:orb" | "cursor:star_trail" | ...
+  // canonical cursor id: "cursor:glow" | "cursor:orb" | "cursor:star_trail" | null
+  cursorId: string | null;
   setCursorId: (id: string | null) => Promise<void>;
   // alias for your shop.tsx (it calls setCursorById)
   setCursorById: (id: string | null) => Promise<void>;
@@ -88,8 +96,8 @@ function normalizeOwnedMap(purchases: any): OwnedMap {
 }
 
 export function CursorProvider({ children }: { children: React.ReactNode }) {
-  // default cursor for mobile overlay
-  const [cursorId, _setCursorId] = useState<string>("cursor:star_trail");
+  // default: no special cursor until something is equipped
+  const [cursorId, _setCursorId] = useState<string | null>(null);
   const [owned, setOwned] = useState<OwnedMap>({});
 
   const hydrate = async () => {
@@ -101,9 +109,23 @@ export function CursorProvider({ children }: { children: React.ReactNode }) {
     const nextOwned = normalizeOwnedMap(purchasesRaw);
     setOwned(nextOwned);
 
-    const equipped = canonCursorId(equippedRaw);
-    if (equipped) _setCursorId(equipped);
-    else _setCursorId("cursor:star_trail");
+    const equippedCanon = canonCursorId(equippedRaw);
+
+    // 🔥 Migration: if an OLD build saved star_trail as the "default",
+    // treat that as *no cursor* now so default is plain.
+    if (equippedCanon === "cursor:star_trail") {
+      _setCursorId(null);
+      try {
+        await AsyncStorage.removeItem(KEY_EQUIPPED);
+      } catch {}
+      return;
+    }
+
+    if (equippedCanon) {
+      _setCursorId(equippedCanon);
+    } else {
+      _setCursorId(null);
+    }
   };
 
   useEffect(() => {
@@ -119,19 +141,28 @@ export function CursorProvider({ children }: { children: React.ReactNode }) {
 
   const setCursorId = async (id: string | null) => {
     const c = canonCursorId(id);
-    const next = c || "cursor:star_trail";
+    const next: string | null = c || null;
+
     _setCursorId(next);
+
     try {
-      await AsyncStorage.setItem(KEY_EQUIPPED, next);
+      if (!next) {
+        await AsyncStorage.removeItem(KEY_EQUIPPED);
+      } else {
+        await AsyncStorage.setItem(KEY_EQUIPPED, next);
+      }
     } catch {}
   };
 
   const owns = (id: string) => {
     const c = canonCursorId(id);
-    // allow default even if not purchased
     if (!c) return false;
-    if (c === "cursor:star_trail") return true;
+    // ✅ NO special case: star_trail is NOT "free" anymore.
     return !!owned[c];
+  };
+
+  const reload = async () => {
+    await hydrate();
   };
 
   const value = useMemo(
@@ -141,7 +172,7 @@ export function CursorProvider({ children }: { children: React.ReactNode }) {
       setCursorById: setCursorId, // alias for shop.tsx
       owned,
       owns,
-      reload: hydrate,
+      reload,
     }),
     [cursorId, owned]
   );

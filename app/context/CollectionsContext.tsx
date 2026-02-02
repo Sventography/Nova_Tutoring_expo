@@ -1,67 +1,162 @@
-import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { DeviceEventEmitter } from "react-native";
+// app/context/CollectionsContext.tsx
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-export type Card = { id?: string|number; front: string; back: string };
-export type CollectionTopic = { id: string; title: string; cards: Card[]; createdAt: number; isCustom?: boolean };
-
-type Ctx = {
-  topics: CollectionTopic[];
-  addCard: (card: Card, topicId?: string, topicTitleGuess?: string) => void;
-  removeCard: (id: string|number, topicId: string) => void;
-  clearTopic: (topicId: string) => void;
-  createTopic: (title: string) => string; // returns id
+export type CollectionCard = {
+  id: string;
+  front: string;
+  back: string;
 };
 
-const KEY = "collections:v1";
-const CollectionsContext = createContext<Ctx | null>(null);
-const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
+export type CollectionTopic = {
+  id: string;
+  title: string;
+  cards: CollectionCard[];
+};
 
-async function loadAll(): Promise<CollectionTopic[]> {
-  try { const raw = await AsyncStorage.getItem(KEY); return raw ? JSON.parse(raw) : []; }
-  catch { return []; }
-}
-async function saveAll(list: CollectionTopic[]) {
-  try { await AsyncStorage.setItem(KEY, JSON.stringify(list)); } catch {}
+type CollectionsContextValue = {
+  topics: CollectionTopic[];
+  addCard: (
+    card: { front: string; back: string; id?: string },
+    topicId?: string,
+    title?: string
+  ) => Promise<void>;
+  removeCard: (topicId: string, cardId: string) => Promise<void>;
+  clearAll: () => Promise<void>;
+};
+
+const CollectionsContext = createContext<CollectionsContextValue | undefined>(
+  undefined
+);
+
+const STORAGE_KEY = "@nova_collections_v1";
+
+async function loadFromStorage(): Promise<CollectionTopic[]> {
+  try {
+    const raw = await AsyncStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed;
+  } catch (e) {
+    console.warn("[Collections] load error", e);
+    return [];
+  }
 }
 
-export const notify=(m:string)=>{try{const{AchieveEmitter}=require("./AchievementsContext");AchieveEmitter?.emit?.("celebrate",m);}catch{}};
+async function saveToStorage(topics: CollectionTopic[]) {
+  try {
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(topics));
+  } catch (e) {
+    console.warn("[Collections] save error", e);
+  }
+}
 
 export function CollectionsProvider({ children }: { children: React.ReactNode }) {
-
   const [topics, setTopics] = useState<CollectionTopic[]>([]);
-  const booted = useRef(false);
 
-  useEffect(() => { if(!booted.current){ booted.current = true; loadAll().then(setTopics); }}, []);
-  useEffect(() => { if(booted.current) saveAll(topics); }, [topics]);
+  useEffect(() => {
+    loadFromStorage().then(setTopics);
+  }, []);
 
-  const api = useMemo<Ctx>(() => ({
+  const addCard = useCallback<
+    CollectionsContextValue["addCard"]
+  >(async (card, topicId, title) => {
+    setTopics((prev) => {
+      const tid = topicId || "saved-flashcards";
+      const tTitle = title || "Saved Flashcards";
+
+      const newId =
+        card.id ||
+        `${tid}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+      const nextCard: CollectionCard = {
+        id: String(newId),
+        front: card.front,
+        back: card.back,
+      };
+
+      const idx = prev.findIndex((t) => t.id === tid);
+      let next: CollectionTopic[];
+
+      if (idx === -1) {
+        next = [
+          ...prev,
+          {
+            id: tid,
+            title: tTitle,
+            cards: [nextCard],
+          },
+        ];
+      } else {
+        next = prev.map((t, i) =>
+          i === idx
+            ? {
+                ...t,
+                cards: [...t.cards, nextCard],
+              }
+            : t
+        );
+      }
+
+      saveToStorage(next);
+      return next;
+    });
+  }, []);
+
+  const removeCard = useCallback<
+    CollectionsContextValue["removeCard"]
+  >(async (topicId, cardId) => {
+    setTopics((prev) => {
+      const next = prev
+        .map((t) =>
+          t.id === topicId
+            ? {
+                ...t,
+                cards: t.cards.filter((c) => c.id !== cardId),
+              }
+            : t
+        )
+        .filter((t) => t.cards.length > 0);
+
+      saveToStorage(next);
+      return next;
+    });
+  }, []);
+
+  const clearAll = useCallback(async () => {
+    setTopics([]);
+    try {
+      await AsyncStorage.removeItem(STORAGE_KEY);
+    } catch (e) {
+      console.warn("[Collections] clear error", e);
+    }
+  }, []);
+
+  const value: CollectionsContextValue = {
     topics,
-    addCard: (card, topicId, titleGuess) => {
-      setTopics(prev => {
-        const next = [...prev];
-        let t = topicId ? next.find(x=>x.id===topicId) : undefined;
-        if (!t) {
-          // default set
-          t = { id: topicId || uid(), title: titleGuess || "My Flashcards", cards: [], createdAt: Date.now(), isCustom: true };
-          next.unshift(t);
-        }
-        const newCard = { id: uid(), front: String(card.front), back: String(card.back) };
-        t.cards = [newCard, ...(t.cards||[])];
-        return next;
-      });
-    },
-    removeCard: (id, tid) => setTopics(prev => prev.map(t => t.id===tid ? { ...t, cards: (t.cards||[]).filter(c => String(c.id)!==String(id)) } : t)),
-    clearTopic: (tid) => setTopics(prev => prev.map(t => t.id===tid ? { ...t, cards: [] } : t)),
-    createTopic: (title) => {
-      const id = uid();
-      setTopics(prev => [{ id, title: title.trim() || "Untitled Set", cards: [], createdAt: Date.now(), isCustom: true }, ...prev]);
-      return id;
-    },
-  }), [topics]);
+    addCard,
+    removeCard,
+    clearAll,
+  };
 
-  return <CollectionsContext.Provider value={api}>{children}</CollectionsContext.Provider>;
+  return (
+    <CollectionsContext.Provider value={value}>
+      {children}
+    </CollectionsContext.Provider>
+  );
 }
 
-export function useCollections(){ return useContext(CollectionsContext)!; }
-export function useCollectionsSafe(){ try{ return useContext(CollectionsContext); }catch{ return null; } }
+export function useCollections() {
+  const ctx = useContext(CollectionsContext);
+  if (!ctx) {
+    throw new Error("useCollections must be used within CollectionsProvider");
+  }
+  return ctx;
+}

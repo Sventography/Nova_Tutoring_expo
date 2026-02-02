@@ -1,3 +1,4 @@
+// app/(tabs)/account.tsx
 import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
@@ -9,12 +10,16 @@ import {
   Alert,
   Platform,
   Modal,
+  ScrollView,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
+import { useRouter } from "expo-router";
+
 import { useUser } from "../context/UserContext";
-import { showToast } from "../utils/toast";
 import { useTheme } from "../context/ThemeContext";
+import { useCoins } from "../context/CoinsContext";
+import { showToast } from "../utils/toast";
 
 export default function AccountScreen() {
   const {
@@ -29,11 +34,14 @@ export default function AccountScreen() {
   } = useUser() as any;
 
   const { tokens } = useTheme();
+  const { setCoins } = useCoins();
+  const router = useRouter();
 
   const [name, setName] = useState("");
   const [contactEmail, setContactEmail] = useState("");
   const [avatarLocal, setAvatarLocal] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
 
   const currentAvatar = useMemo(() => {
     return (
@@ -185,15 +193,26 @@ export default function AccountScreen() {
 
   async function handleConfirmDelete() {
     try {
+      // 1) Nuke all persisted data (user, coins, purchases, achievements, etc.)
       await deleteAccount?.();
 
-      // Clear local UI state
+      // 2) Reset coins in memory so the UI updates immediately
+      setCoins?.(0);
+
+      // 3) Clear local Account-screen state
       setName("");
       setContactEmail("");
       setAvatarLocal(null);
       setShowDeleteModal(false);
 
       showToast("Account deleted");
+
+      // 4) "Restart" experience: send them back to the splash / home screen
+      try {
+        router.replace("/");
+      } catch {
+        // ignore navigation errors
+      }
     } catch (e: any) {
       setShowDeleteModal(false);
       Alert.alert(
@@ -382,6 +401,13 @@ export default function AccountScreen() {
             Avatar: {currentAvatar ? "Set" : "None"}
           </Text>
         </View>
+
+        {/* Privacy Policy link */}
+        <View style={S.privacyRow}>
+          <Pressable onPress={() => setShowPrivacyModal(true)}>
+            <Text style={S.privacyLink}>Privacy Policy</Text>
+          </Pressable>
+        </View>
       </View>
 
       {/* Delete Account confirmation modal */}
@@ -423,9 +449,7 @@ export default function AccountScreen() {
                 ]}
                 onPress={() => setShowDeleteModal(false)}
               >
-                <Text
-                  style={[S.btnt, { color: tokens.text }]}
-                >
+                <Text style={[S.btnt, { color: tokens.text }]}>
                   Cancel
                 </Text>
               </Pressable>
@@ -442,10 +466,80 @@ export default function AccountScreen() {
                 ]}
                 onPress={handleConfirmDelete}
               >
-                <Text
-                  style={[S.btnt, { color: tokens.text }]}
-                >
+                <Text style={[S.btnt, { color: tokens.text }]}>
                   Delete
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Privacy Policy modal */}
+      <Modal
+        visible={showPrivacyModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowPrivacyModal(false)}
+      >
+        <View style={S.modalBackdrop}>
+          <View
+            style={[
+              S.modalCard,
+              {
+                backgroundColor: tokens.card,
+                borderColor: tokens.border,
+              },
+            ]}
+          >
+            <Text style={[S.modalTitle, { color: tokens.text }]}>
+              Privacy Policy
+            </Text>
+
+            <ScrollView
+              style={{ maxHeight: 360, marginTop: 8 }}
+              showsVerticalScrollIndicator
+            >
+              <Text style={[S.modalBody, { color: tokens.cardText }]}>
+                Nova Tutoring stores your profile (name, optional contact
+                email, avatar), your coins, achievements, quiz history, and
+                shop purchases locally on this device so the app can show
+                your progress and unlocked items.{"\n\n"}
+                The app does not create an online account for you and does
+                not sell your data or show third-party ads.{"\n\n"}
+                When you make real-money purchases, payments are processed
+                by third-party providers such as Stripe. Your full card
+                details are handled by them and are not stored in this app.{"\n\n"}
+                For physical orders, we may collect your name, email
+                address, and shipping address so we can process and ship
+                your order and send order confirmations. Some order details
+                may be stored securely on our server or in logs for support
+                and record-keeping.{"\n\n"}
+                You can erase your local profile, coins, achievements, and
+                purchase history at any time using the “Delete Account”
+                option on this screen, which removes your saved data on
+                this device and returns you to the start of the app.{"\n\n"}
+                For more details or questions, please refer to the privacy
+                information in the App Store listing or contact us using
+                the email address listed there.
+              </Text>
+            </ScrollView>
+
+            <View style={[S.modalRowBtns, { marginTop: 14 }]}>
+              <Pressable
+                style={[
+                  S.modalBtn,
+                  {
+                    borderColor: tokens.border,
+                    backgroundColor: tokens.isDark
+                      ? "rgba(255,255,255,0.06)"
+                      : "rgba(0,0,0,0.04)",
+                  },
+                ]}
+                onPress={() => setShowPrivacyModal(false)}
+              >
+                <Text style={[S.btnt, { color: tokens.text }]}>
+                  Close
                 </Text>
               </Pressable>
             </View>
@@ -499,6 +593,18 @@ export const S = StyleSheet.create({
   k: { marginBottom: 6 },
   v: { fontWeight: "600", marginTop: 2 },
 
+  // Privacy link
+  privacyRow: {
+    marginTop: 18,
+    alignItems: "center",
+  },
+  privacyLink: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#9ad8ff",
+    textDecorationLine: "underline",
+  },
+
   // Modal styles
   modalBackdrop: {
     flex: 1,
@@ -523,7 +629,7 @@ export const S = StyleSheet.create({
   modalBody: {
     fontSize: 13,
     lineHeight: 18,
-    textAlign: "center",
+    textAlign: "left",
   },
   modalRowBtns: {
     flexDirection: "row",

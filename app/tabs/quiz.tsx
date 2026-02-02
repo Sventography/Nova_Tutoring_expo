@@ -126,6 +126,11 @@ export default function QuizScreen() {
   const current = items[idx];
   const total = items.length;
 
+  const headerTitle = useMemo(
+    () => (title ? String(title) : "Quiz"),
+    [title]
+  );
+
   // timer
   useEffect(() => {
     if (loading || done || noData) return;
@@ -152,9 +157,7 @@ export default function QuizScreen() {
     setLoading(true);
 
     const raw = getCardsById(String(topicId));
-    const qas = raw
-      .map(toQA)
-      .filter(Boolean) as QA[];
+    const qas = raw.map(toQA).filter(Boolean) as QA[];
 
     if (!qas.length) {
       setNoData(true);
@@ -185,8 +188,6 @@ export default function QuizScreen() {
 
     setLoading(false);
   }, [topicId]);
-
-  const headerTitle = useMemo(() => (title ? String(title) : "Quiz"), [title]);
 
   const logResultIfNeeded = async (reason: string) => {
     if (loggedRef.current) return;
@@ -220,10 +221,20 @@ export default function QuizScreen() {
     loggedRef.current = true;
   };
 
+  // log when done
   useEffect(() => {
     if (!done) return;
     void logResultIfNeeded("done");
   }, [done]);
+
+  // auto-pop certificate modal on 80%+
+  useEffect(() => {
+    if (!done || !total) return;
+    const pct = Math.round((correct / total) * 100);
+    if (pct >= 80) {
+      setShowCert(true);
+    }
+  }, [done, correct, total]);
 
   function goNext() {
     if (idx + 1 >= total) {
@@ -285,7 +296,9 @@ export default function QuizScreen() {
   if (noData) {
     return renderShell(
       <>
-        <Text style={[S.title, { color: headerTextColor }]}>{headerTitle}</Text>
+        <Text style={[S.title, { color: headerTextColor }]}>
+          {headerTitle}
+        </Text>
         <Text style={[S.result, { color: headerTextColor }]}>
           No questions available.
         </Text>
@@ -295,19 +308,58 @@ export default function QuizScreen() {
 
   if (done || !current) {
     const pct = total ? Math.round((correct / total) * 100) : 0;
+    const passed = pct >= 80;
 
     return renderShell(
       <>
-        <Text style={[S.title, { color: headerTextColor }]}>{headerTitle}</Text>
-        <Text style={[S.result, { color: headerTextColor }]}>
-          Score: {correct} / {total} ({pct}%)
+        <Text style={[S.title, { color: headerTextColor }]}>
+          {headerTitle}
         </Text>
 
-        <View style={{ height: 12 }} />
+        <View
+          style={[
+            S.resultCard,
+            {
+              backgroundColor: cardBg,
+              borderColor,
+            },
+          ]}
+        >
+          <Text
+            style={[
+              S.resultLabel,
+              { color: passed ? accent : metaColor },
+            ]}
+          >
+            {passed ? "Great job!" : "Keep going 🐇"}
+          </Text>
+          <Text
+            style={[
+              S.resultScore,
+              { color: headerTextColor },
+            ]}
+          >
+            {correct} / {total} ({pct}%)
+          </Text>
+          <Text
+            style={[
+              S.resultNote,
+              { color: metaColor },
+            ]}
+          >
+            {passed
+              ? "You’ve unlocked a certificate for this quiz."
+              : "Score 80% or higher to unlock a certificate."}
+          </Text>
+        </View>
 
-        {pct >= 80 ? (
+        {passed ? (
           <Pressable
-            style={[S.btn, S.solid, { backgroundColor: accent, borderColor: accent }]}
+            style={[
+              S.btn,
+              S.solid,
+              { backgroundColor: accent, borderColor: accent },
+            ]}
             onPress={() => {
               try {
                 router.navigate("/(tabs)/certificates");
@@ -316,7 +368,12 @@ export default function QuizScreen() {
               }
             }}
           >
-            <Text style={[S.btnTxt, { color: tokens.isDark ? "#000" : "#fff" }]}>
+            <Text
+              style={[
+                S.btnTxt,
+                { color: tokens.isDark ? "#000" : "#fff" },
+              ]}
+            >
               View Certificate
             </Text>
           </Pressable>
@@ -329,13 +386,24 @@ export default function QuizScreen() {
             style={[S.btn, S.outline, { borderColor }]}
             onPress={() => router.back()}
           >
-            <Text style={[S.btnTxt, { color: headerTextColor }]}>Back</Text>
+            <Text
+              style={[
+                S.btnTxt,
+                { color: headerTextColor },
+              ]}
+            >
+              Back
+            </Text>
           </Pressable>
 
           <View style={{ width: 10 }} />
 
           <Pressable
-            style={[S.btn, S.solid, { backgroundColor: accent, borderColor: accent }]}
+            style={[
+              S.btn,
+              S.solid,
+              { backgroundColor: accent, borderColor: accent },
+            ]}
             onPress={() => {
               setIdx(0);
               setCorrect(0);
@@ -347,12 +415,18 @@ export default function QuizScreen() {
               loggedRef.current = false;
             }}
           >
-            <Text style={[S.btnTxt, { color: tokens.isDark ? "#000" : "#fff" }]}>
+            <Text
+              style={[
+                S.btnTxt,
+                { color: tokens.isDark ? "#000" : "#fff" },
+              ]}
+            >
               Start Over
             </Text>
           </Pressable>
         </View>
 
+        {/* 80%+ certificate modal */}
         <Modal
           visible={showCert}
           transparent
@@ -361,17 +435,32 @@ export default function QuizScreen() {
         >
           <View style={S.modalBackdrop}>
             <LinearGradient colors={gradient} style={S.modalCard}>
-              <Text style={[S.modalTitle, { color: headerTextColor }]}>
+              <Text
+                style={[
+                  S.modalTitle,
+                  { color: headerTextColor },
+                ]}
+              >
                 You scored {pct}% 🎉
               </Text>
-              <Text style={[S.modalBody, { color: metaColor }]}>
-                80% or higher! Here’s your certificate.
+              <Text
+                style={[
+                  S.modalBody,
+                  { color: metaColor },
+                ]}
+              >
+                80% or higher! Your certificate is ready in the
+                Certificates tab.
               </Text>
 
               <View style={{ height: 12 }} />
 
               <Pressable
-                style={[S.btn, S.solid, { backgroundColor: accent, borderColor: accent }]}
+                style={[
+                  S.btn,
+                  S.solid,
+                  { backgroundColor: accent, borderColor: accent },
+                ]}
                 onPress={() => {
                   setShowCert(false);
                   try {
@@ -381,7 +470,12 @@ export default function QuizScreen() {
                   }
                 }}
               >
-                <Text style={[S.btnTxt, { color: tokens.isDark ? "#000" : "#fff" }]}>
+                <Text
+                  style={[
+                    S.btnTxt,
+                    { color: tokens.isDark ? "#000" : "#fff" },
+                  ]}
+                >
                   View Certificate
                 </Text>
               </Pressable>
@@ -392,7 +486,14 @@ export default function QuizScreen() {
                 style={[S.btn, S.outline, { borderColor }]}
                 onPress={() => setShowCert(false)}
               >
-                <Text style={[S.btnTxt, { color: headerTextColor }]}>Close</Text>
+                <Text
+                  style={[
+                    S.btnTxt,
+                    { color: headerTextColor },
+                  ]}
+                >
+                  Close
+                </Text>
               </Pressable>
             </LinearGradient>
           </View>
@@ -401,14 +502,21 @@ export default function QuizScreen() {
     );
   }
 
-  // active
+  // active quiz
   const choices = Array.isArray(current.choices) ? current.choices : [];
 
   return renderShell(
     <>
       <View style={S.row}>
-        <Text style={[S.title, { color: headerTextColor }]}>{headerTitle}</Text>
-        <Text style={[S.meta, { color: totalLeft <= 20 ? dangerColor : metaColor }]}>
+        <Text style={[S.title, { color: headerTextColor }]}>
+          {headerTitle}
+        </Text>
+        <Text
+          style={[
+            S.meta,
+            { color: totalLeft <= 20 ? dangerColor : metaColor },
+          ]}
+        >
           ⏳ {mm}:{ss}
         </Text>
       </View>
@@ -417,14 +525,50 @@ export default function QuizScreen() {
         {idx + 1}/{total} • {mm}:{ss}
       </Text>
 
-      <Text style={[S.qText, { color: headerTextColor }]}>{current.question}</Text>
+      <View
+        style={[
+          S.questionCard,
+          {
+            backgroundColor: cardBg,
+            borderColor,
+          },
+        ]}
+      >
+        <Text
+          style={[
+            S.qLabel,
+            { color: metaColor },
+          ]}
+        >
+          Question
+        </Text>
+        <Text
+          style={[
+            S.qText,
+            { color: headerTextColor },
+          ]}
+        >
+          {current.question}
+        </Text>
+      </View>
 
       <View style={{ height: 10 }} />
 
       {choices.length === 0 ? (
-        <View style={[S.choice, { backgroundColor: cardBg, borderColor }]}>
-          <Text style={[S.choiceTxt, { color: metaColor }]}>
-            (No answer choices generated — check your flashcard data for this topic.)
+        <View
+          style={[
+            S.choice,
+            { backgroundColor: cardBg, borderColor },
+          ]}
+        >
+          <Text
+            style={[
+              S.choiceTxt,
+              { color: metaColor },
+            ]}
+          >
+            (No answer choices generated — check your flashcard data for
+            this topic.)
           </Text>
         </View>
       ) : (
@@ -453,7 +597,14 @@ export default function QuizScreen() {
                 },
               ]}
             >
-              <Text style={[S.choiceTxt, { color: textColor }]}>{opt}</Text>
+              <Text
+                style={[
+                  S.choiceTxt,
+                  { color: textColor },
+                ]}
+              >
+                {opt}
+              </Text>
             </Pressable>
           );
         })
@@ -462,7 +613,9 @@ export default function QuizScreen() {
       <View style={{ height: 14 }} />
 
       <View style={S.row}>
-        <Text style={[S.meta, { color: metaColor }]}>Correct: {correct}</Text>
+        <Text style={[S.meta, { color: metaColor }]}>
+          Correct: {correct}
+        </Text>
         <Text style={[S.meta, { color: metaColor }]}>
           Remaining: {Math.max(0, total - (idx + 1))}
         </Text>
@@ -476,7 +629,15 @@ export default function QuizScreen() {
           onPress={goPrev}
           disabled={idx === 0}
         >
-          <Text style={[S.btnTxt, { color: headerTextColor, opacity: idx === 0 ? 0.45 : 1 }]}>
+          <Text
+            style={[
+              S.btnTxt,
+              {
+                color: headerTextColor,
+                opacity: idx === 0 ? 0.45 : 1,
+              },
+            ]}
+          >
             Back
           </Text>
         </Pressable>
@@ -487,7 +648,14 @@ export default function QuizScreen() {
           style={[S.btnSmall, S.outline, { borderColor }]}
           onPress={finishNow}
         >
-          <Text style={[S.btnTxt, { color: headerTextColor }]}>Finish</Text>
+          <Text
+            style={[
+              S.btnTxt,
+              { color: headerTextColor },
+            ]}
+          >
+            Finish
+          </Text>
         </Pressable>
       </View>
     </>
@@ -496,12 +664,43 @@ export default function QuizScreen() {
 
 export const S = StyleSheet.create({
   container: { padding: 16, paddingBottom: 28 },
-  center: { flex: 1, alignItems: "center", justifyContent: "center", paddingTop: 32 },
+  center: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: 32,
+  },
   dim: { opacity: 0.85 },
   title: { fontSize: 22, fontWeight: "800", marginBottom: 6 },
-  qText: { fontSize: 18, marginTop: 10, fontWeight: "700" },
-  row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+
+  questionCard: {
+    borderRadius: 14,
+    borderWidth: 1.5,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginTop: 8,
+  },
+  qLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+    opacity: 0.9,
+    marginBottom: 4,
+  },
+  qText: {
+    fontSize: 18,
+    marginTop: 2,
+    fontWeight: "700",
+  },
+
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
   meta: { fontSize: 14, opacity: 0.9 },
+
   choice: {
     padding: 14,
     borderRadius: 12,
@@ -509,6 +708,7 @@ export const S = StyleSheet.create({
     marginVertical: 7,
   },
   choiceTxt: { fontSize: 16, fontWeight: "700" },
+
   btnSmall: {
     paddingVertical: 12,
     paddingHorizontal: 14,
@@ -524,9 +724,35 @@ export const S = StyleSheet.create({
     flex: 1,
   },
   btnTxt: { fontWeight: "800", textAlign: "center" },
+
   solid: { borderWidth: 1.5 },
   outline: { backgroundColor: "transparent", borderWidth: 1.5 },
+
   result: { fontSize: 18, marginTop: 6 },
+
+  resultCard: {
+    borderRadius: 14,
+    borderWidth: 1.5,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginTop: 10,
+    marginBottom: 14,
+  },
+  resultLabel: {
+    fontSize: 14,
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+  resultScore: {
+    fontSize: 20,
+    fontWeight: "800",
+    marginBottom: 4,
+  },
+  resultNote: {
+    fontSize: 13,
+    opacity: 0.9,
+  },
+
   modalBackdrop: {
     position: "absolute",
     top: 0,
