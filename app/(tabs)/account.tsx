@@ -20,6 +20,7 @@ import { useUser } from "../context/UserContext";
 import { useTheme } from "../context/ThemeContext";
 import { useCoins } from "../context/CoinsContext";
 import { showToast } from "../utils/toast";
+import { supabase } from "../lib/supabase";
 
 export default function AccountScreen() {
   const {
@@ -28,7 +29,6 @@ export default function AccountScreen() {
     setUsername,
     setAvatar,
     updateProfile,
-    signIn,
     signOut,
     deleteAccount,
   } = useUser() as any;
@@ -63,21 +63,17 @@ export default function AccountScreen() {
   useEffect(() => {
     if (ready) {
       setName(user?.username || user?.name || "");
-      setContactEmail(user?.contactEmail || "");
+      setContactEmail(user?.contactEmail || user?.email || "");
       setAvatarLocal(currentAvatar);
     }
-  }, [ready, user?.username, user?.name, user?.contactEmail, currentAvatar]);
-
-  const saveAvatarEverywhere = async (uri: string | null) => {
-    await updateProfile?.({
-      avatarUri: uri,
-      avatarUrl: uri,
-      avatar: uri,
-      photoURL: uri,
-      imageUrl: uri,
-    });
-    await setAvatar?.(uri ?? null);
-  };
+  }, [
+    ready,
+    user?.username,
+    user?.name,
+    user?.contactEmail,
+    user?.email,
+    currentAvatar,
+  ]);
 
   const pickAvatarWeb = async () => {
     return new Promise<string | null>((resolve) => {
@@ -99,6 +95,17 @@ export default function AccountScreen() {
         resolve(null);
       }
     });
+  };
+
+  const saveAvatarEverywhere = async (uri: string | null) => {
+    await updateProfile?.({
+      avatarUri: uri,
+      avatarUrl: uri,
+      avatar: uri,
+      photoURL: uri,
+      imageUrl: uri,
+    });
+    await setAvatar?.(uri ?? null);
   };
 
   async function onPickAvatar() {
@@ -160,25 +167,6 @@ export default function AccountScreen() {
     showToast("Profile saved");
   }
 
-  async function onQuickLogin() {
-    const newName = name.trim() || "Student";
-    const newEmail = contactEmail.trim();
-
-    await signIn?.({
-      id: "local",
-      username: newName,
-      name: newName,
-      contactEmail: newEmail,
-      avatarUri: avatarLocal,
-      avatarUrl: avatarLocal,
-      avatar: avatarLocal,
-      photoURL: avatarLocal,
-      imageUrl: avatarLocal,
-    });
-
-    showToast("Signed in");
-  }
-
   async function onSignOut() {
     await signOut?.();
     setName("");
@@ -211,6 +199,40 @@ export default function AccountScreen() {
       Alert.alert(
         "Error",
         e?.message ? String(e.message) : "Could not delete account"
+      );
+    }
+  }
+
+  const loginEmail = user?.email || user?.contactEmail || contactEmail || "";
+  const loginUsername = user?.username || user?.name || name || "";
+
+  async function onForgotPassword() {
+    const email = loginEmail.trim();
+
+    if (!email) {
+      Alert.alert(
+        "No email on file",
+        "To reset your password, first sign up or sign in with an email address."
+      );
+      return;
+    }
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo:
+          "https://novatutoring-eoq65leh2-contactnovatutoring-8350s-projects.vercel.app",
+      });
+
+      if (error) throw error;
+
+      Alert.alert(
+        "Check your email",
+        `We sent a password reset link to:\n\n${email}`
+      );
+    } catch (e: any) {
+      Alert.alert(
+        "Reset error",
+        e?.message ? String(e.message) : "Could not send reset email"
       );
     }
   }
@@ -319,23 +341,6 @@ export default function AccountScreen() {
             style={[
               S.btn,
               {
-                borderColor: tokens.border,
-                backgroundColor: tokens.isDark
-                  ? "rgba(255,255,255,0.06)"
-                  : "rgba(0,0,0,0.04)",
-              },
-            ]}
-            onPress={onQuickLogin}
-          >
-            <Text style={[S.btnt, { color: tokens.text }]}>
-              Sign In
-            </Text>
-          </Pressable>
-
-          <Pressable
-            style={[
-              S.btn,
-              {
                 borderColor: "#ff6b6b",
                 backgroundColor: tokens.isDark
                   ? "rgba(255,107,107,0.18)"
@@ -390,7 +395,10 @@ export default function AccountScreen() {
         >
           <Text style={[S.k, { color: tokens.cardText }]}>Current</Text>
           <Text style={[S.v, { color: tokens.text }]}>
-            Name: {user?.username || user?.name || "—"}
+            Username: {loginUsername || "—"}
+          </Text>
+          <Text style={[S.v, { color: tokens.text }]}>
+            Login Email: {loginEmail || "—"}
           </Text>
           <Text style={[S.v, { color: tokens.text }]}>
             Contact Email: {user?.contactEmail || "—"}
@@ -398,6 +406,72 @@ export default function AccountScreen() {
           <Text style={[S.v, { color: tokens.text }]}>
             Avatar: {currentAvatar ? "Set" : "None"}
           </Text>
+        </View>
+
+        {/* Security / “forgot” helpers */}
+        <View
+          style={[
+            S.card,
+            {
+              borderColor: tokens.border,
+              backgroundColor: tokens.card,
+            },
+          ]}
+        >
+          <Text style={[S.k, { color: tokens.cardText }]}>Security</Text>
+
+          <Text style={[S.smallNote, { color: tokens.cardText }]}>
+            This is the email you should use on the login screen:
+          </Text>
+          <Text style={[S.v, { color: tokens.text }]}>
+            {loginEmail || "No login email saved yet"}
+          </Text>
+
+          {/* Forgot password – text link */}
+          <Pressable
+            style={{ marginTop: 8 }}
+            onPress={onForgotPassword}
+          >
+            <Text style={S.privacyLink}>
+              Forgot password? Send reset email
+            </Text>
+          </Pressable>
+
+          {/* Forgot email */}
+          <Pressable
+            style={{ marginTop: 4 }}
+            onPress={() => {
+              if (!loginEmail) {
+                Alert.alert(
+                  "No email saved",
+                  "Once you sign up or sign in with an email, it will be shown here so you can remember it later."
+                );
+              } else {
+                Alert.alert("Login email", loginEmail);
+              }
+            }}
+          >
+            <Text style={S.privacyLink}>
+              Forgot which email you used?
+            </Text>
+          </Pressable>
+
+          {/* Forgot username */}
+          <Pressable
+            style={{ marginTop: 4 }}
+            onPress={() => {
+              if (!loginUsername) {
+                Alert.alert(
+                  "No username saved",
+                  "Once you choose a username, it will be shown here so you can remember it later."
+                );
+              } else {
+                Alert.alert("Your username", loginUsername);
+              }
+            }}
+          >
+            <Text style={S.privacyLink}>Forgot your username?</Text>
+          </Pressable>
         </View>
 
         {/* Privacy Policy link */}
@@ -592,7 +666,11 @@ export const S = StyleSheet.create({
   k: { marginBottom: 6 },
   v: { fontWeight: "600", marginTop: 2 },
 
-  // Delete Account – like other buttons but full-width + red
+  smallNote: {
+    fontSize: 11,
+    marginTop: 4,
+  },
+
   deleteBtn: {
     width: "100%",
     paddingVertical: 12,
@@ -607,7 +685,6 @@ export const S = StyleSheet.create({
     color: "#000000",
   },
 
-  // Privacy link
   privacyRow: {
     marginTop: 18,
     alignItems: "center",
@@ -619,7 +696,6 @@ export const S = StyleSheet.create({
     textDecorationLine: "underline",
   },
 
-  // Modal styles
   modalBackdrop: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.55)",

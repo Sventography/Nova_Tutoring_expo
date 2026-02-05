@@ -1,4 +1,4 @@
-package com.novatutoring
+package com.sventography.novatutoring
 
 import android.os.Build
 import android.os.Bundle

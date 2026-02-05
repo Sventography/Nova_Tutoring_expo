@@ -1,214 +1,496 @@
-// app/context/UserContext.tsx
 import React, {
   createContext,
-  useCallback,
   useContext,
   useEffect,
-  useMemo,
   useState,
+  ReactNode,
 } from "react";
+import type { Session, User as SupabaseUser } from "@supabase/supabase-js";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { supabase } from "../lib/supabase";
 
-export type User = {
-  id?: string;
-  name?: string;
-  username?: string;
-  email?: string;
-  contactEmail?: string;
-  avatarUri?: string;
-  avatarUrl?: string;
-  avatar?: string;
-  photoURL?: string;
-  imageUrl?: string;
+type LocalUserProfile = {
+  id: string;
+  username?: string | null;
+  name?: string | null;
+  displayName?: string | null;
+  contactEmail?: string | null;
+  avatar?: string | null;
+  avatarUrl?: string | null;
+  avatarUri?: string | null;
+  photoURL?: string | null;
+  imageUrl?: string | null;
 };
 
-type Ctx = {
-  user: User | null;
+type UserContextValue = {
   ready: boolean;
-  setUser: (u: User | null) => void;
-  updateUser: (patch: Partial<User>) => void;
-  updateProfile: (patch: Partial<User>) => Promise<void>;
-  setUsername: (name: string) => Promise<void>;
-  setAvatar: (uri: string | null) => Promise<void>;
-  signIn: (u: Partial<User>) => Promise<void>;
+  session: Session | null;
+  supabaseUserId: string | null;
+  user: LocalUserProfile | null;
+
+  username: string | null;
+  name: string | null;
+  contactEmail: string | null;
+
+  avatar: string | null;
+  avatarUrl: string | null;
+  avatarUri: string | null;
+  photoURL: string | null;
+  imageUrl: string | null;
+
+  setUsername: (name: string) => Promise<void> | void;
+  setAvatar: (uri: string | null) => Promise<void> | void;
+  updateProfile: (patch: Partial<LocalUserProfile>) => Promise<void>;
+
+  signUpWithEmailPassword: (
+    username: string,
+    email: string,
+    password: string
+  ) => Promise<void>;
+
+  loginWithEmailPassword: (email: string, password: string) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
+  updatePassword: (newPassword: string) => Promise<void>;
+
   signOut: () => Promise<void>;
   deleteAccount: () => Promise<void>;
-  reload: () => Promise<void>;
 };
 
-export const USER_STORAGE_KEY = "@nova/user";
-const C = createContext<Ctx | null>(null);
+const UserContext = createContext<UserContextValue | null>(null);
 
-export function UserProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUserState] = useState<User | null>(null);
+const PROFILE_KEY = "user.profile.v1";
+const SUPABASE_JWT_KEY = "auth.supabase.jwt";
+
+function mapProfileRow(row: any): Partial<LocalUserProfile> {
+  if (!row) return {};
+  const avatar = row.avatar_url ?? null;
+  return {
+    id: row.id,
+    username: row.username ?? null,
+    name: row.username ?? null,
+    displayName: row.username ?? null,
+    contactEmail: row.contact_email ?? null,
+    avatar,
+    avatarUrl: avatar,
+    avatarUri: avatar,
+    photoURL: avatar,
+    imageUrl: avatar,
+  };
+}
+
+async function persistProfile(profile: LocalUserProfile | null) {
+  if (!profile) {
+    await AsyncStorage.removeItem(PROFILE_KEY);
+  } else {
+    await AsyncStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+  }
+}
+
+export function UserProvider({ children }: { children: ReactNode }) {
+  const [profile, setProfile] = useState<LocalUserProfile | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [supabaseUserId, setSupabaseUserId] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
 
-  // initial load from AsyncStorage
+  // Initial load: local profile + Supabase session
   useEffect(() => {
     (async () => {
       try {
-        const raw = await AsyncStorage.getItem(USER_STORAGE_KEY);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (parsed && typeof parsed === "object") {
-            setUserState(parsed as User);
+        const stored = await AsyncStorage.getItem(PROFILE_KEY);
+        if (stored) {
+          try {
+            setProfile(JSON.parse(stored));
+          } catch {
+            // ignore parse errors
           }
         }
-      } catch {
-        // ignore
+
+        const { data, error } = await supabase.auth.getSession();
+        if (error) {
+          console.warn("[UserContext] getSession error:", error);
+        }
+        const sess = data.session ?? null;
+        setSession(sess);
+
+        if (sess?.access_token) {
+          await AsyncStorage.setItem(SUPABASE_JWT_KEY, sess.access_token);
+        } else {
+          await AsyncStorage.removeItem(SUPABASE_JWT_KEY);
+        }
+
+        const authUser = sess?.user ?? null;
+        if (authUser) {
+          setSupabaseUserId(authUser.id);
+          await hydrateProfileFromSupabase(authUser.id, authUser);
+        }
+      } catch (e) {
+        console.warn("[UserContext] init error:", e);
       } finally {
         setReady(true);
       }
     })();
   }, []);
 
-  // persist user changes once ready
+  // React to auth state changes (login / logout)
   useEffect(() => {
-    if (!ready) return;
-    AsyncStorage.setItem(
-      USER_STORAGE_KEY,
-      JSON.stringify(user ?? {})
-    ).catch(() => {});
-  }, [user, ready]);
-
-  const setUser = useCallback((u: User | null) => {
-    setUserState(u);
-  }, []);
-
-  const updateUser = useCallback((patch: Partial<User>) => {
-    setUserState((prev) => ({ ...(prev ?? {}), ...patch }));
-  }, []);
-
-  const updateProfile = useCallback(async (patch: Partial<User>) => {
-    setUserState((prev) => {
-      const next = { ...(prev ?? {}), ...patch };
-      AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(next)).catch(
-        () => {}
-      );
-      return next;
-    });
-  }, []);
-
-  const setUsername = useCallback(async (name: string) => {
-    setUserState((prev) => {
-      const base: User = { id: "local" };
-      const next: User = {
-        ...(prev ?? base),
-        username: name,
-        name,
-      };
-      AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(next)).catch(
-        () => {}
-      );
-      return next;
-    });
-  }, []);
-
-  const setAvatar = useCallback(async (uri: string | null) => {
-    setUserState((prev) => {
-      const base: User = { id: "local" };
-      const next: User = {
-        ...(prev ?? base),
-        avatarUri: uri || undefined,
-        avatarUrl: uri || undefined,
-        avatar: uri || undefined,
-        photoURL: uri || undefined,
-        imageUrl: uri || undefined,
-      };
-      AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(next)).catch(
-        () => {}
-      );
-      return next;
-    });
-  }, []);
-
-  const signIn = useCallback(
-    async (u: Partial<User>) => {
-      const base: User = {
-        id: "local",
-        name: "Student",
-        username: "Student",
-      };
-      const next: User = { ...base, ...(user ?? {}), ...u };
-      setUserState(next);
-      try {
-        await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(next));
-      } catch {
-        // ignore
-      }
-    },
-    [user]
-  );
-
-  const signOut = useCallback(async () => {
-    setUserState(null);
-    try {
-      await AsyncStorage.removeItem(USER_STORAGE_KEY);
-    } catch {
-      // ignore
-    }
-  }, []);
-
-  const deleteAccount = useCallback(async () => {
-    // hard nuke: user + coins + achievements + purchases + everything AsyncStorage
-    setUserState(null);
-    try {
-      await AsyncStorage.clear();
-    } catch {
-      // ignore
-    }
-  }, []);
-
-  const reload = useCallback(async () => {
-    try {
-      const raw = await AsyncStorage.getItem(USER_STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed && typeof parsed === "object") {
-          setUserState(parsed as User);
+    const { data } = supabase.auth.onAuthStateChange(
+      async (_event, sess) => {
+        setSession(sess);
+        const token = sess?.access_token;
+        if (token) {
+          await AsyncStorage.setItem(SUPABASE_JWT_KEY, token);
+        } else {
+          await AsyncStorage.removeItem(SUPABASE_JWT_KEY);
         }
-      } else {
-        setUserState(null);
+
+        const authUser = sess?.user ?? null;
+        if (authUser) {
+          setSupabaseUserId(authUser.id);
+          await hydrateProfileFromSupabase(authUser.id, authUser);
+        } else {
+          setSupabaseUserId(null);
+          setProfile(null);
+          await persistProfile(null);
+        }
       }
-    } catch {
-      // ignore
-    }
+    );
+
+    return () => {
+      data.subscription.unsubscribe();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const value = useMemo(
-    () => ({
-      user,
-      ready,
-      setUser,
-      updateUser,
-      updateProfile,
-      setUsername,
-      setAvatar,
-      signIn,
-      signOut,
-      deleteAccount,
-      reload,
-    }),
-    [
-      user,
-      ready,
-      setUser,
-      updateUser,
-      updateProfile,
-      setUsername,
-      setAvatar,
-      signIn,
-      signOut,
-      deleteAccount,
-      reload,
-    ]
-  );
+  const hydrateProfileFromSupabase = async (
+    userId: string,
+    authUser?: SupabaseUser | null
+  ) => {
+    try {
+      const { data: row, error } = await supabase
+        .from("profiles")
+        .select("id, username, contact_email, avatar_url")
+        .eq("id", userId)
+        .maybeSingle();
 
-  return <C.Provider value={value}>{children}</C.Provider>;
+      if (error && (error as any).code !== "PGRST116") {
+        console.warn("[UserContext] load profile error:", error);
+      }
+
+      let next: LocalUserProfile = {
+        id: userId,
+        username: null,
+        name: null,
+        displayName: null,
+        contactEmail: null,
+        avatar: null,
+        avatarUrl: null,
+        avatarUri: null,
+        photoURL: null,
+        imageUrl: null,
+      };
+
+      if (authUser) {
+        const meta: any = authUser.user_metadata || {};
+        const usernameFromMeta = meta.username ?? null;
+        const email = authUser.email ?? null;
+
+        next.username = usernameFromMeta ?? row?.username ?? usernameFromMeta;
+        next.name = next.username;
+        next.displayName = next.username;
+        next.contactEmail = row?.contact_email ?? email;
+      }
+
+      if (row) {
+        next = { ...next, ...mapProfileRow(row) };
+      }
+
+      setProfile(next);
+      await persistProfile(next);
+    } catch (e) {
+      console.warn("[UserContext] hydrateProfileFromSupabase error:", e);
+    }
+  };
+
+  const baseUpdateProfileLocal = (patch: Partial<LocalUserProfile>) => {
+    setProfile((prev) => {
+      const next: LocalUserProfile = {
+        ...(prev || {
+          id: supabaseUserId || "local",
+        }),
+        ...patch,
+      };
+      persistProfile(next);
+      return next;
+    });
+  };
+
+  const updateProfile = async (patch: Partial<LocalUserProfile>) => {
+    baseUpdateProfileLocal(patch);
+
+    if (!supabaseUserId) {
+      return;
+    }
+
+    const row: any = {
+      id: supabaseUserId,
+      updated_at: new Date().toISOString(),
+    };
+
+    const candidateUsername =
+      patch.username ?? patch.name ?? patch.displayName;
+    if (typeof candidateUsername === "string") {
+      row.username = candidateUsername;
+    }
+
+    const candidateEmail =
+      patch.contactEmail ?? (patch as any).contact_email;
+    if (typeof candidateEmail === "string") {
+      row.contact_email = candidateEmail;
+    }
+
+    const candidateAvatar =
+      patch.avatar ??
+      patch.avatarUrl ??
+      patch.avatarUri ??
+      patch.photoURL ??
+      patch.imageUrl;
+    if (typeof candidateAvatar === "string") {
+      row.avatar_url = candidateAvatar;
+    }
+
+    try {
+      const { error } = await supabase.from("profiles").upsert(row);
+      if (error) {
+        console.warn("[UserContext] updateProfile Supabase error:", error);
+      }
+    } catch (e) {
+      console.warn("[UserContext] updateProfile error:", e);
+    }
+  };
+
+  const setUsername = (name: string) => {
+    const trimmed = name.trim() || "Student";
+    return updateProfile({
+      username: trimmed,
+      name: trimmed,
+      displayName: trimmed,
+    });
+  };
+
+  const setAvatar = (uri: string | null) => {
+    return updateProfile({
+      avatar: uri,
+      avatarUrl: uri,
+      avatarUri: uri,
+      photoURL: uri,
+      imageUrl: uri,
+    });
+  };
+
+  const signUpWithEmailPassword = async (
+    username: string,
+    email: string,
+    password: string
+  ) => {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { username },
+        },
+      });
+
+      if (error) {
+        console.warn("[UserContext] signUp error:", error);
+        throw error;
+      }
+
+      const sess = data.session ?? null;
+      const authUser = data.user ?? null;
+      setSession(sess);
+
+      if (sess?.access_token) {
+        await AsyncStorage.setItem(SUPABASE_JWT_KEY, sess.access_token);
+      }
+
+      if (authUser) {
+        setSupabaseUserId(authUser.id);
+        const next: LocalUserProfile = {
+          id: authUser.id,
+          username,
+          name: username,
+          displayName: username,
+          contactEmail: email,
+          avatar: null,
+          avatarUrl: null,
+          avatarUri: null,
+          photoURL: null,
+          imageUrl: null,
+        };
+        setProfile(next);
+        await persistProfile(next);
+
+        const { error: profileError } = await supabase
+          .from("profiles")
+          .upsert({
+            id: authUser.id,
+            username,
+            contact_email: email,
+          });
+
+        if (profileError) {
+          console.warn(
+            "[UserContext] profiles upsert on signUp error:",
+            profileError
+          );
+        }
+      }
+    } catch (e) {
+      console.warn("[UserContext] signUpWithEmailPassword threw:", e);
+      throw e;
+    }
+  };
+
+  const loginWithEmailPassword = async (email: string, password: string) => {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        console.warn("[UserContext] login error:", error);
+        throw error;
+      }
+
+      const sess = data.session ?? null;
+      const authUser = data.user ?? null;
+      setSession(sess);
+
+      if (sess?.access_token) {
+        await AsyncStorage.setItem(SUPABASE_JWT_KEY, sess.access_token);
+      }
+
+      if (authUser) {
+        setSupabaseUserId(authUser.id);
+        await hydrateProfileFromSupabase(authUser.id, authUser);
+      }
+    } catch (e) {
+      console.warn("[UserContext] loginWithEmailPassword threw:", e);
+      throw e;
+    }
+  };
+
+  const resetPassword = async (email: string) => {
+    try {
+      const trimmed = email.trim();
+      if (!trimmed) {
+        throw new Error("Please enter an email address first.");
+      }
+
+      const { error } = await supabase.auth.resetPasswordForEmail(trimmed, {
+        // You can change this redirect later if you add a hosted reset page
+        redirectTo:
+          "https://novatutoring-eoq65leh2-contactnovatutoring-8350s-projects.vercel.app",
+      });
+
+      if (error) {
+        console.warn("[UserContext] resetPassword error:", error);
+        throw error;
+      }
+    } catch (e) {
+      console.warn("[UserContext] resetPassword threw:", e);
+      throw e;
+    }
+  };
+
+  const updatePassword = async (newPassword: string) => {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+      if (error) {
+        console.warn("[UserContext] updatePassword error:", error);
+        throw error;
+      }
+    } catch (e) {
+      console.warn("[UserContext] updatePassword threw:", e);
+      throw e;
+    }
+  };
+
+  const signOut = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (e) {
+      console.warn("[UserContext] signOut error:", e);
+    } finally {
+      setSession(null);
+      setSupabaseUserId(null);
+      setProfile(null);
+      await AsyncStorage.removeItem(SUPABASE_JWT_KEY);
+      await AsyncStorage.removeItem(PROFILE_KEY);
+    }
+  };
+
+  const deleteAccount = async () => {
+    // For now, "delete account" just clears local data on this device.
+    // Full remote deletion would go through your backend with the service key.
+    await signOut();
+  };
+
+  const flatUsername =
+    profile?.username ?? profile?.name ?? profile?.displayName ?? null;
+  const flatName = profile?.name ?? profile?.username ?? null;
+  const flatContactEmail = profile?.contactEmail ?? null;
+
+  const flatAvatar =
+    profile?.avatar ??
+    profile?.avatarUrl ??
+    profile?.avatarUri ??
+    profile?.photoURL ??
+    profile?.imageUrl ??
+    null;
+
+  const value: UserContextValue = {
+    ready,
+    session,
+    supabaseUserId,
+    user: profile,
+
+    username: flatUsername,
+    name: flatName,
+    contactEmail: flatContactEmail,
+
+    avatar: flatAvatar,
+    avatarUrl: profile?.avatarUrl ?? null,
+    avatarUri: profile?.avatarUri ?? null,
+    photoURL: profile?.photoURL ?? null,
+    imageUrl: profile?.imageUrl ?? null,
+
+    setUsername,
+    setAvatar,
+    updateProfile,
+
+    signUpWithEmailPassword,
+    loginWithEmailPassword,
+    resetPassword,
+    updatePassword,
+
+    signOut,
+    deleteAccount,
+  };
+
+  return (
+    <UserContext.Provider value={value}>{children}</UserContext.Provider>
+  );
 }
 
 export function useUser() {
-  const ctx = useContext(C);
-  if (!ctx) throw new Error("useUser must be used inside UserProvider");
+  const ctx = useContext(UserContext);
+  if (!ctx) {
+    throw new Error("useUser must be used inside <UserProvider>");
+  }
   return ctx;
 }

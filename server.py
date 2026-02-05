@@ -7,10 +7,13 @@ import random
 from datetime import datetime, timezone
 from typing import List, Dict, Any
 
+import requests
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
 # --------------------------- Env loading (backend-only) ---------------------------
+
+
 def load_server_env():
     """
     Load secrets from server/env/.env.server if present.
@@ -18,6 +21,7 @@ def load_server_env():
     """
     try:
         from dotenv import load_dotenv
+
         env_file = os.getenv("SERVER_ENV_FILE", "server/env/.env.server")
         if os.path.exists(env_file):
             load_dotenv(env_file, override=False)
@@ -25,11 +29,19 @@ def load_server_env():
         # dotenv optional — if missing, skip
         pass
 
+
 load_server_env()
 
 # --------------------------- Config ---------------------------
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
-OPENAI_MODEL   = os.getenv("OPENAI_MODEL", "gpt-4o-mini").strip() or "gpt-4o-mini"
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini").strip() or "gpt-4o-mini"
+
+# Supabase config (server-side only)
+SUPABASE_URL = (os.getenv("SUPABASE_URL", "") or "").rstrip("/")
+SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+if not SUPABASE_SERVICE_ROLE_KEY:
+    # Fallback to anon if service role not set (okay for /auth/v1/user)
+    SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_ANON_KEY", "").strip()
 
 # Flask bind
 HOST = os.getenv("HOST", "0.0.0.0")
@@ -43,6 +55,8 @@ CORS_ALLOW_ORIGIN = os.getenv("CORS_ALLOW_ORIGIN", "*").strip() or "*"
 
 # --------------------------- OpenAI client (optional) ---------------------------
 _client = None
+
+
 def get_openai_client():
     global _client
     if _client is not None:
@@ -52,45 +66,73 @@ def get_openai_client():
     try:
         # OpenAI >= 1.0 SDK
         from openai import OpenAI
+
         _client = OpenAI(api_key=OPENAI_API_KEY)
         return _client
     except Exception:
         return None
 
+
 # --------------------------- App ---------------------------
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": CORS_ALLOW_ORIGIN}}, supports_credentials=True)
+CORS(
+    app,
+    resources={r"/*": {"origins": CORS_ALLOW_ORIGIN}},
+    supports_credentials=True,
+)
 
 # --------------------------- Utils ---------------------------
+
+
 def jerr(msg: str, code: int = 400):
     return jsonify({"error": msg}), code
 
+
 def norm(s: str) -> str:
     return (s or "").strip().lower()
+
 
 # Very small offline judge for sample teasers
 def offline_teaser_check(teaser: str, answer: str) -> Dict[str, Any]:
     t = norm(teaser)
     a = norm(answer)
 
-    if ("keys" in t and "open locks" in t):
+    if "keys" in t and "open locks" in t:
         ok = ("keyboard" in a) or ("piano" in a)
-        return {"correct": ok, "feedback": "keyboard or piano" if ok else "Think of keys that type or play.", "coins_awarded": 5 if ok else 0}
+        return {
+            "correct": ok,
+            "feedback": "keyboard or piano" if ok else "Think of keys that type or play.",
+            "coins_awarded": 5 if ok else 0,
+        }
 
     if ("speak without a mouth" in t) or ("hear without ears" in t):
         ok = "echo" in a
-        return {"correct": ok, "feedback": "echo" if ok else "It repeats you in canyons.", "coins_awarded": 5 if ok else 0}
+        return {
+            "correct": ok,
+            "feedback": "echo" if ok else "It repeats you in canyons.",
+            "coins_awarded": 5 if ok else 0,
+        }
 
-    if ("the less you see" in t):
+    if "the less you see" in t:
         ok = ("dark" in a) or ("darkness" in a) or ("fog" in a)
-        return {"correct": ok, "feedback": "darkness" if ok else "When it increases, visibility drops.", "coins_awarded": 5 if ok else 0}
+        return {
+            "correct": ok,
+            "feedback": "darkness" if ok else "When it increases, visibility drops.",
+            "coins_awarded": 5 if ok else 0,
+        }
 
-    return {"correct": False, "feedback": "No match offline. Try again!", "coins_awarded": 0}
+    return {
+        "correct": False,
+        "feedback": "No match offline. Try again!",
+        "coins_awarded": 0,
+    }
+
 
 def today_seed() -> int:
     # Deterministic per day seed
     d = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     return int(hashlib.sha256(d.encode()).hexdigest(), 16) % (2**31 - 1)
+
 
 # Small built-in pool if no OpenAI
 SEED_TEASERS = [
@@ -103,8 +145,9 @@ SEED_TEASERS = [
     "What has a neck but no head?",
     "What has to be broken before you can use it?",
     "What is full of holes but still holds water?",
-    "What goes up but never comes down?"
+    "What goes up but never comes down?",
 ]
+
 
 def pick_five_teasers() -> List[str]:
     rnd = random.Random(today_seed())
@@ -135,7 +178,9 @@ def pick_five_teasers() -> List[str]:
             # Extract 5 lines that look like teasers (strip numbers if any)
             teasers = []
             for l in lines:
-                l = l.split(".", 1)[-1].strip() if l[:2].isdigit() else l
+                # naive "1. Riddle" stripping
+                if len(l) >= 2 and l[0].isdigit() and l[1] in {".", ")", ":"}:
+                    l = l.split(" ", 1)[-1].strip()
                 if len(l) > 8:
                     teasers.append(l)
                 if len(teasers) == 5:
@@ -149,20 +194,83 @@ def pick_five_teasers() -> List[str]:
     rnd.shuffle(SEED_TEASERS)
     return SEED_TEASERS[:5]
 
+
+# --------------------------- Supabase auth helpers ---------------------------
+
+
+def get_supabase_user_from_request():
+    """
+    Reads Authorization: Bearer <token> from the request, asks Supabase
+    /auth/v1/user who this is, and returns (user_dict, None, 200) on success
+    or (None, error_message, status_code) on failure.
+    """
+    auth = request.headers.get("Authorization", "")
+    if not auth.lower().startswith("bearer "):
+        return None, "Missing or invalid Authorization header", 401
+
+    token = auth.split(" ", 1)[1].strip()
+    if not token:
+        return None, "Empty bearer token", 401
+
+    if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY:
+        return None, "Supabase not configured on server", 500
+
+    try:
+        resp = requests.get(
+            f"{SUPABASE_URL}/auth/v1/user",
+            headers={
+                "apikey": SUPABASE_SERVICE_ROLE_KEY,
+                "Authorization": f"Bearer {token}",
+            },
+            timeout=5,
+        )
+    except Exception as e:
+        return None, f"Error contacting Supabase: {e}", 502
+
+    if resp.status_code != 200:
+        return None, f"Supabase auth failed ({resp.status_code})", 401
+
+    try:
+        user = resp.json()
+    except Exception:
+        return None, "Failed to parse Supabase user JSON", 500
+
+    return user, None, 200
+
+
 # --------------------------- Routes ---------------------------
+
+
 @app.get("/health")
 def health():
-    return jsonify({
-        "ok": True,
-        "time": int(time.time()),
-        "frontend": APP_FRONTEND_URL or None,
-        "has_openai": bool(get_openai_client()),
-        "port": PORT
-    })
+    return jsonify(
+        {
+            "ok": True,
+            "time": int(time.time()),
+            "frontend": APP_FRONTEND_URL or None,
+            "has_openai": bool(get_openai_client()),
+            "port": PORT,
+        }
+    )
+
 
 @app.get("/api/ping")
 def ping():
     return jsonify({"pong": True, "time": int(time.time())})
+
+
+@app.get("/api/auth/me")
+def api_auth_me():
+    """
+    Phase 2 test route:
+    Frontend sends Authorization: Bearer <supabase_access_token>
+    Server responds with Supabase's user object if valid.
+    """
+    user, err, status = get_supabase_user_from_request()
+    if err:
+        return jerr(err, status)
+    return jsonify({"user": user})
+
 
 @app.post("/api/ask")
 def api_ask():
@@ -193,12 +301,21 @@ def api_ask():
             return jerr(f"OpenAI error: {e}", 500)
 
     # No key → offline fallback
-    fake = "I can’t reach the AI model right now, but here’s a tip: break the problem into smaller steps."
+    fake = (
+        "I can’t reach the AI model right now, but here’s a tip: break the problem into smaller steps."
+    )
     return jsonify({"answer": fake, "coins_awarded": 0})
+
 
 @app.get("/api/teasers/today")
 def api_teasers_today():
-    return jsonify({"date": datetime.now(timezone.utc).strftime("%Y-%m-%d"), "teasers": pick_five_teasers()})
+    return jsonify(
+        {
+            "date": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+            "teasers": pick_five_teasers(),
+        }
+    )
+
 
 @app.post("/api/teasers/check")
 def api_teasers_check():
@@ -224,7 +341,9 @@ def api_teasers_check():
                 f"Answer: {answer}\n"
             )
             try:
-                resp = client.responses.create(model=OPENAI_MODEL, input=judge_prompt)
+                resp = client.responses.create(
+                    model=OPENAI_MODEL, input=judge_prompt
+                )
                 txt = (resp.output_text or "").strip()
             except Exception:
                 chat = client.chat.completions.create(
@@ -242,19 +361,32 @@ def api_teasers_check():
                 start = txt.find("{")
                 end = txt.rfind("}")
                 if start >= 0 and end > start:
-                    parsed = json.loads(txt[start:end+1])
+                    parsed = json.loads(txt[start : end + 1])
 
             if isinstance(parsed, dict) and "correct" in parsed:
                 correct = bool(parsed.get("correct"))
-                feedback = str(parsed.get("feedback") or ("Correct!" if correct else "Incorrect."))
-                return jsonify({"correct": correct, "feedback": feedback, "coins_awarded": 5 if correct else 0})
+                feedback = str(
+                    parsed.get("feedback")
+                    or ("Correct!" if correct else "Incorrect.")
+                )
+                return jsonify(
+                    {
+                        "correct": correct,
+                        "feedback": feedback,
+                        "coins_awarded": 5 if correct else 0,
+                    }
+                )
         except Exception:
             pass
 
     # Default: incorrect (unknown)
-    return jsonify({"correct": False, "feedback": "Try again!", "coins_awarded": 0})
+    return jsonify(
+        {"correct": False, "feedback": "Try again!", "coins_awarded": 0}
+    )
+
 
 # --------------------------- Simple shop stubs ---------------------------
+
 CATALOG = [
     {
         "id": "plushie_bunny",
@@ -277,9 +409,11 @@ CATALOG = [
     },
 ]
 
+
 @app.get("/api/shop/list")
 def api_shop_list():
     return jsonify({"catalog": CATALOG})
+
 
 @app.post("/api/order")
 def api_order():
@@ -296,21 +430,26 @@ def api_order():
         result["payment_url"] = None  # Fill in with Stripe session URL if integrated
     return jsonify(result)
 
+
+# --------------------------- Achievements passthrough ---------------------------
+
+
+@app.get("/api/achievements")
+def get_achievements():
+    """
+    Simple passthrough that serves app/_data/achievements.json so the app
+    can fetch live definitions from the backend instead of bundling them.
+    """
+    try:
+        path = os.path.join("app", "_data", "achievements.json")
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return jsonify(data)
+    except Exception as e:
+        return jerr(str(e), 500)
+
+
 # --------------------------- Main ---------------------------
 if __name__ == "__main__":
     print(f"🚀 Flask listening on http://{HOST}:{PORT}")
     app.run(host=HOST, port=PORT, debug=True)
-from flask import Flask, jsonify
-import json
-import os
-
-app = Flask(__name__)
-
-@app.route("/api/achievements", methods=["GET"])
-def get_achievements():
-    try:
-        with open(os.path.join("app", "_data", "achievements.json"), "r") as f:
-            data = json.load(f)
-        return jsonify(data)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500

@@ -9,10 +9,10 @@
 /* Begin PBXBuildFile section */
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
-		55536B928F68F25A3AB3C7BA /* libPods-NovaTutoring.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CE4CCAB647650030B35DF797 /* libPods-NovaTutoring.a */; };
-		5ADC09E30E6114C138C81292 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A82E5DBCC0FF47905FBA3E6 /* ExpoModulesProvider.swift */; };
+		73796C20D78DF77E8B0BAE14 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = CEB4202D3389C40AECA4EC03 /* PrivacyInfo.xcprivacy */; };
+		74AE4B619F15C79A00F7ADC9 /* Pods_NovaTutoring.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5443A4D4820025E07CE46CD8 /* Pods_NovaTutoring.framework */; };
+		A06F71A557EDAA1A67D7C397 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A03C6C5027F6BE7522BB0BAD /* ExpoModulesProvider.swift */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
-		E39A0B11B52DBBF185550E31 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = C88DDE3942E708514D1C16EE /* PrivacyInfo.xcprivacy */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
 /* End PBXBuildFile section */
 
@@ -20,13 +20,13 @@
 		13B07F961A680F5B00A75B9A /* NovaTutoring.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NovaTutoring.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = NovaTutoring/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = NovaTutoring/Info.plist; sourceTree = "<group>"; };
-		37CA9C130D5383C3065B982B /* Pods-NovaTutoring.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-NovaTutoring.release.xcconfig"; path = "Target Support Files/Pods-NovaTutoring/Pods-NovaTutoring.release.xcconfig"; sourceTree = "<group>"; };
-		37D75F7DDF52DEE4B7BF5622 /* Pods-NovaTutoring.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-NovaTutoring.debug.xcconfig"; path = "Target Support Files/Pods-NovaTutoring/Pods-NovaTutoring.debug.xcconfig"; sourceTree = "<group>"; };
-		4A82E5DBCC0FF47905FBA3E6 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-NovaTutoring/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
+		5443A4D4820025E07CE46CD8 /* Pods_NovaTutoring.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_NovaTutoring.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		687FA640E8A9CF24A67F8595 /* Pods-NovaTutoring.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-NovaTutoring.debug.xcconfig"; path = "Target Support Files/Pods-NovaTutoring/Pods-NovaTutoring.debug.xcconfig"; sourceTree = "<group>"; };
+		A03C6C5027F6BE7522BB0BAD /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-NovaTutoring/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = NovaTutoring/SplashScreen.storyboard; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
-		C88DDE3942E708514D1C16EE /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = NovaTutoring/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		CE4CCAB647650030B35DF797 /* libPods-NovaTutoring.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-NovaTutoring.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		C76129E084F39B96E6FF94B7 /* Pods-NovaTutoring.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-NovaTutoring.release.xcconfig"; path = "Target Support Files/Pods-NovaTutoring/Pods-NovaTutoring.release.xcconfig"; sourceTree = "<group>"; };
+		CEB4202D3389C40AECA4EC03 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = NovaTutoring/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = NovaTutoring/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* NovaTutoring-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "NovaTutoring-Bridging-Header.h"; path = "NovaTutoring/NovaTutoring-Bridging-Header.h"; sourceTree = "<group>"; };
@@ -37,7 +37,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				55536B928F68F25A3AB3C7BA /* libPods-NovaTutoring.a in Frameworks */,
+				74AE4B619F15C79A00F7ADC9 /* Pods_NovaTutoring.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -53,15 +53,7 @@
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
-				C88DDE3942E708514D1C16EE /* PrivacyInfo.xcprivacy */,
-			);
-			name = NovaTutoring;
-			sourceTree = "<group>";
-		};
-		17A9E2C7CA7461F14C33C33F /* NovaTutoring */ = {
-			isa = PBXGroup;
-			children = (
-				4A82E5DBCC0FF47905FBA3E6 /* ExpoModulesProvider.swift */,
+				CEB4202D3389C40AECA4EC03 /* PrivacyInfo.xcprivacy */,
 			);
 			name = NovaTutoring;
 			sourceTree = "<group>";
@@ -70,9 +62,34 @@
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				CE4CCAB647650030B35DF797 /* libPods-NovaTutoring.a */,
+				5443A4D4820025E07CE46CD8 /* Pods_NovaTutoring.framework */,
 			);
 			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		3FD2A92A20C4B5024C6308A6 /* NovaTutoring */ = {
+			isa = PBXGroup;
+			children = (
+				A03C6C5027F6BE7522BB0BAD /* ExpoModulesProvider.swift */,
+			);
+			name = NovaTutoring;
+			sourceTree = "<group>";
+		};
+		578C4FCF0653412FE1B61D09 /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				687FA640E8A9CF24A67F8595 /* Pods-NovaTutoring.debug.xcconfig */,
+				C76129E084F39B96E6FF94B7 /* Pods-NovaTutoring.release.xcconfig */,
+			);
+			path = Pods;
+			sourceTree = "<group>";
+		};
+		7CEB839B0EAB087F8ECA62A9 /* ExpoModulesProviders */ = {
+			isa = PBXGroup;
+			children = (
+				3FD2A92A20C4B5024C6308A6 /* NovaTutoring */,
+			);
+			name = ExpoModulesProviders;
 			sourceTree = "<group>";
 		};
 		832341AE1AAA6A7D00B99B32 /* Libraries */ = {
@@ -89,8 +106,8 @@
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
-				BFDCB279D3B82971DBE99A40 /* Pods */,
-				F0F26241CB087C188D9F7E86 /* ExpoModulesProviders */,
+				578C4FCF0653412FE1B61D09 /* Pods */,
+				7CEB839B0EAB087F8ECA62A9 /* ExpoModulesProviders */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -114,24 +131,6 @@
 			path = NovaTutoring/Supporting;
 			sourceTree = "<group>";
 		};
-		BFDCB279D3B82971DBE99A40 /* Pods */ = {
-			isa = PBXGroup;
-			children = (
-				37D75F7DDF52DEE4B7BF5622 /* Pods-NovaTutoring.debug.xcconfig */,
-				37CA9C130D5383C3065B982B /* Pods-NovaTutoring.release.xcconfig */,
-			);
-			name = Pods;
-			path = Pods;
-			sourceTree = "<group>";
-		};
-		F0F26241CB087C188D9F7E86 /* ExpoModulesProviders */ = {
-			isa = PBXGroup;
-			children = (
-				17A9E2C7CA7461F14C33C33F /* NovaTutoring */,
-			);
-			name = ExpoModulesProviders;
-			sourceTree = "<group>";
-		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -140,13 +139,13 @@
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "NovaTutoring" */;
 			buildPhases = (
 				08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */,
-				8A2F1669CF86B18E4E2ED124 /* [Expo] Configure project */,
+				F3A89A05B098F01C69144C5F /* [Expo] Configure project */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
-				8F1E2C04F389ACB426A02E9F /* [CP] Embed Pods Frameworks */,
+				A5FFCF94C8954F988B642DF1 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -196,7 +195,7 @@
 				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
-				E39A0B11B52DBBF185550E31 /* PrivacyInfo.xcprivacy in Resources */,
+				73796C20D78DF77E8B0BAE14 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -253,6 +252,7 @@
 				"${PODS_CONFIGURATION_BUILD_DIR}/EXConstants/ExpoConstants_privacy.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/ExpoFileSystem/ExpoFileSystem_privacy.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/RNCAsyncStorage/RNCAsyncStorage_resources.bundle",
+				"${PODS_CONFIGURATION_BUILD_DIR}/RNSVG/RNSVGFilters.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/React-Core/React-Core_privacy.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/React-cxxreact/React-cxxreact_privacy.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/Stripe/StripeBundle.bundle",
@@ -263,6 +263,8 @@
 				"${PODS_CONFIGURATION_BUILD_DIR}/StripePayments/Stripe3DS2.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/StripePaymentsUI/StripePaymentsUIBundle.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/StripeUICore/StripeUICoreBundle.bundle",
+				"${PODS_CONFIGURATION_BUILD_DIR}/expo-dev-launcher/EXDevLauncher.bundle",
+				"${PODS_CONFIGURATION_BUILD_DIR}/expo-dev-menu/EXDevMenu.bundle",
 			);
 			name = "[CP] Copy Pods Resources";
 			outputPaths = (
@@ -270,6 +272,7 @@
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/ExpoConstants_privacy.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/ExpoFileSystem_privacy.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/RNCAsyncStorage_resources.bundle",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/RNSVGFilters.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/React-Core_privacy.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/React-cxxreact_privacy.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/StripeBundle.bundle",
@@ -280,36 +283,15 @@
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Stripe3DS2.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/StripePaymentsUIBundle.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/StripeUICoreBundle.bundle",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/EXDevLauncher.bundle",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/EXDevMenu.bundle",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-NovaTutoring/Pods-NovaTutoring-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		8A2F1669CF86B18E4E2ED124 /* [Expo] Configure project */ = {
-			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-				"$(SRCROOT)/.xcode.env",
-				"$(SRCROOT)/.xcode.env.local",
-				"$(SRCROOT)/Pods/Target Support Files/Pods-NovaTutoring/expo-configure-project.sh",
-			);
-			name = "[Expo] Configure project";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-				"$(SRCROOT)/Pods/Target Support Files/Pods-NovaTutoring/ExpoModulesProvider.swift",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-NovaTutoring/expo-configure-project.sh\"\n";
-		};
-		8F1E2C04F389ACB426A02E9F /* [CP] Embed Pods Frameworks */ = {
+		A5FFCF94C8954F988B642DF1 /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -331,6 +313,30 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-NovaTutoring/Pods-NovaTutoring-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
+		F3A89A05B098F01C69144C5F /* [Expo] Configure project */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/.xcode.env",
+				"$(SRCROOT)/.xcode.env.local",
+				"$(SRCROOT)/NovaTutoring/NovaTutoring.entitlements",
+				"$(SRCROOT)/Pods/Target Support Files/Pods-NovaTutoring/expo-configure-project.sh",
+			);
+			name = "[Expo] Configure project";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(SRCROOT)/Pods/Target Support Files/Pods-NovaTutoring/ExpoModulesProvider.swift",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-NovaTutoring/expo-configure-project.sh\"\n";
+		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -339,7 +345,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
-				5ADC09E30E6114C138C81292 /* ExpoModulesProvider.swift in Sources */,
+				A06F71A557EDAA1A67D7C397 /* ExpoModulesProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -348,11 +354,13 @@
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 37D75F7DDF52DEE4B7BF5622 /* Pods-NovaTutoring.debug.xcconfig */;
+			baseConfigurationReference = 687FA640E8A9CF24A67F8595 /* Pods-NovaTutoring.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = NovaTutoring/NovaTutoring.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 9CRT2P8KAM;
 				ENABLE_BITCODE = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
@@ -371,22 +379,25 @@
 					"-lc++",
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
-				PRODUCT_BUNDLE_IDENTIFIER = org.name.NovaTutoring;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sventography.novatutoring;
 				PRODUCT_NAME = NovaTutoring;
 				SWIFT_OBJC_BRIDGING_HEADER = "NovaTutoring/NovaTutoring-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Debug;
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 37CA9C130D5383C3065B982B /* Pods-NovaTutoring.release.xcconfig */;
+			baseConfigurationReference = C76129E084F39B96E6FF94B7 /* Pods-NovaTutoring.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = NovaTutoring/NovaTutoring.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 9CRT2P8KAM;
 				INFOPLIST_FILE = NovaTutoring/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -400,10 +411,11 @@
 					"-lc++",
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
-				PRODUCT_BUNDLE_IDENTIFIER = org.name.NovaTutoring;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sventography.novatutoring;
 				PRODUCT_NAME = NovaTutoring;
 				SWIFT_OBJC_BRIDGING_HEADER = "NovaTutoring/NovaTutoring-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Release;
@@ -455,6 +467,19 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"${PODS_ROOT}/ReactCommon",
+					"${PODS_ROOT}/ReactCommon/react/nativemodule/core",
+					"${PODS_ROOT}/React-runtimeexecutor",
+					"${PODS_ROOT}/React-runtimeexecutor/platform/ios",
+					"${PODS_ROOT}/ReactCommon-Samples",
+					"${PODS_ROOT}/ReactCommon-Samples/platform/ios",
+					"${PODS_ROOT}/React-Fabric/react/renderer/components/view/platform/cxx",
+					"${PODS_ROOT}/React-NativeModulesApple",
+					"${PODS_ROOT}/React-graphics",
+					"${PODS_ROOT}/React-graphics/react/renderer/graphics/platform/ios",
+				);
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					/usr/lib/swift,
@@ -511,6 +536,19 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"${PODS_ROOT}/ReactCommon",
+					"${PODS_ROOT}/ReactCommon/react/nativemodule/core",
+					"${PODS_ROOT}/React-runtimeexecutor",
+					"${PODS_ROOT}/React-runtimeexecutor/platform/ios",
+					"${PODS_ROOT}/ReactCommon-Samples",
+					"${PODS_ROOT}/ReactCommon-Samples/platform/ios",
+					"${PODS_ROOT}/React-Fabric/react/renderer/components/view/platform/cxx",
+					"${PODS_ROOT}/React-NativeModulesApple",
+					"${PODS_ROOT}/React-graphics",
+					"${PODS_ROOT}/React-graphics/react/renderer/graphics/platform/ios",
+				);
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					/usr/lib/swift,

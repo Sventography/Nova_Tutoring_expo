@@ -1,4 +1,4 @@
-package com.novatutoring
+package com.sventography.novatutoring
 
 import android.app.Application
 import android.content.res.Configuration

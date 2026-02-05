@@ -1,6 +1,5 @@
 // app/components/HeaderBar.tsx
 import React, { useEffect, useRef } from "react";
-import { useCoins } from "../context/CoinsContext";
 import {
   View,
   Text,
@@ -17,6 +16,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 
+import { useCoins } from "../context/CoinsContext";
 import { useUser } from "../context/UserContext";
 import { useStreak } from "../context/StreakContext";
 import { useFx } from "../context/FxProvider";
@@ -31,19 +31,20 @@ export default function HeaderBar() {
   const router = useRouter();
 
   const { enabled: fxOn, toggle: toggleFx } = useFx();
-  const userCtx = (useUser() || {}) as any;
   const { coins = 0 } = (useCoins() || {}) as any;
   const { loaded, count, todayChecked, markToday } =
     (useStreak() || {}) as any;
 
+  // 👉 This is the *only* place we read the user now
+  const { user, ready } = useUser();
+
   useEffect(() => {
     try {
-      console.log("HeaderBar useUser() shape:", userCtx);
+      console.log("[HeaderBar] user from context:", user, "ready:", ready);
     } catch {}
-  }, [userCtx]);
+  }, [user, ready]);
 
-  const nested = userCtx.user || {};
-
+  // Simple helpers for name + avatar
   const pickString = (v: any) =>
     typeof v === "string" && v.trim().length > 0 ? v.trim() : null;
 
@@ -51,68 +52,34 @@ export default function HeaderBar() {
     if (!obj || typeof obj !== "object") return null;
 
     const preferred = [
-      "avatar",
-      "avatarUrl",
-      "avatarURL",
       "avatarUri",
-      "avatarURI",
-      "photoUrl",
+      "avatarUrl",
+      "avatar",
       "photoURL",
-      "photo",
-      "image",
+      "photoUrl",
       "imageUrl",
       "imageURL",
-      "profilePic",
-      "profilePicUrl",
-      "profilePicture",
-      "profilePictureUrl",
-      "pfp",
     ];
 
     for (const k of preferred) {
-      const v = pickString(obj[k]);
+      const v = pickString((obj as any)[k]);
       if (v) return v;
-
-      if (obj[k] && typeof obj[k] === "object") {
-        const u = pickString(obj[k].uri);
-        if (u) return u;
-      }
-    }
-
-    for (const [k, v] of Object.entries(obj)) {
-      const key = String(k).toLowerCase();
-      if (
-        key.includes("avatar") ||
-        key.includes("photo") ||
-        key.includes("image") ||
-        key.includes("picture") ||
-        key.includes("pfp")
-      ) {
-        const s = pickString(v);
-        if (s) return s;
-        if (v && typeof v === "object") {
-          const u = pickString((v as any).uri);
-          if (u) return u;
-        }
-      }
     }
 
     return null;
   };
 
   const rawName =
-    userCtx.username ??
-    userCtx.name ??
-    userCtx.displayName ??
-    nested.username ??
-    nested.name ??
-    nested.displayName;
+    pickString(user?.username) ||
+    pickString(user?.name) ||
+    pickString(user?.contactEmail?.split("@")[0] || "");
 
-  const rawAvatar = scanForAvatar(userCtx) || scanForAvatar(nested);
+  const rawAvatar = scanForAvatar(user);
 
-  const name: string = (rawName || "Nova Student") as string;
+  const name: string = rawName || "Nova Student";
   const avatar: string | undefined = rawAvatar || undefined;
 
+  // Streak auto-mark
   useEffect(() => {
     if (loaded && !todayChecked && typeof markToday === "function") {
       markToday();

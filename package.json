@@ -9,7 +9,9 @@
     "build:web": "expo export -p web",
     "export:web": "expo export -p web",
     "start:web": "expo start --web",
-    "deploy": "expo export -p web && vercel --prod"
+    "deploy": "expo export -p web && vercel --prod",
+    "android": "expo run:android",
+    "ios": "expo run:ios"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
@@ -17,6 +19,9 @@
     "@stripe/stripe-js": "^8.3.0",
     "@stripe/stripe-react-native": "0.50.3",
     "@supabase/supabase-js": "^2.81.0",
+    "body-parser": "^2.2.2",
+    "cors": "^2.8.6",
+    "expo": "~54.0.31",
     "expo-av": "~16.0.8",
     "expo-build-properties": "~1.0.10",
     "expo-dev-client": "~6.0.20",
@@ -30,6 +35,10 @@
     "expo-router": "~6.0.21",
     "expo-sharing": "~14.0.8",
     "expo-web-browser": "~15.0.10",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.2.1",
+    "helmet": "^8.1.0",
+    "nodemailer": "^8.0.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-native": "0.81.5",
@@ -46,6 +55,7 @@
     "react-native-web": "^0.21.0",
     "react-native-worklets": "0.5.1",
     "resend": "^3.2.0",
+    "stripe": "^20.3.0",
     "zustand": "^5.0.8"
   },
   "devDependencies": {
@@ -60,5 +70,6 @@
   },
   "overrides": {
     "react-native-worklets": "0.5.1"
-  }
+  },
+  "version": "1.0.0"
 }

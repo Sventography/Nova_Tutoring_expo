@@ -1,21 +1,39 @@
+// app/index.tsx
 import React, { useRef, useEffect } from "react";
-import { View, Text, Pressable, StyleSheet, Image, Animated, Platform } from "react-native";
+import {
+  View,
+  Text,
+  Pressable,
+  StyleSheet,
+  Image,
+  Animated,
+  Platform,
+} from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { Link, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+
+import { useUser } from "./context/UserContext";
 
 const TUTORIAL_KEY = "onboarding.tutorial.done.v1";
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { isLoggedIn } = (useUser() || {}) as any;
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   // One-time tutorial gate (shows only once ever)
   useEffect(() => {
     (async () => {
-      const done = await AsyncStorage.getItem(TUTORIAL_KEY);
-      if (!done) router.replace("/tutorial");
+      try {
+        const done = await AsyncStorage.getItem(TUTORIAL_KEY);
+        if (!done) {
+          router.replace("/tutorial");
+        }
+      } catch {
+        // ignore tutorial errors
+      }
     })();
   }, [router]);
 
@@ -37,17 +55,47 @@ export default function HomeScreen() {
     ).start();
   }, [pulseAnim]);
 
-  const handlePress = async () => {
+  const hapticTap = async () => {
     if (Platform.OS !== "web") {
-      await Haptics.selectionAsync().catch(() => {});
+      try {
+        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+      } catch {
+        // ignore haptics errors
+      }
+    }
+  };
+
+  const handleLetsLearn = async () => {
+    await hapticTap();
+    router.push("/ask");
+  };
+
+  const handleLoginPress = async () => {
+    await hapticTap();
+    if (isLoggedIn) {
+      // Already signed in -> go straight to Account
+      router.push("/(tabs)/account");
+    } else {
+      // Not signed in -> go to sign-in / create account screen
+      router.push("/sign-in");
     }
   };
 
   const handleResetTutorial = async () => {
     if (Platform.OS !== "web") {
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      try {
+        await Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Success
+        );
+      } catch {
+        // ignore
+      }
     }
-    await AsyncStorage.removeItem(TUTORIAL_KEY);
+    try {
+      await AsyncStorage.removeItem(TUTORIAL_KEY);
+    } catch {
+      // ignore
+    }
     router.replace("/tutorial");
   };
 
@@ -59,38 +107,38 @@ export default function HomeScreen() {
       </Pressable>
 
       {/* Let’s Learn button */}
-      <Link href="/ask" asChild>
-        <Pressable onPress={handlePress}>
-          <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
-            <LinearGradient
-              colors={["#00e5ff", "#66b2ff", "#000000"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.button}
-            >
-              <Text style={styles.buttonText}>Let’s Learn</Text>
-            </LinearGradient>
-          </Animated.View>
-        </Pressable>
-      </Link>
+      <Pressable onPress={handleLetsLearn}>
+        <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+          <LinearGradient
+            colors={["#00e5ff", "#66b2ff", "#000000"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.button}
+          >
+            <Text style={styles.buttonText}>Let’s Learn</Text>
+          </LinearGradient>
+        </Animated.View>
+      </Pressable>
 
-      {/* Login button */}
-      <Link href="/account" asChild>
-        <Pressable onPress={handlePress}>
-          <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
-            <LinearGradient
-              colors={["#00e5ff", "#66b2ff", "#000000"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.button}
-            >
-              <Text style={styles.buttonText}>Login</Text>
-            </LinearGradient>
-          </Animated.View>
-        </Pressable>
-      </Link>
+      {/* Login button (conditional routing based on isLoggedIn) */}
+      <Pressable onPress={handleLoginPress}>
+        <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+          <LinearGradient
+            colors={["#00e5ff", "#66b2ff", "#000000"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.button}
+          >
+            <Text style={styles.buttonText}>
+              {isLoggedIn ? "Go to Account" : "Login"}
+            </Text>
+          </LinearGradient>
+        </Animated.View>
+      </Pressable>
 
-      <Text style={styles.hint}>Tip: Long-press the logo to replay the tutorial.</Text>
+      <Text style={styles.hint}>
+        Tip: Long-press the logo to replay the tutorial.
+      </Text>
     </View>
   );
 }

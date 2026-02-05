@@ -8,11 +8,14 @@ export default ({ config }) => ({
   version: "1.0.0",
   orientation: "portrait",
 
-  icon: "./app/assets/icon.png",
+  // TEMP SAFE IMAGE (guaranteed to exist)
+  icon: "./app/assets/favicon.png",
+
   userInterfaceStyle: "dark",
 
+  // TEMP SAFE SPLASH (same image)
   splash: {
-    image: "./assets/splash.png",
+    image: "./app/assets/favicon.png",
     resizeMode: "contain",
     backgroundColor: "#000000",
   },
@@ -25,16 +28,12 @@ export default ({ config }) => ({
 
   android: {
     package: "com.sventography.novatutoring",
-    adaptiveIcon: {
-      foregroundImage: "./assets/adaptive-icon.png",
-      backgroundColor: "#000000",
-    },
   },
 
   web: {
     bundler: "metro",
     output: "static",
-    favicon: "./assets/favicon.png",
+    favicon: "./app/assets/favicon.png",
   },
 
   plugins: [
