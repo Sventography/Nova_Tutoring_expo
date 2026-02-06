@@ -13,6 +13,8 @@ export type CheckoutPayload = {
   meta?: Record<string, any>;
   success_url?: string;
   cancel_url?: string;
+  /** Backend expects "coins" or "card". For Stripe/cash we use "card". */
+  method?: "coins" | "card";
 };
 
 export type CheckoutResult =
@@ -41,62 +43,49 @@ function getExpoDevHost(): string | null {
 
   if (typeof hostUri !== "string" || !hostUri) return null;
 
-  // hostUri/debuggerHost often looks like: "192.168.1.50:19000"
+  // hostUri/debuggerHost often looks like: "192.168.1.74:19000"
   const host = hostUri.split(":")[0];
   return host || null;
 }
 
-/** Resolve the backend base URL.
- * Priority:
- *  1) EXPO_PUBLIC_BACKEND_URL (wins)
- *  2) Web: mirror page host if LAN IP or localhost; else 127.0.0.1
- *  3) Native:
- *     - Android emulator: 10.0.2.2
- *     - iOS simulator: 127.0.0.1
- *     - Physical device: infer Expo dev host (LAN IP)
+/**
+ * Resolve the backend base URL.
  *
- * Default port is **8787**
+ * DEV MODE:
+ *  - Web: mirror the page host
+ *  - Device/simulator: use Expo's dev host (e.g. 192.168.1.74)
+ *  - Fallbacks: 10.0.2.2 for Android emulator, 127.0.0.1 last-resort
  */
 function getBackend(): string {
-  // 1) Env wins
-  const envRaw = (process?.env?.EXPO_PUBLIC_BACKEND_URL as string) || "";
-  if (envRaw.trim()) {
-    const out = stripTrailingSlashes(ensureHttp(envRaw));
-    if (__DEV__) console.warn("[checkout] BACKEND(env)", out);
-    return out;
-  }
-
-  // 2) Web host mirror
+  // 1) Web: use current page host
   if (Platform.OS === "web" && typeof window !== "undefined") {
     const h = window.location.hostname || "";
     const isLanIp = /^\d+\.\d+\.\d+\.\d+$/.test(h);
     const isLocal = /^(localhost|127\.0\.0\.1)$/i.test(h);
     const host = isLanIp || isLocal ? h : "127.0.0.1";
     const base = `http://${host}:${DEFAULT_PORT}`;
-    if (__DEV__) console.warn("[checkout] BACKEND(auto-web)", base);
+    if (__DEV__) console.warn("[checkout] BACKEND(web-host)", base);
     return base;
   }
 
-  // 3) Native fallback
-  if (Platform.OS === "android") {
-    // Android emulator -> host machine
-    const base = `http://10.0.2.2:${DEFAULT_PORT}`;
-    if (__DEV__) console.warn("[checkout] BACKEND(android-emulator)", base);
-    return base;
-  }
-
-  // iOS: could be simulator or physical device
-  // Simulator can reach 127.0.0.1, physical cannot.
-  const expoHost = getExpoDevHost(); // usually LAN IP of your Mac in dev
+  // 2) Expo dev host (works for physical devices + simulators)
+  const expoHost = getExpoDevHost();
   if (expoHost) {
     const base = `http://${expoHost}:${DEFAULT_PORT}`;
     if (__DEV__) console.warn("[checkout] BACKEND(expo-host)", base);
     return base;
   }
 
-  // last resort
+  // 3) Android emulator fallback
+  if (Platform.OS === "android") {
+    const base = `http://10.0.2.2:${DEFAULT_PORT}`;
+    if (__DEV__) console.warn("[checkout] BACKEND(android-emulator)", base);
+    return base;
+  }
+
+  // 4) Last resort: assume local machine
   const base = `http://127.0.0.1:${DEFAULT_PORT}`;
-  if (__DEV__) console.warn("[checkout] BACKEND(fallback)", base);
+  if (__DEV__) console.warn("[checkout] BACKEND(fallback-127)", base);
   return base;
 }
 
@@ -160,16 +149,21 @@ export async function startCheckout(
     success_url: input.success_url,
     cancel_url: input.cancel_url,
     meta: input.meta,
+    // 🔑 method is REQUIRED by your backend: "coins" or "card"
+    method: input.method || "card",
+    // extra fields we sometimes send along
     title: (input as any).title,
     image: (input as any).image,
     images: (input as any).images,
     description: (input as any).description,
   };
 
+  // We ONLY call the routes that exist on your Flask backend:
+  //   POST /checkout/start
+  //   POST /api/checkout/start
   const endpoints = [
     `${BACKEND}/checkout/start`,
     `${BACKEND}/api/checkout/start`,
-    `${BACKEND}/payments/checkout/start`,
   ];
 
   let lastErr: any = null;
@@ -187,11 +181,13 @@ export async function startCheckout(
     const checkoutUrl: string | undefined = json?.url ?? json?.checkout_url;
     const sessionId: string | undefined = json?.id ?? json?.sessionId;
 
+    // ✅ Preferred path: backend returns a Stripe Checkout URL
     if (checkoutUrl) {
       openUrl(checkoutUrl);
       return { ok: true, url: checkoutUrl };
     }
 
+    // Web-only: if backend gives a sessionId instead, use Stripe.js
     if (Platform.OS === "web" && sessionId) {
       try {
         const mod =
@@ -223,6 +219,7 @@ export async function startCheckout(
       }
     }
 
+    // If we got here, the response didn't have url or sessionId
     lastErr = new Error("No url/sessionId in response");
   }
 
