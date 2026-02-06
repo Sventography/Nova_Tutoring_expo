@@ -1,5 +1,8 @@
+// app/_lib/catalog.ts
+
 export const COINS_PER_DOLLAR = 1000;
-export const dollarsToCoins = (usd: number) => Math.round(usd * COINS_PER_DOLLAR);
+export const dollarsToCoins = (usd: number) =>
+  Math.round(usd * COINS_PER_DOLLAR);
 
 export type Category =
   | "plushies"
@@ -11,12 +14,12 @@ export type Category =
   | "coin_pack";
 
 export const CATEGORY_BORDER: Record<Category, string> = {
-  plushies:  "#00e5ff",
-  clothing:  "#FFD700", // gold border for clothing
+  plushies: "#00e5ff",
+  clothing: "#FFD700", // gold border for clothing
   tangibles: "#14b8a6",
-  cursor:    "#22c55e",
-  theme:     "#b67cff",
-  bundle:    "#f97316",
+  cursor: "#22c55e",
+  theme: "#b67cff",
+  bundle: "#f97316",
   coin_pack: "#f59e0b",
 };
 
@@ -25,81 +28,88 @@ export type CatalogItem = {
   title: string;
   desc?: string;
   category: Category;
-  priceUSD?: number;     // coin packs: USD only
-  priceCoins?: number;   // omit for coin packs
+  priceUSD?: number; // USD price (all non–coin-pack items)
+  priceCoins?: number; // Coins price (omit for coin packs)
   image?: any;
-  altImageKey?: string;  // for flip (front/back or alt angle)
-  themeId?: string;      // for themes only
+  altImageKey?: string; // for flip (front/back or alt angle)
+  themeId?: string; // for themes only
 };
 
 const img = {
   // plushies
-  plushie_nova_front:        require("../assets/shop/plushie_nova_pajamas_front.png"),
-  plushie_nova_back:         require("../assets/shop/plushie_nova_pajamas_back.png"),
+  plushie_nova_front: require("../assets/shop/plushie_nova_pajamas_front.png"),
+  plushie_nova_back: require("../assets/shop/plushie_nova_pajamas_back.png"),
 
   // bunny with book (now paired)
   nova_bunny_book_plushie_front: require("../assets/shop/nova_bunny_book_plushie_front.png"),
-  nova_bunny_book_plushie_back:  require("../assets/shop/nova_bunny_book_plushie_back.png"),
+  nova_bunny_book_plushie_back: require("../assets/shop/nova_bunny_book_plushie_back.png"),
 
   // star plushie (paired)
-  plushie_star_front:        require("../assets/shop/plushie_star_front.png"),
-  plushie_star_back:         require("../assets/shop/plushie_star_back.png"),
+  plushie_star_front: require("../assets/shop/plushie_star_front.png"),
+  plushie_star_back: require("../assets/shop/plushie_star_back.png"),
 
   // bunny classic + white (already paired)
-  plushie_bunny_front:       require("../assets/shop/plushie_bunny_front.png"),
-  plushie_bunny_back:        require("../assets/shop/plushie_bunny_back.png"),
+  plushie_bunny_front: require("../assets/shop/plushie_bunny_front.png"),
+  plushie_bunny_back: require("../assets/shop/plushie_bunny_back.png"),
   plushie_bunny_front_white: require("../assets/shop/plushie_bunny_front_white.png"),
-  plushie_bunny_back_white:  require("../assets/shop/plushie_bunny_back_white.png"),
+  plushie_bunny_back_white: require("../assets/shop/plushie_bunny_back_white.png"),
 
   // devil + purple (now paired)
-  nova_plushie_devil_front:  require("../assets/shop/nova_plushie_devil_front.png"),
-  nova_plushie_devil_back:   require("../assets/shop/nova_plushie_devil_back.png"),
+  nova_plushie_devil_front: require("../assets/shop/nova_plushie_devil_front.png"),
+  nova_plushie_devil_back: require("../assets/shop/nova_plushie_devil_back.png"),
   nova_plushie_purple_front: require("../assets/shop/nova_plushie_purple_front.png"),
-  nova_plushie_purple_back:  require("../assets/shop/nova_plushie_purple_back.png"),
+  nova_plushie_purple_back: require("../assets/shop/nova_plushie_purple_back.png"),
 
   // clothing
-  beanie:         require("../assets/shop/beanie.png"),
-  hoodie:         require("../assets/shop/hoodie.png"),
-  tee_front:      require("../assets/shop/tee_front.png"),
+  beanie: require("../assets/shop/beanie.png"),
+  hoodie: require("../assets/shop/hoodie.png"),
+  tee_front: require("../assets/shop/tee_front.png"),
   tee_front_glow: require("../assets/shop/tee_front_glow.png"),
-  pajamas:        require("../assets/shop/pajamas.png"),
+  pajamas: require("../assets/shop/pajamas.png"),
   pajama_bottoms: require("../assets/shop/pajama_bottoms.png"),
-  sweat_bottoms:  require("../assets/shop/sweat_bottoms.png"),
-  hat:            require("../assets/shop/hat.png"),
+  sweat_bottoms: require("../assets/shop/sweat_bottoms.png"),
+  hat: require("../assets/shop/hat.png"),
 
   // tangibles (other)
-  keychain:   require("../assets/shop/keychain.png"),
+  keychain: require("../assets/shop/keychain.png"),
   stationery: require("../assets/shop/stationery.png"),
-  case:       require("../assets/shop/case.png"),
+  case: require("../assets/shop/case.png"),
 
   // cursors
-  glow_cursor:       require("../assets/shop/glow_cursor.png"),
-  orb_cursor:        require("../assets/shop/orb_cursor.png"),
+  glow_cursor: require("../assets/shop/glow_cursor.png"),
+  orb_cursor: require("../assets/shop/orb_cursor.png"),
   star_trail_cursor: require("../assets/shop/star_trail_cursor.png"),
 
   // themes
-  neon_theme:           require("../assets/shop/neon_theme.png"),
-  star_theme:           require("../assets/shop/star_theme.png"),
-  pink_theme:           require("../assets/shop/pink_theme.png"),
-  dark_theme:           require("../assets/shop/dark_theme.png"),
-  mint_theme:           require("../assets/shop/mint_theme.png"),
-  glitter_theme:        require("../assets/shop/glitter_theme.png"),
-  theme_black_gold:     require("../assets/shop/theme_black_gold.png"),
-  theme_crimson_dream:  require("../assets/shop/theme_crimson_dream.png"),
-  theme_emerald_wave:   require("../assets/shop/theme_emerald_wave.png"),
-  theme_neon_purple:    require("../assets/shop/theme_neon_purple.png"),
-  theme_silver_frost:   require("../assets/shop/theme_silver_frost.png"),
+  neon_theme: require("../assets/shop/neon_theme.png"),
+  star_theme: require("../assets/shop/star_theme.png"),
+  pink_theme: require("../assets/shop/pink_theme.png"),
+  dark_theme: require("../assets/shop/dark_theme.png"),
+  mint_theme: require("../assets/shop/mint_theme.png"),
+  glitter_theme: require("../assets/shop/glitter_theme.png"),
+  theme_black_gold: require("../assets/shop/theme_black_gold.png"),
+  theme_crimson_dream: require("../assets/shop/theme_crimson_dream.png"),
+  theme_emerald_wave: require("../assets/shop/theme_emerald_wave.png"),
+  theme_neon_purple: require("../assets/shop/theme_neon_purple.png"),
+  theme_silver_frost: require("../assets/shop/theme_silver_frost.png"),
 
   // bundles / coin art
-  bundle_neon:  require("../assets/shop/bundle_neon.png"),
-  coins_1000:   require("../assets/shop/coins_1000.png"),
-  coins_5000:   require("../assets/shop/coins_5000.png"),
+  bundle_neon: require("../assets/shop/bundle_neon.png"),
+  coins_1000: require("../assets/shop/coins_1000.png"),
+  coins_5000: require("../assets/shop/coins_5000.png"),
 };
 
-/* Prices: bump ×2 where requested:
-   keychain 15→30, stationery 24→48, phone case 20→40, hat 30→60,
-   pajamas set 45→90, pj bottoms 25→50, sweat bottoms 35→70.
+/*
+  Prices: bump ×2 where requested:
+  - keychain 15→30
+  - stationery 24→48
+  - phone case 20→40
+  - hat 30→60
+  - pajamas set 45→90
+  - pj bottoms 25→50
+  - sweat bottoms 35→70.
 */
+
 export const catalog: CatalogItem[] = [
   // --- Plushies (front/back via altImageKey)
   {
@@ -173,7 +183,7 @@ export const catalog: CatalogItem[] = [
     desc: "Vibrant purple plush with chill energy.",
   },
 
-  // --- Clothing (TEE COMBINED: uses altImageKey for the glow close-up)
+  // --- Clothing (tee uses altImageKey for glow close-up)
   {
     id: "tee_nova_glow",
     title: "Nova Glow Tee",
@@ -441,12 +451,12 @@ export const catalog: CatalogItem[] = [
 
 // Alt images used by flip logic
 export const altImages: Record<string, any> = {
-  plushie_nova_back:               img.plushie_nova_back,
-  plushie_bunny_back:              img.plushie_bunny_back,
-  plushie_bunny_back_white:        img.plushie_bunny_back_white,
-  plushie_star_back:               img.plushie_star_back,
-  nova_bunny_book_plushie_back:    img.nova_bunny_book_plushie_back,
-  nova_plushie_devil_back:         img.nova_plushie_devil_back,
-  nova_plushie_purple_back:        img.nova_plushie_purple_back,
-  tee_front_glow:                  img.tee_front_glow,
+  plushie_nova_back: img.plushie_nova_back,
+  plushie_bunny_back: img.plushie_bunny_back,
+  plushie_bunny_back_white: img.plushie_bunny_back_white,
+  plushie_star_back: img.plushie_star_back,
+  nova_bunny_book_plushie_back: img.nova_bunny_book_plushie_back,
+  nova_plushie_devil_back: img.nova_plushie_devil_back,
+  nova_plushie_purple_back: img.nova_plushie_purple_back,
+  tee_front_glow: img.tee_front_glow,
 };

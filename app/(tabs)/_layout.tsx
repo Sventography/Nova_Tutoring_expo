@@ -7,6 +7,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
+import { StripeProvider } from "@stripe/stripe-react-native";
 
 import { ThemeProvider } from "../context/ThemeContext";
 import { CursorProvider } from "../context/CursorContext";
@@ -40,6 +41,11 @@ type Pt = { x: number; y: number };
 
 const CURSOR_EQUIPPED_KEY = "cursor.equipped.v1";
 
+// ✅ Stripe publishable key (Expo public env)
+const STRIPE_PUBLISHABLE_KEY =
+  process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || "";
+
+// Simple celebratory toast
 function CelebrateToast({
   message,
   onClose,
@@ -105,252 +111,276 @@ export default function TabsLayout() {
   }, []);
 
   return (
-    <UserProvider>
-      <ThemeProvider>
-        <GlobalTextDefaults />
-        <CursorProvider>
-          <ToastHost />
-          <CollectionsProvider>
-            <View
-              style={{ flex: 1, position: "relative" }}
-              onTouchStartCapture={
-                Platform.OS === "web"
-                  ? undefined
-                  : (e) => {
-                      setDown(true);
-                      setP({ x: e.nativeEvent.pageX, y: e.nativeEvent.pageY });
-                    }
-              }
-              onTouchMoveCapture={
-                Platform.OS === "web"
-                  ? undefined
-                  : (e) => {
-                      setP({ x: e.nativeEvent.pageX, y: e.nativeEvent.pageY });
-                    }
-              }
-              onTouchEndCapture={
-                Platform.OS === "web" ? undefined : () => setDown(false)
-              }
-              onTouchCancelCapture={
-                Platform.OS === "web" ? undefined : () => setDown(false)
-              }
-            >
+    <StripeProvider publishableKey={STRIPE_PUBLISHABLE_KEY}>
+      <UserProvider>
+        <ThemeProvider>
+          <GlobalTextDefaults />
+          <CursorProvider>
+            <ToastHost />
+            <CollectionsProvider>
               <View
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  zIndex: 1000,
-                }}
+                style={{ flex: 1, position: "relative" }}
+                onTouchStartCapture={
+                  Platform.OS === "web"
+                    ? undefined
+                    : (e) => {
+                        setDown(true);
+                        setP({
+                          x: e.nativeEvent.pageX,
+                          y: e.nativeEvent.pageY,
+                        });
+                      }
+                }
+                onTouchMoveCapture={
+                  Platform.OS === "web"
+                    ? undefined
+                    : (e) => {
+                        setP({
+                          x: e.nativeEvent.pageX,
+                          y: e.nativeEvent.pageY,
+                        });
+                      }
+                }
+                onTouchEndCapture={
+                  Platform.OS === "web" ? undefined : () => setDown(false)
+                }
+                onTouchCancelCapture={
+                  Platform.OS === "web" ? undefined : () => setDown(false)
+                }
               >
-                <HeaderBar />
-              </View>
+                <View
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    zIndex: 1000,
+                  }}
+                >
+                  <HeaderBar />
+                </View>
 
-              <AchievementsCoinsBridge />
-              <AchievementsAutoTracker />
+                <AchievementsCoinsBridge />
+                <AchievementsAutoTracker />
 
-              <Tabs
-                screenOptions={{
-                  headerShown: false,
-                  tabBarShowLabel: true,
-                  tabBarActiveTintColor: "#00e5ff",
-                  tabBarInactiveTintColor: "rgba(0,229,255,0.7)",
-                  tabBarStyle: {
-                    height: 68,
-                    backgroundColor: "transparent",
-                    borderTopWidth: 0,
-                    elevation: 0,
-                    shadowOpacity: 0,
-                  },
-                  sceneStyle: {
-                    backgroundColor: "transparent",
-                    paddingTop: HEADER_HEIGHT,
-                  },
-                  tabBarLabelStyle: {
-                    fontSize: 11,
-                    fontWeight: "700",
-                    letterSpacing: 0.5,
-                  },
-                  tabBarButton: (props) => (
-                    <Pressable
-                      {...props}
-                      onPress={(e) => {
-                        if (Platform.OS !== "web") {
-                          // 💥 CRANKED-UP HAPTICS FOR TAB PRESSES
-                          Haptics.impactAsync(
-                            Haptics.ImpactFeedbackStyle.Heavy
-                          );
-                          Haptics.notificationAsync(
-                            Haptics.NotificationFeedbackType.Success
-                          );
-                        }
-                        props.onPress?.(e);
-                      }}
-                    />
-                  ),
-                }}
-                tabBar={(props) => <ScrollableTabBar {...props} />}
-              >
-                <Tabs.Screen
-                  name="ask"
-                  options={{
-                    title: "ASK",
-                    tabBarIcon: ({ color, size }) => (
-                      <Ionicons
-                        name="chatbubbles-outline"
-                        color={color}
-                        size={size}
+                <Tabs
+                  screenOptions={{
+                    headerShown: false,
+                    tabBarShowLabel: true,
+                    tabBarActiveTintColor: "#00e5ff",
+                    tabBarInactiveTintColor: "rgba(0,229,255,0.7)",
+                    tabBarStyle: {
+                      height: 68,
+                      backgroundColor: "transparent",
+                      borderTopWidth: 0,
+                      elevation: 0,
+                      shadowOpacity: 0,
+                    },
+                    sceneStyle: {
+                      backgroundColor: "transparent",
+                      paddingTop: HEADER_HEIGHT,
+                    },
+                    tabBarLabelStyle: {
+                      fontSize: 11,
+                      fontWeight: "700",
+                      letterSpacing: 0.5,
+                    },
+                    tabBarButton: (props) => (
+                      <Pressable
+                        {...props}
+                        onPress={(e) => {
+                          if (Platform.OS !== "web") {
+                            // 💥 CRANKED-UP HAPTICS FOR TAB PRESSES
+                            Haptics.impactAsync(
+                              Haptics.ImpactFeedbackStyle.Heavy
+                            );
+                            Haptics.notificationAsync(
+                              Haptics.NotificationFeedbackType.Success
+                            );
+                          }
+                          props.onPress?.(e);
+                        }}
                       />
                     ),
                   }}
-                />
-                <Tabs.Screen
-                  name="flashcards"
-                  options={{
-                    title: "FLASHCARDS",
-                    tabBarIcon: ({ color, size }) => (
-                      <Ionicons
-                        name="albums-outline"
-                        color={color}
-                        size={size}
-                      />
-                    ),
-                  }}
-                />
-                <Tabs.Screen
-                  name="quiz"
-                  options={{
-                    title: "QUIZ",
-                    tabBarIcon: ({ color, size }) => (
-                      <Ionicons
-                        name="help-circle-outline"
-                        color={color}
-                        size={size}
-                      />
-                    ),
-                  }}
-                />
-                <Tabs.Screen
-                  name="brainteasers"
-                  options={{
-                    title: "BRAINTEASERS",
-                    tabBarIcon: ({ color, size }) => (
-                      <Ionicons name="bulb-outline" color={color} size={size} />
-                    ),
-                  }}
-                />
-                <Tabs.Screen
-                  name="shop"
-                  options={{
-                    title: "SHOP",
-                    tabBarIcon: ({ color, size }) => (
-                      <Ionicons
-                        name="bag-handle-outline"
-                        color={color}
-                        size={size}
-                      />
-                    ),
-                  }}
-                />
-                <Tabs.Screen
-                  name="achievements"
-                  options={{
-                    title: "ACHIEVEMENTS",
-                    tabBarIcon: ({ color, size }) => (
-                      <Ionicons name="trophy-outline" color={color} size={size} />
-                    ),
-                  }}
-                />
-                <Tabs.Screen
-                  name="history"
-                  options={{
-                    title: "HISTORY",
-                    tabBarIcon: ({ color, size }) => (
-                      <Ionicons name="time-outline" color={color} size={size} />
-                    ),
-                  }}
-                />
-                <Tabs.Screen
-                  name="relax"
-                  options={{
-                    title: "RELAX",
-                    tabBarIcon: ({ color, size }) => (
-                      <Ionicons
-                        name="sparkles-outline"
-                        color={color}
-                        size={size}
-                      />
-                    ),
-                  }}
-                />
-                <Tabs.Screen
-                  name="account"
-                  options={{
-                    title: "ACCOUNT",
-                    tabBarIcon: ({ color, size }) => (
-                      <Ionicons
-                        name="person-circle-outline"
-                        color={color}
-                        size={size}
-                      />
-                    ),
-                  }}
-                />
-                <Tabs.Screen
-                  name="certificates"
-                  options={{
-                    title: "CERTIFICATES",
-                    tabBarIcon: ({ color, size }) => (
-                      <Ionicons name="ribbon-outline" color={color} size={size} />
-                    ),
-                  }}
-                />
-                <Tabs.Screen
-                  name="collections"
-                  options={{
-                    title: "COLLECTIONS",
-                    tabBarIcon: ({ color, size }) => (
-                      <Ionicons
-                        name="bookmarks-outline"
-                        color={color}
-                        size={size}
-                      />
-                    ),
-                  }}
-                />
-                <Tabs.Screen
-                  name="purchases"
-                  options={{
-                    title: "PURCHASES",
-                    tabBarIcon: ({ color, size }) => (
-                      <Ionicons name="bag" color={color} size={size} />
-                    ),
-                  }}
-                />
-              </Tabs>
+                  tabBar={(props) => <ScrollableTabBar {...props} />}
+                >
+                  <Tabs.Screen
+                    name="ask"
+                    options={{
+                      title: "ASK",
+                      tabBarIcon: ({ color, size }) => (
+                        <Ionicons
+                          name="chatbubbles-outline"
+                          color={color}
+                          size={size}
+                        />
+                      ),
+                    }}
+                  />
+                  <Tabs.Screen
+                    name="flashcards"
+                    options={{
+                      title: "FLASHCARDS",
+                      tabBarIcon: ({ color, size }) => (
+                        <Ionicons
+                          name="albums-outline"
+                          color={color}
+                          size={size}
+                        />
+                      ),
+                    }}
+                  />
+                  <Tabs.Screen
+                    name="quiz"
+                    options={{
+                      title: "QUIZ",
+                      tabBarIcon: ({ color, size }) => (
+                        <Ionicons
+                          name="help-circle-outline"
+                          color={color}
+                          size={size}
+                        />
+                      ),
+                    }}
+                  />
+                  <Tabs.Screen
+                    name="brainteasers"
+                    options={{
+                      title: "BRAINTEASERS",
+                      tabBarIcon: ({ color, size }) => (
+                        <Ionicons
+                          name="bulb-outline"
+                          color={color}
+                          size={size}
+                        />
+                      ),
+                    }}
+                  />
+                  <Tabs.Screen
+                    name="shop"
+                    options={{
+                      title: "SHOP",
+                      tabBarIcon: ({ color, size }) => (
+                        <Ionicons
+                          name="bag-handle-outline"
+                          color={color}
+                          size={size}
+                        />
+                      ),
+                    }}
+                  />
+                  <Tabs.Screen
+                    name="achievements"
+                    options={{
+                      title: "ACHIEVEMENTS",
+                      tabBarIcon: ({ color, size }) => (
+                        <Ionicons
+                          name="trophy-outline"
+                          color={color}
+                          size={size}
+                        />
+                      ),
+                    }}
+                  />
+                  <Tabs.Screen
+                    name="history"
+                    options={{
+                      title: "HISTORY",
+                      tabBarIcon: ({ color, size }) => (
+                        <Ionicons
+                          name="time-outline"
+                          color={color}
+                          size={size}
+                        />
+                      ),
+                    }}
+                  />
+                  <Tabs.Screen
+                    name="relax"
+                    options={{
+                      title: "RELAX",
+                      tabBarIcon: ({ color, size }) => (
+                        <Ionicons
+                          name="sparkles-outline"
+                          color={color}
+                          size={size}
+                        />
+                      ),
+                    }}
+                  />
+                  <Tabs.Screen
+                    name="account"
+                    options={{
+                      title: "ACCOUNT",
+                      tabBarIcon: ({ color, size }) => (
+                        <Ionicons
+                          name="person-circle-outline"
+                          color={color}
+                          size={size}
+                        />
+                      ),
+                    }}
+                  />
+                  <Tabs.Screen
+                    name="certificates"
+                    options={{
+                      title: "CERTIFICATES",
+                      tabBarIcon: ({ color, size }) => (
+                        <Ionicons
+                          name="ribbon-outline"
+                          color={color}
+                          size={size}
+                        />
+                      ),
+                    }}
+                  />
+                  <Tabs.Screen
+                    name="collections"
+                    options={{
+                      title: "COLLECTIONS",
+                      tabBarIcon: ({ color, size }) => (
+                        <Ionicons
+                          name="bookmarks-outline"
+                          color={color}
+                          size={size}
+                        />
+                      ),
+                    }}
+                  />
+                  <Tabs.Screen
+                    name="purchases"
+                    options={{
+                      title: "PURCHASES",
+                      tabBarIcon: ({ color, size }) => (
+                        <Ionicons name="bag" color={color} size={size} />
+                      ),
+                    }}
+                  />
+                </Tabs>
 
-              <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-                <FxOverlay />
-                {Platform.OS === "web" ? <StarTrailOverlay /> : null}
-                {Platform.OS !== "web" ? (
-                  <TouchCursorOverlay p={p} down={down} />
+                <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+                  <FxOverlay />
+                  {Platform.OS === "web" ? <StarTrailOverlay /> : null}
+                  {Platform.OS !== "web" ? (
+                    <TouchCursorOverlay p={p} down={down} />
+                  ) : null}
+                </View>
+
+                {celebrate ? (
+                  <CelebrateToast
+                    message={celebrate}
+                    onClose={() => setCelebrate(null)}
+                  />
                 ) : null}
               </View>
 
-              {celebrate ? (
-                <CelebrateToast
-                  message={celebrate}
-                  onClose={() => setCelebrate(null)}
-                />
-              ) : null}
-            </View>
-
-            {Platform.OS === "web" ? <CursorOverlay /> : null}
-          </CollectionsProvider>
-        </CursorProvider>
-      </ThemeProvider>
-    </UserProvider>
+              {Platform.OS === "web" ? <CursorOverlay /> : null}
+            </CollectionsProvider>
+          </CursorProvider>
+        </ThemeProvider>
+      </UserProvider>
+    </StripeProvider>
   );
 }
 

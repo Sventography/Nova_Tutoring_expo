@@ -219,31 +219,56 @@ function normalizePurchases(obj: Record<string, any>): PurchaseMap {
 }
 
 /* ----------------- Stripe wrapper for $$ buttons -------------------------- */
-async function startCheckoutRequest(opts: {
-  priceId?: string;
-  amount?: number;
-  currency?: string;
-  success_url?: string;
-  cancel_url?: string;
-  quantity?: number;
-  meta?: any;
-}) {
+
+async function startCheckoutForItem(
+  it: any,
+  opts?: { size?: string | null; source?: string; via?: string }
+) {
   const origin =
     (typeof window !== "undefined" && (window as any).location?.origin) ||
     "http://localhost:8081";
 
+  const rawPrice = it.priceUSD ?? it.usd ?? undefined;
+  const priceNum =
+    rawPrice != null && !Number.isNaN(Number(rawPrice))
+      ? Number(rawPrice)
+      : undefined;
+  const amount =
+    typeof priceNum === "number" && priceNum > 0
+      ? Math.round(priceNum * 100)
+      : undefined;
+
+  const successUrl = Linking.createURL("/", {
+    queryParams: {
+      sku: it.id,
+      size: opts?.size || "",
+    },
+  });
+
   const payload: any = {
-    quantity: opts?.quantity ?? 1,
-    success_url: opts?.success_url || `${origin}/?purchase=success`,
-    cancel_url: opts?.cancel_url || `${origin}/?purchase=cancel`,
-    meta: opts?.meta,
+    sku: it.id,
+    quantity: 1,
+    success_url: successUrl,
+    cancel_url: successUrl,
+    title: it.title,
+    description: it.desc,
+    meta: {
+      sku: it.id,
+      category: it.category,
+      size: opts?.size || null,
+      source: opts?.source || "shop",
+      via: opts?.via || "usd",
+    },
   };
 
-  if (typeof opts?.amount === "number") {
-    payload.amount = opts.amount;
-    payload.currency = (opts.currency || "usd").toLowerCase();
+  if (typeof amount === "number") {
+    payload.amount = amount;
+    payload.currency = "usd";
   }
-  if (opts?.priceId) payload.priceId = opts.priceId;
+
+  const stripeInfo = (it.stripe || {}) as any;
+  if (stripeInfo.priceId) payload.priceId = stripeInfo.priceId;
+  if (stripeInfo.productId) payload.productId = stripeInfo.productId;
 
   return startCheckout(payload);
 }
@@ -539,7 +564,7 @@ export default function Shop() {
 
   const floatBasePos = useRef({
     x: windowDims.width - FLOAT_SIZE - 16,
-    y: windowDims.height - FLOAT_SIZE - 160, // higher so it's not cut by tab bar
+    y: windowDims.height - FLOAT_SIZE - 160,
   });
   const floatPos = useRef(
     new Animated.ValueXY({
@@ -564,9 +589,7 @@ export default function Shop() {
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: () => {
-        // nothing, we use basePos + dx/dy
-      },
+      onPanResponderGrant: () => {},
       onPanResponderMove: (_evt, gesture) => {
         const newX = floatBasePos.current.x + gesture.dx;
         const newY = floatBasePos.current.y + gesture.dy;
@@ -1005,13 +1028,27 @@ export default function Shop() {
 
     const it = catalog.find((x) => canonId(x.id) === cid);
     if (it?.priceUSD) {
-      const amount = Math.round((it.priceUSD ?? 1) * 100);
-      const success = Linking.createURL("/", { queryParams: { sku: it.id } });
-      void startCheckoutRequest({
-        amount,
-        currency: "usd",
-        success_url: success,
-        cancel_url: success,
+      const rawPrice = it.priceUSD ?? it.usd ?? undefined;
+      const priceNum =
+        rawPrice != null && !Number.isNaN(Number(rawPrice))
+          ? Number(rawPrice)
+          : undefined;
+      const amountCents =
+        typeof priceNum === "number" ? Math.round(priceNum * 100) : undefined;
+
+      track("shop_money_buy", {
+        sku: it.id,
+        amount_cents: amountCents,
+        meta: {
+          sku: it.id,
+          category: it.category,
+          from: "quick_row",
+        },
+      });
+
+      void startCheckoutForItem(it, {
+        source: "quick_row",
+        via: "usd",
       });
       return;
     }
@@ -1114,30 +1151,39 @@ export default function Shop() {
   }
 
   async function moneyBuy(it: any, meta?: { size?: string }) {
-    const amount = Math.round((it.priceUSD ?? 1) * 100);
-    const success = Linking.createURL("/", {
-      queryParams: { sku: it.id, size: meta?.size || "" },
-    });
+    const rawPrice = it.priceUSD ?? it.usd ?? undefined;
+    const priceNum =
+      rawPrice != null && !Number.isNaN(Number(rawPrice))
+        ? Number(rawPrice)
+        : undefined;
+    const amountCents =
+      typeof priceNum === "number" ? Math.round(priceNum * 100) : undefined;
+
+    const metaPayload = {
+      sku: it.id,
+      size: meta?.size || null,
+      category: it.category,
+    };
 
     track("shop_money_buy", {
       sku: it.id,
-      amount_cents: amount,
-      meta,
+      amount_cents: amountCents,
+      meta: metaPayload,
     });
 
-    await startCheckoutRequest({
-      amount,
-      currency: "usd",
-      success_url: success,
-      cancel_url: success,
+    await startCheckoutForItem(it, {
+      size: meta?.size || null,
+      source: "card_button",
+      via: "usd",
     });
 
     if (
       it.category === "theme" ||
       it.category === "cursor" ||
       it.category === "bundle"
-    )
+    ) {
       markOwned(it.id);
+    }
   }
 
   function equipTheme(it: any) {
@@ -1265,7 +1311,6 @@ export default function Shop() {
     if (comp) {
       setFloatingCompanion(comp);
 
-      // reset starting position bottom-right, but above tab bar
       const dims = Dimensions.get("window");
       const startX = dims.width - FLOAT_SIZE - 16;
       const startY = dims.height - FLOAT_SIZE - 160;
@@ -1452,7 +1497,7 @@ export default function Shop() {
             <View
               style={{
                 flexDirection: "row",
-                justifyContent: "space_between",
+                justifyContent: "space-between",
                 columnGap: 8,
               }}
             >
@@ -1850,7 +1895,7 @@ export default function Shop() {
           {COMPANIONS.map((it: any) => {
             const owned = isOwned(it.id);
             const src = it.image;
-            const priceCoins = 1_000; // 🔥 all companions cost 1,000 coins now
+            const priceCoins = 1_000;
 
             return (
               <Card
