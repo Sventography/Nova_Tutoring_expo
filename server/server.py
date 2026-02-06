@@ -1,5 +1,5 @@
-# 🔥🔥 RUNNING FIXED SERVER VERSION v3 (CHECKOUT SESSION) 🔥🔥
-print("🔥🔥 RUNNING FIXED SERVER VERSION v3 (CHECKOUT SESSION) 🔥🔥")
+# 🔥🔥 RUNNING FIXED SERVER VERSION v3.4 (STRIPE URL DEBUG LOCK) 🔥🔥
+print("🔥🔥 RUNNING FIXED SERVER VERSION v3.4 (STRIPE URL DEBUG LOCK) 🔥🔥")
 
 import os
 from flask import Flask, request, jsonify
@@ -17,42 +17,44 @@ except Exception:
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
-print("🔥🔥 FLASK APP INITIALIZED (v3) 🔥🔥")
+print("🔥🔥 FLASK APP INITIALIZED (v3.4) 🔥🔥")
 
 # -------------------------------------------------
 # Load environment
 # -------------------------------------------------
 
-try:
-    from dotenv import load_dotenv
+from dotenv import load_dotenv
 
-    base_dir = os.path.dirname(__file__)
-    env_server = os.path.join(base_dir, "env", ".env.server")
-    env_fallback = os.path.join(base_dir, ".env")
+base_dir = os.path.dirname(__file__)
+env_server = os.path.join(base_dir, "env", ".env.server")
+env_fallback = os.path.join(base_dir, ".env")
 
-    if os.path.exists(env_server):
-        load_dotenv(env_server)
-        print("[server] loaded env:", env_server)
-    elif os.path.exists(env_fallback):
-        load_dotenv(env_fallback)
-        print("[server] loaded env:", env_fallback)
-    else:
-        print("[server] no env file found")
-
-except Exception as e:
-    print("[server] dotenv load failed:", e)
+if os.path.exists(env_server):
+    load_dotenv(env_server)
+    print("[server] loaded env:", env_server)
+elif os.path.exists(env_fallback):
+    load_dotenv(env_fallback)
+    print("[server] loaded env:", env_fallback)
+else:
+    print("[server] no env file found")
 
 # -------------------------------------------------
 # Stripe setup
 # -------------------------------------------------
 
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "").strip()
+APP_BASE_URL = os.getenv(
+    "APP_BASE_URL",
+    "https://nova-tutoring.onrender.com"
+).rstrip("/")
 
 if stripe and STRIPE_SECRET_KEY:
     stripe.api_key = STRIPE_SECRET_KEY
     print("[server] Stripe secret loaded: True")
 else:
     print("[server] Stripe secret loaded: False")
+
+print("[server] APP_BASE_URL:", APP_BASE_URL)
 
 # -------------------------------------------------
 # Health
@@ -70,6 +72,7 @@ def _checkout_logic():
     print("🔥🔥 CHECKOUT SESSION LOGIC HIT 🔥🔥")
 
     body = request.get_json(silent=True) or {}
+    print("[server] incoming body:", body)
 
     sku = body.get("sku")
     title = body.get("title") or sku
@@ -77,22 +80,27 @@ def _checkout_logic():
     quantity = int(body.get("quantity") or 1)
     currency = body.get("currency", "usd")
     method = (body.get("method") or "").lower()
-    success_url = body.get("success_url")
-    cancel_url = body.get("cancel_url")
-
-    print("[server] incoming body:", body)
 
     if not sku:
         return jsonify(ok=False, error="missing sku"), 400
 
     if method != "card":
-        return jsonify(ok=False, error="only card supported here"), 400
+        return jsonify(ok=False, error="only card supported"), 400
 
     if not amount or amount <= 0:
         return jsonify(ok=False, error="invalid amount"), 400
 
     if not (stripe and STRIPE_SECRET_KEY):
         return jsonify(ok=False, error="stripe not configured"), 500
+
+    # 🔒 SERVER-CONTROLLED STRIPE URLS ONLY
+    success_url = f"{APP_BASE_URL}/checkout/success"
+    cancel_url = f"{APP_BASE_URL}/checkout/cancel"
+
+    # 🚨 DEBUG — THIS IS THE PROOF
+    print("🚨 STRIPE URLS BEING USED 🚨")
+    print("SUCCESS URL:", success_url)
+    print("CANCEL URL:", cancel_url)
 
     try:
         session = stripe.checkout.Session.create(
@@ -110,8 +118,8 @@ def _checkout_logic():
                     "quantity": quantity,
                 }
             ],
-            success_url=success_url or "https://example.com/success",
-            cancel_url=cancel_url or "https://example.com/cancel",
+            success_url=success_url,
+            cancel_url=cancel_url,
             metadata={
                 "sku": sku,
                 "quantity": quantity,
@@ -135,11 +143,8 @@ def _checkout_logic():
 # -------------------------------------------------
 
 @app.post("/checkout/start")
-def checkout_start():
-    return _checkout_logic()
-
 @app.post("/api/checkout/start")
-def checkout_start_api():
+def checkout_start():
     return _checkout_logic()
 
 # -------------------------------------------------
@@ -148,5 +153,5 @@ def checkout_start_api():
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", "8787"))
-    print(f"🔥🔥 STARTING SERVER v3 ON http://127.0.0.1:{port} 🔥🔥")
+    print(f"🔥🔥 STARTING SERVER v3.4 ON http://127.0.0.1:{port} 🔥🔥")
     app.run(host="0.0.0.0", port=port, debug=False)
