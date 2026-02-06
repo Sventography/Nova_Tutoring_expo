@@ -54,6 +54,12 @@ export default ({ config }) => ({
 
   extra: {
     ...(config.extra || {}),
+
+    // 🔑 SINGLE SOURCE OF TRUTH FOR BACKEND
+    backendUrl:
+      process.env.EXPO_PUBLIC_BACKEND_URL ||
+      "http://192.168.1.74:8787",
+
     eas: {
       projectId: "34a00115-306a-4cb6-b58b-97e26409a781",
     },
