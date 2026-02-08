@@ -87,9 +87,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.sventography.novatutoring'
+    namespace 'com.sventography.novatutoring.ios'
     defaultConfig {
-        applicationId 'com.sventography.novatutoring'
+        applicationId 'com.sventography.novatutoring.ios'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

@@ -8,12 +8,10 @@ export default ({ config }) => ({
   version: "1.0.0",
   orientation: "portrait",
 
-  // TEMP SAFE IMAGE (guaranteed to exist)
   icon: "./app/assets/favicon.png",
 
   userInterfaceStyle: "dark",
 
-  // TEMP SAFE SPLASH (same image)
   splash: {
     image: "./app/assets/favicon.png",
     resizeMode: "contain",
@@ -22,12 +20,12 @@ export default ({ config }) => ({
 
   ios: {
     supportsTablet: true,
-    bundleIdentifier: "com.sventography.novatutoring",
+    bundleIdentifier: "com.sventography.novatutoring.ios",
     buildNumber: "1",
   },
 
   android: {
-    package: "com.sventography.novatutoring",
+    package: "com.sventography.novatutoring.ios",
   },
 
   web: {
@@ -55,7 +53,6 @@ export default ({ config }) => ({
   extra: {
     ...(config.extra || {}),
 
-    // 🔑 SINGLE SOURCE OF TRUTH FOR BACKEND
     backendUrl:
       process.env.EXPO_PUBLIC_BACKEND_URL ||
       "http://192.168.1.74:8787",

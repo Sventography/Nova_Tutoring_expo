@@ -28,7 +28,7 @@
         <key>CFBundleURLSchemes</key>
         <array>
           <string>nova</string>
-          <string>com.sventography.novatutoring</string>
+          <string>com.sventography.novatutoring.ios</string>
         </array>
       </dict>
       <dict>

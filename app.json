@@ -34,7 +34,6 @@
       "android",
       "web"
     ],
-    "entryPoint": "./expo-router/entry",
     "plugins": [
       "expo-mail-composer",
       "expo-router",
