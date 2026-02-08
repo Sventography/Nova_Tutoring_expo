@@ -35,7 +35,7 @@ export default function HeaderBar() {
   const { loaded, count, todayChecked, markToday } =
     (useStreak() || {}) as any;
 
-  // 👉 This is the *only* place we read the user now
+  // 👉 Read user out of context; this drives name + avatar
   const { user, ready } = useUser();
 
   useEffect(() => {
@@ -44,7 +44,6 @@ export default function HeaderBar() {
     } catch {}
   }, [user, ready]);
 
-  // Simple helpers for name + avatar
   const pickString = (v: any) =>
     typeof v === "string" && v.trim().length > 0 ? v.trim() : null;
 
@@ -72,6 +71,7 @@ export default function HeaderBar() {
   const rawName =
     pickString(user?.username) ||
     pickString(user?.name) ||
+    pickString(user?.displayName) ||
     pickString(user?.contactEmail?.split("@")[0] || "");
 
   const rawAvatar = scanForAvatar(user);

@@ -1,3 +1,4 @@
+// app/context/UserContext.tsx
 import React, {
   createContext,
   useContext,
@@ -27,6 +28,8 @@ type UserContextValue = {
   session: Session | null;
   supabaseUserId: string | null;
   user: LocalUserProfile | null;
+
+  isLoggedIn: boolean;
 
   username: string | null;
   name: string | null;
@@ -60,6 +63,7 @@ const UserContext = createContext<UserContextValue | null>(null);
 
 const PROFILE_KEY = "user.profile.v1";
 const SUPABASE_JWT_KEY = "auth.supabase.jwt";
+const DISPLAY_NAME_KEY = "user.displayName.v1";
 
 function mapProfileRow(row: any): Partial<LocalUserProfile> {
   if (!row) return {};
@@ -206,6 +210,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
       setProfile(next);
       await persistProfile(next);
+
+      // also keep DISPLAY_NAME_KEY in sync
+      if (next.displayName) {
+        await AsyncStorage.setItem(DISPLAY_NAME_KEY, next.displayName);
+      }
     } catch (e) {
       console.warn("[UserContext] hydrateProfileFromSupabase error:", e);
     }
@@ -268,8 +277,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const setUsername = (name: string) => {
+  // 🔵 This is the important part: also store name in AsyncStorage
+  const setUsername = async (name: string) => {
     const trimmed = name.trim() || "Student";
+
+    try {
+      await AsyncStorage.setItem(DISPLAY_NAME_KEY, trimmed);
+    } catch (e) {
+      console.warn("[UserContext] setUsername store error:", e);
+    }
+
     return updateProfile({
       username: trimmed,
       name: trimmed,
@@ -330,6 +347,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         };
         setProfile(next);
         await persistProfile(next);
+        await AsyncStorage.setItem(DISPLAY_NAME_KEY, username);
 
         const { error: profileError } = await supabase
           .from("profiles")
@@ -390,7 +408,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
       }
 
       const { error } = await supabase.auth.resetPasswordForEmail(trimmed, {
-        // You can change this redirect later if you add a hosted reset page
         redirectTo:
           "https://novatutoring-eoq65leh2-contactnovatutoring-8350s-projects.vercel.app",
       });
@@ -431,12 +448,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
       setProfile(null);
       await AsyncStorage.removeItem(SUPABASE_JWT_KEY);
       await AsyncStorage.removeItem(PROFILE_KEY);
+      await AsyncStorage.removeItem(DISPLAY_NAME_KEY);
     }
   };
 
   const deleteAccount = async () => {
     // For now, "delete account" just clears local data on this device.
-    // Full remote deletion would go through your backend with the service key.
     await signOut();
   };
 
@@ -453,11 +470,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
     profile?.imageUrl ??
     null;
 
+  const isLoggedIn = !!session && !!supabaseUserId;
+
   const value: UserContextValue = {
     ready,
     session,
     supabaseUserId,
     user: profile,
+
+    isLoggedIn,
 
     username: flatUsername,
     name: flatName,
