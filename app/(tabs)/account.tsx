@@ -15,6 +15,7 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { useUser } from "../context/UserContext";
 import { useTheme } from "../context/ThemeContext";
@@ -181,14 +182,40 @@ export default function AccountScreen() {
 
   async function handleConfirmDelete() {
     try {
-      await deleteAccount?.();
+      // 1) Best-effort remote deletion (if wired in UserContext)
+      try {
+        await deleteAccount?.();
+      } catch (err) {
+        console.log("deleteAccount error:", err);
+        // continue with local nuke anyway
+      }
+
+      // 2) Supabase sign-out (just to be safe)
+      try {
+        await supabase.auth.signOut();
+      } catch (err) {
+        console.log("supabase signOut error:", err);
+      }
+
+      // 3) Clear ALL local AsyncStorage (coins, achievements, tutorial, etc.)
+      try {
+        await AsyncStorage.clear();
+      } catch (err) {
+        console.log("AsyncStorage.clear error:", err);
+      }
+
+      // 4) Reset in-memory state for this session
       setCoins?.(0);
+      setUsername?.("");
+      setAvatar?.(null);
       setName("");
       setContactEmail("");
       setAvatarLocal(null);
+
       setShowDeleteModal(false);
       showToast("Account deleted");
 
+      // 5) Kick back to the very start of the app
       try {
         router.replace("/");
       } catch {
@@ -321,7 +348,7 @@ export default function AccountScreen() {
         </View>
 
         {/* Top buttons */}
-        <View style={S.rowBtns}>
+        <View className="rowBtns" style={S.rowBtns}>
           <Pressable
             style={[
               S.btn,
@@ -665,12 +692,10 @@ export const S = StyleSheet.create({
   },
   k: { marginBottom: 6 },
   v: { fontWeight: "600", marginTop: 2 },
-
   smallNote: {
     fontSize: 11,
     marginTop: 4,
   },
-
   deleteBtn: {
     width: "100%",
     paddingVertical: 12,
@@ -684,7 +709,6 @@ export const S = StyleSheet.create({
     fontSize: 16,
     color: "#000000",
   },
-
   privacyRow: {
     marginTop: 18,
     alignItems: "center",
@@ -695,7 +719,6 @@ export const S = StyleSheet.create({
     color: "#9ad8ff",
     textDecorationLine: "underline",
   },
-
   modalBackdrop: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.55)",

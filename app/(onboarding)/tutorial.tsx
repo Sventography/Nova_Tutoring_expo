@@ -1,5 +1,14 @@
 import React, { useMemo, useRef, useState } from "react";
-import { View, Text, StyleSheet, Image, Pressable, FlatList, Dimensions, Platform } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  Pressable,
+  FlatList,
+  Dimensions,
+  Platform,
+} from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
@@ -109,7 +118,8 @@ export default function Tutorial() {
   const finish = async () => {
     await buzz();
     await AsyncStorage.setItem(KEY, "1");
-    router.replace("/(tabs)/ask");
+    // ⬇⬇⬇ changed this line to go back to the splash / home
+    router.replace("/");
   };
 
   const goTo = async (nextIndex: number) => {
@@ -176,7 +186,9 @@ export default function Tutorial() {
 
       <View style={s.footer}>
         <Pressable onPress={next} style={s.primaryBtn}>
-          <Text style={s.primaryText}>{index === slides.length - 1 ? "Finish" : "Next"}</Text>
+          <Text style={s.primaryText}>
+            {index === slides.length - 1 ? "Finish" : "Next"}
+          </Text>
         </Pressable>
 
         <Pressable onPress={finish}>
@@ -190,14 +202,30 @@ export default function Tutorial() {
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "black", paddingTop: 56 },
   page: { flex: 1, alignItems: "center", paddingHorizontal: 18 },
-  title: { color: "white", fontSize: 26, fontWeight: "800", textAlign: "center" },
-  body: { color: "#aaa", marginTop: 12, textAlign: "center", lineHeight: 20, maxWidth: 380 },
+  title: {
+    color: "white",
+    fontSize: 26,
+    fontWeight: "800",
+    textAlign: "center",
+  },
+  body: {
+    color: "#aaa",
+    marginTop: 12,
+    textAlign: "center",
+    lineHeight: 20,
+    maxWidth: 380,
+  },
 
   stage: { width: "100%", alignItems: "center", marginTop: 16 },
   image: { width: "94%", height: "100%" },
 
   footer: { paddingHorizontal: 22, paddingBottom: 22, gap: 12 },
-  primaryBtn: { backgroundColor: "#00e5ff", paddingVertical: 14, borderRadius: 14, alignItems: "center" },
+  primaryBtn: {
+    backgroundColor: "#00e5ff",
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: "center",
+  },
   primaryText: { fontWeight: "800", color: "black", fontSize: 16 },
   skip: { color: "#888", textAlign: "center", fontWeight: "700" },
 });

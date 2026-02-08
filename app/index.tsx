@@ -73,10 +73,8 @@ export default function HomeScreen() {
   const handleLoginPress = async () => {
     await hapticTap();
     if (isLoggedIn) {
-      // Already signed in -> go straight to Account
       router.push("/(tabs)/account");
     } else {
-      // Not signed in -> go to sign-in / create account screen
       router.push("/sign-in");
     }
   };
@@ -120,7 +118,7 @@ export default function HomeScreen() {
         </Animated.View>
       </Pressable>
 
-      {/* Login button (conditional routing based on isLoggedIn) */}
+      {/* Login button */}
       <Pressable onPress={handleLoginPress}>
         <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
           <LinearGradient
@@ -130,11 +128,16 @@ export default function HomeScreen() {
             style={styles.button}
           >
             <Text style={styles.buttonText}>
-              {isLoggedIn ? "Go to Account" : "Login"}
+              {isLoggedIn ? "Go to Account" : "Log In"}
             </Text>
           </LinearGradient>
         </Animated.View>
       </Pressable>
+
+      {/* Small guidance text */}
+      <Text style={styles.subtle}>
+        Log In to save your progress
+      </Text>
 
       <Text style={styles.hint}>
         Tip: Long-press the logo to replay the tutorial.
@@ -168,6 +171,11 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "bold",
     textAlign: "center",
+  },
+  subtle: {
+    marginTop: 14,
+    color: "#888",
+    fontSize: 14,
   },
   hint: {
     marginTop: 18,
