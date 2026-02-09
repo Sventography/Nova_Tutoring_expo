@@ -1,3 +1,4 @@
+// app/(onboarding)/tutorial.tsx
 import React, { useMemo, useRef, useState } from "react";
 import {
   View,
@@ -118,7 +119,7 @@ export default function Tutorial() {
   const finish = async () => {
     await buzz();
     await AsyncStorage.setItem(KEY, "1");
-    // ⬇⬇⬇ changed this line to go back to the splash / home
+    // back to splash / home so the normal flow runs
     router.replace("/");
   };
 

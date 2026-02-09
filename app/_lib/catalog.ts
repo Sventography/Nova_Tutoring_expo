@@ -33,6 +33,10 @@ export type CatalogItem = {
   image?: any;
   altImageKey?: string; // for flip (front/back or alt angle)
   themeId?: string; // for themes only
+  stripe?: {
+    priceId?: string;
+    productId?: string;
+  };
 };
 
 const img = {
@@ -100,14 +104,8 @@ const img = {
 };
 
 /*
-  Prices: bump ×2 where requested:
-  - keychain 15→30
-  - stationery 24→48
-  - phone case 20→40
-  - hat 30→60
-  - pajamas set 45→90
-  - pj bottoms 25→50
-  - sweat bottoms 35→70.
+  Coin prices: current in-app sale = ~50% off in coins.
+  USD prices stay the same (Stripe), but priceCoins are based on (priceUSD / 2).
 */
 
 export const catalog: CatalogItem[] = [
@@ -117,7 +115,8 @@ export const catalog: CatalogItem[] = [
     title: "Nova Plushie (Pajamas)",
     category: "plushies",
     priceUSD: 60,
-    priceCoins: dollarsToCoins(60),
+    // half-off in coins → 60 / 2 = 30
+    priceCoins: dollarsToCoins(30),
     image: img.plushie_nova_front,
     altImageKey: "plushie_nova_back",
     desc: "Cuddly Nova in cozy pajamas. Flip to see the back!",
@@ -127,7 +126,7 @@ export const catalog: CatalogItem[] = [
     title: "Bunny Plushie (Classic)",
     category: "plushies",
     priceUSD: 60,
-    priceCoins: dollarsToCoins(60),
+    priceCoins: dollarsToCoins(30),
     image: img.plushie_bunny_front,
     altImageKey: "plushie_bunny_back",
     desc: "The original Nova bunny—classic smile, classic vibes.",
@@ -137,7 +136,7 @@ export const catalog: CatalogItem[] = [
     title: "Bunny Plushie (White)",
     category: "plushies",
     priceUSD: 60,
-    priceCoins: dollarsToCoins(60),
+    priceCoins: dollarsToCoins(30),
     image: img.plushie_bunny_front_white,
     altImageKey: "plushie_bunny_back_white",
     desc: "Clean white edition of the fan-favorite bunny.",
@@ -147,7 +146,7 @@ export const catalog: CatalogItem[] = [
     title: "Star Plushie",
     category: "plushies",
     priceUSD: 60,
-    priceCoins: dollarsToCoins(60),
+    priceCoins: dollarsToCoins(30),
     image: img.plushie_star_front,
     altImageKey: "plushie_star_back",
     desc: "A soft star to brighten any desk or bed.",
@@ -157,7 +156,7 @@ export const catalog: CatalogItem[] = [
     title: "Bunny Plushie (Book)",
     category: "plushies",
     priceUSD: 60,
-    priceCoins: dollarsToCoins(60),
+    priceCoins: dollarsToCoins(30),
     image: img.nova_bunny_book_plushie_front,
     altImageKey: "nova_bunny_book_plushie_back",
     desc: "Bunny with a book—your study buddy mascot.",
@@ -167,7 +166,7 @@ export const catalog: CatalogItem[] = [
     title: "Nova Plushie Devil",
     category: "plushies",
     priceUSD: 60,
-    priceCoins: dollarsToCoins(60),
+    priceCoins: dollarsToCoins(30),
     image: img.nova_plushie_devil_front,
     altImageKey: "nova_plushie_devil_back",
     desc: "Mischievous horns, maximum cute.",
@@ -177,7 +176,7 @@ export const catalog: CatalogItem[] = [
     title: "Nova Plushie Purple",
     category: "plushies",
     priceUSD: 60,
-    priceCoins: dollarsToCoins(60),
+    priceCoins: dollarsToCoins(30),
     image: img.nova_plushie_purple_front,
     altImageKey: "nova_plushie_purple_back",
     desc: "Vibrant purple plush with chill energy.",
@@ -189,7 +188,8 @@ export const catalog: CatalogItem[] = [
     title: "Nova Glow Tee",
     category: "clothing",
     priceUSD: 80,
-    priceCoins: dollarsToCoins(80),
+    // 80 / 2 = 40
+    priceCoins: dollarsToCoins(40),
     image: img.tee_front,
     altImageKey: "tee_front_glow",
     desc: "Premium tee with a luminous Nova crest. Tap to view the glow detail.",
@@ -199,7 +199,8 @@ export const catalog: CatalogItem[] = [
     title: "Nova Hoodie",
     category: "clothing",
     priceUSD: 120,
-    priceCoins: dollarsToCoins(120),
+    // 120 / 2 = 60
+    priceCoins: dollarsToCoins(60),
     image: img.hoodie,
     desc: "Heavyweight hoodie—warm, soft, and built for all-nighters.",
   },
@@ -208,7 +209,8 @@ export const catalog: CatalogItem[] = [
     title: "Nova Beanie",
     category: "clothing",
     priceUSD: 45,
-    priceCoins: dollarsToCoins(45),
+    // 45 / 2 = 22.5
+    priceCoins: dollarsToCoins(22.5),
     image: img.beanie,
     desc: "Cozy cuffed beanie with the Nova mark.",
   },
@@ -217,7 +219,8 @@ export const catalog: CatalogItem[] = [
     title: "Pajamas (Set)",
     category: "clothing",
     priceUSD: 90,
-    priceCoins: dollarsToCoins(90),
+    // 90 / 2 = 45
+    priceCoins: dollarsToCoins(45),
     image: img.pajamas,
     desc: "Two-piece pajama set for ultra-comfy study sessions.",
   },
@@ -226,7 +229,8 @@ export const catalog: CatalogItem[] = [
     title: "Pajama Bottoms",
     category: "clothing",
     priceUSD: 50,
-    priceCoins: dollarsToCoins(50),
+    // 50 / 2 = 25
+    priceCoins: dollarsToCoins(25),
     image: img.pajama_bottoms,
     desc: "Soft lounge bottoms—pair with your favorite tee.",
   },
@@ -235,7 +239,8 @@ export const catalog: CatalogItem[] = [
     title: "Sweat Bottoms",
     category: "clothing",
     priceUSD: 70,
-    priceCoins: dollarsToCoins(70),
+    // 70 / 2 = 35
+    priceCoins: dollarsToCoins(35),
     image: img.sweat_bottoms,
     desc: "Relaxed fit sweatpants for everyday comfort.",
   },
@@ -244,7 +249,8 @@ export const catalog: CatalogItem[] = [
     title: "Hat",
     category: "clothing",
     priceUSD: 60,
-    priceCoins: dollarsToCoins(60),
+    // 60 / 2 = 30
+    priceCoins: dollarsToCoins(30),
     image: img.hat,
     desc: "Adjustable cap with the Nova emblem.",
   },
@@ -255,7 +261,8 @@ export const catalog: CatalogItem[] = [
     title: "Nova Keychain",
     category: "tangibles",
     priceUSD: 30,
-    priceCoins: dollarsToCoins(30),
+    // 30 / 2 = 15
+    priceCoins: dollarsToCoins(15),
     image: img.keychain,
     desc: "Metal keychain—carry Nova wherever you go.",
   },
@@ -264,7 +271,8 @@ export const catalog: CatalogItem[] = [
     title: "Stationery Set",
     category: "tangibles",
     priceUSD: 48,
-    priceCoins: dollarsToCoins(48),
+    // 48 / 2 = 24
+    priceCoins: dollarsToCoins(24),
     image: img.stationery,
     desc: "Stickers, note cards, and more—desk-ready essentials.",
   },
@@ -273,7 +281,8 @@ export const catalog: CatalogItem[] = [
     title: "Phone Case",
     category: "tangibles",
     priceUSD: 40,
-    priceCoins: dollarsToCoins(40),
+    // 40 / 2 = 20
+    priceCoins: dollarsToCoins(20),
     image: img.case,
     desc: "Protective case with a smooth matte Nova finish.",
   },
@@ -284,7 +293,8 @@ export const catalog: CatalogItem[] = [
     title: "Cursor: Glow",
     category: "cursor",
     priceUSD: 3,
-    priceCoins: dollarsToCoins(3),
+    // 3 / 2 = 1.5
+    priceCoins: dollarsToCoins(1.5),
     image: img.glow_cursor,
     desc: "Subtle neon glow for your pointer.",
   },
@@ -293,7 +303,7 @@ export const catalog: CatalogItem[] = [
     title: "Cursor: Orb Glow",
     category: "cursor",
     priceUSD: 3,
-    priceCoins: dollarsToCoins(3),
+    priceCoins: dollarsToCoins(1.5),
     image: img.orb_cursor,
     desc: "Spherical glow with smooth motion.",
   },
@@ -302,7 +312,7 @@ export const catalog: CatalogItem[] = [
     title: "Cursor: Star Trail",
     category: "cursor",
     priceUSD: 3,
-    priceCoins: dollarsToCoins(3),
+    priceCoins: dollarsToCoins(1.5),
     image: img.star_trail_cursor,
     desc: "A sparkling tail that follows each move.",
   },
@@ -314,7 +324,8 @@ export const catalog: CatalogItem[] = [
     category: "theme",
     themeId: "neon",
     priceUSD: 6,
-    priceCoins: dollarsToCoins(6),
+    // 6 / 2 = 3
+    priceCoins: dollarsToCoins(3),
     image: img.neon_theme,
     desc: "Bold neon accents on dark—signature Nova.",
   },
@@ -324,7 +335,7 @@ export const catalog: CatalogItem[] = [
     category: "theme",
     themeId: "theme:starry",
     priceUSD: 6,
-    priceCoins: dollarsToCoins(6),
+    priceCoins: dollarsToCoins(3),
     image: img.star_theme,
     desc: "Midnight skies and distant galaxies.",
   },
@@ -334,7 +345,7 @@ export const catalog: CatalogItem[] = [
     category: "theme",
     themeId: "pink",
     priceUSD: 6,
-    priceCoins: dollarsToCoins(6),
+    priceCoins: dollarsToCoins(3),
     image: img.pink_theme,
     desc: "Warm pink gradients for a soft glow.",
   },
@@ -344,7 +355,7 @@ export const catalog: CatalogItem[] = [
     category: "theme",
     themeId: "dark",
     priceUSD: 6,
-    priceCoins: dollarsToCoins(6),
+    priceCoins: dollarsToCoins(3),
     image: img.dark_theme,
     desc: "Ultra-dark minimal—the hacker vibe.",
   },
@@ -354,7 +365,7 @@ export const catalog: CatalogItem[] = [
     category: "theme",
     themeId: "mint",
     priceUSD: 6,
-    priceCoins: dollarsToCoins(6),
+    priceCoins: dollarsToCoins(3),
     image: img.mint_theme,
     desc: "Cool mints with breezy contrast.",
   },
@@ -364,7 +375,7 @@ export const catalog: CatalogItem[] = [
     category: "theme",
     themeId: "glitter",
     priceUSD: 6,
-    priceCoins: dollarsToCoins(6),
+    priceCoins: dollarsToCoins(3),
     image: img.glitter_theme,
     desc: "Sparkles everywhere—because you can.",
   },
@@ -374,7 +385,7 @@ export const catalog: CatalogItem[] = [
     category: "theme",
     themeId: "black_gold",
     priceUSD: 6,
-    priceCoins: dollarsToCoins(6),
+    priceCoins: dollarsToCoins(3),
     image: img.theme_black_gold,
     desc: "Luxury black with gold trim.",
   },
@@ -384,7 +395,7 @@ export const catalog: CatalogItem[] = [
     category: "theme",
     themeId: "crimson_dream",
     priceUSD: 6,
-    priceCoins: dollarsToCoins(6),
+    priceCoins: dollarsToCoins(3),
     image: img.theme_crimson_dream,
     desc: "Deep reds with soft highlights.",
   },
@@ -394,7 +405,7 @@ export const catalog: CatalogItem[] = [
     category: "theme",
     themeId: "emerald_wave",
     priceUSD: 6,
-    priceCoins: dollarsToCoins(6),
+    priceCoins: dollarsToCoins(3),
     image: img.theme_emerald_wave,
     desc: "Jewel-toned greens that pop.",
   },
@@ -404,7 +415,7 @@ export const catalog: CatalogItem[] = [
     category: "theme",
     themeId: "neon_purple",
     priceUSD: 6,
-    priceCoins: dollarsToCoins(6),
+    priceCoins: dollarsToCoins(3),
     image: img.theme_neon_purple,
     desc: "Electric purples with neon edges.",
   },
@@ -414,7 +425,7 @@ export const catalog: CatalogItem[] = [
     category: "theme",
     themeId: "silver_frost",
     priceUSD: 6,
-    priceCoins: dollarsToCoins(6),
+    priceCoins: dollarsToCoins(3),
     image: img.theme_silver_frost,
     desc: "Icy chrome with subtle shine.",
   },
@@ -425,12 +436,13 @@ export const catalog: CatalogItem[] = [
     title: "Neon Starter Bundle",
     category: "bundle",
     priceUSD: 12,
-    priceCoins: dollarsToCoins(12),
+    // 12 / 2 = 6
+    priceCoins: dollarsToCoins(6),
     image: img.bundle_neon,
     desc: "Neon theme + Orb cursor combo.",
   },
 
-  // --- Coin Packs (USD only)
+  // --- Coin Packs (USD only – coin amounts handled elsewhere)
   {
     id: "pack_1k",
     title: "1,000 coins",

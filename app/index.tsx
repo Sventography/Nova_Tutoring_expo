@@ -20,7 +20,9 @@ const TUTORIAL_KEY = "onboarding.tutorial.done.v1";
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { isLoggedIn } = (useUser() || {}) as any;
+  const { session } = useUser();
+  const isLoggedIn = !!session;
+
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   // One-time tutorial gate (shows only once ever)
@@ -75,7 +77,8 @@ export default function HomeScreen() {
     if (isLoggedIn) {
       router.push("/(tabs)/account");
     } else {
-      router.push("/sign-in");
+      // 👇 new login route (app/(auth)/login.tsx)
+      router.push("/login");
     }
   };
 
@@ -135,9 +138,7 @@ export default function HomeScreen() {
       </Pressable>
 
       {/* Small guidance text */}
-      <Text style={styles.subtle}>
-        Log In to save your progress
-      </Text>
+      <Text style={styles.subtle}>Log In to save your progress</Text>
 
       <Text style={styles.hint}>
         Tip: Long-press the logo to replay the tutorial.

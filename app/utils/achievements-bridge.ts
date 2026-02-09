@@ -3,97 +3,234 @@ import {
   AchieveEmitter,
   ACHIEVEMENT_EVENT,
 } from "../context/AchievementsContext";
-import { subjectKey } from "../constants/achievements";
 
-const STORAGE_KEY = "@nova/achievements.quizFlags.v1";
+/**
+ * Versioned storage (safe to evolve later)
+ */
+const STORAGE_KEY = "@nova/achievements.v1";
 
-type QuizFlags = {
-  firstQuiz?: boolean;
-  score80?: boolean;
-  score100?: boolean;
+type State = {
+  // quiz
+  quizTotal: number;
+  quiz80: number;
+  quiz90: number;
+  quiz100: number;
+  quizFast: number;
+  quiz90Streak: number;
+  quizSessionCount: number;
+  lastQuizDay?: string;
+
+  // engagement
+  quizDayStreak: number;
+  lastActiveDay?: string;
+
+  // ask synergy
+  askToday: boolean;
+  askThenQuizCount: number;
+
+  // flashcards
+  cardsToday: boolean;
+  cardsThenQuizCount: number;
+  flashcardDayStreak: number;
+  lastFlashcardDay?: string;
 };
 
-async function loadQuizFlags(): Promise<QuizFlags> {
+const DEFAULT_STATE: State = {
+  quizTotal: 0,
+  quiz80: 0,
+  quiz90: 0,
+  quiz100: 0,
+  quizFast: 0,
+  quiz90Streak: 0,
+  quizSessionCount: 0,
+
+  quizDayStreak: 0,
+
+  askToday: false,
+  askThenQuizCount: 0,
+
+  cardsToday: false,
+  cardsThenQuizCount: 0,
+  flashcardDayStreak: 0,
+};
+
+const TOTAL_THRESHOLDS = [1, 5, 10, 25, 50, 100, 200, 300, 500];
+const COUNT80 = [3, 5, 10, 20, 50];
+const COUNT90 = [3, 5, 10, 20];
+const COUNT100 = [1, 3, 5, 10, 20];
+const FAST = [1, 5, 10];
+
+function todayKey() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+async function load(): Promise<State> {
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
-    if (!raw) return {};
-    return JSON.parse(raw) as QuizFlags;
-  } catch (e) {
-    console.warn("[achievements-bridge] loadQuizFlags failed", e);
-    return {};
+    return raw ? { ...DEFAULT_STATE, ...JSON.parse(raw) } : { ...DEFAULT_STATE };
+  } catch {
+    return { ...DEFAULT_STATE };
   }
 }
 
-async function saveQuizFlags(flags: QuizFlags) {
-  try {
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(flags));
-  } catch (e) {
-    console.warn("[achievements-bridge] saveQuizFlags failed", e);
-  }
+async function save(state: State) {
+  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
-function unlockAchievement(id: string) {
-  if (!id) return;
-  console.log("[achievements-bridge] unlocking achievement", id);
-  // 🔹 Notify the global emitter — Achievements screen + coins bridge listen here
+function unlock(id: string) {
   AchieveEmitter.emit(ACHIEVEMENT_EVENT, { id });
 }
 
 /**
- * Called when a quiz finishes.
- *
- * - Unlocks: first quiz completed (maps to quiz_taken_1)
- * - Unlocks: first quiz with >= 80% (maps to quiz_80)
- * - Unlocks: first quiz with 100% (maps to quiz_100)
- *
- * It only unlocks each of these **once** per profile.
+ * Call when Ask is used
+ */
+export async function askUsed() {
+  const s = await load();
+  s.askToday = true;
+  s.lastActiveDay = todayKey();
+  await save(s);
+}
+
+/**
+ * Call when flashcards are saved/reviewed
+ */
+export async function flashcardsUsed(countInSession = 1) {
+  const s = await load();
+  const today = todayKey();
+
+  if (s.lastFlashcardDay !== today) {
+    s.flashcardDayStreak =
+      s.lastFlashcardDay === prevDay(today) ? s.flashcardDayStreak + 1 : 1;
+    s.lastFlashcardDay = today;
+
+    if (s.flashcardDayStreak === 3) unlock("flashcards_day_3");
+  }
+
+  if (countInSession >= 10) unlock("flashcards_session_10");
+
+  s.cardsToday = true;
+  s.lastActiveDay = today;
+  await save(s);
+}
+
+/**
+ * Call when a quiz finishes
  */
 export async function quizFinished(
   correct: number,
   durationSec: number,
-  total: number,
-  subjectRaw?: string
+  totalQuestions: number
 ) {
-  const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
-  const subject = subjectKey(subjectRaw); // "math", "science", etc. if you want later
+  const pct =
+    totalQuestions > 0
+      ? Math.round((correct / totalQuestions) * 100)
+      : 0;
 
-  console.log("[achievements-bridge] quizFinished()", {
-    correct,
-    total,
-    pct,
-    durationSec,
-    subject,
-  });
+  const today = todayKey();
+  const hour = new Date().getHours();
+  const s = await load();
 
-  const flags = await loadQuizFlags();
-  const next: QuizFlags = { ...flags };
+  // ────────── engagement / day tracking ──────────
+  if (s.lastQuizDay !== today) {
+    s.quizDayStreak =
+      s.lastQuizDay === prevDay(today) ? s.quizDayStreak + 1 : 1;
 
-  // 🔹 1) First quiz ever finished -> use existing global achievement id
-  if (!next.firstQuiz) {
-    next.firstQuiz = true;
-    unlockAchievement("quiz_taken_1");
+    unlock("quiz_day_1");
+    if (s.quizDayStreak === 2) unlock("quiz_days_2");
+    if (s.quizDayStreak === 3) unlock("quiz_days_3");
+    if (s.quizDayStreak === 5) unlock("quiz_days_5");
   }
 
-  // 🔹 2) First quiz with >= 80% -> global performance achievement
-  if (pct >= 80 && !next.score80) {
-    next.score80 = true;
-    unlockAchievement("quiz_80");
+  if (s.lastActiveDay && daysBetween(s.lastActiveDay, today) >= 3) {
+    unlock("return_after_break");
   }
 
-  // 🔹 3) First quiz with 100% -> global perfect score achievement
-  if (pct === 100 && !next.score100) {
-    next.score100 = true;
-    unlockAchievement("quiz_100");
+  s.lastQuizDay = today;
+  s.lastActiveDay = today;
+
+  // ────────── quiz totals ──────────
+  s.quizTotal += 1;
+  if (TOTAL_THRESHOLDS.includes(s.quizTotal)) {
+    unlock(`quiz_total_${s.quizTotal}`);
   }
 
-  await saveQuizFlags(next);
+  // ────────── time based ──────────
+  if (durationSec <= 60) {
+    s.quizFast += 1;
+    if (FAST.includes(s.quizFast)) unlock(`quiz_fast_${s.quizFast}`);
+  }
+
+  // ────────── score logic ──────────
+  if (pct >= 80) {
+    s.quiz80 += 1;
+    unlock("quiz_score_80");
+    if (COUNT80.includes(s.quiz80)) unlock(`quiz_80_count_${s.quiz80}`);
+  }
+
+  if (pct >= 90) {
+    s.quiz90 += 1;
+    s.quiz90Streak += 1;
+    unlock("quiz_score_90");
+    if (COUNT90.includes(s.quiz90)) unlock(`quiz_90_count_${s.quiz90}`);
+    if (s.quiz90Streak === 3) unlock("quiz_streak_90_3");
+    if (s.quiz90Streak === 5) unlock("quiz_streak_90_5");
+  } else {
+    s.quiz90Streak = 0;
+  }
+
+  if (pct === 100) {
+    s.quiz100 += 1;
+    unlock("quiz_score_100");
+    if (COUNT100.includes(s.quiz100)) unlock(`quiz_100_count_${s.quiz100}`);
+  }
+
+  // ────────── session ──────────
+  s.quizSessionCount += 1;
+  if (s.quizSessionCount === 5) unlock("quiz_session_5");
+
+  // ────────── time of day ──────────
+  if (hour < 8) unlock("quiz_early_bird");
+  if (hour >= 22) unlock("quiz_late_night");
+
+  // ────────── Ask synergy ──────────
+  if (s.askToday) {
+    s.askThenQuizCount += 1;
+    unlock("ask_then_quiz_1");
+    if (s.askThenQuizCount === 5) unlock("ask_then_quiz_5");
+    if (pct >= 80) unlock("ask_then_80");
+    s.askToday = false;
+  }
+
+  // ────────── Flashcards synergy ──────────
+  if (s.cardsToday) {
+    s.cardsThenQuizCount += 1;
+    unlock("cards_then_quiz_1");
+    if (s.cardsThenQuizCount === 5) unlock("cards_then_quiz_5");
+    s.cardsToday = false;
+  }
+
+  await save(s);
 }
 
 /**
- * Optional: debug helper to wipe quiz achievement flags.
- * You can ignore this in production.
+ * Helpers
  */
-export async function resetQuizAchievements() {
+function prevDay(day: string) {
+  const d = new Date(day);
+  d.setDate(d.getDate() - 1);
+  return d.toISOString().slice(0, 10);
+}
+
+function daysBetween(a: string, b: string) {
+  const d1 = new Date(a);
+  const d2 = new Date(b);
+  return Math.floor((+d2 - +d1) / 86400000);
+}
+
+/**
+ * Debug helper
+ */
+export async function resetAchievements() {
   await AsyncStorage.removeItem(STORAGE_KEY);
-  console.log("[achievements-bridge] quiz flags reset");
+  console.log("[achievements] reset");
 }

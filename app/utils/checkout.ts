@@ -51,13 +51,25 @@ function getExpoDevHost(): string | null {
 /**
  * Resolve the backend base URL.
  *
- * DEV MODE:
- *  - Web: mirror the page host
- *  - Device/simulator: use Expo's dev host (e.g. 192.168.1.74)
- *  - Fallbacks: 10.0.2.2 for Android emulator, 127.0.0.1 last-resort
+ * Priority:
+ *  1) EXPO_PUBLIC_BACKEND_URL (Render / remote backend)
+ *  2) Web: mirror page host if LAN IP or localhost; else 127.0.0.1
+ *  3) Native dev:
+ *     - Expo dev host (LAN IP) on device/simulator
+ *     - Android emulator: 10.0.2.2
+ *     - Fallback: 127.0.0.1
  */
 function getBackend(): string {
-  // 1) Web: use current page host
+  // 1) Env wins (this is where your Render URL goes)
+  const envRaw =
+    (process?.env?.EXPO_PUBLIC_BACKEND_URL as string | undefined) || "";
+  if (envRaw.trim()) {
+    const out = stripTrailingSlashes(ensureHttp(envRaw));
+    if (__DEV__) console.warn("[checkout] BACKEND(env)", out);
+    return out;
+  }
+
+  // 2) Web: use current page host
   if (Platform.OS === "web" && typeof window !== "undefined") {
     const h = window.location.hostname || "";
     const isLanIp = /^\d+\.\d+\.\d+\.\d+$/.test(h);
@@ -68,7 +80,7 @@ function getBackend(): string {
     return base;
   }
 
-  // 2) Expo dev host (works for physical devices + simulators)
+  // 3) Expo dev host (works for physical devices + simulators)
   const expoHost = getExpoDevHost();
   if (expoHost) {
     const base = `http://${expoHost}:${DEFAULT_PORT}`;
@@ -76,21 +88,22 @@ function getBackend(): string {
     return base;
   }
 
-  // 3) Android emulator fallback
+  // 4) Android emulator fallback
   if (Platform.OS === "android") {
     const base = `http://10.0.2.2:${DEFAULT_PORT}`;
     if (__DEV__) console.warn("[checkout] BACKEND(android-emulator)", base);
     return base;
   }
 
-  // 4) Last resort: assume local machine
+  // 5) Last resort: assume local machine
   const base = `http://127.0.0.1:${DEFAULT_PORT}`;
   if (__DEV__) console.warn("[checkout] BACKEND(fallback-127)", base);
   return base;
 }
 
 /** Small helper with timeout to avoid hanging fetches in dev */
-async function postJSON(url: string, body: any, timeoutMs = 15000) {
+async function postJSON(url: string, body: any, timeoutMs = 60000) {
+  // ⬆ bumped from 15000 → 60000 so Render cold starts don't get aborted
   if (__DEV__) console.log("[checkout] POST", url, body);
 
   const ctrl = new AbortController();
@@ -158,7 +171,7 @@ export async function startCheckout(
     description: (input as any).description,
   };
 
-  // We ONLY call the routes that exist on your Flask backend:
+  // ✅ Only the routes that exist on your Flask backend:
   //   POST /checkout/start
   //   POST /api/checkout/start
   const endpoints = [

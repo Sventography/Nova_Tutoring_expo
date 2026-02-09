@@ -1514,9 +1514,7 @@ export default function Shop() {
                   opacity: pressed ? 0.9 : 1,
                 })}
               >
-                <Text
-                  style={{ color: color, fontWeight: "800" }}
-                >
+                <Text style={{ color: color, fontWeight: "800" }}>
                   {(it.priceCoins ?? 0).toLocaleString()} coins
                 </Text>
               </Pressable>
@@ -1534,9 +1532,7 @@ export default function Shop() {
                   opacity: pressed ? 0.9 : 1,
                 })}
               >
-                <Text
-                  style={{ color: color, fontWeight: "800" }}
-                >
+                <Text style={{ color: color, fontWeight: "800" }}>
                   ${it.priceUSD?.toFixed(0)}
                 </Text>
               </Pressable>
@@ -1592,9 +1588,7 @@ export default function Shop() {
                   opacity: pressed ? 0.9 : 1,
                 })}
               >
-                <Text
-                  style={{ color: color, fontWeight: "800" }}
-                >
+                <Text style={{ color: color, fontWeight: "800" }}>
                   {(it.priceCoins ?? 0).toLocaleString()} coins
                 </Text>
               </Pressable>
@@ -1612,9 +1606,7 @@ export default function Shop() {
                   opacity: pressed ? 0.9 : 1,
                 })}
               >
-                <Text
-                  style={{ color: color, fontWeight: "800" }}
-                >
+                <Text style={{ color: color, fontWeight: "800" }}>
                   ${it.priceUSD?.toFixed(0)}
                 </Text>
               </Pressable>
@@ -1649,8 +1641,7 @@ export default function Shop() {
             <Pressable
               onPress={() => {
                 const chosen =
-                  sizeCtl.get(sizeKey) ||
-                  (getSizesFor(sizeKey)[0] ?? null);
+                  sizeCtl.get(sizeKey) || getSizesFor(sizeKey)[0] || null;
                 buyWithCoins(it, { size: chosen as any });
               }}
               style={({ pressed }) => ({
@@ -1672,8 +1663,7 @@ export default function Shop() {
             <Pressable
               onPress={() => {
                 const chosen =
-                  sizeCtl.get(sizeKey) ||
-                  (getSizesFor(sizeKey)[0] ?? null);
+                  sizeCtl.get(sizeKey) || getSizesFor(sizeKey)[0] || null;
                 void moneyBuy(it, { size: chosen as any });
               }}
               style={({ pressed }) => ({
@@ -1783,10 +1773,7 @@ export default function Shop() {
             >
               My Companions
             </Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-            >
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {ownedCompanions.map((it: any) => {
                 const isActive = activeCompanionId === it.id;
                 const scale = isActive ? companionScale : 1;
@@ -1890,18 +1877,15 @@ export default function Shop() {
           )}
         </Section>
 
-        {/* Companions – coin-only, digital pals (1k each) */}
+        {/* Companions – coin-only, digital pals (500 coins each) */}
         <Section title="Companions">
           {COMPANIONS.map((it: any) => {
             const owned = isOwned(it.id);
             const src = it.image;
-            const priceCoins = 1_000;
+            const priceCoins = 500; // HALF OFF from 1,000
 
             return (
-              <Card
-                key={it.id}
-                color={CATEGORY_BORDER.tangibles}
-              >
+              <Card key={it.id} color={CATEGORY_BORDER.tangibles}>
                 {src ? (
                   <Pressable
                     style={{
