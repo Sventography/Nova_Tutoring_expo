@@ -1,3 +1,4 @@
+// app/context/UserContext.tsx
 import React, {
   createContext,
   useContext,
@@ -129,6 +130,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         setReady(true);
       }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // React to auth state changes (login / logout)
@@ -390,7 +392,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
       }
 
       const { error } = await supabase.auth.resetPasswordForEmail(trimmed, {
-        // You can change this redirect later if you add a hosted reset page
         redirectTo:
           "https://novatutoring-eoq65leh2-contactnovatutoring-8350s-projects.vercel.app",
       });

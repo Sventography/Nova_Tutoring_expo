@@ -1,120 +1,133 @@
+// app/context/CoinsContext.tsx
 import React, {
   createContext,
   useCallback,
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
+  ReactNode,
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useUser } from "./UserContext";
 
-const KEY_V2 = "coins.balance.v2";
-const LEGACY_KEYS = ["@nova/coins", "@nova/coins.v1", "coins.balance", "coins.balance.v1"];
-
-type CoinsContextType = {
+type CoinsContextValue = {
   coins: number;
-  setCoins: (value: number | ((prev: number) => number)) => void;
-  addCoins: (delta: number) => void;
-  spendCoins: (amount: number) => boolean;
-  reload: () => Promise<void>;
+  loading: boolean;
+  addCoins: (delta: number) => Promise<void>;
+  setCoins: (value: number) => Promise<void>;
+  resetCoins: () => Promise<void>;
 };
 
-const CoinsCtx = createContext<CoinsContextType | null>(null);
+const CoinsContext = createContext<CoinsContextValue | null>(null);
 
-async function readInitialCoins(): Promise<number> {
-  // Try v2 first
-  const v2 = await AsyncStorage.getItem(KEY_V2);
-  if (v2 != null) {
-    const n = Number(v2);
-    return Number.isFinite(n) ? n : 0;
-  }
-  // Fallback to legacy keys
-  for (const k of LEGACY_KEYS) {
-    const val = await AsyncStorage.getItem(k);
-    if (val != null) {
-      const n = Number(val);
-      const safe = Number.isFinite(n) ? n : 0;
-      await AsyncStorage.setItem(KEY_V2, String(safe));
-      return safe;
-    }
-  }
-  return 0;
-}
+const GUEST_KEY = "@nova/coins.guest.v1";
+const userKey = (uid: string | null) =>
+  uid ? `@nova/coins.user.${uid}.v1` : GUEST_KEY;
 
-export function CoinsProvider({ children }: { children: React.ReactNode }) {
-  const [coins, _setCoins] = useState<number>(0);
-  const loadingRef = useRef(false);
+export function CoinsProvider({ children }: { children: ReactNode }) {
+  const { supabaseUserId } = useUser();
+  const [coins, setCoinsState] = useState(0);
+  const [loading, setLoading] = useState(true);
 
-  // Load once
+  // Load coins when the active Supabase user changes
   useEffect(() => {
+    let alive = true;
+
     (async () => {
-      const n = await readInitialCoins();
-      _setCoins(n);
-    })();
-  }, []);
+      try {
+        setLoading(true);
+        const keyForUser = userKey(supabaseUserId);
 
-  // Persist on change
-  useEffect(() => {
-    AsyncStorage.setItem(KEY_V2, String(coins)).catch(() => {});
-  }, [coins]);
+        // Try user-specific key first
+        const rawUser = await AsyncStorage.getItem(keyForUser);
+        let next = 0;
+
+        if (rawUser != null) {
+          const parsedUser = Number(rawUser);
+          next = Number.isFinite(parsedUser) ? parsedUser : 0;
+        } else {
+          // 🚚 One-time migration: if user has no coins key yet,
+          // but there is a guest coins value, adopt it.
+          const rawGuest = await AsyncStorage.getItem(GUEST_KEY);
+          const guestVal = rawGuest != null ? Number(rawGuest) : 0;
+          if (guestVal > 0 && supabaseUserId) {
+            next = Number.isFinite(guestVal) ? guestVal : 0;
+            await AsyncStorage.setItem(keyForUser, String(next));
+          } else {
+            next = 0;
+          }
+        }
+
+        if (alive) {
+          setCoinsState(next);
+        }
+      } catch {
+        if (alive) setCoinsState(0);
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, [supabaseUserId]);
+
+  const persist = useCallback(
+    async (next: number) => {
+      const safe = Math.max(0, Number.isFinite(next) ? next : 0);
+      setCoinsState(safe);
+      try {
+        const key = userKey(supabaseUserId);
+        await AsyncStorage.setItem(key, String(safe));
+      } catch {
+        // ignore storage errors
+      }
+    },
+    [supabaseUserId]
+  );
+
+  const addCoins = useCallback(
+    async (delta: number) => {
+      if (!Number.isFinite(delta) || delta === 0) return;
+      const next = Math.max(0, coins + delta);
+      await persist(next);
+    },
+    [coins, persist]
+  );
 
   const setCoins = useCallback(
-    (value: number | ((prev: number) => number)) => {
-      _setCoins(prev => {
-        const next = typeof value === "function" ? (value as (p: number) => number)(prev) : value;
-        const safe = Math.max(0, Math.floor(next || 0));
-        AsyncStorage.setItem(KEY_V2, String(safe)).catch(() => {});
-        return safe;
-      });
+    async (value: number) => {
+      await persist(value);
     },
-    []
+    [persist]
   );
 
-  const addCoins = useCallback((delta: number) => {
-    if (!Number.isFinite(delta)) return;
-    _setCoins(prev => {
-      const next = Math.max(0, Math.floor(prev + delta));
-      AsyncStorage.setItem(KEY_V2, String(next)).catch(() => {});
-      return next;
-    });
-  }, []);
-
-  const spendCoins = useCallback((amount: number) => {
-    if (!Number.isFinite(amount) || amount <= 0) return false;
-    let success = false;
-    _setCoins(prev => {
-      if (prev < amount) return prev;
-      const next = prev - amount;
-      success = true;
-      AsyncStorage.setItem(KEY_V2, String(next)).catch(() => {});
-      return next;
-    });
-    return success;
-  }, []);
-
-  const reload = useCallback(async () => {
-    if (loadingRef.current) return;
-    loadingRef.current = true;
-    try {
-      const raw = await AsyncStorage.getItem(KEY_V2);
-      const n = Number(raw);
-      _setCoins(Number.isFinite(n) ? n : 0);
-    } finally {
-      loadingRef.current = false;
-    }
-  }, []);
+  const resetCoins = useCallback(async () => {
+    await persist(0);
+  }, [persist]);
 
   const value = useMemo(
-    () => ({ coins, setCoins, addCoins, spendCoins, reload }),
-    [coins, setCoins, addCoins, spendCoins, reload]
+    () => ({
+      coins,
+      loading,
+      addCoins,
+      setCoins,
+      resetCoins,
+    }),
+    [coins, loading, addCoins, setCoins, resetCoins]
   );
 
-  return <CoinsCtx.Provider value={value}>{children}</CoinsCtx.Provider>;
+  return (
+    <CoinsContext.Provider value={value}>{children}</CoinsContext.Provider>
+  );
 }
 
 export function useCoins() {
-  const ctx = useContext(CoinsCtx);
-  if (!ctx) throw new Error("useCoins must be used inside CoinsProvider");
+  const ctx = useContext(CoinsContext);
+  if (!ctx) {
+    throw new Error("useCoins must be used inside <CoinsProvider>");
+  }
   return ctx;
 }

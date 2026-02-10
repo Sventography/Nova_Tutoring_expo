@@ -19,6 +19,7 @@ import { useRouter } from "expo-router";
 import { useUser } from "../context/UserContext";
 import { useTheme } from "../context/ThemeContext";
 import { useCoins } from "../context/CoinsContext";
+import { useStreak } from "../context/StreakContext";
 import { showToast } from "../utils/toast";
 import { supabase } from "../lib/supabase";
 
@@ -35,6 +36,7 @@ export default function AccountScreen() {
 
   const { tokens } = useTheme();
   const { setCoins } = useCoins();
+  const { resetStreak } = useStreak();
   const router = useRouter();
 
   const [name, setName] = useState("");
@@ -42,6 +44,12 @@ export default function AccountScreen() {
   const [avatarLocal, setAvatarLocal] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+
+  // crude "logged in" flag based on having any user identity
+  const isLoggedIn = !!(
+    user &&
+    (user.id || user.username || user.contactEmail || user.email)
+  );
 
   const currentAvatar = useMemo(() => {
     return (
@@ -61,13 +69,21 @@ export default function AccountScreen() {
   ]);
 
   useEffect(() => {
-    if (ready) {
-      setName(user?.username || user?.name || "");
-      setContactEmail(user?.contactEmail || user?.email || "");
-      setAvatarLocal(currentAvatar);
+    if (!ready) return;
+
+    if (!isLoggedIn) {
+      setName("");
+      setContactEmail("");
+      setAvatarLocal(null);
+      return;
     }
+
+    setName(user?.username || user?.name || "");
+    setContactEmail(user?.contactEmail || user?.email || "");
+    setAvatarLocal(currentAvatar);
   }, [
     ready,
+    isLoggedIn,
     user?.username,
     user?.name,
     user?.contactEmail,
@@ -109,6 +125,11 @@ export default function AccountScreen() {
   };
 
   async function onPickAvatar() {
+    if (!isLoggedIn) {
+      showToast("Sign in to change your avatar");
+      return;
+    }
+
     try {
       let uri: string | null = null;
 
@@ -146,6 +167,11 @@ export default function AccountScreen() {
   }
 
   async function onSave() {
+    if (!isLoggedIn) {
+      showToast("Sign in to save your profile");
+      return;
+    }
+
     const newName = name.trim() || "Student";
     const newEmail = contactEmail.trim();
 
@@ -169,10 +195,22 @@ export default function AccountScreen() {
 
   async function onSignOut() {
     await signOut?.();
+
+    // 🔥 also clear coins + streak locally so HeaderBar updates instantly
+    setCoins?.(0);
+    await resetStreak?.();
+
     setName("");
     setContactEmail("");
     setAvatarLocal(null);
     showToast("Signed out");
+
+    // go straight to full sign-in / sign-up screen
+    try {
+      router.replace("/sign-in");
+    } catch {
+      // ignore navigation errors
+    }
   }
 
   function onDeleteAccountPress() {
@@ -182,7 +220,11 @@ export default function AccountScreen() {
   async function handleConfirmDelete() {
     try {
       await deleteAccount?.();
+
+      // after delete, fully clear coins + streak on this device
       setCoins?.(0);
+      await resetStreak?.();
+
       setName("");
       setContactEmail("");
       setAvatarLocal(null);
@@ -347,10 +389,18 @@ export default function AccountScreen() {
                   : "rgba(255,107,107,0.12)",
               },
             ]}
-            onPress={onSignOut}
+            onPress={
+              isLoggedIn
+                ? onSignOut
+                : () => {
+                    try {
+                      router.push("/sign-in");
+                    } catch {}
+                  }
+            }
           >
             <Text style={[S.btnt, { color: tokens.text }]}>
-              Sign Out
+              {isLoggedIn ? "Sign Out" : "Sign In"}
             </Text>
           </Pressable>
         </View>

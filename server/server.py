@@ -1,14 +1,33 @@
-# 🔥🔥 RUNNING FIXED SERVER VERSION v3 (CHECKOUT SESSION) 🔥🔥
-print("🔥🔥 RUNNING FIXED SERVER VERSION v3 (CHECKOUT SESSION) 🔥🔥")
+# 🔥🔥 RUNNING FIXED SERVER VERSION v4 (CHECKOUT + ASK + COIN ORDER EMAILS) 🔥🔥
+print("🔥🔥 RUNNING FIXED SERVER VERSION v4 (CHECKOUT + ASK + COIN ORDER EMAILS) 🔥🔥")
 
 import os
+import smtplib
+import ssl
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+
+# -------------------------------------------------
+# Optional deps (Stripe, dotenv, OpenAI)
+# -------------------------------------------------
 
 try:
     import stripe
 except Exception:
     stripe = None
+
+try:
+    from dotenv import load_dotenv
+except Exception:
+    load_dotenv = None
+
+try:
+    from openai import OpenAI
+except Exception:
+    OpenAI = None
 
 # -------------------------------------------------
 # App setup
@@ -17,36 +36,68 @@ except Exception:
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
-print("🔥🔥 FLASK APP INITIALIZED (v3) 🔥🔥")
+print("🔥🔥 FLASK APP INITIALIZED (v4) 🔥🔥")
 
 # -------------------------------------------------
-# Load environment
+# Load environment (prefers server/env/.env.server, else server/.env)
 # -------------------------------------------------
 
 try:
-    from dotenv import load_dotenv
-
     base_dir = os.path.dirname(__file__)
     env_server = os.path.join(base_dir, "env", ".env.server")
     env_fallback = os.path.join(base_dir, ".env")
 
-    if os.path.exists(env_server):
-        load_dotenv(env_server)
-        print("[server] loaded env:", env_server)
-    elif os.path.exists(env_fallback):
-        load_dotenv(env_fallback)
-        print("[server] loaded env:", env_fallback)
+    if load_dotenv is None:
+        print("[server] python-dotenv not installed; skipping env file load")
     else:
-        print("[server] no env file found")
-
+        if os.path.exists(env_server):
+            load_dotenv(env_server)
+            print("[server] loaded env:", env_server)
+        elif os.path.exists(env_fallback):
+            load_dotenv(env_fallback)
+            print("[server] loaded env:", env_fallback)
+        else:
+            print("[server] no env file found")
 except Exception as e:
     print("[server] dotenv load failed:", e)
 
 # -------------------------------------------------
-# Stripe setup
+# Read environment variables
 # -------------------------------------------------
 
-STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "").strip()
+# Stripe
+STRIPE_SECRET_KEY = (os.getenv("STRIPE_SECRET_KEY") or "").strip()
+
+# Supabase (for future use, coins / profiles, etc.)
+SUPABASE_URL = (os.getenv("SUPABASE_URL") or "").strip()
+SUPABASE_ANON_KEY = (os.getenv("SUPABASE_ANON_KEY") or "").strip()
+SUPABASE_SERVICE_ROLE_KEY = (os.getenv("SUPABASE_SERVICE_ROLE_KEY") or "").strip()
+
+# OpenAI
+OPENAI_API_KEY = (os.getenv("OPENAI_API_KEY") or "").strip()
+OPENAI_MODEL = (os.getenv("OPENAI_MODEL") or "gpt-4.1-mini").strip() or "gpt-4.1-mini"
+
+# Admin / internal secret (if you use it later)
+ADMIN_SUPER_SECRET_CODE = (os.getenv("ADMIN_SUPER_SECRET_CODE") or "").strip()
+
+# SMTP / Gmail (for order + confirmation emails)
+SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))  # 465 for SSL, 587 for STARTTLS
+SMTP_USER = (os.getenv("SMTP_USER") or "").strip()  # your Gmail address
+SMTP_PASS = (os.getenv("SMTP_PASS") or "").strip()  # Gmail App Password
+SHOP_OWNER_EMAIL = (os.getenv("SHOP_OWNER_EMAIL") or SMTP_USER or "").strip()
+
+if SMTP_USER and SMTP_PASS:
+    print(
+        f"[server] SMTP configured: host={SMTP_HOST} port={SMTP_PORT} "
+        f"user={SMTP_USER} owner={SHOP_OWNER_EMAIL}"
+    )
+else:
+    print("[server] SMTP not fully configured (missing SMTP_USER / SMTP_PASS)")
+
+# -------------------------------------------------
+# Stripe setup
+# -------------------------------------------------
 
 if stripe and STRIPE_SECRET_KEY:
     stripe.api_key = STRIPE_SECRET_KEY
@@ -55,16 +106,126 @@ else:
     print("[server] Stripe secret loaded: False")
 
 # -------------------------------------------------
+# OpenAI setup
+# -------------------------------------------------
+
+if OpenAI and OPENAI_API_KEY:
+    openai_client = OpenAI(api_key=OPENAI_API_KEY)
+    print("[server] OpenAI configured: True, model:", OPENAI_MODEL)
+else:
+    openai_client = None
+    if not OpenAI:
+        print("[server] OpenAI configured: False (openai library not installed)")
+    elif not OPENAI_API_KEY:
+        print("[server] OpenAI configured: False (missing OPENAI_API_KEY)")
+    else:
+        print("[server] OpenAI configured: False (unknown reason)")
+
+# -------------------------------------------------
+# Email helpers
+# -------------------------------------------------
+
+
+def send_email(to_address: str, subject: str, body_text: str, body_html: str | None = None):
+    """
+    Low-level helper: send a single email using SMTP_USER / SMTP_PASS.
+
+    Uses implicit SSL when SMTP_PORT == 465, otherwise STARTTLS on given port.
+    """
+    if not to_address:
+        print("[mail] no to_address provided; skipping send_email")
+        return
+
+    if not (SMTP_HOST and SMTP_USER and SMTP_PASS):
+        print("[mail] SMTP not fully configured; skipping email send")
+        return
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"] = SMTP_USER
+    msg["To"] = to_address
+
+    msg.attach(MIMEText(body_text, "plain"))
+    if body_html:
+        msg.attach(MIMEText(body_html, "html"))
+
+    print(f"[mail] sending email to {to_address!r}: {subject!r}")
+
+    context = ssl.create_default_context()
+
+    try:
+        if SMTP_PORT == 465:
+            with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, context=context) as server:
+                server.login(SMTP_USER, SMTP_PASS)
+                server.sendmail(SMTP_USER, [to_address], msg.as_string())
+        else:
+            with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+                server.starttls(context=context)
+                server.login(SMTP_USER, SMTP_PASS)
+                server.sendmail(SMTP_USER, [to_address], msg.as_string())
+        print("[mail] email sent OK")
+    except Exception as e:
+        print("[mail] error sending email:", e)
+
+
+def send_coin_order_emails(
+    user_email: str | None,
+    coins_amount: int,
+    stripe_session_id: str | None = None,
+    user_display_name: str | None = None,
+):
+    """
+    Sends:
+      - notification to shop owner
+      - confirmation to the user (if user_email present)
+    """
+    # Email to owner
+    if SHOP_OWNER_EMAIL:
+        owner_subject = "Nova Tutoring – Coin order placed"
+        owner_body = (
+            "A coin order has been placed.\n\n"
+            f"User: {user_display_name or user_email or 'unknown'}\n"
+            f"Email: {user_email or 'unknown'}\n"
+            f"Coins: {coins_amount}\n"
+            f"Stripe session: {stripe_session_id or 'n/a'}\n"
+        )
+        send_email(SHOP_OWNER_EMAIL, owner_subject, owner_body)
+
+    # Email to user
+    if user_email:
+        user_subject = "Nova Tutoring – Thanks for your coin purchase!"
+        user_body = (
+            f"Hi {user_display_name or 'there'},\n\n"
+            f"Thank you for your coin purchase.\n"
+            f"We've added {coins_amount} coins to your Nova Tutoring account.\n\n"
+            f"If you did not make this purchase, please contact support.\n"
+        )
+        send_email(user_email, user_subject, user_body)
+    else:
+        print("[mail] no user_email for coin order; only owner was notified.")
+
+
+# -------------------------------------------------
 # Health
 # -------------------------------------------------
 
+
 @app.get("/health")
 def health():
-    return jsonify(ok=True, service="nova-backend", status="up")
+    return jsonify(
+        ok=True,
+        service="nova-backend",
+        status="up",
+        stripe=bool(stripe and STRIPE_SECRET_KEY),
+        openai=bool(openai_client),
+        smtp=bool(SMTP_USER and SMTP_PASS),
+    )
+
 
 # -------------------------------------------------
-# Checkout core
+# Checkout core (card / Stripe)
 # -------------------------------------------------
+
 
 def _checkout_logic():
     print("🔥🔥 CHECKOUT SESSION LOGIC HIT 🔥🔥")
@@ -73,7 +234,7 @@ def _checkout_logic():
 
     sku = body.get("sku")
     title = body.get("title") or sku
-    amount = body.get("amount")          # cents
+    amount = body.get("amount")  # cents
     quantity = int(body.get("quantity") or 1)
     currency = body.get("currency", "usd")
     method = (body.get("method") or "").lower()
@@ -130,17 +291,143 @@ def _checkout_logic():
         print("[server] Stripe error:", e)
         return jsonify(ok=False, error=str(e)), 500
 
+
+# -------------------------------------------------
+# Ask core (OpenAI)
+# -------------------------------------------------
+
+
+def _ask_logic():
+    if not openai_client:
+        return jsonify(ok=False, error="OpenAI not configured on server"), 500
+
+    body = request.get_json(silent=True) or {}
+    question = (
+        (body.get("question") or "")
+        or (body.get("prompt") or "")
+        or (body.get("q") or "")
+    )
+    question = str(question).strip()
+
+    print("[server] /ask body:", body)
+
+    if not question:
+        return jsonify(ok=False, error="missing question"), 400
+
+    try:
+        completion = openai_client.chat.completions.create(
+            model=OPENAI_MODEL,
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are Nova, a kind, encouraging tutor for the Nova Tutoring app. "
+                        "Explain things clearly, step by step, and keep answers concise but helpful. "
+                        "Focus on teaching and encouragement."
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": question,
+                },
+            ],
+        )
+
+        choice = completion.choices[0]
+        answer = (choice.message.content or "").strip()
+
+        return jsonify(
+            ok=True,
+            answer=answer,
+            model=OPENAI_MODEL,
+        )
+
+    except Exception as e:
+        print("[server] OpenAI error:", e)
+        return jsonify(ok=False, error=str(e)), 500
+
+
 # -------------------------------------------------
 # Routes
 # -------------------------------------------------
+
 
 @app.post("/checkout/start")
 def checkout_start():
     return _checkout_logic()
 
+
 @app.post("/api/checkout/start")
 def checkout_start_api():
     return _checkout_logic()
+
+
+@app.post("/ask")
+def ask():
+    return _ask_logic()
+
+
+@app.post("/api/ask")
+def ask_api():
+    return _ask_logic()
+
+
+# ---------------------- Coin order email endpoint --------------------------
+
+
+@app.post("/api/coin-order")
+def api_coin_order():
+    """
+    Called by the app when a coin purchase is completed.
+
+    Expected JSON body (example):
+
+    {
+      "coins": 6000,
+      "sessionId": "cs_test_123",   // optional
+      "user": {
+        "id": "...",
+        "displayName": "Sven",
+        "username": "Sven",
+        "contactEmail": "svenningson6388@gmail.com",
+        "email": "svenningson6388@gmail.com"
+      }
+    }
+    """
+    data = request.get_json(silent=True) or {}
+    print("[coin-order] incoming:", data)
+
+    coins = int(data.get("coins") or 0)
+    if coins <= 0:
+        return jsonify(ok=False, error="invalid coins"), 400
+
+    user = data.get("user") or {}
+    user_email = (
+        user.get("contactEmail")
+        or user.get("email")
+        or data.get("contactEmail")
+        or data.get("email")
+    )
+    display_name = user.get("displayName") or user.get("username") or None
+    session_id = data.get("sessionId") or data.get("stripeSessionId")
+
+    # Here is where you'd also update Supabase / DB to record the order
+    # and the user's new coin balance. For now, we just log + send emails.
+    print(
+        f"[coin-order] coins={coins} user_email={user_email!r} "
+        f"display_name={display_name!r} session={session_id!r}"
+    )
+
+    # Send owner + user emails
+    send_coin_order_emails(
+        user_email=user_email,
+        coins_amount=coins,
+        stripe_session_id=session_id,
+        user_display_name=display_name,
+    )
+
+    return jsonify(ok=True)
+
 
 # -------------------------------------------------
 # Entrypoint
@@ -148,5 +435,5 @@ def checkout_start_api():
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", "8787"))
-    print(f"🔥🔥 STARTING SERVER v3 ON http://127.0.0.1:{port} 🔥🔥")
+    print(f"🔥🔥 STARTING SERVER v4 ON http://127.0.0.1:{port} 🔥🔥")
     app.run(host="0.0.0.0", port=port, debug=False)

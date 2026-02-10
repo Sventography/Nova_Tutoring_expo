@@ -35,14 +35,27 @@ export default function HeaderBar() {
   const { loaded, count, todayChecked, markToday } =
     (useStreak() || {}) as any;
 
-  // 👉 This is the *only* place we read the user now
-  const { user, ready } = useUser();
+  // 👉 Read full user context so we can know if we're logged in
+  const userCtx = useUser() as any;
+  const { user, ready, supabaseUserId, session } = userCtx || {};
+
+  const isLoggedIn =
+    !!supabaseUserId || !!session || !!user;
+
+  const displayCoins = isLoggedIn ? coins : 0;
 
   useEffect(() => {
     try {
-      console.log("[HeaderBar] user from context:", user, "ready:", ready);
+      console.log(
+        "[HeaderBar] user from context:",
+        user,
+        "ready:",
+        ready,
+        "isLoggedIn:",
+        isLoggedIn
+      );
     } catch {}
-  }, [user, ready]);
+  }, [user, ready, isLoggedIn]);
 
   // Simple helpers for name + avatar
   const pickString = (v: any) =>
@@ -79,12 +92,12 @@ export default function HeaderBar() {
   const name: string = rawName || "Nova Student";
   const avatar: string | undefined = rawAvatar || undefined;
 
-  // Streak auto-mark
+  // Streak auto-mark (only when logged in)
   useEffect(() => {
-    if (loaded && !todayChecked && typeof markToday === "function") {
+    if (loaded && isLoggedIn && !todayChecked && typeof markToday === "function") {
       markToday();
     }
-  }, [loaded, todayChecked, markToday]);
+  }, [loaded, todayChecked, markToday, isLoggedIn]);
 
   const goAccount = () => {
     try {
@@ -191,12 +204,16 @@ export default function HeaderBar() {
 
         <View style={S.coinPill}>
           <Image source={COIN_IMG} style={S.coinImg} resizeMode="contain" />
-          <Text style={S.coinText}>{Number(coins).toLocaleString()}</Text>
+          <Text style={S.coinText}>
+            {Number(displayCoins).toLocaleString()}
+          </Text>
         </View>
 
-        <Pressable onPress={markToday} hitSlop={hit} style={S.streakPill}>
-          <Text style={S.streakText}>{streakLabel}</Text>
-        </Pressable>
+        {isLoggedIn && (
+          <Pressable onPress={markToday} hitSlop={hit} style={S.streakPill}>
+            <Text style={S.streakText}>{streakLabel}</Text>
+          </Pressable>
+        )}
       </Pressable>
 
       {/* Right: FX + tiny heart donate button */}
@@ -232,11 +249,7 @@ export default function HeaderBar() {
                 end={{ x: 1, y: 1 }}
                 style={S.donateGrad}
               >
-                <Ionicons
-                  name="heart"
-                  size={heartSize}
-                  color="#ff9abf"
-                />
+                <Ionicons name="heart" size={heartSize} color="#ff9abf" />
               </LinearGradient>
             </View>
           </Pressable>

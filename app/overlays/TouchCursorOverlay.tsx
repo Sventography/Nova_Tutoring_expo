@@ -5,11 +5,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { useCursor } from "../context/CursorContext";
 import { useTheme } from "../context/ThemeContext";
 
-type Pt = { x: number; y: number };
+export type Pt = { x: number; y: number };
 
 type Props = {
-  p: Pt;        // current touch point (page coords)
-  down: boolean; // finger down?
+  p?: Pt | null; // current touch point (page coords)
+  down?: boolean; // finger down?
 };
 
 type SparkKind = "none" | "glow" | "orb" | "star_trail";
@@ -83,14 +83,14 @@ function pickStyle(cursorIdRaw: string | null | undefined, tokens: any) {
     };
   }
 
-  // Glow → small sparkles around finger
+  // Glow → soft halo around finger
   if (id === "cursor:glow") {
     return {
       kind: "glow" as const,
-      icon: "sparkles" as const, // will fallback to default icon if needed
+      icon: "sparkles" as const, // still available if we want icon accents
       color: accent,
-      baseSize: 16,
-      jitter: 14,
+      baseSize: 20,
+      jitter: 10,
     };
   }
 
@@ -121,7 +121,7 @@ function pickStyle(cursorIdRaw: string | null | undefined, tokens: any) {
     kind: "glow" as const,
     icon: "sparkles" as const,
     color: accent,
-    baseSize: 16,
+    baseSize: 18,
     jitter: 12,
   };
 }
@@ -131,27 +131,24 @@ function pickStyle(cursorIdRaw: string | null | undefined, tokens: any) {
  * - pointerEvents="none" so it never steals taps
  * - emits particles while finger is down & moving
  * - style driven by cursor id + theme
+ *
+ * Hooks are **never** called conditionally to avoid
+ * "Rendered more hooks than during the previous render".
  */
 export default function TouchCursorOverlay({ p, down }: Props) {
   const { cursorId } = useCursor();
   const { tokens } = useTheme();
 
+  // Decide what visual mode we're in
   const style = useMemo(() => pickStyle(cursorId, tokens), [cursorId, tokens]);
 
-  // If no cursor equipped, do nothing (plain default behavior)
-  if (style.kind === "none") {
-    return <View pointerEvents="none" style={StyleSheet.absoluteFill} />;
-  }
-
+  // Spark state + last point
   const [sparks, setSparks] = useState<Spark[]>([]);
   const last = useRef<Pt>({ x: -1, y: -1 });
 
-  const shouldEmit = useMemo(() => {
-    const dx = p.x - last.current.x;
-    const dy = p.y - last.current.y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    return down && p.x >= 0 && p.y >= 0 && dist >= 6;
-  }, [p, down]);
+  // Safe point defaults
+  const pt: Pt = p ?? { x: -1, y: -1 };
+  const isDown = !!down;
 
   const makeSpark = (x: number, y: number, seed = 0): Spark => {
     const a = new Animated.Value(1);
@@ -176,7 +173,7 @@ export default function TouchCursorOverlay({ p, down }: Props) {
       a,
       s,
       r,
-      kind: style.kind,
+      kind: style.kind as SparkKind,
       icon: style.icon,
       size,
       color,
@@ -185,16 +182,21 @@ export default function TouchCursorOverlay({ p, down }: Props) {
   };
 
   const runAnim = (sp: Spark, fadeMs = 700) => {
+    const upScale =
+      sp.kind === "orb" ? 1.45 : sp.kind === "glow" ? 1.35 : 1.25;
+    const downScale =
+      sp.kind === "orb" ? 0.85 : sp.kind === "glow" ? 0.9 : 0.75;
+
     Animated.parallel([
       Animated.sequence([
         Animated.timing(sp.s, {
-          toValue: sp.kind === "orb" ? 1.45 : 1.25,
-          duration: 120,
+          toValue: upScale,
+          duration: 130,
           easing: Easing.out(Easing.quad),
           useNativeDriver: true,
         }),
         Animated.timing(sp.s, {
-          toValue: sp.kind === "orb" ? 0.85 : 0.75,
+          toValue: downScale,
           duration: 520,
           easing: Easing.inOut(Easing.quad),
           useNativeDriver: true,
@@ -216,18 +218,27 @@ export default function TouchCursorOverlay({ p, down }: Props) {
 
   // Emit while moving
   useEffect(() => {
-    if (!shouldEmit) return;
+    if (!isDown) return;
+    if (style.kind === "none") return;
+    if (pt.x < 0 || pt.y < 0) return;
 
-    last.current = { x: p.x, y: p.y };
+    const dx = pt.x - last.current.x;
+    const dy = pt.y - last.current.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
 
-    const sp = makeSpark(p.x, p.y);
-    setSparks((prev) => [sp, ...prev].slice(0, 30));
-    runAnim(sp, style.kind === "orb" ? 880 : 700);
-  }, [shouldEmit, p.x, p.y, style.kind]);
+    if (last.current.x < 0 || last.current.y < 0 || dist >= 6) {
+      last.current = { x: pt.x, y: pt.y };
+      const sp = makeSpark(pt.x, pt.y);
+      setSparks((prev) => [sp, ...prev].slice(0, 30));
+      runAnim(sp, style.kind === "orb" ? 880 : 700);
+    }
+  }, [pt.x, pt.y, isDown, style.kind]);
 
   // Burst on touch-down
   useEffect(() => {
-    if (!down || p.x < 0 || p.y < 0) return;
+    if (!isDown) return;
+    if (style.kind === "none") return;
+    if (pt.x < 0 || pt.y < 0) return;
 
     const j = style.jitter;
     const offsets = [
@@ -238,11 +249,18 @@ export default function TouchCursorOverlay({ p, down }: Props) {
     ];
 
     offsets.forEach((o, k) => {
-      const sp = makeSpark(p.x + o.dx, p.y + o.dy, k);
+      const sp = makeSpark(pt.x + o.dx, pt.y + o.dy, k);
       setSparks((prev) => [sp, ...prev].slice(0, 30));
       runAnim(sp, style.kind === "orb" ? 980 : 820);
     });
-  }, [down, p.x, p.y, style.kind]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDown]);
+
+  // ✅ Hooks are all above this line. Different renders may
+  // return different JSX, but the hook list never changes.
+  if (style.kind === "none" && sparks.length === 0) {
+    return <View pointerEvents="none" style={StyleSheet.absoluteFill} />;
+  }
 
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
@@ -265,8 +283,29 @@ export default function TouchCursorOverlay({ p, down }: Props) {
               },
             ]}
           >
-            {sp.halo ? (
-              // ORB: halo + core
+            {sp.kind === "glow" ? (
+              // ✨ Glow cursor: soft halo with bright core
+              <View style={S.glowWrap}>
+                <View
+                  style={[
+                    S.glowHalo,
+                    {
+                      borderColor: sp.color,
+                      shadowColor: sp.color,
+                    },
+                  ]}
+                />
+                <View
+                  style={[
+                    S.glowCore,
+                    {
+                      backgroundColor: sp.color,
+                    },
+                  ]}
+                />
+              </View>
+            ) : sp.halo ? (
+              // Orb: halo + core
               <View style={S.orbWrap}>
                 <View
                   style={[
@@ -288,7 +327,7 @@ export default function TouchCursorOverlay({ p, down }: Props) {
                 />
               </View>
             ) : sp.icon ? (
-              // Glow / star trail: icon particles
+              // Star trail or fallback icon particles
               <Ionicons name={sp.icon} size={sp.size} color={sp.color} />
             ) : null}
           </Animated.View>
@@ -305,6 +344,31 @@ const S = StyleSheet.create({
     height: 28,
     alignItems: "center",
     justifyContent: "center",
+  },
+
+  // ✨ Glow cursor visuals
+  glowWrap: {
+    width: 26,
+    height: 26,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  glowHalo: {
+    position: "absolute",
+    width: 24,
+    height: 24,
+    borderRadius: 999,
+    borderWidth: 1,
+    opacity: 0.65,
+    shadowOpacity: 0.9,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  glowCore: {
+    width: 10,
+    height: 10,
+    borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.95)",
   },
 
   // Orb cursor visuals

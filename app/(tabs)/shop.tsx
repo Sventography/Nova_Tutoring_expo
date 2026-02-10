@@ -1,3 +1,4 @@
+// app/(tabs)/shop.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
@@ -20,6 +21,7 @@ import { Linking as RNLinking } from "react-native";
 import { useCoins } from "../context/CoinsContext";
 import { useTheme } from "../context/ThemeContext";
 import { useCursor } from "../context/CursorContext";
+import { useUser } from "../context/UserContext";
 
 import {
   catalog,
@@ -67,7 +69,11 @@ type Order = {
 };
 
 const COINS_KEY = "coins.balance.v2";
-const PURCHASES_KEY = "@nova/purchases";
+
+// 🔐 New versioned purchases key, plus backward-compat with legacy
+const PURCHASES_KEY = "@nova/purchases.v2";
+const PURCHASES_COMPAT_KEYS = ["@nova/purchases", PURCHASES_KEY];
+
 const CURSOR_KEY = "@nova/cursor";
 const THEME_KEY = "@nova/themeId";
 const ORDERS_KEY = "@nova/orders";
@@ -102,7 +108,7 @@ function canonId(raw: string | null | undefined): string {
     ) {
       v = "cursor:star_trail";
     }
-    // known themes
+    // known themes (base names and long variants)
     else if (
       [
         "neon",
@@ -118,6 +124,10 @@ function canonId(raw: string | null | undefined): string {
         "neonpurple",
         "neon_purple",
         "silver",
+        // long-name variants
+        "crimson_dream",
+        "emerald_wave",
+        "silver_frost",
       ].includes(v)
     ) {
       v = "theme:" + v;
@@ -133,9 +143,14 @@ function canonId(raw: string | null | undefined): string {
   // cursor aliases
   if (v === "cursor:startrail") v = "cursor:star_trail";
 
-  // theme aliases (underscore/hyphen versions)
+  // theme aliases (underscore/hyphen versions & long names)
   if (v === "theme:black_gold") v = "theme:blackgold";
   if (v === "theme:neon_purple") v = "theme:neonpurple";
+
+  // long-name → base ids
+  if (v === "theme:crimson_dream") v = "theme:crimson";
+  if (v === "theme:emerald_wave") v = "theme:emerald";
+  if (v === "theme:silver_frost") v = "theme:silver";
 
   return v;
 }
@@ -159,6 +174,17 @@ function toThemeCtxId(id: string | null) {
   return map[cid] ?? (cid.startsWith("theme:") ? cid.slice(6) : cid);
 }
 
+// normalize all saved purchase keys into canonical IDs
+function normalizePurchases(obj: Record<string, any>): PurchaseMap {
+  const out: Record<string, true> = {};
+  for (const [k, v] of Object.entries(obj || {})) {
+    if (!v) continue;
+    const cid = canonId(k);
+    if (cid) out[cid] = true;
+  }
+  return out;
+}
+
 const track = (event: string, props?: Record<string, any>) => {
   try {
     (globalThis as any).novaTrack?.(event, props ?? {});
@@ -172,13 +198,36 @@ async function loadCoins(): Promise<number> {
 async function saveCoins(n: number) {
   await AsyncStorage.setItem(COINS_KEY, String(n));
 }
+
+// 🔁 Read from both legacy & v2 keys, merge, normalize, and write back to v2
 async function loadPurchases(): Promise<PurchaseMap> {
-  const v = await AsyncStorage.getItem(PURCHASES_KEY);
-  return v ? JSON.parse(v) : {};
+  let merged: Record<string, any> = {};
+  for (const key of PURCHASES_COMPAT_KEYS) {
+    try {
+      const raw = await AsyncStorage.getItem(key);
+      if (!raw) continue;
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object") {
+        merged = { ...merged, ...parsed };
+      }
+    } catch {
+      // ignore broken entries; we'll normalize below
+    }
+  }
+  const norm = normalizePurchases(merged);
+  // Ensure v2 (and legacy) are kept in sync with normalized map
+  await savePurchases(norm);
+  return norm;
 }
+
 async function savePurchases(m: PurchaseMap) {
-  await AsyncStorage.setItem(PURCHASES_KEY, JSON.stringify(m));
+  const norm = normalizePurchases(m);
+  const serialized = JSON.stringify(norm);
+  await Promise.all(
+    PURCHASES_COMPAT_KEYS.map((key) => AsyncStorage.setItem(key, serialized))
+  );
 }
+
 async function loadCursor(): Promise<string | null> {
   return (await AsyncStorage.getItem(CURSOR_KEY)) || null;
 }
@@ -205,17 +254,6 @@ async function loadOrders(): Promise<Order[]> {
 }
 async function saveOrders(list: Order[]) {
   await AsyncStorage.setItem(ORDERS_KEY, JSON.stringify(list));
-}
-
-// normalize all saved purchase keys into canonical IDs
-function normalizePurchases(obj: Record<string, any>): PurchaseMap {
-  const out: Record<string, true> = {};
-  for (const [k, v] of Object.entries(obj || {})) {
-    if (!v) continue;
-    const cid = canonId(k);
-    if (cid) out[cid] = true;
-  }
-  return out;
 }
 
 /* ----------------- Stripe wrapper for $$ buttons -------------------------- */
@@ -486,20 +524,12 @@ function OrderSuccessModal({
 
 /* --------------------------------- Screen -------------------------------- */
 export default function Shop() {
+  // ✅ Hooks all at top level, no try/catch, no conditionals
   const { coins, setCoins } = useCoins();
   const { tokens, setThemeById } = useTheme();
+  const { setCursorById } = useCursor();
+  const { user: currentUser } = useUser();
   const router = useRouter();
-
-  const cursorApi = (() => {
-    try {
-      return useCursor();
-    } catch {
-      return null as any;
-    }
-  })();
-  const setCursorById = cursorApi?.setCursorById as
-    | undefined
-    | ((id: string | null) => void);
 
   const [purchases, setPurchases] = useState<PurchaseMap>({});
   const [orders, setOrders] = useState<Order[]>([]);
@@ -522,6 +552,9 @@ export default function Shop() {
 
   const coinsRef = useRef<number>(coins ?? 0);
 
+  // 🔥 DEV CHEAT: tap Shop title 5x → +500,000 coins (dev only)
+  const [devTapCount, setDevTapCount] = useState(0);
+
   // companions strip bounce state
   const [activeCompanionId, setActiveCompanionId] = useState<string | null>(
     null
@@ -539,7 +572,7 @@ export default function Shop() {
 
   const floatBasePos = useRef({
     x: windowDims.width - FLOAT_SIZE - 16,
-    y: windowDims.height - FLOAT_SIZE - 160, // higher so it's not cut by tab bar
+    y: windowDims.height - FLOAT_SIZE - 160,
   });
   const floatPos = useRef(
     new Animated.ValueXY({
@@ -564,9 +597,6 @@ export default function Shop() {
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: () => {
-        // nothing, we use basePos + dx/dy
-      },
       onPanResponderMove: (_evt, gesture) => {
         const newX = floatBasePos.current.x + gesture.dx;
         const newY = floatBasePos.current.y + gesture.dy;
@@ -640,6 +670,42 @@ export default function Shop() {
       track("shop_unview", { duration_ms: durMs });
     };
   }, []);
+
+  // 🔥 Dev cheat handler: 5 taps on title → +500k coins (dev only)
+  const handleDevTitlePress = () => {
+    if (!__DEV__) return;
+
+    setDevTapCount((prev) => {
+      const next = prev + 1;
+
+      if (next % 5 === 0) {
+        const bonus = 500_000;
+        const cur = coinsRef.current ?? 0;
+        const nextCoins = cur + bonus;
+
+        setCoins(nextCoins);
+        coinsRef.current = nextCoins;
+        void saveCoins(nextCoins);
+
+        track("dev_shop_title_cheat", {
+          bonus,
+          taps: next,
+        });
+
+        try {
+          console.log(
+            `[DEV CHEAT] Granted ${
+              bonus.toLocaleString?.() ?? bonus
+            } coins from Shop title taps`
+          );
+        } catch {
+          console.log("[DEV CHEAT] Granted 500,000 coins from Shop title taps");
+        }
+      }
+
+      return next;
+    });
+  };
 
   /* --------------------------- Initial data load -------------------------- */
   useEffect(() => {
@@ -716,7 +782,7 @@ export default function Shop() {
           if (cid) next[cid] = true;
           void savePurchases(next);
           track("shop_purchase_complete", {
-            sku: cid,
+            sku: cid || it.id,
             category: it.category,
             mode: "stripe",
           });
@@ -1065,6 +1131,31 @@ export default function Shop() {
         size: chosen || null,
       });
 
+      const userForOrder =
+        currentUser &&
+        (currentUser.contactEmail ||
+          currentUser.email ||
+          currentUser.username)
+          ? {
+              id: currentUser.id,
+              username:
+                currentUser.username ?? currentUser.name ?? undefined,
+              displayName:
+                currentUser.displayName ??
+                currentUser.name ??
+                currentUser.username ??
+                undefined,
+              contactEmail:
+                currentUser.contactEmail ??
+                currentUser.email ??
+                null,
+              email:
+                currentUser.contactEmail ??
+                currentUser.email ??
+                null,
+            }
+          : undefined;
+
       startCoinCheckout({
         id: it.id,
         title: it.title,
@@ -1072,6 +1163,7 @@ export default function Shop() {
         imageUrl: undefined,
         category: it.category,
         size: chosen,
+        user: userForOrder,
       });
       return;
     }
@@ -1297,6 +1389,7 @@ export default function Shop() {
   }
 
   /* ----------------------------- Render helpers --------------------------- */
+
   const renderItem = (
     it: any,
     color: string,
@@ -1327,6 +1420,7 @@ export default function Shop() {
         ? canonId(equippedCursor ?? "") === cid
         : false;
 
+    // 🧠 IMPORTANT: no hooks here – we just use `tokens` from closure
     return (
       <Card key={it.id} color={color}>
         {src ? (
@@ -1452,7 +1546,7 @@ export default function Shop() {
             <View
               style={{
                 flexDirection: "row",
-                justifyContent: "space_between",
+                justifyContent: "space-between",
                 columnGap: 8,
               }}
             >
@@ -1469,9 +1563,7 @@ export default function Shop() {
                   opacity: pressed ? 0.9 : 1,
                 })}
               >
-                <Text
-                  style={{ color: color, fontWeight: "800" }}
-                >
+                <Text style={{ color: color, fontWeight: "800" }}>
                   {(it.priceCoins ?? 0).toLocaleString()} coins
                 </Text>
               </Pressable>
@@ -1489,9 +1581,7 @@ export default function Shop() {
                   opacity: pressed ? 0.9 : 1,
                 })}
               >
-                <Text
-                  style={{ color: color, fontWeight: "800" }}
-                >
+                <Text style={{ color: color, fontWeight: "800" }}>
                   ${it.priceUSD?.toFixed(0)}
                 </Text>
               </Pressable>
@@ -1547,9 +1637,7 @@ export default function Shop() {
                   opacity: pressed ? 0.9 : 1,
                 })}
               >
-                <Text
-                  style={{ color: color, fontWeight: "800" }}
-                >
+                <Text style={{ color: color, fontWeight: "800" }}>
                   {(it.priceCoins ?? 0).toLocaleString()} coins
                 </Text>
               </Pressable>
@@ -1567,9 +1655,7 @@ export default function Shop() {
                   opacity: pressed ? 0.9 : 1,
                 })}
               >
-                <Text
-                  style={{ color: color, fontWeight: "800" }}
-                >
+                <Text style={{ color: color, fontWeight: "800" }}>
                   ${it.priceUSD?.toFixed(0)}
                 </Text>
               </Pressable>
@@ -1678,23 +1764,25 @@ export default function Shop() {
             justifyContent: "space-between",
           }}
         >
-          {/* Shop title – no dev tap cheat */}
-          <Text
-            style={{
-              color: tokens.titleText as any,
-              fontSize: 24,
-              fontWeight: "800",
-              textShadowColor: tokens.isDark
-                ? "transparent"
-                : (tokens.softShadow as any),
-              textShadowOffset: tokens.isDark
-                ? undefined
-                : ({ width: 0, height: 1 } as any),
-              textShadowRadius: tokens.isDark ? 0 : 2,
-            }}
-          >
-            Shop
-          </Text>
+          {/* Shop title – with dev tap cheat in dev builds */}
+          <Pressable onPress={handleDevTitlePress} hitSlop={10}>
+            <Text
+              style={{
+                color: tokens.titleText as any,
+                fontSize: 24,
+                fontWeight: "800",
+                textShadowColor: tokens.isDark
+                  ? "transparent"
+                  : (tokens.softShadow as any),
+                textShadowOffset: tokens.isDark
+                  ? undefined
+                  : ({ width: 0, height: 1 } as any),
+                textShadowRadius: tokens.isDark ? 0 : 2,
+              }}
+            >
+              Shop
+            </Text>
+          </Pressable>
 
           <View
             style={{
@@ -1850,7 +1938,7 @@ export default function Shop() {
           {COMPANIONS.map((it: any) => {
             const owned = isOwned(it.id);
             const src = it.image;
-            const priceCoins = 1_000; // 🔥 all companions cost 1,000 coins now
+            const priceCoins = 1_000; // all companions cost 1,000 coins now
 
             return (
               <Card

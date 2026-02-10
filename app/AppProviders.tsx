@@ -1,3 +1,4 @@
+// app/AppProviders.tsx
 import React, { useEffect } from "react";
 import * as Linking from "expo-linking";
 
@@ -25,7 +26,11 @@ function DevCoinsListener() {
       if (!url) return;
       const { hostname, path, queryParams } = Linking.parse(url);
       const route = (hostname || path || "").toLowerCase();
-      if (route.includes("coins") && queryParams && typeof queryParams.add !== "undefined") {
+      if (
+        route.includes("coins") &&
+        queryParams &&
+        typeof queryParams.add !== "undefined"
+      ) {
         const amt = Number(queryParams.add);
         if (!Number.isNaN(amt) && amt !== 0) addCoins(amt);
       }
@@ -44,7 +49,11 @@ function DevThemeListener() {
       if (!url) return;
       const { hostname, path, queryParams } = Linking.parse(url);
       const route = (hostname || path || "").toLowerCase();
-      if (route.includes("theme") && queryParams && typeof queryParams.id !== "undefined") {
+      if (
+        route.includes("theme") &&
+        queryParams &&
+        typeof queryParams.id !== "undefined"
+      ) {
         setThemeById(String(queryParams.id));
       }
     };
@@ -63,7 +72,11 @@ function DevGrantListener() {
       if (!url) return;
       const { hostname, path, queryParams } = Linking.parse(url);
       const route = (hostname || path || "").toLowerCase();
-      if (route.includes("grant") && queryParams && typeof queryParams.id !== "undefined") {
+      if (
+        route.includes("grant") &&
+        queryParams &&
+        typeof queryParams.id !== "undefined"
+      ) {
         let ids = String(queryParams.id)
           .split(",")
           .map((s) => s.trim())
@@ -104,13 +117,16 @@ function DevGrantListener() {
 
 export function AppProviders(props: any) {
   const { children } = props;
+
   return (
     <ThemeProvider>
       <ThemeGate>
-        <CoinsProvider>
-          <PurchasesProvider>
-            <CursorProvider>
-              <UserProvider>
+        {/* 🔐 UserProvider MUST wrap anything that calls useUser() */}
+        <UserProvider>
+          {/* Coins & purchases can safely read user now */}
+          <CoinsProvider>
+            <PurchasesProvider>
+              <CursorProvider>
                 <CollectionsProvider>
                   <CertificatesProvider>
                     <ToastProvider>
@@ -125,10 +141,10 @@ export function AppProviders(props: any) {
                     </ToastProvider>
                   </CertificatesProvider>
                 </CollectionsProvider>
-              </UserProvider>
-            </CursorProvider>
-          </PurchasesProvider>
-        </CoinsProvider>
+              </CursorProvider>
+            </PurchasesProvider>
+          </CoinsProvider>
+        </UserProvider>
       </ThemeGate>
     </ThemeProvider>
   );

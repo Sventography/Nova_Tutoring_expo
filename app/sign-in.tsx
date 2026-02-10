@@ -6,234 +6,385 @@ import {
   TextInput,
   Pressable,
   StyleSheet,
-  Platform,
+  Alert,
   KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 
+import { useTheme } from "./context/ThemeContext";
 import { useUser } from "./context/UserContext";
-
-type Mode = "login" | "signup";
+import { showToast } from "./utils/toast";
 
 export default function SignInScreen() {
   const router = useRouter();
-  const user = (useUser() || {}) as any;
+  const { tokens } = useTheme();
 
-  const [mode, setMode] = useState<Mode>("login");
-  const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirm, setConfirm] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const {
+    signUpWithEmailPassword,
+    loginWithEmailPassword,
+  } = useUser() as any;
+
+  const [mode, setMode] = useState<"signup" | "login">("signup");
+
+  // Sign Up fields
+  const [suUsername, setSuUsername] = useState("");
+  const [suEmail, setSuEmail] = useState("");
+  const [suConfirmEmail, setSuConfirmEmail] = useState("");
+  const [suPassword, setSuPassword] = useState("");
+
+  // Login fields
+  const [liEmail, setLiEmail] = useState("");
+  const [liPassword, setLiPassword] = useState("");
+
   const [loading, setLoading] = useState(false);
 
-  const haptic = async () => {
+  const hapticTap = async () => {
     if (Platform.OS !== "web") {
       try {
         await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      } catch {}
+      } catch {
+        // ignore
+      }
     }
   };
 
-  const submit = async () => {
-    await haptic();
-    setError(null);
+  const switchMode = async (next: "signup" | "login") => {
+    if (mode === next) return;
+    await hapticTap();
+    setMode(next);
+  };
 
-    if (!email || !password) {
-      setError("Please fill in all required fields.");
+  const handleSignUp = async () => {
+    const username = suUsername.trim();
+    const email = suEmail.trim().toLowerCase();
+    const confirmEmail = suConfirmEmail.trim().toLowerCase();
+    const password = suPassword;
+
+    if (!username || !email || !confirmEmail || !password) {
+      Alert.alert("Missing info", "Please fill out all fields.");
       return;
     }
 
-    if (mode === "signup") {
-      if (!username) {
-        setError("Username is required.");
-        return;
-      }
-      if (password !== confirm) {
-        setError("Passwords do not match.");
-        return;
-      }
+    if (email !== confirmEmail) {
+      Alert.alert(
+        "Emails do not match",
+        "Make sure your email and confirm email are the same."
+      );
+      return;
     }
 
+    if (password.length < 6) {
+      Alert.alert(
+        "Weak password",
+        "Please use a password with at least 6 characters."
+      );
+      return;
+    }
+
+    setLoading(true);
     try {
-      setLoading(true);
-
-      if (mode === "login") {
-        await user.login(email.trim(), password);
-      } else {
-        await user.signup({
-          username: username.trim(),
-          email: email.trim(),
-          password,
-        });
-      }
-
-      // Success → go to Account
+      await signUpWithEmailPassword(username, email, password);
+      showToast("Account created! You’re signed in.");
       router.replace("/(tabs)/account");
     } catch (e: any) {
-      setError(e?.message ?? "Something went wrong.");
+      console.log("signUp error:", e);
+      Alert.alert(
+        "Sign up error",
+        e?.message ? String(e.message) : "Could not sign up right now."
+      );
     } finally {
       setLoading(false);
     }
   };
 
+  const handleLogin = async () => {
+    const email = liEmail.trim().toLowerCase();
+    const password = liPassword;
+
+    if (!email || !password) {
+      Alert.alert("Missing info", "Please enter your email and password.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await loginWithEmailPassword(email, password);
+      showToast("Welcome back! You’re signed in.");
+      router.replace("/(tabs)/account");
+    } catch (e: any) {
+      console.log("login error:", e);
+      Alert.alert(
+        "Login error",
+        e?.message ? String(e.message) : "Could not log you in right now."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const subtitle =
+    mode === "signup"
+      ? "Create an account to save your progress!"
+      : "Log In to save your progress!";
+
+  const isSignup = mode === "signup";
+
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
-      <View style={styles.card}>
-        <Text style={styles.title}>
-          {mode === "login" ? "Log In" : "Create Account"}
-        </Text>
+    <LinearGradient colors={tokens.gradient} style={{ flex: 1 }}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.card}>
+            {/* Toggle header */}
+            <View style={styles.headerRow}>
+              <Pressable
+                style={[
+                  styles.headerTab,
+                  isSignup && styles.headerTabActive,
+                ]}
+                onPress={() => switchMode("signup")}
+              >
+                <Text
+                  style={[
+                    styles.headerTabText,
+                    isSignup && styles.headerTabTextActive,
+                  ]}
+                >
+                  Sign Up
+                </Text>
+              </Pressable>
+              <Pressable
+                style={[
+                  styles.headerTab,
+                  !isSignup && styles.headerTabActive,
+                ]}
+                onPress={() => switchMode("login")}
+              >
+                <Text
+                  style={[
+                    styles.headerTabText,
+                    !isSignup && styles.headerTabTextActive,
+                  ]}
+                >
+                  Log In
+                </Text>
+              </Pressable>
+            </View>
 
-        {/* Mode toggle */}
-        <View style={styles.toggleRow}>
-          <Pressable onPress={() => setMode("login")}>
-            <Text
-              style={[
-                styles.toggle,
-                mode === "login" && styles.toggleActive,
-              ]}
+            <Text style={styles.subtitle}>{subtitle}</Text>
+
+            {/* SIGN UP FORM */}
+            {isSignup ? (
+              <View style={styles.form}>
+                <Text style={styles.label}>Username</Text>
+                <TextInput
+                  value={suUsername}
+                  onChangeText={setSuUsername}
+                  placeholder="Nova Student"
+                  placeholderTextColor="#6b7685"
+                  style={styles.input}
+                />
+
+                <Text style={styles.label}>Email</Text>
+                <TextInput
+                  value={suEmail}
+                  onChangeText={setSuEmail}
+                  placeholder="you@example.com"
+                  autoCapitalize="none"
+                  keyboardType={
+                    Platform.OS === "web" ? "default" : "email-address"
+                  }
+                  placeholderTextColor="#6b7685"
+                  style={styles.input}
+                />
+
+                <Text style={styles.label}>Confirm Email</Text>
+                <TextInput
+                  value={suConfirmEmail}
+                  onChangeText={setSuConfirmEmail}
+                  placeholder="Re-enter your email"
+                  autoCapitalize="none"
+                  keyboardType={
+                    Platform.OS === "web" ? "default" : "email-address"
+                  }
+                  placeholderTextColor="#6b7685"
+                  style={styles.input}
+                />
+
+                <Text style={styles.label}>Password</Text>
+                <TextInput
+                  value={suPassword}
+                  onChangeText={setSuPassword}
+                  placeholder="••••••••"
+                  secureTextEntry
+                  placeholderTextColor="#6b7685"
+                  style={styles.input}
+                />
+
+                <Pressable
+                  onPress={handleSignUp}
+                  style={({ pressed }) => [
+                    styles.primaryBtn,
+                    pressed && { opacity: 0.8 },
+                    loading && { opacity: 0.7 },
+                  ]}
+                  disabled={loading}
+                >
+                  <Text style={styles.primaryBtnText}>
+                    {loading ? "Creating account..." : "Create Account"}
+                  </Text>
+                </Pressable>
+              </View>
+            ) : (
+              /* LOGIN FORM */
+              <View style={styles.form}>
+                <Text style={styles.label}>Email</Text>
+                <TextInput
+                  value={liEmail}
+                  onChangeText={setLiEmail}
+                  placeholder="you@example.com"
+                  autoCapitalize="none"
+                  keyboardType={
+                    Platform.OS === "web" ? "default" : "email-address"
+                  }
+                  placeholderTextColor="#6b7685"
+                  style={styles.input}
+                />
+
+                <Text style={styles.label}>Password</Text>
+                <TextInput
+                  value={liPassword}
+                  onChangeText={setLiPassword}
+                  placeholder="••••••••"
+                  secureTextEntry
+                  placeholderTextColor="#6b7685"
+                  style={styles.input}
+                />
+
+                <Pressable
+                  onPress={handleLogin}
+                  style={({ pressed }) => [
+                    styles.primaryBtn,
+                    pressed && { opacity: 0.8 },
+                    loading && { opacity: 0.7 },
+                  ]}
+                  disabled={loading}
+                >
+                  <Text style={styles.primaryBtnText}>
+                    {loading ? "Logging in..." : "Log In"}
+                  </Text>
+                </Pressable>
+              </View>
+            )}
+
+            {/* Back to home */}
+            <Pressable
+              style={styles.backRow}
+              onPress={() => router.replace("/")}
             >
-              Log In
-            </Text>
-          </Pressable>
-          <Pressable onPress={() => setMode("signup")}>
-            <Text
-              style={[
-                styles.toggle,
-                mode === "signup" && styles.toggleActive,
-              ]}
-            >
-              Sign Up
-            </Text>
-          </Pressable>
-        </View>
-
-        {mode === "signup" && (
-          <TextInput
-            placeholder="Username"
-            placeholderTextColor="#666"
-            value={username}
-            onChangeText={setUsername}
-            style={styles.input}
-            autoCapitalize="none"
-          />
-        )}
-
-        <TextInput
-          placeholder="Email"
-          placeholderTextColor="#666"
-          value={email}
-          onChangeText={setEmail}
-          style={styles.input}
-          autoCapitalize="none"
-          keyboardType="email-address"
-        />
-
-        <TextInput
-          placeholder="Password"
-          placeholderTextColor="#666"
-          value={password}
-          onChangeText={setPassword}
-          style={styles.input}
-          secureTextEntry
-        />
-
-        {mode === "signup" && (
-          <TextInput
-            placeholder="Confirm Password"
-            placeholderTextColor="#666"
-            value={confirm}
-            onChangeText={setConfirm}
-            style={styles.input}
-            secureTextEntry
-          />
-        )}
-
-        {error && <Text style={styles.error}>{error}</Text>}
-
-        <Pressable onPress={submit} disabled={loading}>
-          <LinearGradient
-            colors={["#00e5ff", "#66b2ff", "#000000"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.submit}
-          >
-            <Text style={styles.submitText}>
-              {loading
-                ? "Please wait…"
-                : mode === "login"
-                ? "Log In"
-                : "Create Account"}
-            </Text>
-          </LinearGradient>
-        </Pressable>
-      </View>
-    </KeyboardAvoidingView>
+              <Text style={styles.backText}>← Back to Home</Text>
+            </Pressable>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "black",
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 40,
     justifyContent: "center",
-    padding: 24,
   },
   card: {
-    backgroundColor: "#050b12",
-    borderRadius: 14,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: "rgba(0,229,255,0.25)",
+    backgroundColor: "rgba(0, 8, 16, 0.9)",
+    borderRadius: 18,
+    padding: 18,
+    borderWidth: 1.5,
+    borderColor: "rgba(0,229,255,0.35)",
   },
-  title: {
-    color: "white",
-    fontSize: 22,
-    fontWeight: "800",
-    textAlign: "center",
-    marginBottom: 16,
-  },
-  toggleRow: {
+  headerRow: {
     flexDirection: "row",
-    justifyContent: "center",
-    marginBottom: 16,
-    gap: 20,
+    marginBottom: 8,
+    borderRadius: 999,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(0,229,255,0.4)",
   },
-  toggle: {
-    color: "#777",
-    fontSize: 15,
+  headerTab: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: "center",
+    backgroundColor: "transparent",
+  },
+  headerTabActive: {
+    backgroundColor: "rgba(0,229,255,0.18)",
+  },
+  headerTabText: {
+    color: "#7ea3b8",
     fontWeight: "700",
+    fontSize: 14,
   },
-  toggleActive: {
-    color: "#00e5ff",
+  headerTabTextActive: {
+    color: "#e8fbff",
+  },
+  subtitle: {
+    marginTop: 4,
+    marginBottom: 10,
+    color: "#cfeff6",
+    fontSize: 13,
+    textAlign: "center",
+  },
+  form: {
+    marginTop: 4,
+  },
+  label: {
+    color: "#a6c4d6",
+    fontSize: 13,
+    marginTop: 10,
+    marginBottom: 4,
   },
   input: {
-    backgroundColor: "#0b2030",
+    borderWidth: 1.3,
+    borderColor: "rgba(0,229,255,0.3)",
     borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    color: "white",
-    marginBottom: 12,
+    paddingHorizontal: 10,
+    paddingVertical: Platform.OS === "ios" ? 10 : 8,
+    color: "#e8fbff",
+    backgroundColor: "rgba(2,20,32,0.9)",
+    fontSize: 14,
   },
-  submit: {
-    marginTop: 8,
-    paddingVertical: 14,
-    borderRadius: 12,
+  primaryBtn: {
+    marginTop: 18,
+    borderRadius: 999,
+    paddingVertical: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#00e5ff",
+  },
+  primaryBtnText: {
+    color: "#001018",
+    fontWeight: "800",
+    fontSize: 16,
+  },
+  backRow: {
+    marginTop: 16,
     alignItems: "center",
   },
-  submitText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "800",
-  },
-  error: {
-    color: "#ff6b6b",
-    marginBottom: 8,
-    textAlign: "center",
+  backText: {
+    color: "#9ad8ff",
+    fontSize: 13,
+    textDecorationLine: "underline",
   },
 });
