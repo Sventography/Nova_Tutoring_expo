@@ -1,5 +1,5 @@
-# 🔥🔥 RUNNING FIXED SERVER VERSION v5 (CHECKOUT + ASK + COIN ORDER EMAILS + ITEM DETAILS) 🔥🔥
-print("🔥🔥 RUNNING FIXED SERVER VERSION v5 (CHECKOUT + ASK + COIN ORDER EMAILS + ITEM DETAILS) 🔥🔥")
+# 🔥🔥 RUNNING FIXED SERVER VERSION v5 (CHECKOUT + ASK + COIN ORDER EMAILS + ITEM DETAILS + SMTP DEBUG) 🔥🔥
+print("🔥🔥 RUNNING FIXED SERVER VERSION v5 (CHECKOUT + ASK + COIN ORDER EMAILS + ITEM DETAILS + SMTP DEBUG) 🔥🔥")
 
 import os
 import smtplib
@@ -77,7 +77,7 @@ SUPABASE_SERVICE_ROLE_KEY = (os.getenv("SUPABASE_SERVICE_ROLE_KEY") or "").strip
 OPENAI_API_KEY = (os.getenv("OPENAI_API_KEY") or "").strip()
 OPENAI_MODEL = (os.getenv("OPENAI_MODEL") or "gpt-4.1-mini").strip() or "gpt-4.1-mini"
 
-# Admin / internal secret (if you use it later)
+# Admin / internal secret for debug/test routes
 ADMIN_SUPER_SECRET_CODE = (os.getenv("ADMIN_SUPER_SECRET_CODE") or "").strip()
 
 # SMTP / Gmail (for order + confirmation emails)
@@ -132,6 +132,11 @@ def send_email(to_address: str, subject: str, body_text: str, body_html: str | N
 
     Uses implicit SSL when SMTP_PORT == 465, otherwise STARTTLS on given port.
     """
+    print(
+        f"[mail] send_email called: to={to_address!r} subject={subject!r} "
+        f"host={SMTP_HOST} port={SMTP_PORT} user={SMTP_USER!r}"
+    )
+
     if not to_address:
         print("[mail] no to_address provided; skipping send_email")
         return
@@ -149,24 +154,24 @@ def send_email(to_address: str, subject: str, body_text: str, body_html: str | N
     if body_html:
         msg.attach(MIMEText(body_html, "html"))
 
-    print(f"[mail] sending email to {to_address!r}: {subject!r}")
-    print(f"[mail] SMTP details host={SMTP_HOST!r} port={SMTP_PORT} user={SMTP_USER!r}")
-
     context = ssl.create_default_context()
 
     try:
         if SMTP_PORT == 465:
+            print("[mail] connecting via SMTP_SSL...")
             with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, context=context) as server:
                 server.login(SMTP_USER, SMTP_PASS)
                 server.sendmail(SMTP_USER, [to_address], msg.as_string())
         else:
+            print("[mail] connecting via SMTP + STARTTLS...")
             with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
                 server.starttls(context=context)
                 server.login(SMTP_USER, SMTP_PASS)
                 server.sendmail(SMTP_USER, [to_address], msg.as_string())
         print("[mail] email sent OK")
     except Exception as e:
-        print("[mail] error sending email:", e)
+        # Print full exception so we can see Gmail's exact error
+        print("[mail] error sending email:", repr(e))
 
 
 def send_coin_order_emails(
@@ -188,6 +193,13 @@ def send_coin_order_emails(
     If item_title / item_size / item_sku / item_category are provided,
     they will also be listed in both emails.
     """
+    print(
+        "[mail] send_coin_order_emails called with: "
+        f"user_email={user_email!r} coins={coins_amount} "
+        f"item_title={item_title!r} item_size={item_size!r} "
+        f"item_sku={item_sku!r} item_category={item_category!r}"
+    )
+
     # Build a small item details block, used in both emails if present.
     item_lines = []
     if item_title:
@@ -203,26 +215,9 @@ def send_coin_order_emails(
     if item_lines:
         item_block = "\n" + "\n".join(item_lines) + "\n"
 
-    # Debug so we can see exactly what's about to be sent
-    print(
-        "[mail] send_coin_order_emails: owner_email={owner!r} user_email={user!r} "
-        "coins={coins} item_title={title!r} item_size={size!r} "
-        "item_sku={sku!r} item_category={cat!r}".format(
-            owner=SHOP_OWNER_EMAIL,
-            user=user_email,
-            coins=coins_amount,
-            title=item_title,
-            size=item_size,
-            sku=item_sku,
-            cat=item_category,
-        )
-    )
-
     # Email to owner
     if SHOP_OWNER_EMAIL:
-        owner_subject = (
-            f"Nova Tutoring – Coin order placed – {item_title or 'Nova Shop Item'} ({coins_amount} coins)"
-        )
+        owner_subject = f"Nova Tutoring – Coin order: {item_title or 'Unknown item'}"
         owner_body = (
             "A coin-based order has been placed.\n\n"
             f"User: {user_display_name or user_email or 'unknown'}\n"
@@ -236,15 +231,14 @@ def send_coin_order_emails(
         if item_block:
             owner_body += item_block
 
+        print("[mail] sending OWNER coin order email...")
         send_email(SHOP_OWNER_EMAIL, owner_subject, owner_body)
     else:
-        print("[mail] SHOP_OWNER_EMAIL is empty; skipping owner notification")
+        print("[mail] SHOP_OWNER_EMAIL not set; owner will NOT receive order emails.")
 
     # Email to user
     if user_email:
-        user_subject = (
-            f"Nova Tutoring – Thanks for your order of {item_title or 'your Nova item'}!"
-        )
+        user_subject = f"Nova Tutoring – Your coin order: {item_title or 'Unknown item'}"
         user_body = (
             f"Hi {user_display_name or 'there'},\n\n"
             f"Thank you for your order paid with {coins_amount} Nova coins.\n"
@@ -257,9 +251,10 @@ def send_coin_order_emails(
             "If you did not make this purchase, please contact support.\n"
         )
 
+        print("[mail] sending USER coin order email...")
         send_email(user_email, user_subject, user_body)
     else:
-        print("[mail] no user_email for coin order; only owner was notified.")
+        print("[mail] no user_email for coin order; only owner was notified (if configured).")
 
 
 # -------------------------------------------------
@@ -550,6 +545,41 @@ def api_coin_order():
         item_category=item_category,
     )
 
+    return jsonify(ok=True)
+
+
+# -------------------------------------------------
+# Debug route – send a test email to the shop owner
+# -------------------------------------------------
+
+
+@app.post("/debug/send-test-email")
+def debug_send_test_email():
+    """
+    Simple debug endpoint to verify SMTP from Render.
+
+    Call with JSON: { "code": "YOUR_ADMIN_SUPER_SECRET_CODE" }
+
+    It will send a single test email to SHOP_OWNER_EMAIL.
+    """
+    body = request.get_json(silent=True) or {}
+    code = body.get("code") or ""
+
+    if not ADMIN_SUPER_SECRET_CODE:
+        return jsonify(ok=False, error="ADMIN_SUPER_SECRET_CODE not set"), 403
+
+    if code != ADMIN_SUPER_SECRET_CODE:
+        return jsonify(ok=False, error="invalid code"), 403
+
+    if not SHOP_OWNER_EMAIL:
+        return jsonify(ok=False, error="SHOP_OWNER_EMAIL not configured"), 400
+
+    print("[debug] debug_send_test_email triggered")
+    send_email(
+        SHOP_OWNER_EMAIL,
+        "Nova Tutoring – SMTP test from Render",
+        "If you see this, SMTP from Render is working!",
+    )
     return jsonify(ok=True)
 
 
