@@ -172,6 +172,8 @@ def send_email(to_address: str, subject: str, body_text: str, body_html: str | N
     except Exception as e:
         # Print full exception so we can see Gmail's exact error
         print("[mail] error sending email:", repr(e))
+        # 🔴 IMPORTANT CHANGE: re-raise so callers can see it and return an error
+        raise
 
 
 def send_coin_order_emails(
@@ -575,12 +577,18 @@ def debug_send_test_email():
         return jsonify(ok=False, error="SHOP_OWNER_EMAIL not configured"), 400
 
     print("[debug] debug_send_test_email triggered")
-    send_email(
-        SHOP_OWNER_EMAIL,
-        "Nova Tutoring – SMTP test from Render",
-        "If you see this, SMTP from Render is working!",
-    )
-    return jsonify(ok=True)
+
+    try:
+        send_email(
+            SHOP_OWNER_EMAIL,
+            "Nova Tutoring – SMTP test from Render",
+            "If you see this, SMTP from Render is working!",
+        )
+        return jsonify(ok=True)
+    except Exception as e:
+        # 🔴 IMPORTANT CHANGE: surface SMTP errors to the client
+        print("[debug] SMTP error in debug_send_test_email:", repr(e))
+        return jsonify(ok=False, error=str(e)), 500
 
 
 # -------------------------------------------------
