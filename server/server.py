@@ -150,6 +150,7 @@ def send_email(to_address: str, subject: str, body_text: str, body_html: str | N
         msg.attach(MIMEText(body_html, "html"))
 
     print(f"[mail] sending email to {to_address!r}: {subject!r}")
+    print(f"[mail] SMTP details host={SMTP_HOST!r} port={SMTP_PORT} user={SMTP_USER!r}")
 
     context = ssl.create_default_context()
 
@@ -202,9 +203,26 @@ def send_coin_order_emails(
     if item_lines:
         item_block = "\n" + "\n".join(item_lines) + "\n"
 
+    # Debug so we can see exactly what's about to be sent
+    print(
+        "[mail] send_coin_order_emails: owner_email={owner!r} user_email={user!r} "
+        "coins={coins} item_title={title!r} item_size={size!r} "
+        "item_sku={sku!r} item_category={cat!r}".format(
+            owner=SHOP_OWNER_EMAIL,
+            user=user_email,
+            coins=coins_amount,
+            title=item_title,
+            size=item_size,
+            sku=item_sku,
+            cat=item_category,
+        )
+    )
+
     # Email to owner
     if SHOP_OWNER_EMAIL:
-        owner_subject = f"Nova Tutoring – Coin order: {item_title or 'Unknown item'}"
+        owner_subject = (
+            f"Nova Tutoring – Coin order placed – {item_title or 'Nova Shop Item'} ({coins_amount} coins)"
+        )
         owner_body = (
             "A coin-based order has been placed.\n\n"
             f"User: {user_display_name or user_email or 'unknown'}\n"
@@ -219,10 +237,14 @@ def send_coin_order_emails(
             owner_body += item_block
 
         send_email(SHOP_OWNER_EMAIL, owner_subject, owner_body)
+    else:
+        print("[mail] SHOP_OWNER_EMAIL is empty; skipping owner notification")
 
     # Email to user
     if user_email:
-        user_subject = f"Nova Tutoring – Your coin order: {item_title or 'Unknown item'}"
+        user_subject = (
+            f"Nova Tutoring – Thanks for your order of {item_title or 'your Nova item'}!"
+        )
         user_body = (
             f"Hi {user_display_name or 'there'},\n\n"
             f"Thank you for your order paid with {coins_amount} Nova coins.\n"
