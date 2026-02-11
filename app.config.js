@@ -1,3 +1,4 @@
+// app.config.js
 export default ({ config }) => ({
   ...config,
 
@@ -54,6 +55,11 @@ export default ({ config }) => ({
 
   extra: {
     ...(config.extra || {}),
+    // 🔑 This is what coinCheckout & checkout will now use
+    backendBase:
+      process.env.EXPO_PUBLIC_BACKEND_URL ||
+      "https://nove-tutoring-backend.onrender.com",
+
     eas: {
       projectId: "34a00115-306a-4cb6-b58b-97e26409a781",
     },

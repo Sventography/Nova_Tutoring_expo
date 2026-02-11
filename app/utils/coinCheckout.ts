@@ -28,7 +28,7 @@ function stripTrailingSlashes(s: string | null | undefined) {
 }
 
 function getBackendBase(): string {
-  // Prefer extra.backendBase from app config, then EXPO_PUBLIC_BACKEND_URL, then localhost.
+  // Prefer extra.backendBase from app config, then EXPO_PUBLIC_BACKEND_URL, then Render URL fallback.
   const extra =
     ((Constants.expoConfig as any)?.extra ??
       (Constants.manifest as any)?.extra) || {};
@@ -38,8 +38,16 @@ function getBackendBase(): string {
     (process.env as any)?.EXPO_PUBLIC_BACKEND_URL ||
     "";
 
-  const fallback = "http://127.0.0.1:8787";
-  return stripTrailingSlashes(envUrl || fallback) || fallback;
+  const fallback = "https://nove-tutoring-backend.onrender.com";
+  const base = stripTrailingSlashes(envUrl || fallback) || fallback;
+
+  if (__DEV__) {
+    console.log("[coinCheckout] extra =", extra);
+    console.log("[coinCheckout] envUrl =", envUrl);
+    console.log("[coinCheckout] backendBase =", base);
+  }
+
+  return base;
 }
 
 /**

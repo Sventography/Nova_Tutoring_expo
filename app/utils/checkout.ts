@@ -51,12 +51,30 @@ function getExpoDevHost(): string | null {
 /**
  * Resolve the backend base URL.
  *
+ * PROD:
+ *  - Use extra.backendBase or EXPO_PUBLIC_BACKEND_URL (Render URL)
+ *
  * DEV MODE:
  *  - Web: mirror the page host
  *  - Device/simulator: use Expo's dev host (e.g. 192.168.1.74)
  *  - Fallbacks: 10.0.2.2 for Android emulator, 127.0.0.1 last-resort
  */
 function getBackend(): string {
+  const extra =
+    ((Constants.expoConfig as any)?.extra ??
+      (Constants.manifest as any)?.extra) || {};
+
+  const configured =
+    (extra.backendBase ||
+      (process.env as any)?.EXPO_PUBLIC_BACKEND_URL ||
+      "").trim();
+
+  if (configured) {
+    const base = ensureHttp(stripTrailingSlashes(configured));
+    if (__DEV__) console.warn("[checkout] BACKEND(configured)", base);
+    return base;
+  }
+
   // 1) Web: use current page host
   if (Platform.OS === "web" && typeof window !== "undefined") {
     const h = window.location.hostname || "";
@@ -138,6 +156,7 @@ export async function startCheckout(
   input: CheckoutPayload
 ): Promise<CheckoutResult> {
   const BACKEND = getBackend();
+  if (__DEV__) console.log("[checkout] using BACKEND", BACKEND);
 
   const payload: Record<string, any> = {
     sku: input.sku,
