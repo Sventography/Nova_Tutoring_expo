@@ -1,5 +1,5 @@
-# 🔥🔥 RUNNING FIXED SERVER VERSION v4 (CHECKOUT + ASK + COIN ORDER EMAILS) 🔥🔥
-print("🔥🔥 RUNNING FIXED SERVER VERSION v4 (CHECKOUT + ASK + COIN ORDER EMAILS) 🔥🔥")
+# 🔥🔥 RUNNING FIXED SERVER VERSION v5 (CHECKOUT + ASK + COIN ORDER EMAILS + ITEM DETAILS) 🔥🔥
+print("🔥🔥 RUNNING FIXED SERVER VERSION v5 (CHECKOUT + ASK + COIN ORDER EMAILS + ITEM DETAILS) 🔥🔥")
 
 import os
 import smtplib
@@ -36,7 +36,7 @@ except Exception:
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
-print("🔥🔥 FLASK APP INITIALIZED (v4) 🔥🔥")
+print("🔥🔥 FLASK APP INITIALIZED (v5) 🔥🔥")
 
 # -------------------------------------------------
 # Load environment (prefers server/env/.env.server, else server/.env)
@@ -173,33 +173,68 @@ def send_coin_order_emails(
     coins_amount: int,
     stripe_session_id: str | None = None,
     user_display_name: str | None = None,
+    *,
+    item_title: str | None = None,
+    item_size: str | None = None,
+    item_sku: str | None = None,
+    item_category: str | None = None,
 ):
     """
     Sends:
       - notification to shop owner
       - confirmation to the user (if user_email present)
+
+    If item_title / item_size / item_sku / item_category are provided,
+    they will also be listed in both emails.
     """
+    # Build a small item details block, used in both emails if present.
+    item_lines = []
+    if item_title:
+        item_lines.append(f"Item: {item_title}")
+    if item_sku:
+        item_lines.append(f"SKU: {item_sku}")
+    if item_size:
+        item_lines.append(f"Size: {item_size}")
+    if item_category:
+        item_lines.append(f"Category: {item_category}")
+
+    item_block = ""
+    if item_lines:
+        item_block = "\n" + "\n".join(item_lines) + "\n"
+
     # Email to owner
     if SHOP_OWNER_EMAIL:
-        owner_subject = "Nova Tutoring – Coin order placed"
+        owner_subject = f"Nova Tutoring – Coin order: {item_title or 'Unknown item'}"
         owner_body = (
-            "A coin order has been placed.\n\n"
+            "A coin-based order has been placed.\n\n"
             f"User: {user_display_name or user_email or 'unknown'}\n"
             f"Email: {user_email or 'unknown'}\n"
             f"Coins: {coins_amount}\n"
-            f"Stripe session: {stripe_session_id or 'n/a'}\n"
         )
+
+        if stripe_session_id:
+            owner_body += f"Stripe session: {stripe_session_id}\n"
+
+        if item_block:
+            owner_body += item_block
+
         send_email(SHOP_OWNER_EMAIL, owner_subject, owner_body)
 
     # Email to user
     if user_email:
-        user_subject = "Nova Tutoring – Thanks for your coin purchase!"
+        user_subject = f"Nova Tutoring – Your coin order: {item_title or 'Unknown item'}"
         user_body = (
             f"Hi {user_display_name or 'there'},\n\n"
-            f"Thank you for your coin purchase.\n"
-            f"We've added {coins_amount} coins to your Nova Tutoring account.\n\n"
-            f"If you did not make this purchase, please contact support.\n"
+            f"Thank you for your order paid with {coins_amount} Nova coins.\n"
         )
+
+        if item_block:
+            user_body += "\nHere are your item details:\n" + item_block + "\n"
+
+        user_body += (
+            "If you did not make this purchase, please contact support.\n"
+        )
+
         send_email(user_email, user_subject, user_body)
     else:
         print("[mail] no user_email for coin order; only owner was notified.")
@@ -378,21 +413,42 @@ def ask_api():
 @app.post("/api/coin-order")
 def api_coin_order():
     """
-    Called by the app when a coin purchase is completed.
+    Called by the app when a coin-based order is completed.
 
-    Expected JSON body (example):
+    Expected JSON body (examples):
 
+    1) Pure coin top-up:
     {
       "coins": 6000,
-      "sessionId": "cs_test_123",   // optional
+      "sessionId": "cs_test_123",
       "user": {
         "id": "...",
         "displayName": "Sven",
         "username": "Sven",
-        "contactEmail": "svenningson6388@gmail.com",
-        "email": "svenningson6388@gmail.com"
+        "contactEmail": "sven@example.com",
+        "email": "sven@example.com"
       }
     }
+
+    2) Physical item paid with coins:
+    {
+      "coins": 6000,
+      "item": {
+        "id": "plushie_nova_pajamas",
+        "title": "Nova Plushie (Pajamas)",
+        "size": "L",
+        "category": "plushies"
+      },
+      "user": {
+        "id": "...",
+        "displayName": "Sven",
+        "username": "Sven",
+        "contactEmail": "sven@example.com",
+        "email": "sven@example.com"
+      }
+    }
+
+    Also supports flat fields itemTitle / itemSize / sku / category.
     """
     data = request.get_json(silent=True) or {}
     print("[coin-order] incoming:", data)
@@ -408,22 +464,68 @@ def api_coin_order():
         or data.get("contactEmail")
         or data.get("email")
     )
-    display_name = user.get("displayName") or user.get("username") or None
+    display_name = (
+        user.get("displayName")
+        or user.get("username")
+        or user.get("name")
+        or None
+    )
     session_id = data.get("sessionId") or data.get("stripeSessionId")
+
+    # Item details (either nested under "item" or flat on the body)
+    item = data.get("item") or {}
+
+    item_title = (
+        item.get("title")
+        or data.get("itemTitle")
+        or data.get("title")
+        or None
+    )
+    item_size = (
+        item.get("size")
+        or data.get("itemSize")
+        or data.get("size")
+        or None
+    )
+    item_sku = (
+        item.get("id")
+        or item.get("sku")
+        or data.get("sku")
+        or None
+    )
+    item_category = (
+        item.get("category")
+        or data.get("category")
+        or None
+    )
 
     # Here is where you'd also update Supabase / DB to record the order
     # and the user's new coin balance. For now, we just log + send emails.
     print(
-        f"[coin-order] coins={coins} user_email={user_email!r} "
-        f"display_name={display_name!r} session={session_id!r}"
+        "[coin-order] coins={coins} user_email={email!r} "
+        "display_name={name!r} session={sid!r} item_title={title!r} "
+        "item_size={size!r} item_sku={sku!r} item_category={cat!r}".format(
+            coins=coins,
+            email=user_email,
+            name=display_name,
+            sid=session_id,
+            title=item_title,
+            size=item_size,
+            sku=item_sku,
+            cat=item_category,
+        )
     )
 
-    # Send owner + user emails
+    # Send owner + user emails, including item details if present
     send_coin_order_emails(
         user_email=user_email,
         coins_amount=coins,
         stripe_session_id=session_id,
         user_display_name=display_name,
+        item_title=item_title,
+        item_size=item_size,
+        item_sku=item_sku,
+        item_category=item_category,
     )
 
     return jsonify(ok=True)
@@ -435,5 +537,5 @@ def api_coin_order():
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", "8787"))
-    print(f"🔥🔥 STARTING SERVER v4 ON http://127.0.0.1:{port} 🔥🔥")
+    print(f"🔥🔥 STARTING SERVER v5 ON http://127.0.0.1:{port} 🔥🔥")
     app.run(host="0.0.0.0", port=port, debug=False)

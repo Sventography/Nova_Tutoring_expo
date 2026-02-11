@@ -56,7 +56,16 @@ export function startCoinCheckout(opts: CoinCheckoutOpts) {
   const apiUrl = `${base}/api/coin-order`;
 
   const payload: any = {
+    // how many coins this order cost
     coins: opts.priceCoins,
+
+    // flat fields (nice for logging + backend fallbacks)
+    sku: opts.id,
+    category: opts.category,
+    itemTitle: opts.title,
+    itemSize: opts.size || null,
+
+    // nested item block (used by server v5 for emails)
     item: {
       id: opts.id,
       title: opts.title,

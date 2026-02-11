@@ -22,7 +22,8 @@ import AchievementsAutoTracker from "../context/AchievementsAutoTracker";
 import AchievementsCoinsBridge from "../context/AchievementsCoinsBridge";
 import FxOverlay from "../components/FxOverlay";
 import GlobalTextDefaults from "../components/GlobalTextDefaults";
-import { UserProvider } from "../context/UserContext"; // ✅ ADDED
+import { UserProvider } from "../context/UserContext";
+import { StreakProvider } from "../context/StreakContext";
 
 // --------------------
 // DEV-ONLY imports
@@ -38,7 +39,8 @@ if (__DEV__) {
 
 type Pt = { x: number; y: number };
 
-const CURSOR_EQUIPPED_KEY = "cursor.equipped.v1";
+// use a namespaced key so it doesn't collide with anything else
+const CURSOR_EQUIPPED_KEY = "@nova/cursor.equipped.v1";
 
 function CelebrateToast({
   message,
@@ -87,269 +89,304 @@ export default function TabsLayout() {
   // ✅ ensure mobile has a default cursor trail (star) if none is set yet
   useEffect(() => {
     if (Platform.OS === "web") return;
-    let alive = true;
+
+    let cancelled = false;
+
     (async () => {
       try {
-        const cur = await AsyncStorage.getItem(CURSOR_EQUIPPED_KEY);
-        if (!alive) return;
-        if (!cur) {
+        const stored = await AsyncStorage.getItem(CURSOR_EQUIPPED_KEY);
+        if (cancelled) return;
+
+        if (!stored) {
           await AsyncStorage.setItem(CURSOR_EQUIPPED_KEY, "star");
-          if (__DEV__)
+          if (__DEV__) {
+            // eslint-disable-next-line no-console
             console.log("[cursor] seeded default cursor.equipped.v1=star");
+          }
         }
-      } catch {}
+      } catch (err) {
+        if (__DEV__) {
+          // eslint-disable-next-line no-console
+          console.warn("[cursor] error seeding default cursor", err);
+        }
+      }
     })();
+
     return () => {
-      alive = false;
+      cancelled = true;
     };
   }, []);
 
   return (
     <UserProvider>
-      <ThemeProvider>
-        <GlobalTextDefaults />
-        <CursorProvider>
-          <ToastHost />
-          <CollectionsProvider>
-            <View
-              style={{ flex: 1, position: "relative" }}
-              onTouchStartCapture={
-                Platform.OS === "web"
-                  ? undefined
-                  : (e) => {
-                      setDown(true);
-                      setP({ x: e.nativeEvent.pageX, y: e.nativeEvent.pageY });
-                    }
-              }
-              onTouchMoveCapture={
-                Platform.OS === "web"
-                  ? undefined
-                  : (e) => {
-                      setP({ x: e.nativeEvent.pageX, y: e.nativeEvent.pageY });
-                    }
-              }
-              onTouchEndCapture={
-                Platform.OS === "web" ? undefined : () => setDown(false)
-              }
-              onTouchCancelCapture={
-                Platform.OS === "web" ? undefined : () => setDown(false)
-              }
-            >
+      <StreakProvider>
+        <ThemeProvider>
+          <GlobalTextDefaults />
+          <CursorProvider>
+            <ToastHost />
+            <CollectionsProvider>
               <View
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  zIndex: 1000,
-                }}
+                style={{ flex: 1, position: "relative" }}
+                onTouchStartCapture={
+                  Platform.OS === "web"
+                    ? undefined
+                    : (e) => {
+                        setDown(true);
+                        setP({
+                          x: e.nativeEvent.pageX,
+                          y: e.nativeEvent.pageY,
+                        });
+                      }
+                }
+                onTouchMoveCapture={
+                  Platform.OS === "web"
+                    ? undefined
+                    : (e) => {
+                        setP({
+                          x: e.nativeEvent.pageX,
+                          y: e.nativeEvent.pageY,
+                        });
+                      }
+                }
+                onTouchEndCapture={
+                  Platform.OS === "web" ? undefined : () => setDown(false)
+                }
+                onTouchCancelCapture={
+                  Platform.OS === "web" ? undefined : () => setDown(false)
+                }
               >
-                <HeaderBar />
-              </View>
+                <View
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    zIndex: 1000,
+                  }}
+                >
+                  <HeaderBar />
+                </View>
 
-              <AchievementsCoinsBridge />
-              <AchievementsAutoTracker />
+                <AchievementsCoinsBridge />
+                <AchievementsAutoTracker />
 
-              <Tabs
-                screenOptions={{
-                  headerShown: false,
-                  tabBarShowLabel: true,
-                  tabBarActiveTintColor: "#00e5ff",
-                  tabBarInactiveTintColor: "rgba(0,229,255,0.7)",
-                  tabBarStyle: {
-                    height: 68,
-                    backgroundColor: "transparent",
-                    borderTopWidth: 0,
-                    elevation: 0,
-                    shadowOpacity: 0,
-                  },
-                  sceneStyle: {
-                    backgroundColor: "transparent",
-                    paddingTop: HEADER_HEIGHT,
-                  },
-                  tabBarLabelStyle: {
-                    fontSize: 11,
-                    fontWeight: "700",
-                    letterSpacing: 0.5,
-                  },
-                  tabBarButton: (props) => (
-                    <Pressable
-                      {...props}
-                      onPress={(e) => {
-                        if (Platform.OS !== "web") {
-                          // 💥 CRANKED-UP HAPTICS FOR TAB PRESSES
-                          Haptics.impactAsync(
-                            Haptics.ImpactFeedbackStyle.Heavy
-                          );
-                          Haptics.notificationAsync(
-                            Haptics.NotificationFeedbackType.Success
-                          );
-                        }
-                        props.onPress?.(e);
-                      }}
-                    />
-                  ),
-                }}
-                tabBar={(props) => <ScrollableTabBar {...props} />}
-              >
-                <Tabs.Screen
-                  name="ask"
-                  options={{
-                    title: "ASK",
-                    tabBarIcon: ({ color, size }) => (
-                      <Ionicons
-                        name="chatbubbles-outline"
-                        color={color}
-                        size={size}
+                <Tabs
+                  screenOptions={{
+                    headerShown: false,
+                    tabBarShowLabel: true,
+                    tabBarActiveTintColor: "#00e5ff",
+                    tabBarInactiveTintColor: "rgba(0,229,255,0.7)",
+                    tabBarStyle: {
+                      height: 68,
+                      backgroundColor: "transparent",
+                      borderTopWidth: 0,
+                      elevation: 0,
+                      shadowOpacity: 0,
+                    },
+                    sceneStyle: {
+                      backgroundColor: "transparent",
+                      paddingTop: HEADER_HEIGHT,
+                    },
+                    tabBarLabelStyle: {
+                      fontSize: 11,
+                      fontWeight: "700",
+                      letterSpacing: 0.5,
+                    },
+                    tabBarButton: (props) => (
+                      <Pressable
+                        {...props}
+                        onPress={(e) => {
+                          if (Platform.OS !== "web") {
+                            // 💥 strong haptics for tab presses
+                            Haptics.impactAsync(
+                              Haptics.ImpactFeedbackStyle.Heavy
+                            );
+                            Haptics.notificationAsync(
+                              Haptics.NotificationFeedbackType.Success
+                            );
+                          }
+                          props.onPress?.(e);
+                        }}
                       />
                     ),
                   }}
-                />
-                <Tabs.Screen
-                  name="flashcards"
-                  options={{
-                    title: "FLASHCARDS",
-                    tabBarIcon: ({ color, size }) => (
-                      <Ionicons
-                        name="albums-outline"
-                        color={color}
-                        size={size}
-                      />
-                    ),
-                  }}
-                />
-                <Tabs.Screen
-                  name="quiz"
-                  options={{
-                    title: "QUIZ",
-                    tabBarIcon: ({ color, size }) => (
-                      <Ionicons
-                        name="help-circle-outline"
-                        color={color}
-                        size={size}
-                      />
-                    ),
-                  }}
-                />
-                <Tabs.Screen
-                  name="brainteasers"
-                  options={{
-                    title: "BRAINTEASERS",
-                    tabBarIcon: ({ color, size }) => (
-                      <Ionicons name="bulb-outline" color={color} size={size} />
-                    ),
-                  }}
-                />
-                <Tabs.Screen
-                  name="shop"
-                  options={{
-                    title: "SHOP",
-                    tabBarIcon: ({ color, size }) => (
-                      <Ionicons
-                        name="bag-handle-outline"
-                        color={color}
-                        size={size}
-                      />
-                    ),
-                  }}
-                />
-                <Tabs.Screen
-                  name="achievements"
-                  options={{
-                    title: "ACHIEVEMENTS",
-                    tabBarIcon: ({ color, size }) => (
-                      <Ionicons name="trophy-outline" color={color} size={size} />
-                    ),
-                  }}
-                />
-                <Tabs.Screen
-                  name="history"
-                  options={{
-                    title: "HISTORY",
-                    tabBarIcon: ({ color, size }) => (
-                      <Ionicons name="time-outline" color={color} size={size} />
-                    ),
-                  }}
-                />
-                <Tabs.Screen
-                  name="relax"
-                  options={{
-                    title: "RELAX",
-                    tabBarIcon: ({ color, size }) => (
-                      <Ionicons
-                        name="sparkles-outline"
-                        color={color}
-                        size={size}
-                      />
-                    ),
-                  }}
-                />
-                <Tabs.Screen
-                  name="account"
-                  options={{
-                    title: "ACCOUNT",
-                    tabBarIcon: ({ color, size }) => (
-                      <Ionicons
-                        name="person-circle-outline"
-                        color={color}
-                        size={size}
-                      />
-                    ),
-                  }}
-                />
-                <Tabs.Screen
-                  name="certificates"
-                  options={{
-                    title: "CERTIFICATES",
-                    tabBarIcon: ({ color, size }) => (
-                      <Ionicons name="ribbon-outline" color={color} size={size} />
-                    ),
-                  }}
-                />
-                <Tabs.Screen
-                  name="collections"
-                  options={{
-                    title: "COLLECTIONS",
-                    tabBarIcon: ({ color, size }) => (
-                      <Ionicons
-                        name="bookmarks-outline"
-                        color={color}
-                        size={size}
-                      />
-                    ),
-                  }}
-                />
-                <Tabs.Screen
-                  name="purchases"
-                  options={{
-                    title: "PURCHASES",
-                    tabBarIcon: ({ color, size }) => (
-                      <Ionicons name="bag" color={color} size={size} />
-                    ),
-                  }}
-                />
-              </Tabs>
+                  tabBar={(props) => <ScrollableTabBar {...props} />}
+                >
+                  <Tabs.Screen
+                    name="ask"
+                    options={{
+                      title: "ASK",
+                      tabBarIcon: ({ color, size }) => (
+                        <Ionicons
+                          name="chatbubbles-outline"
+                          color={color}
+                          size={size}
+                        />
+                      ),
+                    }}
+                  />
+                  <Tabs.Screen
+                    name="flashcards"
+                    options={{
+                      title: "FLASHCARDS",
+                      tabBarIcon: ({ color, size }) => (
+                        <Ionicons
+                          name="albums-outline"
+                          color={color}
+                          size={size}
+                        />
+                      ),
+                    }}
+                  />
+                  <Tabs.Screen
+                    name="quiz"
+                    options={{
+                      title: "QUIZ",
+                      tabBarIcon: ({ color, size }) => (
+                        <Ionicons
+                          name="help-circle-outline"
+                          color={color}
+                          size={size}
+                        />
+                      ),
+                    }}
+                  />
+                  <Tabs.Screen
+                    name="brainteasers"
+                    options={{
+                      title: "BRAINTEASERS",
+                      tabBarIcon: ({ color, size }) => (
+                        <Ionicons
+                          name="bulb-outline"
+                          color={color}
+                          size={size}
+                        />
+                      ),
+                    }}
+                  />
+                  <Tabs.Screen
+                    name="shop"
+                    options={{
+                      title: "SHOP",
+                      tabBarIcon: ({ color, size }) => (
+                        <Ionicons
+                          name="bag-handle-outline"
+                          color={color}
+                          size={size}
+                        />
+                      ),
+                    }}
+                  />
+                  <Tabs.Screen
+                    name="achievements"
+                    options={{
+                      title: "ACHIEVEMENTS",
+                      tabBarIcon: ({ color, size }) => (
+                        <Ionicons
+                          name="trophy-outline"
+                          color={color}
+                          size={size}
+                        />
+                      ),
+                    }}
+                  />
+                  <Tabs.Screen
+                    name="history"
+                    options={{
+                      title: "HISTORY",
+                      tabBarIcon: ({ color, size }) => (
+                        <Ionicons
+                          name="time-outline"
+                          color={color}
+                          size={size}
+                        />
+                      ),
+                    }}
+                  />
+                  <Tabs.Screen
+                    name="relax"
+                    options={{
+                      title: "RELAX",
+                      tabBarIcon: ({ color, size }) => (
+                        <Ionicons
+                          name="sparkles-outline"
+                          color={color}
+                          size={size}
+                        />
+                      ),
+                    }}
+                  />
+                  <Tabs.Screen
+                    name="account"
+                    options={{
+                      title: "ACCOUNT",
+                      tabBarIcon: ({ color, size }) => (
+                        <Ionicons
+                          name="person-circle-outline"
+                          color={color}
+                          size={size}
+                        />
+                      ),
+                    }}
+                  />
+                  <Tabs.Screen
+                    name="certificates"
+                    options={{
+                      title: "CERTIFICATES",
+                      tabBarIcon: ({ color, size }) => (
+                        <Ionicons
+                          name="ribbon-outline"
+                          color={color}
+                          size={size}
+                        />
+                      ),
+                    }}
+                  />
+                  <Tabs.Screen
+                    name="collections"
+                    options={{
+                      title: "COLLECTIONS",
+                      tabBarIcon: ({ color, size }) => (
+                        <Ionicons
+                          name="bookmarks-outline"
+                          color={color}
+                          size={size}
+                        />
+                      ),
+                    }}
+                  />
+                  <Tabs.Screen
+                    name="purchases"
+                    options={{
+                      title: "PURCHASES",
+                      tabBarIcon: ({ color, size }) => (
+                        <Ionicons name="bag" color={color} size={size} />
+                      ),
+                    }}
+                  />
+                </Tabs>
 
-              <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-                <FxOverlay />
-                {Platform.OS === "web" ? <StarTrailOverlay /> : null}
-                {Platform.OS !== "web" ? (
-                  <TouchCursorOverlay p={p} down={down} />
+                <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+                  <FxOverlay />
+                  {Platform.OS === "web" ? <StarTrailOverlay /> : null}
+                  {Platform.OS !== "web" ? (
+                    <TouchCursorOverlay p={p} down={down} />
+                  ) : null}
+                </View>
+
+                {celebrate ? (
+                  <CelebrateToast
+                    message={celebrate}
+                    onClose={() => setCelebrate(null)}
+                  />
                 ) : null}
               </View>
 
-              {celebrate ? (
-                <CelebrateToast
-                  message={celebrate}
-                  onClose={() => setCelebrate(null)}
-                />
-              ) : null}
-            </View>
-
-            {Platform.OS === "web" ? <CursorOverlay /> : null}
-          </CollectionsProvider>
-        </CursorProvider>
-      </ThemeProvider>
+              {Platform.OS === "web" ? <CursorOverlay /> : null}
+            </CollectionsProvider>
+          </CursorProvider>
+        </ThemeProvider>
+      </StreakProvider>
     </UserProvider>
   );
 }

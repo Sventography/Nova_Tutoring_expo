@@ -21,17 +21,18 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <StreakProvider>
-        <AppProviders>
+      <AppProviders>
+        <StreakProvider>
           <FxProvider>
             <ThemeOverlay />
             <Slot />
           </FxProvider>
-        </AppProviders>
-      </StreakProvider>
+        </StreakProvider>
+      </AppProviders>
     </GestureHandlerRootView>
   );
 }
+
 // --- DEV ONLY: catch bad relative checkout calls ---
 if (
   typeof globalThis !== "undefined" &&

@@ -11,6 +11,7 @@ import {
   Modal,
   Dimensions,
   PanResponder,
+  Platform,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -50,6 +51,7 @@ import { COMPANIONS } from "../_lib/companionsCatalog";
 
 import { startCheckout } from "../utils/checkout";
 import { startCoinCheckout } from "../utils/coinCheckout";
+import { notifyCoinOrder } from "../utils/coin-order";
 
 /* ----------------------------- Local typings ------------------------------ */
 type QuickItem = {
@@ -67,8 +69,6 @@ type Order = {
   status: "paid" | "fulfilled" | "shipped";
   createdAt: number;
 };
-
-const COINS_KEY = "coins.balance.v2";
 
 // 🔐 New versioned purchases key, plus backward-compat with legacy
 const PURCHASES_KEY = "@nova/purchases.v2";
@@ -190,14 +190,6 @@ const track = (event: string, props?: Record<string, any>) => {
     (globalThis as any).novaTrack?.(event, props ?? {});
   } catch {}
 };
-
-async function loadCoins(): Promise<number> {
-  const v = await AsyncStorage.getItem(COINS_KEY);
-  return v ? parseInt(v, 10) : 0;
-}
-async function saveCoins(n: number) {
-  await AsyncStorage.setItem(COINS_KEY, String(n));
-}
 
 // 🔁 Read from both legacy & v2 keys, merge, normalize, and write back to v2
 async function loadPurchases(): Promise<PurchaseMap> {
@@ -552,8 +544,8 @@ export default function Shop() {
 
   const coinsRef = useRef<number>(coins ?? 0);
 
-  // 🔥 DEV CHEAT: tap Shop title 5x → +500,000 coins (dev only)
-  const [devTapCount, setDevTapCount] = useState(0);
+  // 🔥 DEV CHEAT: tap Shop title 5x → +500,000 coins (dev only) – use ref to avoid nested state updates
+  const devTapRef = useRef(0);
 
   // companions strip bounce state
   const [activeCompanionId, setActiveCompanionId] = useState<string | null>(
@@ -574,12 +566,12 @@ export default function Shop() {
     x: windowDims.width - FLOAT_SIZE - 16,
     y: windowDims.height - FLOAT_SIZE - 160,
   });
-  const floatPos = useRef(
-    new Animated.ValueXY({
-      x: floatBasePos.current.x,
-      y: floatBasePos.current.y,
-    })
-  ).current;
+
+  // plain numbers for top/left
+  const [floatPos, setFloatPos] = useState({
+    x: floatBasePos.current.x,
+    y: floatBasePos.current.y,
+  });
 
   const floatScale = useRef(new Animated.Value(1)).current;
   const floatHop = useRef(new Animated.Value(0)).current;
@@ -600,7 +592,7 @@ export default function Shop() {
       onPanResponderMove: (_evt, gesture) => {
         const newX = floatBasePos.current.x + gesture.dx;
         const newY = floatBasePos.current.y + gesture.dy;
-        floatPos.setValue({ x: newX, y: newY });
+        setFloatPos({ x: newX, y: newY });
       },
       onPanResponderRelease: (_evt, gesture) => {
         const minX = 8;
@@ -615,7 +607,7 @@ export default function Shop() {
         newY = Math.min(Math.max(newY, minY), maxY);
 
         floatBasePos.current = { x: newX, y: newY };
-        floatPos.setValue({ x: newX, y: newY });
+        setFloatPos({ x: newX, y: newY });
       },
     })
   ).current;
@@ -671,47 +663,46 @@ export default function Shop() {
     };
   }, []);
 
-  // 🔥 Dev cheat handler: 5 taps on title → +500k coins (dev only)
+  // 🔥 Dev cheat handler: 5 taps on title → +500k coins (dev only), but no nested setState
   const handleDevTitlePress = () => {
     if (!__DEV__) return;
 
-    setDevTapCount((prev) => {
-      const next = prev + 1;
+    devTapRef.current += 1;
+    const taps = devTapRef.current;
 
-      if (next % 5 === 0) {
-        const bonus = 500_000;
-        const cur = coinsRef.current ?? 0;
-        const nextCoins = cur + bonus;
+    if (taps % 5 === 0) {
+      const bonus = 500_000;
+      const cur = coinsRef.current ?? coins ?? 0;
+      const nextCoins = cur + bonus;
 
-        setCoins(nextCoins);
-        coinsRef.current = nextCoins;
-        void saveCoins(nextCoins);
+      coinsRef.current = nextCoins;
 
-        track("dev_shop_title_cheat", {
-          bonus,
-          taps: next,
-        });
+      // Defer update so it's not happening during any other render
+      setTimeout(() => {
+        void setCoins(nextCoins);
+      }, 0);
 
-        try {
-          console.log(
-            `[DEV CHEAT] Granted ${
-              bonus.toLocaleString?.() ?? bonus
-            } coins from Shop title taps`
-          );
-        } catch {
-          console.log("[DEV CHEAT] Granted 500,000 coins from Shop title taps");
-        }
+      track("dev_shop_title_cheat", {
+        bonus,
+        taps,
+      });
+
+      try {
+        console.log(
+          `[DEV CHEAT] Granted ${
+            bonus.toLocaleString?.() ?? bonus
+          } coins from Shop title taps`
+        );
+      } catch {
+        console.log("[DEV CHEAT] Granted 500,000 coins from Shop title taps");
       }
-
-      return next;
-    });
+    }
   };
 
   /* --------------------------- Initial data load -------------------------- */
   useEffect(() => {
     (async () => {
-      const [c, pRaw, curRaw, thRaw, ord] = await Promise.all([
-        loadCoins(),
+      const [pRaw, curRaw, thRaw, ord] = await Promise.all([
         loadPurchases(),
         loadCursor(),
         loadTheme(),
@@ -723,7 +714,6 @@ export default function Shop() {
         await savePurchases(p);
       }
 
-      setCoins(c);
       setPurchases(p);
 
       const cur = canonId(curRaw);
@@ -739,7 +729,7 @@ export default function Shop() {
       if (typeof setThemeById === "function") setThemeById(mappedTheme);
 
       track("shop_state_hydrated", {
-        coins: c,
+        coins: coinsRef.current ?? coins ?? 0,
         purchases_count: Object.keys(p).length,
         cursor: cur,
         theme: th,
@@ -798,9 +788,12 @@ export default function Shop() {
 
       if (it.category === "coin_pack") {
         const addAmt = dollarsToCoins(it.priceUSD ?? 0);
-        const nextCoins = (coinsRef.current ?? 0) + addAmt;
-        setCoins(nextCoins);
-        await saveCoins(nextCoins);
+        const cur = coinsRef.current ?? coins ?? 0;
+        const nextCoins = cur + addAmt;
+
+        coinsRef.current = nextCoins;
+        await setCoins(nextCoins);
+
         track("shop_coins_added", {
           amount: addAmt,
           via: "stripe",
@@ -830,7 +823,7 @@ export default function Shop() {
     const sub = RNLinking.addEventListener("url", onUrl);
     Linking.getInitialURL().then((url) => url && onUrl({ url }));
     return () => sub.remove();
-  }, [setCoins]);
+  }, [setCoins, coins]);
 
   /* -------------------------- Equip helpers ------------------------------- */
 
@@ -1105,7 +1098,19 @@ export default function Shop() {
       bundle: [],
       coin_pack: [],
     };
-    for (const it of catalog) byCat[it.category].push(it);
+
+    for (const it of catalog) {
+      // 🚫 Remove the Neon bundle from the shop
+      if (it.category === "bundle") {
+        const idLc = (it.id ?? "").toLowerCase();
+        const titleLc =
+          typeof it.title === "string" ? it.title.toLowerCase() : "";
+        if (idLc.includes("neon") || titleLc.includes("neon")) {
+          continue;
+        }
+      }
+      byCat[it.category].push(it);
+    }
     return byCat;
   }, []);
 
@@ -1156,6 +1161,7 @@ export default function Shop() {
             }
           : undefined;
 
+      // Backend coin-based checkout (handles coins + supabase / orders)
       startCoinCheckout({
         id: it.id,
         title: it.title,
@@ -1165,10 +1171,26 @@ export default function Shop() {
         size: chosen,
         user: userForOrder,
       });
+
+      // 🔔 New: notify backend to send confirmation + owner email
+      void notifyCoinOrder({
+        coins: price,
+        user: userForOrder ?? null,
+        item: {
+          id: it.id,
+          sku: it.id,
+          title: it.title,
+          category: it.category,
+          size: chosen ?? null,
+          quantity: 1,
+        },
+        sessionId: null,
+      });
+
       return;
     }
 
-    const curCoins = coinsRef.current ?? 0;
+    const curCoins = coinsRef.current ?? coins ?? 0;
     if (curCoins < price) {
       setNeed(price - curCoins);
       setShowInsufficient(true);
@@ -1181,13 +1203,14 @@ export default function Shop() {
     }
 
     const nextCoins = curCoins - price;
+    coinsRef.current = nextCoins;
+
     const cid = canonId(it.id);
     const nextPurch: PurchaseMap = { ...purchases };
     if (cid) nextPurch[cid] = true;
 
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setCoins(nextCoins);
-    void saveCoins(nextCoins);
+    void setCoins(nextCoins);
 
     setPurchases(nextPurch);
     void savePurchases(nextPurch);
@@ -1363,7 +1386,7 @@ export default function Shop() {
       const startY = dims.height - FLOAT_SIZE - 160;
 
       floatBasePos.current = { x: startX, y: startY };
-      floatPos.setValue({ x: startX, y: startY });
+      setFloatPos({ x: startX, y: startY });
 
       wiggleAction();
     }
@@ -1420,7 +1443,7 @@ export default function Shop() {
         ? canonId(equippedCursor ?? "") === cid
         : false;
 
-    // 🧠 IMPORTANT: no hooks here – we just use `tokens` from closure
+    // no hooks here – just using closure values
     return (
       <Card key={it.id} color={color}>
         {src ? (
@@ -2068,11 +2091,13 @@ export default function Shop() {
           )}
         </Section>
 
-        <Section title="Bundles">
-          {groups.bundle.map((it) =>
-            renderItem(it, CATEGORY_BORDER.bundle)
-          )}
-        </Section>
+        {groups.bundle.length > 0 && (
+          <Section title="Bundles">
+            {groups.bundle.map((it) =>
+              renderItem(it, CATEGORY_BORDER.bundle)
+            )}
+          </Section>
+        )}
 
         <Section title="Coin Packs">
           {groups.coin_pack.map((it) =>

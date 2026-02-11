@@ -13,6 +13,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { useTheme } from "../context/ThemeContext";
 import { useCursor } from "../context/CursorContext";
+import { useUser } from "../context/UserContext";
 import { showToast } from "../utils/toast";
 
 import {
@@ -24,17 +25,23 @@ import { COMPANIONS } from "../_lib/companionsCatalog";
 
 type PurchaseMap = Record<string, true>;
 
-const PURCHASES_KEY = "@nova/purchases";
+// 🔐 Versioned purchases key + backward-compat (same as Shop)
+const PURCHASES_KEY = "@nova/purchases.v2";
+const PURCHASES_COMPAT_KEYS = ["@nova/purchases", PURCHASES_KEY];
+
 const CURSOR_KEY = "@nova/cursor";
 const THEME_KEY = "@nova/themeId";
 
-// Same canonId logic as in the shop so everything lines up
+// --------------------------- Canonical helpers ----------------------------
+
+// Same canonId logic as in the Shop so everything lines up
 function canonId(raw: string | null | undefined): string {
   if (!raw) return "";
   let v = String(raw).trim().toLowerCase();
   v = v.replace(/-/g, "_");
 
   if (!v.includes(":")) {
+    // known cursors
     if (v === "glow" || v === "cursor_glow") {
       v = "cursor:glow";
     } else if (v === "orb" || v === "cursor_orb") {
@@ -46,7 +53,9 @@ function canonId(raw: string | null | undefined): string {
       v === "cursor_star_trail"
     ) {
       v = "cursor:star_trail";
-    } else if (
+    }
+    // known themes (short ids)
+    else if (
       [
         "neon",
         "starry",
@@ -61,19 +70,33 @@ function canonId(raw: string | null | undefined): string {
         "neonpurple",
         "neon_purple",
         "silver",
+        // long-name variants
+        "crimson_dream",
+        "emerald_wave",
+        "silver_frost",
       ].includes(v)
     ) {
       v = "theme:" + v;
-    } else if (v.startsWith("cursor")) {
+    }
+    // generic cursor/theme strings
+    else if (v.startsWith("cursor")) {
       v = "cursor:" + v.replace(/^cursor[_:]?/, "");
     } else if (v.startsWith("theme")) {
       v = "theme:" + v.replace(/^theme[_:]?/, "");
     }
   }
 
+  // cursor aliases
   if (v === "cursor:startrail") v = "cursor:star_trail";
+
+  // theme aliases
   if (v === "theme:black_gold") v = "theme:blackgold";
   if (v === "theme:neon_purple") v = "theme:neonpurple";
+
+  // long-name → base ids
+  if (v === "theme:crimson_dream") v = "theme:crimson";
+  if (v === "theme:emerald_wave") v = "theme:emerald";
+  if (v === "theme:silver_frost") v = "theme:silver";
 
   return v;
 }
@@ -98,7 +121,9 @@ function toThemeCtxId(id: string | null | undefined) {
   return map[cid] ?? (cid.startsWith("theme:") ? cid.slice(6) : cid);
 }
 
-function normalizePurchases(obj: Record<string, any> | null | undefined): PurchaseMap {
+function normalizePurchases(
+  obj: Record<string, any> | null | undefined
+): PurchaseMap {
   const out: PurchaseMap = {};
   if (!obj) return out;
   for (const [k, v] of Object.entries(obj)) {
@@ -108,6 +133,32 @@ function normalizePurchases(obj: Record<string, any> | null | undefined): Purcha
   }
   return out;
 }
+
+async function loadPurchasesFromStorage(): Promise<Record<string, any>> {
+  let merged: Record<string, any> = {};
+  for (const key of PURCHASES_COMPAT_KEYS) {
+    try {
+      const raw = await AsyncStorage.getItem(key);
+      if (!raw) continue;
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object") {
+        merged = { ...merged, ...parsed };
+      }
+    } catch {
+      // ignore broken entries; we'll normalize later
+    }
+  }
+  return merged;
+}
+
+async function savePurchases(m: PurchaseMap) {
+  const serialized = JSON.stringify(m);
+  await Promise.all(
+    PURCHASES_COMPAT_KEYS.map((key) => AsyncStorage.setItem(key, serialized))
+  );
+}
+
+// ----------------------------- UI helpers ---------------------------------
 
 function Section({
   title,
@@ -169,10 +220,13 @@ function Card({
   );
 }
 
+// ----------------------------- Screen -------------------------------------
+
 export default function PurchasesScreen() {
   const { tokens, setThemeById } = useTheme();
+  const { user } = useUser();
 
-  // Cursor context may throw on web if overlay not mounted yet, so guard it
+  // Cursor context may be fussy on web if overlay not mounted yet, so guard it
   const cursorApi = (() => {
     try {
       return useCursor();
@@ -189,19 +243,31 @@ export default function PurchasesScreen() {
   const [equippedTheme, setEquippedTheme] = useState<string | null>(null);
   const [equippedCursor, setEquippedCursor] = useState<string | null>(null);
 
-  // Load purchases + equipped theme/cursor on mount
+  // Load purchases + equipped theme/cursor on mount and when user changes
   useEffect(() => {
     (async () => {
       try {
-        const [rawPurch, rawCursor, rawTheme] = await Promise.all([
-          AsyncStorage.getItem(PURCHASES_KEY),
+        const [storageRaw, rawCursor, rawTheme] = await Promise.all([
+          loadPurchasesFromStorage(),
           AsyncStorage.getItem(CURSOR_KEY),
           AsyncStorage.getItem(THEME_KEY),
         ]);
 
-        const parsed = rawPurch ? JSON.parse(rawPurch) : {};
-        const normalized = normalizePurchases(parsed);
+        // merge Supabase purchases (if present) with local storage
+        const supaPurchRaw =
+          user && (user as any).purchases && typeof (user as any).purchases === "object"
+            ? ((user as any).purchases as Record<string, any>)
+            : {};
+
+        const mergedRaw = {
+          ...(storageRaw || {}),
+          ...(supaPurchRaw || {}),
+        };
+
+        const normalized = normalizePurchases(mergedRaw);
         setPurchases(normalized);
+        // keep local storage in sync with the normalized map
+        await savePurchases(normalized);
 
         const cur = canonId(rawCursor);
         const th = canonId(rawTheme);
@@ -217,10 +283,10 @@ export default function PurchasesScreen() {
           setCursorById(cur || null);
         }
       } catch {
-        // ignore
+        // ignore; worst case, screen just shows empty state
       }
     })();
-  }, [setThemeById, setCursorById]);
+  }, [setThemeById, setCursorById, user]);
 
   const isOwned = useCallback(
     (id: string) => {
@@ -318,10 +384,7 @@ export default function PurchasesScreen() {
   }
 
   return (
-    <LinearGradient
-      colors={tokens.gradient as any}
-      style={{ flex: 1 }}
-    >
+    <LinearGradient colors={tokens.gradient as any} style={{ flex: 1 }}>
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: 16, paddingBottom: 24 }}
@@ -384,10 +447,7 @@ export default function PurchasesScreen() {
               const equipped = cid && equippedTheme && cid === equippedTheme;
 
               return (
-                <Card
-                  key={it.id}
-                  color={CATEGORY_BORDER.theme}
-                >
+                <Card key={it.id} color={CATEGORY_BORDER.theme}>
                   {it.image ? (
                     <Image
                       source={it.image}
@@ -468,10 +528,7 @@ export default function PurchasesScreen() {
               const equipped = cid && equippedCursor && cid === equippedCursor;
 
               return (
-                <Card
-                  key={it.id}
-                  color={CATEGORY_BORDER.cursor}
-                >
+                <Card key={it.id} color={CATEGORY_BORDER.cursor}>
                   {it.image ? (
                     <Image
                       source={it.image}
@@ -548,10 +605,7 @@ export default function PurchasesScreen() {
         {ownedCompanions.length > 0 && (
           <Section title="Companions">
             {ownedCompanions.map((it: any) => (
-              <Card
-                key={it.id}
-                color={CATEGORY_BORDER.tangibles}
-              >
+              <Card key={it.id} color={CATEGORY_BORDER.tangibles}>
                 {it.image ? (
                   <Image
                     source={it.image}
@@ -623,10 +677,7 @@ export default function PurchasesScreen() {
                 CATEGORY_BORDER[it.category as Category] ||
                 CATEGORY_BORDER.tangibles;
               return (
-                <Card
-                  key={it.id}
-                  color={color}
-                >
+                <Card key={it.id} color={color}>
                   {it.image ? (
                     <Image
                       source={it.image}
@@ -671,7 +722,7 @@ export default function PurchasesScreen() {
                       alignItems: "center",
                       paddingVertical: 8,
                       borderRadius: 10,
-                      borderWidth: 10,
+                      borderWidth: 1,
                       borderColor: "transparent",
                       marginTop: 10,
                     }}

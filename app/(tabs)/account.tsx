@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
+import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
 
 import { useUser } from "../context/UserContext";
@@ -279,6 +280,24 @@ export default function AccountScreen() {
     }
   }
 
+  function onContactUs() {
+    const email = "contact.novatutoring@gmail.com";
+    const subject = encodeURIComponent("Nova Tutoring Support");
+    const body = encodeURIComponent(
+      "Hi Nova Tutoring team,\n\nI have a question about the app:\n\n"
+    );
+    const url = `mailto:${email}?subject=${subject}&body=${body}`;
+
+    try {
+      Linking.openURL(url);
+    } catch (e) {
+      Alert.alert(
+        "Email not available",
+        "You can email us at contact.novatutoring@gmail.com."
+      );
+    }
+  }
+
   return (
     <LinearGradient colors={tokens.gradient} style={{ flex: 1 }}>
       <View style={S.wrap}>
@@ -379,7 +398,7 @@ export default function AccountScreen() {
             <Text style={[S.btnt, { color: tokens.text }]}>Save</Text>
           </Pressable>
 
-          <Pressable
+        <Pressable
             style={[
               S.btn,
               {
@@ -524,9 +543,16 @@ export default function AccountScreen() {
           </Pressable>
         </View>
 
-        {/* Privacy Policy link */}
+        {/* Contact + Privacy links */}
         <View style={S.privacyRow}>
-          <Pressable onPress={() => setShowPrivacyModal(true)}>
+          <Pressable onPress={onContactUs}>
+            <Text style={S.privacyLink}>Contact Us</Text>
+          </Pressable>
+
+          <Pressable
+            style={{ marginTop: 6 }}
+            onPress={() => setShowPrivacyModal(true)}
+          >
             <Text style={S.privacyLink}>Privacy Policy</Text>
           </Pressable>
         </View>
