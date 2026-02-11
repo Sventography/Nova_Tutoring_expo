@@ -1,14 +1,15 @@
-# 🔥🔥 RUNNING FIXED SERVER VERSION v5 (CHECKOUT + ASK + COIN ORDER EMAILS + ITEM DETAILS + SMTP DEBUG) 🔥🔥
-print("🔥🔥 RUNNING FIXED SERVER VERSION v5 (CHECKOUT + ASK + COIN ORDER EMAILS + ITEM DETAILS + SMTP DEBUG) 🔥🔥")
+# 🔥🔥 RUNNING FIXED SERVER VERSION v5 (CHECKOUT + ASK + COIN ORDER EMAILS + ITEM DETAILS + RESEND SMTP DEBUG) 🔥🔥
+print("🔥🔥 RUNNING FIXED SERVER VERSION v5 (CHECKOUT + ASK + COIN ORDER EMAILS + ITEM DETAILS + RESEND SMTP DEBUG) 🔥🔥")
 
 import os
-import smtplib
-import ssl
+import smtplib  # no longer used for real sends, but harmless to keep
+import ssl      # same here
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+import requests  # 👈 used for Resend HTTP API
 
 # -------------------------------------------------
 # Optional deps (Stripe, dotenv, OpenAI)
@@ -80,20 +81,29 @@ OPENAI_MODEL = (os.getenv("OPENAI_MODEL") or "gpt-4.1-mini").strip() or "gpt-4.1
 # Admin / internal secret for debug/test routes
 ADMIN_SUPER_SECRET_CODE = (os.getenv("ADMIN_SUPER_SECRET_CODE") or "").strip()
 
-# SMTP / Gmail (for order + confirmation emails)
+# SMTP / Gmail (kept mostly as "from" identity / legacy; not used for network)
 SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))  # 465 for SSL, 587 for STARTTLS
-SMTP_USER = (os.getenv("SMTP_USER") or "").strip()  # your Gmail address
-SMTP_PASS = (os.getenv("SMTP_PASS") or "").strip()  # Gmail App Password
+SMTP_USER = (os.getenv("SMTP_USER") or "").strip()  # usually your Gmail or from-address
+SMTP_PASS = (os.getenv("SMTP_PASS") or "").strip()  # not used once we switch to Resend
 SHOP_OWNER_EMAIL = (os.getenv("SHOP_OWNER_EMAIL") or SMTP_USER or "").strip()
+
+# Resend API
+RESEND_API_KEY = (os.getenv("RESEND_API_KEY") or "").strip()
+RESEND_FROM_EMAIL = (os.getenv("RESEND_FROM_EMAIL") or "").strip()
 
 if SMTP_USER and SMTP_PASS:
     print(
-        f"[server] SMTP configured: host={SMTP_HOST} port={SMTP_PORT} "
+        f"[server] SMTP (legacy) configured: host={SMTP_HOST} port={SMTP_PORT} "
         f"user={SMTP_USER} owner={SHOP_OWNER_EMAIL}"
     )
 else:
-    print("[server] SMTP not fully configured (missing SMTP_USER / SMTP_PASS)")
+    print("[server] SMTP (legacy) not fully configured (missing SMTP_USER / SMTP_PASS)")
+
+if RESEND_API_KEY:
+    print("[server] Resend API key detected (email will be sent via Resend)")
+else:
+    print("[server] Resend API key NOT set – email sending will FAIL until RESEND_API_KEY is configured")
 
 # -------------------------------------------------
 # Stripe setup
@@ -122,57 +132,73 @@ else:
         print("[server] OpenAI configured: False (unknown reason)")
 
 # -------------------------------------------------
-# Email helpers
+# Email helpers (NOW USING RESEND)
 # -------------------------------------------------
 
 
 def send_email(to_address: str, subject: str, body_text: str, body_html: str | None = None):
     """
-    Low-level helper: send a single email using SMTP_USER / SMTP_PASS.
+    send_email now uses Resend's HTTP API instead of direct SMTP.
 
-    Uses implicit SSL when SMTP_PORT == 465, otherwise STARTTLS on given port.
+    It expects:
+      - RESEND_API_KEY in env
+      - RESEND_FROM_EMAIL or SMTP_USER/SHOP_OWNER_EMAIL to use as the "from" address.
     """
     print(
-        f"[mail] send_email called: to={to_address!r} subject={subject!r} "
-        f"host={SMTP_HOST} port={SMTP_PORT} user={SMTP_USER!r}"
+        f"[mail] send_email (Resend) called: to={to_address!r} subject={subject!r} "
+        f"from_user={SMTP_USER!r} shop_owner={SHOP_OWNER_EMAIL!r} resend_from={RESEND_FROM_EMAIL!r}"
     )
 
     if not to_address:
-        print("[mail] no to_address provided; skipping send_email")
-        return
+        raise Exception("No to_address provided for send_email")
 
-    if not (SMTP_HOST and SMTP_USER and SMTP_PASS):
-        print("[mail] SMTP not fully configured; skipping email send")
-        return
+    api_key = RESEND_API_KEY
+    if not api_key:
+        raise Exception("RESEND_API_KEY not configured in environment")
 
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = subject
-    msg["From"] = SMTP_USER
-    msg["To"] = to_address
+    # Determine from address priority:
+    # 1) RESEND_FROM_EMAIL
+    # 2) SHOP_OWNER_EMAIL
+    # 3) SMTP_USER
+    from_email = RESEND_FROM_EMAIL or SHOP_OWNER_EMAIL or SMTP_USER
+    if not from_email:
+        raise Exception("No from_email configured (RESEND_FROM_EMAIL / SHOP_OWNER_EMAIL / SMTP_USER are empty)")
 
-    msg.attach(MIMEText(body_text, "plain"))
+    # Build content payload for Resend
+    # https://resend.com/docs/api-reference/emails/send-email
+    content_text = body_text or ""
+    data = {
+        "from": from_email,
+        "to": [to_address],
+        "subject": subject or "",
+        # Always include text; optionally include html if provided
+        "text": content_text,
+    }
+
     if body_html:
-        msg.attach(MIMEText(body_html, "html"))
-
-    context = ssl.create_default_context()
+        data["html"] = body_html
 
     try:
-        if SMTP_PORT == 465:
-            print("[mail] connecting via SMTP_SSL...")
-            with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, context=context) as server:
-                server.login(SMTP_USER, SMTP_PASS)
-                server.sendmail(SMTP_USER, [to_address], msg.as_string())
-        else:
-            print("[mail] connecting via SMTP + STARTTLS...")
-            with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-                server.starttls(context=context)
-                server.login(SMTP_USER, SMTP_PASS)
-                server.sendmail(SMTP_USER, [to_address], msg.as_string())
-        print("[mail] email sent OK")
+        print("[mail] sending via Resend HTTP API...")
+        resp = requests.post(
+            "https://api.resend.com/emails",
+            json=data,
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            timeout=10,
+        )
+
+        if resp.status_code >= 400:
+            print("[mail] Resend error response:", resp.status_code, resp.text)
+            raise Exception(f"Resend error {resp.status_code}: {resp.text}")
+
+        print("[mail] email sent OK via Resend:", resp.text)
+
     except Exception as e:
-        # Print full exception so we can see Gmail's exact error
-        print("[mail] error sending email:", repr(e))
-        # 🔴 IMPORTANT CHANGE: re-raise so callers can see it and return an error
+        # Log and bubble up so routes can surface the error
+        print("[mail] error sending email via Resend:", repr(e))
         raise
 
 
@@ -233,7 +259,7 @@ def send_coin_order_emails(
         if item_block:
             owner_body += item_block
 
-        print("[mail] sending OWNER coin order email...")
+        print("[mail] sending OWNER coin order email (via Resend)...")
         send_email(SHOP_OWNER_EMAIL, owner_subject, owner_body)
     else:
         print("[mail] SHOP_OWNER_EMAIL not set; owner will NOT receive order emails.")
@@ -253,7 +279,7 @@ def send_coin_order_emails(
             "If you did not make this purchase, please contact support.\n"
         )
 
-        print("[mail] sending USER coin order email...")
+        print("[mail] sending USER coin order email (via Resend)...")
         send_email(user_email, user_subject, user_body)
     else:
         print("[mail] no user_email for coin order; only owner was notified (if configured).")
@@ -273,6 +299,7 @@ def health():
         stripe=bool(stripe and STRIPE_SECRET_KEY),
         openai=bool(openai_client),
         smtp=bool(SMTP_USER and SMTP_PASS),
+        resend=bool(RESEND_API_KEY),
     )
 
 
@@ -536,18 +563,21 @@ def api_coin_order():
     )
 
     # Send owner + user emails, including item details if present
-    send_coin_order_emails(
-        user_email=user_email,
-        coins_amount=coins,
-        stripe_session_id=session_id,
-        user_display_name=display_name,
-        item_title=item_title,
-        item_size=item_size,
-        item_sku=item_sku,
-        item_category=item_category,
-    )
-
-    return jsonify(ok=True)
+    try:
+        send_coin_order_emails(
+            user_email=user_email,
+            coins_amount=coins,
+            stripe_session_id=session_id,
+            user_display_name=display_name,
+            item_title=item_title,
+            item_size=item_size,
+            item_sku=item_sku,
+            item_category=item_category,
+        )
+        return jsonify(ok=True)
+    except Exception as e:
+        print("[coin-order] error sending emails:", repr(e))
+        return jsonify(ok=False, error=str(e)), 500
 
 
 # -------------------------------------------------
@@ -558,11 +588,11 @@ def api_coin_order():
 @app.post("/debug/send-test-email")
 def debug_send_test_email():
     """
-    Simple debug endpoint to verify SMTP from Render.
+    Simple debug endpoint to verify email sending from Render via Resend.
 
     Call with JSON: { "code": "YOUR_ADMIN_SUPER_SECRET_CODE" }
 
-    It will send a single test email to SHOP_OWNER_EMAIL.
+    It will send a single test email to SHOP_OWNER_EMAIL (or RESEND_FROM_EMAIL / SMTP_USER).
     """
     body = request.get_json(silent=True) or {}
     code = body.get("code") or ""
@@ -573,21 +603,22 @@ def debug_send_test_email():
     if code != ADMIN_SUPER_SECRET_CODE:
         return jsonify(ok=False, error="invalid code"), 403
 
-    if not SHOP_OWNER_EMAIL:
-        return jsonify(ok=False, error="SHOP_OWNER_EMAIL not configured"), 400
+    if not (SHOP_OWNER_EMAIL or RESEND_FROM_EMAIL or SMTP_USER):
+        return jsonify(ok=False, error="No from/to email configured"), 400
 
-    print("[debug] debug_send_test_email triggered")
+    target = SHOP_OWNER_EMAIL or RESEND_FROM_EMAIL or SMTP_USER
+
+    print("[debug] debug_send_test_email triggered → target:", target)
 
     try:
         send_email(
-            SHOP_OWNER_EMAIL,
-            "Nova Tutoring – SMTP test from Render",
-            "If you see this, SMTP from Render is working!",
+            target,
+            "Nova Tutoring – Resend SMTP test from Render",
+            "If you see this, email via Resend from Render is working!",
         )
         return jsonify(ok=True)
     except Exception as e:
-        # 🔴 IMPORTANT CHANGE: surface SMTP errors to the client
-        print("[debug] SMTP error in debug_send_test_email:", repr(e))
+        print("[debug] error in debug_send_test_email:", repr(e))
         return jsonify(ok=False, error=str(e)), 500
 
 
