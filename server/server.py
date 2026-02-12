@@ -1,7 +1,8 @@
-# 🔥🔥 RUNNING FIXED SERVER VERSION v6-HTTP (CHECKOUT + ASK MEMORY + COIN ORDER EMAILS + RESEND + BREVO SMTP) 🔥🔥
+# 🔥🔥 RUNNING FIXED SERVER VERSION v6-HTTP-SMTPONLY
+# (CHECKOUT + ASK MEMORY + COIN ORDER EMAILS via BREVO SMTP ONLY) 🔥🔥
 print(
-  "🔥🔥 RUNNING FIXED SERVER VERSION v6-HTTP "
-  "(CHECKOUT + ASK MEMORY + COIN ORDER EMAILS + RESEND + BREVO SMTP) 🔥🔥"
+  "🔥🔥 RUNNING FIXED SERVER VERSION v6-HTTP-SMTPONLY "
+  "(CHECKOUT + ASK MEMORY + COIN ORDER EMAILS via BREVO SMTP ONLY) 🔥🔥"
 )
 
 import os
@@ -12,7 +13,7 @@ from email.mime.multipart import MIMEMultipart
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import requests  # used for Supabase REST + Resend HTTP
+import requests  # used for Supabase REST
 
 # -------------------------------------------------
 # Optional deps (Stripe, dotenv, OpenAI)
@@ -40,7 +41,7 @@ except Exception:
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
-print("🔥🔥 FLASK APP INITIALIZED (v6-HTTP) 🔥🔥")
+print("🔥🔥 FLASK APP INITIALIZED (v6-HTTP-SMTPONLY) 🔥🔥")
 
 # -------------------------------------------------
 # Load environment (prefers server/env/.env.server, else server/.env)
@@ -83,7 +84,7 @@ OPENAI_MODEL = (os.getenv("OPENAI_MODEL") or "gpt-4.1-mini").strip() or "gpt-4.1
 # Admin / internal secret for debug/test routes
 ADMIN_SUPER_SECRET_CODE = (os.getenv("ADMIN_SUPER_SECRET_CODE") or "").strip()
 
-# Resend (HTTP email API)
+# Resend (HTTP email API) — CONFIG STILL READ BUT SENDING DISABLED
 RESEND_API_KEY = (os.getenv("RESEND_API_KEY") or "").strip()
 RESEND_FROM_EMAIL = (
   (os.getenv("RESEND_FROM_EMAIL") or "").strip()
@@ -92,7 +93,7 @@ RESEND_FROM_EMAIL = (
 )
 
 if RESEND_API_KEY:
-  print("[server] Resend configured: True")
+  print("[server] Resend API key present, but Resend sending is DISABLED (SMTP only).")
 else:
   print("[server] Resend configured: False")
 
@@ -213,56 +214,29 @@ def record_purchase_row(
     print("[coin-order] purchases insert exception:", repr(e))
 
 # -------------------------------------------------
-# Email helpers (Resend first, fallback to Brevo SMTP)
+# Email helpers (SMTP only; Resend disabled)
 # -------------------------------------------------
 
 def send_email(to_address: str, subject: str, body_text: str, body_html: str | None = None):
   """
-  Send an email. Prefer Resend HTTP API if configured, otherwise fall back to Brevo SMTP.
+  Send an email via Brevo SMTP (Resend HTTP API is currently disabled).
   """
   print(
     f"[mail] send_email called: to={to_address!r} subject={subject!r} "
-    f"use_resend={bool(RESEND_API_KEY)} use_smtp={bool(SMTP_USER and SMTP_PASS)}"
+    f"use_resend=False use_smtp={bool(SMTP_USER and SMTP_PASS)}"
   )
 
   if not to_address:
     raise Exception("No to_address provided for send_email")
 
-  # --------------------- Try Resend first if configured ----------------------
-  if RESEND_API_KEY and RESEND_FROM_EMAIL:
-    try:
-      print("[mail] sending via Resend HTTP API ...")
-      payload = {
-        "from": RESEND_FROM_EMAIL,
-        "to": [to_address],
-        "subject": subject or "",
-        "text": body_text or "",
-      }
-      if body_html:
-        payload["html"] = body_html
+  # NOTE: Resend branch has been intentionally disabled.
+  # If you want to re-enable it later, restore the HTTP call here.
 
-      resp = requests.post(
-        "https://api.resend.com/emails",
-        headers={
-          "Authorization": f"Bearer {RESEND_API_KEY}",
-          "Content-Type": "application/json",
-        },
-        json=payload,
-        timeout=10,
-      )
-      if resp.status_code >= 400:
-        print("[mail] Resend error:", resp.status_code, resp.text)
-        raise Exception(f"Resend error {resp.status_code}")
-      print("[mail] email sent OK via Resend")
-      return
-    except Exception as e:
-      print("[mail] Resend exception, falling back to SMTP if available:", repr(e))
-
-  # --------------------- Fallback: Brevo SMTP (if configured) ----------------
+  # --------------------- SMTP (Brevo) ----------------
   if not (SMTP_HOST and SMTP_PORT and SMTP_USER and SMTP_PASS):
     raise Exception(
       "No email provider successfully configured "
-      "(Resend failed and SMTP missing or incomplete)"
+      "(SMTP missing or incomplete)"
     )
 
   from_email = SHOP_OWNER_EMAIL or SMTP_USER
@@ -354,7 +328,7 @@ def send_coin_order_emails(
     if item_block:
       owner_body += item_block
 
-    print("[mail] sending OWNER coin order email (Resend/SMTP)...")
+    print("[mail] sending OWNER coin order email (SMTP)...")
     send_email(SHOP_OWNER_EMAIL, owner_subject, owner_body)
   else:
     print("[mail] SHOP_OWNER_EMAIL not set; owner will NOT receive order emails.")
@@ -372,7 +346,7 @@ def send_coin_order_emails(
 
     user_body += "If you did not make this purchase, please contact support.\n"
 
-    print("[mail] sending USER coin order email (Resend/SMTP)...")
+    print("[mail] sending USER coin order email (SMTP)...")
     send_email(user_email, user_subject, user_body)
   else:
     print("[mail] no user_email for coin order; only owner was notified (if configured).")
@@ -535,7 +509,8 @@ def health():
     openai=bool(openai_client),
     smtp=bool(SMTP_USER and SMTP_PASS),
     supabase=supabase_ok,
-    resend=bool(RESEND_API_KEY),
+    # Resend sending is disabled in code, so report False here even if key exists
+    resend=False,
   )
 
 # -------------------------------------------------
@@ -808,7 +783,7 @@ def api_coin_order():
 @app.post("/debug/send-test-email")
 def debug_send_test_email():
   """
-  Simple debug endpoint to verify email sending from Render via Resend/SMTP.
+  Simple debug endpoint to verify email sending from Render via SMTP.
   """
   body = request.get_json(silent=True) or {}
   code = body.get("code") or ""
@@ -829,8 +804,8 @@ def debug_send_test_email():
   try:
     send_email(
       target,
-      "Nova Tutoring – Test email from Render (Resend/SMTP)",
-      "If you see this, email from Render via Resend/SMTP is working!",
+      "Nova Tutoring – Test email from Render (SMTP-only)",
+      "If you see this, email from Render via Brevo SMTP is working!",
     )
     return jsonify(ok=True)
   except Exception as e:
@@ -843,5 +818,5 @@ def debug_send_test_email():
 
 if __name__ == "__main__":
   port = int(os.getenv("PORT", "8787"))
-  print(f"🔥🔥 STARTING SERVER v6-HTTP ON http://127.0.0.1:{port} 🔥🔥")
+  print(f"🔥🔥 STARTING SERVER v6-HTTP-SMTPONLY ON http://127.0.0.1:{port} 🔥🔥")
   app.run(host="0.0.0.0", port=port, debug=False)
