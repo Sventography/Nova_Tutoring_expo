@@ -1,15 +1,15 @@
-# 🔥🔥 RUNNING FIXED SERVER VERSION v5 (CHECKOUT + ASK + COIN ORDER EMAILS + ITEM DETAILS + RESEND SMTP DEBUG) 🔥🔥
-print("🔥🔥 RUNNING FIXED SERVER VERSION v5 (CHECKOUT + ASK + COIN ORDER EMAILS + ITEM DETAILS + RESEND SMTP DEBUG) 🔥🔥")
+# 🔥🔥 RUNNING FIXED SERVER VERSION v6-HTTP (CHECKOUT + ASK MEMORY + COIN ORDER EMAILS + BREVO SMTP) 🔥🔥
+print("🔥🔥 RUNNING FIXED SERVER VERSION v6-HTTP (CHECKOUT + ASK MEMORY + COIN ORDER EMAILS + BREVO SMTP) 🔥🔥")
 
 import os
-import smtplib  # no longer used for real sends, but harmless to keep
-import ssl      # same here
+import smtplib
+import ssl
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import requests  # 👈 used for Resend HTTP API
+import requests  # used for Supabase REST
 
 # -------------------------------------------------
 # Optional deps (Stripe, dotenv, OpenAI)
@@ -37,7 +37,7 @@ except Exception:
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
-print("🔥🔥 FLASK APP INITIALIZED (v5) 🔥🔥")
+print("🔥🔥 FLASK APP INITIALIZED (v6-HTTP) 🔥🔥")
 
 # -------------------------------------------------
 # Load environment (prefers server/env/.env.server, else server/.env)
@@ -69,9 +69,8 @@ except Exception as e:
 # Stripe
 STRIPE_SECRET_KEY = (os.getenv("STRIPE_SECRET_KEY") or "").strip()
 
-# Supabase (for future use, coins / profiles, etc.)
-SUPABASE_URL = (os.getenv("SUPABASE_URL") or "").strip()
-SUPABASE_ANON_KEY = (os.getenv("SUPABASE_ANON_KEY") or "").strip()
+# Supabase
+SUPABASE_URL = (os.getenv("SUPABASE_URL") or "").strip().rstrip("/")
 SUPABASE_SERVICE_ROLE_KEY = (os.getenv("SUPABASE_SERVICE_ROLE_KEY") or "").strip()
 
 # OpenAI
@@ -81,29 +80,31 @@ OPENAI_MODEL = (os.getenv("OPENAI_MODEL") or "gpt-4.1-mini").strip() or "gpt-4.1
 # Admin / internal secret for debug/test routes
 ADMIN_SUPER_SECRET_CODE = (os.getenv("ADMIN_SUPER_SECRET_CODE") or "").strip()
 
-# SMTP / Gmail (kept mostly as "from" identity / legacy; not used for network)
-SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
+# SMTP / Brevo
+# For Brevo you should set in Render env:
+#   SMTP_HOST=smtp-relay.brevo.com
+#   SMTP_PORT=587
+#   SMTP_USER=<your Brevo SMTP login>
+#   SMTP_PASS=<your Brevo SMTP key>
+#   SHOP_OWNER_EMAIL=contact@sventographystudios.com   (or similar verified sender)
+SMTP_HOST = os.getenv("SMTP_HOST", "smtp-relay.brevo.com")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))  # 465 for SSL, 587 for STARTTLS
-SMTP_USER = (os.getenv("SMTP_USER") or "").strip()  # usually your Gmail or from-address
-SMTP_PASS = (os.getenv("SMTP_PASS") or "").strip()  # not used once we switch to Resend
+SMTP_USER = (os.getenv("SMTP_USER") or "").strip()
+SMTP_PASS = (os.getenv("SMTP_PASS") or "").strip()
 SHOP_OWNER_EMAIL = (os.getenv("SHOP_OWNER_EMAIL") or SMTP_USER or "").strip()
-
-# Resend API
-RESEND_API_KEY = (os.getenv("RESEND_API_KEY") or "").strip()
-RESEND_FROM_EMAIL = (os.getenv("RESEND_FROM_EMAIL") or "").strip()
 
 if SMTP_USER and SMTP_PASS:
     print(
-        f"[server] SMTP (legacy) configured: host={SMTP_HOST} port={SMTP_PORT} "
+        f"[server] SMTP configured: host={SMTP_HOST} port={SMTP_PORT} "
         f"user={SMTP_USER} owner={SHOP_OWNER_EMAIL}"
     )
 else:
-    print("[server] SMTP (legacy) not fully configured (missing SMTP_USER / SMTP_PASS)")
+    print("[server] SMTP not fully configured (missing SMTP_USER / SMTP_PASS)")
 
-if RESEND_API_KEY:
-    print("[server] Resend API key detected (email will be sent via Resend)")
+if SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY:
+    print("[server] Supabase REST configured (URL + service key present)")
 else:
-    print("[server] Resend API key NOT set – email sending will FAIL until RESEND_API_KEY is configured")
+    print("[server] Supabase REST NOT fully configured")
 
 # -------------------------------------------------
 # Stripe setup
@@ -132,73 +133,76 @@ else:
         print("[server] OpenAI configured: False (unknown reason)")
 
 # -------------------------------------------------
-# Email helpers (NOW USING RESEND)
+# Supabase REST helpers
 # -------------------------------------------------
 
+def supabase_headers(extra: dict | None = None):
+    if not (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY):
+        return None
+    base = {
+        "apikey": SUPABASE_SERVICE_ROLE_KEY,
+        "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+    }
+    if extra:
+        base.update(extra)
+    return base
+
+
+def supabase_rest_url(table: str) -> str:
+    return f"{SUPABASE_URL}/rest/v1/{table}"
+
+# -------------------------------------------------
+# Email helpers (NOW USING BREVO SMTP)
+# -------------------------------------------------
 
 def send_email(to_address: str, subject: str, body_text: str, body_html: str | None = None):
     """
-    send_email now uses Resend's HTTP API instead of direct SMTP.
-
-    It expects:
-      - RESEND_API_KEY in env
-      - RESEND_FROM_EMAIL or SMTP_USER/SHOP_OWNER_EMAIL to use as the "from" address.
+    Send an email via Brevo SMTP using smtplib + STARTTLS.
     """
     print(
-        f"[mail] send_email (Resend) called: to={to_address!r} subject={subject!r} "
-        f"from_user={SMTP_USER!r} shop_owner={SHOP_OWNER_EMAIL!r} resend_from={RESEND_FROM_EMAIL!r}"
+        f"[mail] send_email (SMTP) called: to={to_address!r} subject={subject!r} "
+        f"host={SMTP_HOST!r} user={SMTP_USER!r} owner={SHOP_OWNER_EMAIL!r}"
     )
 
     if not to_address:
         raise Exception("No to_address provided for send_email")
 
-    api_key = RESEND_API_KEY
-    if not api_key:
-        raise Exception("RESEND_API_KEY not configured in environment")
+    if not (SMTP_HOST and SMTP_PORT and SMTP_USER and SMTP_PASS):
+        raise Exception("SMTP is not fully configured (check SMTP_HOST/PORT/USER/PASS)")
 
-    # Determine from address priority:
-    # 1) RESEND_FROM_EMAIL
-    # 2) SHOP_OWNER_EMAIL
-    # 3) SMTP_USER
-    from_email = RESEND_FROM_EMAIL or SHOP_OWNER_EMAIL or SMTP_USER
+    from_email = SHOP_OWNER_EMAIL or SMTP_USER
     if not from_email:
-        raise Exception("No from_email configured (RESEND_FROM_EMAIL / SHOP_OWNER_EMAIL / SMTP_USER are empty)")
+        raise Exception("No from_email configured (SHOP_OWNER_EMAIL or SMTP_USER must be set)")
 
-    # Build content payload for Resend
-    # https://resend.com/docs/api-reference/emails/send-email
-    content_text = body_text or ""
-    data = {
-        "from": from_email,
-        "to": [to_address],
-        "subject": subject or "",
-        # Always include text; optionally include html if provided
-        "text": content_text,
-    }
+    # Build MIME message
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject or ""
+    msg["From"] = from_email
+    msg["To"] = to_address
 
+    # Plain text part
+    text_part = MIMEText(body_text or "", "plain", "utf-8")
+    msg.attach(text_part)
+
+    # Optional HTML part
     if body_html:
-        data["html"] = body_html
+        html_part = MIMEText(body_html, "html", "utf-8")
+        msg.attach(html_part)
 
     try:
-        print("[mail] sending via Resend HTTP API...")
-        resp = requests.post(
-            "https://api.resend.com/emails",
-            json=data,
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json",
-            },
-            timeout=10,
-        )
-
-        if resp.status_code >= 400:
-            print("[mail] Resend error response:", resp.status_code, resp.text)
-            raise Exception(f"Resend error {resp.status_code}: {resp.text}")
-
-        print("[mail] email sent OK via Resend:", resp.text)
-
+        print(f"[mail] connecting to SMTP server {SMTP_HOST}:{SMTP_PORT} ...")
+        context = ssl.create_default_context()
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=15) as server:
+            server.ehlo()
+            # STARTTLS for Brevo on 587
+            if SMTP_PORT == 587:
+                server.starttls(context=context)
+                server.ehlo()
+            server.login(SMTP_USER, SMTP_PASS)
+            server.sendmail(from_email, [to_address], msg.as_string())
+        print("[mail] email sent OK via SMTP")
     except Exception as e:
-        # Log and bubble up so routes can surface the error
-        print("[mail] error sending email via Resend:", repr(e))
+        print("[mail] error sending email via SMTP:", repr(e))
         raise
 
 
@@ -217,9 +221,6 @@ def send_coin_order_emails(
     Sends:
       - notification to shop owner
       - confirmation to the user (if user_email present)
-
-    If item_title / item_size / item_sku / item_category are provided,
-    they will also be listed in both emails.
     """
     print(
         "[mail] send_coin_order_emails called with: "
@@ -228,7 +229,6 @@ def send_coin_order_emails(
         f"item_sku={item_sku!r} item_category={item_category!r}"
     )
 
-    # Build a small item details block, used in both emails if present.
     item_lines = []
     if item_title:
         item_lines.append(f"Item: {item_title}")
@@ -243,7 +243,7 @@ def send_coin_order_emails(
     if item_lines:
         item_block = "\n" + "\n".join(item_lines) + "\n"
 
-    # Email to owner
+    # Owner email
     if SHOP_OWNER_EMAIL:
         owner_subject = f"Nova Tutoring – Coin order: {item_title or 'Unknown item'}"
         owner_body = (
@@ -259,12 +259,12 @@ def send_coin_order_emails(
         if item_block:
             owner_body += item_block
 
-        print("[mail] sending OWNER coin order email (via Resend)...")
+        print("[mail] sending OWNER coin order email (via SMTP/Brevo)...")
         send_email(SHOP_OWNER_EMAIL, owner_subject, owner_body)
     else:
         print("[mail] SHOP_OWNER_EMAIL not set; owner will NOT receive order emails.")
 
-    # Email to user
+    # User email
     if user_email:
         user_subject = f"Nova Tutoring – Your coin order: {item_title or 'Unknown item'}"
         user_body = (
@@ -275,23 +275,163 @@ def send_coin_order_emails(
         if item_block:
             user_body += "\nHere are your item details:\n" + item_block + "\n"
 
-        user_body += (
-            "If you did not make this purchase, please contact support.\n"
-        )
+        user_body += "If you did not make this purchase, please contact support.\n"
 
-        print("[mail] sending USER coin order email (via Resend)...")
+        print("[mail] sending USER coin order email (via SMTP/Brevo)...")
         send_email(user_email, user_subject, user_body)
     else:
         print("[mail] no user_email for coin order; only owner was notified (if configured).")
 
+# -------------------------------------------------
+# Supabase REST for Ask Memory
+# -------------------------------------------------
+
+def fetch_profile_memory_settings(user_id: str):
+    """
+    Returns (memory_limit, personality) for this user_id, or (0, 'encouraging') if anything fails.
+    """
+    if not (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY and user_id):
+        return 0, "encouraging"
+
+    url = supabase_rest_url("profiles")
+    params = {
+        "id": f"eq.{user_id}",
+        "select": "ask_memory_limit,ask_personality",
+        "limit": 1,
+    }
+    headers = supabase_headers()
+
+    try:
+        resp = requests.get(url, headers=headers, params=params, timeout=10)
+        if resp.status_code >= 400:
+            print("[ask] profile fetch error:", resp.status_code, resp.text)
+            return 0, "encouraging"
+
+        rows = resp.json()
+        if not rows:
+            return 0, "encouraging"
+
+        row = rows[0]
+        memory_limit = row.get("ask_memory_limit") or 0
+        personality = row.get("ask_personality") or "encouraging"
+        return memory_limit, personality
+    except Exception as e:
+        print("[ask] profile fetch exception:", e)
+        return 0, "encouraging"
+
+
+def fetch_memory_messages(user_id: str, memory_limit: int):
+    """
+    Returns list of { role, content } messages for this user_id.
+    """
+    if not (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY and user_id and memory_limit > 0):
+        return []
+
+    url = supabase_rest_url("ask_messages")
+    params = {
+        "user_id": f"eq.{user_id}",
+        "select": "role,content",
+        "order": "created_at.asc",
+        "limit": memory_limit,
+    }
+    headers = supabase_headers()
+
+    try:
+        resp = requests.get(url, headers=headers, params=params, timeout=10)
+        if resp.status_code >= 400:
+            print("[ask] memory fetch error:", resp.status_code, resp.text)
+            return []
+
+        rows = resp.json()
+        print(f"[ask] fetched {len(rows)} memory messages")
+        return rows
+    except Exception as e:
+        print("[ask] memory fetch exception:", e)
+        return []
+
+
+def insert_memory_messages(user_id: str, question: str, answer: str):
+    """
+    Inserts the latest user + assistant messages.
+    """
+    if not (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY and user_id):
+        return
+
+    url = supabase_rest_url("ask_messages")
+    headers = supabase_headers({"Content-Type": "application/json", "Prefer": "return=minimal"})
+    payload = [
+        {"user_id": user_id, "role": "user", "content": question},
+        {"user_id": user_id, "role": "assistant", "content": answer},
+    ]
+
+    try:
+        resp = requests.post(url, headers=headers, json=payload, timeout=10)
+        if resp.status_code >= 400:
+            print("[ask] insert memory error:", resp.status_code, resp.text)
+        else:
+            print("[ask] inserted memory messages ok")
+    except Exception as e:
+        print("[ask] insert memory exception:", e)
+
+
+def trim_memory_non_pinned(user_id: str, memory_limit: int):
+    """
+    Trims non-pinned messages if there are more than memory_limit.
+    Here we treat memory_limit as the cap for NON-pinned messages (pinned can accumulate).
+    """
+    if not (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY and user_id and memory_limit > 0):
+        return
+
+    url = supabase_rest_url("ask_messages")
+    headers = supabase_headers()
+
+    # Fetch ALL non-pinned IDs ordered oldest-first
+    params = {
+        "user_id": f"eq.{user_id}",
+        "pinned": "eq.false",
+        "select": "id",
+        "order": "created_at.asc",
+    }
+
+    try:
+        resp = requests.get(url, headers=headers, params=params, timeout=10)
+        if resp.status_code >= 400:
+            print("[ask] trim fetch error:", resp.status_code, resp.text)
+            return
+
+        rows = resp.json()
+        ids = [row["id"] for row in rows if "id" in row]
+        if len(ids) <= memory_limit:
+            return
+
+        overflow = len(ids) - memory_limit
+        ids_to_delete = ids[:overflow]
+        if not ids_to_delete:
+            return
+
+        # Supabase REST "in" filter: id=in.(uuid1,uuid2,...)
+        in_clause = ",".join(ids_to_delete)
+        delete_params = {
+            "user_id": f"eq.{user_id}",
+            "pinned": "eq.false",
+            "id": f"in.({in_clause})",
+        }
+
+        del_resp = requests.delete(url, headers=headers, params=delete_params, timeout=10)
+        if del_resp.status_code >= 400:
+            print("[ask] trim delete error:", del_resp.status_code, del_resp.text)
+        else:
+            print(f"[ask] trimmed {len(ids_to_delete)} non-pinned memory messages")
+    except Exception as e:
+        print("[ask] trim exception:", e)
 
 # -------------------------------------------------
 # Health
 # -------------------------------------------------
 
-
 @app.get("/health")
 def health():
+    supabase_ok = bool(SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY)
     return jsonify(
         ok=True,
         service="nova-backend",
@@ -299,14 +439,12 @@ def health():
         stripe=bool(stripe and STRIPE_SECRET_KEY),
         openai=bool(openai_client),
         smtp=bool(SMTP_USER and SMTP_PASS),
-        resend=bool(RESEND_API_KEY),
+        supabase=supabase_ok,
     )
-
 
 # -------------------------------------------------
 # Checkout core (card / Stripe)
 # -------------------------------------------------
-
 
 def _checkout_logic():
     print("🔥🔥 CHECKOUT SESSION LOGIC HIT 🔥🔥")
@@ -372,11 +510,9 @@ def _checkout_logic():
         print("[server] Stripe error:", e)
         return jsonify(ok=False, error=str(e)), 500
 
-
 # -------------------------------------------------
-# Ask core (OpenAI)
+# Ask core (OpenAI + Supabase-backed memory via HTTP)
 # -------------------------------------------------
-
 
 def _ask_logic():
     if not openai_client:
@@ -389,33 +525,55 @@ def _ask_logic():
         or (body.get("q") or "")
     )
     question = str(question).strip()
+    user_id = body.get("user_id")  # Supabase auth user id (string UUID)
 
     print("[server] /ask body:", body)
 
     if not question:
         return jsonify(ok=False, error="missing question"), 400
 
+    # Defaults if no profile or Supabase
+    memory_limit = 0
+    personality = "encouraging"
+    memory_messages: list[dict] = []
+
+    # Fetch profile + memory if possible
+    if SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY and user_id:
+        memory_limit, personality = fetch_profile_memory_settings(user_id)
+        if memory_limit > 0:
+            memory_messages = fetch_memory_messages(user_id, memory_limit)
+
+    # Build messages for OpenAI
+    system_prompt = (
+        f"You are Nova, a kind, encouraging tutor for the Nova Tutoring app.\n"
+        f"Tone: {personality}.\n"
+        "Explain things clearly, step by step, and keep answers concise but helpful. "
+        "Focus on teaching and encouragement."
+    )
+
+    messages = [{"role": "system", "content": system_prompt}]
+
+    for m in memory_messages:
+        role = m.get("role") or "user"
+        content = m.get("content") or ""
+        if content:
+            messages.append({"role": role, "content": content})
+
+    messages.append({"role": "user", "content": question})
+
     try:
         completion = openai_client.chat.completions.create(
             model=OPENAI_MODEL,
-            messages=[
-                {
-                    "role": "system",
-                    "content": (
-                        "You are Nova, a kind, encouraging tutor for the Nova Tutoring app. "
-                        "Explain things clearly, step by step, and keep answers concise but helpful. "
-                        "Focus on teaching and encouragement."
-                    ),
-                },
-                {
-                    "role": "user",
-                    "content": question,
-                },
-            ],
+            messages=messages,
         )
 
         choice = completion.choices[0]
         answer = (choice.message.content or "").strip()
+
+        # Store memory + trim
+        if SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY and user_id and memory_limit > 0:
+            insert_memory_messages(user_id, question, answer)
+            trim_memory_non_pinned(user_id, memory_limit)
 
         return jsonify(
             ok=True,
@@ -427,11 +585,9 @@ def _ask_logic():
         print("[server] OpenAI error:", e)
         return jsonify(ok=False, error=str(e)), 500
 
-
 # -------------------------------------------------
 # Routes
 # -------------------------------------------------
-
 
 @app.post("/checkout/start")
 def checkout_start():
@@ -452,50 +608,10 @@ def ask():
 def ask_api():
     return _ask_logic()
 
-
 # ---------------------- Coin order email endpoint --------------------------
-
 
 @app.post("/api/coin-order")
 def api_coin_order():
-    """
-    Called by the app when a coin-based order is completed.
-
-    Expected JSON body (examples):
-
-    1) Pure coin top-up:
-    {
-      "coins": 6000,
-      "sessionId": "cs_test_123",
-      "user": {
-        "id": "...",
-        "displayName": "Sven",
-        "username": "Sven",
-        "contactEmail": "sven@example.com",
-        "email": "sven@example.com"
-      }
-    }
-
-    2) Physical item paid with coins:
-    {
-      "coins": 6000,
-      "item": {
-        "id": "plushie_nova_pajamas",
-        "title": "Nova Plushie (Pajamas)",
-        "size": "L",
-        "category": "plushies"
-      },
-      "user": {
-        "id": "...",
-        "displayName": "Sven",
-        "username": "Sven",
-        "contactEmail": "sven@example.com",
-        "email": "sven@example.com"
-      }
-    }
-
-    Also supports flat fields itemTitle / itemSize / sku / category.
-    """
     data = request.get_json(silent=True) or {}
     print("[coin-order] incoming:", data)
 
@@ -518,9 +634,7 @@ def api_coin_order():
     )
     session_id = data.get("sessionId") or data.get("stripeSessionId")
 
-    # Item details (either nested under "item" or flat on the body)
     item = data.get("item") or {}
-
     item_title = (
         item.get("title")
         or data.get("itemTitle")
@@ -545,8 +659,6 @@ def api_coin_order():
         or None
     )
 
-    # Here is where you'd also update Supabase / DB to record the order
-    # and the user's new coin balance. For now, we just log + send emails.
     print(
         "[coin-order] coins={coins} user_email={email!r} "
         "display_name={name!r} session={sid!r} item_title={title!r} "
@@ -562,7 +674,6 @@ def api_coin_order():
         )
     )
 
-    # Send owner + user emails, including item details if present
     try:
         send_coin_order_emails(
             user_email=user_email,
@@ -579,20 +690,14 @@ def api_coin_order():
         print("[coin-order] error sending emails:", repr(e))
         return jsonify(ok=False, error=str(e)), 500
 
-
 # -------------------------------------------------
 # Debug route – send a test email to the shop owner
 # -------------------------------------------------
 
-
 @app.post("/debug/send-test-email")
 def debug_send_test_email():
     """
-    Simple debug endpoint to verify email sending from Render via Resend.
-
-    Call with JSON: { "code": "YOUR_ADMIN_SUPER_SECRET_CODE" }
-
-    It will send a single test email to SHOP_OWNER_EMAIL (or RESEND_FROM_EMAIL / SMTP_USER).
+    Simple debug endpoint to verify email sending from Render via Brevo SMTP.
     """
     body = request.get_json(silent=True) or {}
     code = body.get("code") or ""
@@ -603,24 +708,23 @@ def debug_send_test_email():
     if code != ADMIN_SUPER_SECRET_CODE:
         return jsonify(ok=False, error="invalid code"), 403
 
-    if not (SHOP_OWNER_EMAIL or RESEND_FROM_EMAIL or SMTP_USER):
+    if not (SHOP_OWNER_EMAIL or SMTP_USER):
         return jsonify(ok=False, error="No from/to email configured"), 400
 
-    target = SHOP_OWNER_EMAIL or RESEND_FROM_EMAIL or SMTP_USER
+    target = SHOP_OWNER_EMAIL or SMTP_USER
 
     print("[debug] debug_send_test_email triggered → target:", target)
 
     try:
         send_email(
             target,
-            "Nova Tutoring – Resend SMTP test from Render",
-            "If you see this, email via Resend from Render is working!",
+            "Nova Tutoring – Brevo SMTP test from Render",
+            "If you see this, email via Brevo SMTP from Render is working!",
         )
         return jsonify(ok=True)
     except Exception as e:
         print("[debug] error in debug_send_test_email:", repr(e))
         return jsonify(ok=False, error=str(e)), 500
-
 
 # -------------------------------------------------
 # Entrypoint
@@ -628,5 +732,5 @@ def debug_send_test_email():
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", "8787"))
-    print(f"🔥🔥 STARTING SERVER v5 ON http://127.0.0.1:{port} 🔥🔥")
+    print(f"🔥🔥 STARTING SERVER v6-HTTP ON http://127.0.0.1:{port} 🔥🔥")
     app.run(host="0.0.0.0", port=port, debug=False)
