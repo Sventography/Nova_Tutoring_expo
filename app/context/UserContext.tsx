@@ -64,18 +64,19 @@ const SUPABASE_JWT_KEY = "auth.supabase.jwt";
 
 function mapProfileRow(row: any): Partial<LocalUserProfile> {
   if (!row) return {};
-  const avatar = row.avatar_url ?? null;
+  // Prefer avatar_url, but fall back to avatar if that's the column you created.
+  const avatarFromRow = row.avatar_url ?? row.avatar ?? null;
   return {
     id: row.id,
     username: row.username ?? null,
     name: row.username ?? null,
     displayName: row.username ?? null,
     contactEmail: row.contact_email ?? null,
-    avatar,
-    avatarUrl: avatar,
-    avatarUri: avatar,
-    photoURL: avatar,
-    imageUrl: avatar,
+    avatar: avatarFromRow,
+    avatarUrl: avatarFromRow,
+    avatarUri: avatarFromRow,
+    photoURL: avatarFromRow,
+    imageUrl: avatarFromRow,
   };
 }
 
@@ -93,84 +94,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [supabaseUserId, setSupabaseUserId] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
 
-  // Initial load: local profile + Supabase session
-  useEffect(() => {
-    (async () => {
-      try {
-        const stored = await AsyncStorage.getItem(PROFILE_KEY);
-        if (stored) {
-          try {
-            setProfile(JSON.parse(stored));
-          } catch {
-            // ignore parse errors
-          }
-        }
+  // ------------------ helper to hydrate from Supabase ------------------
 
-        const { data, error } = await supabase.auth.getSession();
-        if (error) {
-          console.warn("[UserContext] getSession error:", error);
-        }
-        const sess = data.session ?? null;
-        setSession(sess);
-
-        if (sess?.access_token) {
-          await AsyncStorage.setItem(SUPABASE_JWT_KEY, sess.access_token);
-        } else {
-          await AsyncStorage.removeItem(SUPABASE_JWT_KEY);
-        }
-
-        const authUser = sess?.user ?? null;
-        if (authUser) {
-          setSupabaseUserId(authUser.id);
-          await hydrateProfileFromSupabase(authUser.id, authUser);
-        }
-      } catch (e) {
-        console.warn("[UserContext] init error:", e);
-      } finally {
-        setReady(true);
-      }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // React to auth state changes (login / logout)
-  useEffect(() => {
-    const { data } = supabase.auth.onAuthStateChange(
-      async (_event, sess) => {
-        setSession(sess);
-        const token = sess?.access_token;
-        if (token) {
-          await AsyncStorage.setItem(SUPABASE_JWT_KEY, token);
-        } else {
-          await AsyncStorage.removeItem(SUPABASE_JWT_KEY);
-        }
-
-        const authUser = sess?.user ?? null;
-        if (authUser) {
-          setSupabaseUserId(authUser.id);
-          await hydrateProfileFromSupabase(authUser.id, authUser);
-        } else {
-          setSupabaseUserId(null);
-          setProfile(null);
-          await persistProfile(null);
-        }
-      }
-    );
-
-    return () => {
-      data.subscription.unsubscribe();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const hydrateProfileFromSupabase = async (
+  async function hydrateProfileFromSupabase(
     userId: string,
     authUser?: SupabaseUser | null
-  ) => {
+  ) {
     try {
       const { data: row, error } = await supabase
         .from("profiles")
-        .select("id, username, contact_email, avatar_url")
+        .select("id, username, contact_email, avatar_url, avatar")
         .eq("id", userId)
         .maybeSingle();
 
@@ -206,12 +139,89 @@ export function UserProvider({ children }: { children: ReactNode }) {
         next = { ...next, ...mapProfileRow(row) };
       }
 
+      console.log("[UserContext] hydrateProfileFromSupabase result:", next);
+
       setProfile(next);
       await persistProfile(next);
     } catch (e) {
       console.warn("[UserContext] hydrateProfileFromSupabase error:", e);
     }
-  };
+  }
+
+  // --------------------- initial load (local + Supabase) ---------------------
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const stored = await AsyncStorage.getItem(PROFILE_KEY);
+        if (stored) {
+          try {
+            const parsed = JSON.parse(stored);
+            setProfile(parsed);
+          } catch {
+            // ignore parse errors
+          }
+        }
+
+        const { data, error } = await supabase.auth.getSession();
+        if (error) {
+          console.warn("[UserContext] getSession error:", error);
+        }
+        const sess = data.session ?? null;
+        setSession(sess);
+
+        if (sess?.access_token) {
+          await AsyncStorage.setItem(SUPABASE_JWT_KEY, sess.access_token);
+        } else {
+          await AsyncStorage.removeItem(SUPABASE_JWT_KEY);
+        }
+
+        const authUser = sess?.user ?? null;
+        if (authUser) {
+          setSupabaseUserId(authUser.id);
+          await hydrateProfileFromSupabase(authUser.id, authUser);
+        }
+      } catch (e) {
+        console.warn("[UserContext] init error:", e);
+      } finally {
+        setReady(true);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ----------------- react to auth changes (login / logout) ------------------
+
+  useEffect(() => {
+    const { data } = supabase.auth.onAuthStateChange(
+      async (_event, sess) => {
+        setSession(sess);
+        const token = sess?.access_token;
+        if (token) {
+          await AsyncStorage.setItem(SUPABASE_JWT_KEY, token);
+        } else {
+          await AsyncStorage.removeItem(SUPABASE_JWT_KEY);
+        }
+
+        const authUser = sess?.user ?? null;
+        if (authUser) {
+          setSupabaseUserId(authUser.id);
+          await hydrateProfileFromSupabase(authUser.id, authUser);
+        } else {
+          setSupabaseUserId(null);
+          setProfile(null);
+          await persistProfile(null);
+        }
+      }
+    );
+
+    return () => {
+      data.subscription.unsubscribe();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ---------------------- helpers for updating profile ----------------------
 
   const baseUpdateProfileLocal = (patch: Partial<LocalUserProfile>) => {
     setProfile((prev) => {
@@ -230,6 +240,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
     baseUpdateProfileLocal(patch);
 
     if (!supabaseUserId) {
+      console.log(
+        "[UserContext] updateProfile called while no supabaseUserId (guest); local only",
+        patch
+      );
       return;
     }
 
@@ -256,14 +270,21 @@ export function UserProvider({ children }: { children: ReactNode }) {
       patch.avatarUri ??
       patch.photoURL ??
       patch.imageUrl;
+
     if (typeof candidateAvatar === "string") {
+      // We write to avatar_url. If you also created an `avatar` column, it's fine to mirror it:
       row.avatar_url = candidateAvatar;
+      // row.avatar = candidateAvatar; // uncomment if you want to keep both in sync
     }
+
+    console.log("[UserContext] updateProfile Supabase upsert row:", row);
 
     try {
       const { error } = await supabase.from("profiles").upsert(row);
       if (error) {
         console.warn("[UserContext] updateProfile Supabase error:", error);
+      } else {
+        console.log("[UserContext] updateProfile Supabase upsert OK");
       }
     } catch (e) {
       console.warn("[UserContext] updateProfile error:", e);
@@ -280,6 +301,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   };
 
   const setAvatar = (uri: string | null) => {
+    console.log("[UserContext] setAvatar called with", uri);
     return updateProfile({
       avatar: uri,
       avatarUrl: uri,
@@ -288,6 +310,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
       imageUrl: uri,
     });
   };
+
+  // -------------------- auth helpers (signup/login/etc.) --------------------
 
   const signUpWithEmailPassword = async (
     username: string,
@@ -440,6 +464,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
     // Full remote deletion would go through your backend with the service key.
     await signOut();
   };
+
+  // -------------------- flattened values for consumers ----------------------
 
   const flatUsername =
     profile?.username ?? profile?.name ?? profile?.displayName ?? null;
