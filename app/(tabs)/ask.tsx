@@ -1,3 +1,4 @@
+// app/(tabs)/ask.tsx
 import React, {
   useCallback,
   useEffect,
@@ -18,9 +19,11 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { askNova } from "../_lib/ai";
+
 import { useTheme } from "../context/ThemeContext";
 import { useAchievements } from "../context/AchievementsContext";
+import { useUser } from "../context/UserContext";
+import { askNova, AskResponse } from "../utils/ask";
 
 /* ────────────────────────────────────────── */
 /* ✨ Nova Thinking — Bounce + Dark Shimmer   */
@@ -70,7 +73,7 @@ function NovaThinking() {
       shimmerLoop.stop();
       bounceLoop.stop();
     };
-  }, []);
+  }, [bounces, shimmer]);
 
   const translateX = shimmer.interpolate({
     inputRange: [0, 1],
@@ -145,12 +148,11 @@ async function bumpCount() {
 export default function Ask() {
   const { tokens } = useTheme();
   const { onAskQuestion } = useAchievements();
+  const { supabaseUserId } = useUser();
 
   const gradient = tokens.gradient;
   const headerTextColor = tokens.text;
   const counterTextColor = tokens.cardText;
-  const chipBorderColor = tokens.border;
-  const chipBgColor = tokens.card;
   const inputBg = tokens.isDark
     ? "rgba(255,255,255,0.04)"
     : "rgba(0,0,0,0.03)";
@@ -183,34 +185,60 @@ export default function Ask() {
     setError(null);
     setLoading(true);
 
-    setMessages((m) => [
-      ...m,
-      { id: String(Date.now()), role: "user", text: trimmed },
-    ]);
+    const userMsg: Msg = {
+      id: `${Date.now()}`,
+      role: "user",
+      text: trimmed,
+    };
+
+    setMessages((m) => [...m, userMsg]);
     setInput("");
 
     try {
-      const reply = await askNova(trimmed);
-      setMessages((m) => [
-        ...m,
-        { id: String(Date.now() + 1), role: "assistant", text: reply },
-      ]);
+      const res: AskResponse = await askNova(trimmed, supabaseUserId);
 
-      const newCount = await bumpCount();
-      setCount(newCount);
-      onAskQuestion?.();
+      if (!res.ok || !res.answer) {
+        const msg = res.error || "Something went wrong.";
+        setError(msg);
+        setMessages((m) => [
+          ...m,
+          {
+            id: `${Date.now() + 1}`,
+            role: "system",
+            text: `⚠️ ${msg}`,
+          },
+        ]);
+      } else {
+        const assistantMsg: Msg = {
+          id: `${Date.now() + 1}`,
+          role: "assistant",
+          text: res.answer,
+        };
+        setMessages((m) => [...m, assistantMsg]);
+
+        const newCount = await bumpCount();
+        setCount(newCount);
+        onAskQuestion?.();
+      }
     } catch (e: any) {
       const msg = e?.message || "Something went wrong.";
       setError(msg);
       setMessages((m) => [
         ...m,
-        { id: String(Date.now() + 2), role: "system", text: `⚠️ ${msg}` },
+        {
+          id: `${Date.now() + 2}`,
+          role: "system",
+          text: `⚠️ ${msg}`,
+        },
       ]);
     } finally {
       setLoading(false);
-      setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 20);
+      setTimeout(
+        () => listRef.current?.scrollToEnd({ animated: true }),
+        20
+      );
     }
-  }, [input, loading, onAskQuestion]);
+  }, [input, loading, onAskQuestion, supabaseUserId]);
 
   const renderItem = ({ item }: { item: Msg }) => {
     const isUser = item.role === "user";
@@ -227,9 +255,27 @@ export default function Ask() {
     const align = isUser ? "flex-end" : "flex-start";
 
     return (
-      <View style={{ paddingHorizontal: 12, marginVertical: 6, width: "100%", alignItems: align }}>
-        <View style={{ maxWidth: "88%", borderRadius: 12, borderWidth: 1, borderColor: border, backgroundColor: bg, padding: 12 }}>
-          <Text style={{ color, fontSize: 15, lineHeight: 20 }}>{item.text}</Text>
+      <View
+        style={{
+          paddingHorizontal: 12,
+          marginVertical: 6,
+          width: "100%",
+          alignItems: align,
+        }}
+      >
+        <View
+          style={{
+            maxWidth: "88%",
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: border,
+            backgroundColor: bg,
+            padding: 12,
+          }}
+        >
+          <Text style={{ color, fontSize: 15, lineHeight: 20 }}>
+            {item.text}
+          </Text>
         </View>
       </View>
     );
@@ -237,11 +283,29 @@ export default function Ask() {
 
   return (
     <LinearGradient colors={gradient} style={{ flex: 1 }}>
-      <View style={{ padding: 12, flexDirection: "row", justifyContent: "space-between" }}>
-        <Text style={{ color: headerTextColor, fontWeight: "800", fontSize: 20 }}>
+      <View
+        style={{
+          padding: 12,
+          flexDirection: "row",
+          justifyContent: "space-between",
+        }}
+      >
+        <Text
+          style={{
+            color: headerTextColor,
+            fontWeight: "800",
+            fontSize: 20,
+          }}
+        >
           Ask Nova
         </Text>
-        <Text style={{ color: counterTextColor, fontWeight: "700", fontSize: 13 }}>
+        <Text
+          style={{
+            color: counterTextColor,
+            fontWeight: "700",
+            fontSize: 13,
+          }}
+        >
           Questions today: {count}
         </Text>
       </View>
@@ -260,7 +324,17 @@ export default function Ask() {
         keyboardVerticalOffset={80}
       >
         <View style={{ padding: 10 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", borderRadius: 12, borderWidth: 1, borderColor: inputBorder, backgroundColor: inputBg, paddingHorizontal: 8 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: inputBorder,
+              backgroundColor: inputBg,
+              paddingHorizontal: 8,
+            }}
+          >
             <TextInput
               placeholder="Ask me anything…"
               placeholderTextColor={placeholderColor}
@@ -270,7 +344,10 @@ export default function Ask() {
               style={{ flex: 1, color: tokens.text, paddingVertical: 10 }}
               editable={!loading}
             />
-            <Pressable onPress={send} disabled={loading || !input.trim()}>
+            <Pressable
+              onPress={send}
+              disabled={loading || !input.trim()}
+            >
               <Ionicons
                 name="arrow-up-circle"
                 size={28}
@@ -278,7 +355,9 @@ export default function Ask() {
               />
             </Pressable>
           </View>
-          {error ? <Text style={{ color: "#ffa7a7", marginTop: 6 }}>{error}</Text> : null}
+          {error ? (
+            <Text style={{ color: "#ffa7a7", marginTop: 6 }}>{error}</Text>
+          ) : null}
         </View>
       </KeyboardAvoidingView>
     </LinearGradient>

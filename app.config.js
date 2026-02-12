@@ -24,7 +24,7 @@ export default ({ config }) => ({
   ios: {
     supportsTablet: true,
     bundleIdentifier: "com.sventography.novatutoring",
-    buildNumber: "1",
+    buildNumber: "7",
   },
 
   android: {
@@ -55,7 +55,18 @@ export default ({ config }) => ({
 
   extra: {
     ...(config.extra || {}),
-    // 🔑 This is what coinCheckout & checkout will now use
+
+    // Public backend URL for the app (Ask, checkout, coin-order, etc.)
+    EXPO_PUBLIC_BACKEND_URL:
+      process.env.EXPO_PUBLIC_BACKEND_URL ||
+      "https://nove-tutoring-backend.onrender.com",
+
+    // Dummy public OpenAI key just so any old checks don't crash the app.
+    // The REAL key stays on the backend as OPENAI_API_KEY.
+    EXPO_PUBLIC_OPENAI_API_KEY:
+      process.env.EXPO_PUBLIC_OPENAI_API_KEY || "dummy-key",
+
+    // Legacy / existing field used by checkout utils
     backendBase:
       process.env.EXPO_PUBLIC_BACKEND_URL ||
       "https://nove-tutoring-backend.onrender.com",
