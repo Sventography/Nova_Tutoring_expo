@@ -360,7 +360,7 @@ def fetch_profile_memory_settings(user_id: str):
     return 0, "encouraging"
 
 
-def fetch_memory_messages(user_id: str, memory_limit: int):
+def fetch_memory_messages(user_id: int, memory_limit: int):
   """
   Returns list of { role, content } messages for this user_id.
   """
@@ -758,7 +758,7 @@ def debug_send_test_email():
   body = request.get_json(silent=True) or {}
   code = body.get("code") or ""
 
-  if not ADMIN_SUPER_SUPER_SECRET_CODE:
+  if not ADMIN_SUPER_SECRET_CODE:
     return jsonify(ok=False, error="ADMIN_SUPER_SECRET_CODE not set"), 403
 
   if code != ADMIN_SUPER_SECRET_CODE:
