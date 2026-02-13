@@ -28,7 +28,6 @@ export default function AccountScreen() {
   const {
     user,
     ready,
-    setUsername,
     setAvatar,
     updateProfile,
     signOut,
@@ -173,31 +172,51 @@ export default function AccountScreen() {
       return;
     }
 
-    const newName = name.trim() || "Student";
+    const trimmedName = (name || "").trim() || "Student";
+
+    // Hard limit: 8 characters for username
+    if (trimmedName.length > 8) {
+      Alert.alert(
+        "Username too long",
+        "Usernames can be up to 8 characters long."
+      );
+      return;
+    }
+
     const newEmail = contactEmail.trim();
 
-    await updateProfile?.({
-      username: newName,
-      name: newName,
-      displayName: newName,
-      contactEmail: newEmail,
-      avatarUri: avatarLocal,
-      avatarUrl: avatarLocal,
-      avatar: avatarLocal,
-      photoURL: avatarLocal,
-      imageUrl: avatarLocal,
-    });
+    try {
+      await updateProfile?.({
+        username: trimmedName,
+        name: trimmedName,
+        displayName: trimmedName,
+        contactEmail: newEmail,
+        avatarUri: avatarLocal,
+        avatarUrl: avatarLocal,
+        avatar: avatarLocal,
+        photoURL: avatarLocal,
+        imageUrl: avatarLocal,
+      });
 
-    await setUsername?.(newName);
-    await saveAvatarEverywhere(avatarLocal);
+      showToast("Profile saved");
+    } catch (e: any) {
+      const code = e?.code || e?.message;
+      if (code === "USERNAME_TAKEN") {
+        showToast("That username is already taken. Please choose another.");
+        return;
+      }
 
-    showToast("Profile saved");
+      Alert.alert(
+        "Save error",
+        e?.message ? String(e.message) : "Could not save your profile."
+      );
+    }
   }
 
   async function onSignOut() {
     await signOut?.();
 
-    // 🔥 also clear coins + streak locally so HeaderBar updates instantly
+    // also clear coins + streak locally so HeaderBar updates instantly
     setCoins?.(0);
     await resetStreak?.();
 
@@ -300,7 +319,13 @@ export default function AccountScreen() {
 
   return (
     <LinearGradient colors={tokens.gradient} style={{ flex: 1 }}>
-      <View style={S.wrap}>
+      {/* MAIN SCROLLABLE CONTENT */}
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={S.wrap}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         {/* Header */}
         <Text style={[S.h1, { color: tokens.accent }]}>
           Account Settings
@@ -337,6 +362,7 @@ export default function AccountScreen() {
               value={name}
               onChangeText={setName}
               placeholder="Your name"
+              maxLength={32} // raw input can be longer; we enforce 8 on save
               placeholderTextColor={
                 tokens.isDark ? "#678a94" : "#6b7685"
               }
@@ -398,7 +424,7 @@ export default function AccountScreen() {
             <Text style={[S.btnt, { color: tokens.text }]}>Save</Text>
           </Pressable>
 
-        <Pressable
+          <Pressable
             style={[
               S.btn,
               {
@@ -424,7 +450,7 @@ export default function AccountScreen() {
           </Pressable>
         </View>
 
-        {/* 🔴 DELETE ACCOUNT – slimmer, like the other buttons */}
+        {/* DELETE ACCOUNT – slimmer, like the other buttons */}
         <View style={{ marginTop: 24 }}>
           <Pressable
             style={[
@@ -556,7 +582,7 @@ export default function AccountScreen() {
             <Text style={S.privacyLink}>Privacy Policy</Text>
           </Pressable>
         </View>
-      </View>
+      </ScrollView>
 
       {/* Delete Account confirmation modal */}
       <Modal
@@ -651,22 +677,30 @@ export default function AccountScreen() {
               <Text style={[S.modalBody, { color: tokens.cardText }]}>
                 Nova Tutoring stores your profile (name, optional contact
                 email, avatar), your coins, achievements, quiz history, and
-                shop purchases locally on this device so the app can show
-                your progress and unlocked items.{"\n\n"}
-                The app does not create an online account for you and does
-                not sell your data or show third-party ads.{"\n\n"}
+                shop purchases on this device and, when you create an
+                account or sign in, in our secure online database so the
+                app can show your progress and unlocked items across your
+                devices.{"\n\n"}
+                We do not sell your personal data and we do not show
+                third-party ads inside the app.{"\n\n"}
                 When you make real-money purchases, payments are processed
-                by third-party providers such as Stripe. Your full card
-                details are handled by them and are not stored in this app.{"\n\n"}
-                For physical orders, we may collect your name, email
-                address, and shipping address so we can process and ship
-                your order and send order confirmations. Some order details
-                may be stored securely on our server or in logs for support
-                and record-keeping.{"\n\n"}
+                by trusted third-party providers such as Stripe. Your full
+                card details are handled by those providers and are not
+                stored in this app.{"\n\n"}
+                For physical orders or coin-based orders that require
+                fulfillment, we may collect your name, email address, and
+                shipping details so we can process and ship your order and
+                send order confirmations. Order information and basic
+                account details may be stored securely on our server or in
+                logs for support, receipts, and record-keeping.{"\n\n"}
                 You can erase your local profile, coins, achievements, and
-                purchase history at any time using the “Delete Account”
-                option on this screen, which removes your saved data on
-                this device and returns you to the start of the app.{"\n\n"}
+                purchase history on this device at any time using the
+                “Delete Account” option on this screen, which removes your
+                saved data on this device and returns you to the start of
+                the app. Some order and account records may still exist on
+                our server where required for payment processing or
+                support; you can reach out to us if you have questions
+                about those records.{"\n\n"}
                 For more details or questions, please refer to the privacy
                 information in the App Store listing or contact us using
                 the email address listed there.
@@ -699,7 +733,12 @@ export default function AccountScreen() {
 }
 
 export const S = StyleSheet.create({
-  wrap: { padding: 16, gap: 12, flex: 1 },
+  // used as contentContainerStyle for the ScrollView
+  wrap: {
+    padding: 16,
+    gap: 12,
+    paddingBottom: 32, // tiny extra room so Privacy row clears the tab bar
+  },
   h1: { fontWeight: "800", fontSize: 22 },
   row: { flexDirection: "row", gap: 12, alignItems: "center" },
   avatarWrap: {

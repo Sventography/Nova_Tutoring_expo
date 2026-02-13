@@ -12,6 +12,7 @@ import {
   Dimensions,
   PanResponder,
   Platform,
+  Alert,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -52,6 +53,10 @@ import { COMPANIONS } from "../_lib/companionsCatalog";
 import { startCheckout } from "../utils/checkout";
 import { startCoinCheckout } from "../utils/coinCheckout";
 import { notifyCoinOrder } from "../utils/coin-order";
+
+import AddressSheet, {
+  AddressPayload,
+} from "../components/AddressSheet";
 
 /* ----------------------------- Local typings ------------------------------ */
 type QuickItem = {
@@ -533,6 +538,12 @@ export default function Shop() {
   const [showOrderSuccess, setShowOrderSuccess] = useState(false);
   const [lastOrderTitle, setLastOrderTitle] = useState<string | null>(null);
 
+  // 📨 Address sheet state for coin-based physical orders
+  const [addressVisible, setAddressVisible] = useState(false);
+  const [addressSubmitting, setAddressSubmitting] = useState(false);
+  const [pendingItem, setPendingItem] = useState<any | null>(null);
+  const [pendingSize, setPendingSize] = useState<string | null>(null);
+
   const scrollRef = useRef<ScrollView | null>(null);
   const sizeCtl = useSelectedSizes();
 
@@ -698,6 +709,28 @@ export default function Shop() {
       }
     }
   };
+
+  // Prefill name/email for AddressSheet from currentUser
+  const initialAddressValues = useMemo<Partial<AddressPayload>>(
+    () => ({
+      name:
+        (currentUser as any)?.displayName ||
+        (currentUser as any)?.username ||
+        (currentUser as any)?.name ||
+        "",
+      email:
+        (currentUser as any)?.contactEmail ||
+        (currentUser as any)?.email ||
+        "",
+    }),
+    [
+      (currentUser as any)?.displayName,
+      (currentUser as any)?.username,
+      (currentUser as any)?.name,
+      (currentUser as any)?.contactEmail,
+      (currentUser as any)?.email,
+    ]
+  );
 
   /* --------------------------- Initial data load -------------------------- */
   useEffect(() => {
@@ -1120,6 +1153,7 @@ export default function Shop() {
     const price = it.priceCoins ?? 0;
     if (!price) return;
 
+    // Physical items → open address sheet first, then call backend
     if (REQUIRES_SHIPPING.has(it.category)) {
       const sizeKey =
         it.stripeProductId ||
@@ -1134,59 +1168,16 @@ export default function Shop() {
         category: it.category,
         price,
         size: chosen || null,
+        via: "coins",
+        withAddress: true,
       });
 
-      const userForOrder =
-        currentUser &&
-        (currentUser.contactEmail ||
-          currentUser.email ||
-          currentUser.username)
-          ? {
-              id: currentUser.id,
-              username:
-                currentUser.username ?? currentUser.name ?? undefined,
-              displayName:
-                currentUser.displayName ??
-                currentUser.name ??
-                currentUser.username ??
-                undefined,
-              contactEmail:
-                currentUser.contactEmail ??
-                currentUser.email ??
-                null,
-              email:
-                currentUser.contactEmail ??
-                currentUser.email ??
-                null,
-            }
-          : undefined;
-
-      // Backend coin-based checkout (handles coins + supabase / orders)
-      startCoinCheckout({
-        id: it.id,
-        title: it.title,
+      setPendingItem({
+        ...it,
         priceCoins: price,
-        imageUrl: undefined,
-        category: it.category,
-        size: chosen,
-        user: userForOrder,
       });
-
-      // 🔔 New: notify backend to send confirmation + owner email
-      void notifyCoinOrder({
-        coins: price,
-        user: userForOrder ?? null,
-        item: {
-          id: it.id,
-          sku: it.id,
-          title: it.title,
-          category: it.category,
-          size: chosen ?? null,
-          quantity: 1,
-        },
-        sessionId: null,
-      });
-
+      setPendingSize(chosen);
+      setAddressVisible(true);
       return;
     }
 
@@ -1226,6 +1217,206 @@ export default function Shop() {
       equipThemeImmediate(cid || it.id, { source: "coins_purchase" });
     if (it.category === "cursor")
       void equipCursorImmediate(cid || it.id, { source: "coins_purchase" });
+  }
+
+  // Handle confirm from AddressSheet for coin-based physical orders
+  async function handleAddressConfirm(addr: AddressPayload) {
+    const it = pendingItem;
+    if (!it) return;
+
+    try {
+      setAddressSubmitting(true);
+
+      const size = pendingSize;
+      const priceCoins = it.priceCoins ?? 0;
+
+      // 🔍 Ensure user actually has enough coins before we proceed
+      const curCoins = coinsRef.current ?? coins ?? 0;
+      if (curCoins < priceCoins) {
+        setAddressSubmitting(false);
+        setAddressVisible(false);
+        setPendingItem(null);
+        setPendingSize(null);
+
+        setNeed(priceCoins - curCoins);
+        setShowInsufficient(true);
+        track("shop_modal_insufficient_shown", {
+          needed: priceCoins - curCoins,
+          sku: it.id,
+          via: "coins_address_confirm",
+        });
+        return;
+      }
+
+      // 🧮 Locally deduct coins so UI updates immediately
+      const nextCoins = curCoins - priceCoins;
+      coinsRef.current = nextCoins;
+      await setCoins(nextCoins);
+
+      const userForOrder =
+        currentUser &&
+        ((currentUser as any).contactEmail ||
+          (currentUser as any).email ||
+          (currentUser as any).username)
+          ? {
+              id: (currentUser as any).id,
+              username:
+                (currentUser as any).username ??
+                (currentUser as any).name ??
+                undefined,
+              displayName:
+                (currentUser as any).displayName ??
+                (currentUser as any).name ??
+                (currentUser as any).username ??
+                undefined,
+              contactEmail:
+                (currentUser as any).contactEmail ??
+                (currentUser as any).email ??
+                null,
+              email:
+                (currentUser as any).contactEmail ??
+                (currentUser as any).email ??
+                null,
+            }
+          : undefined;
+
+      track("shop_coin_checkout_confirm_address", {
+        sku: it.id,
+        category: it.category,
+        priceCoins,
+        size: size || null,
+      });
+
+      // 💾 Record purchase in Supabase coins + purchases table
+      await startCoinCheckout({
+        id: it.id,
+        title: it.title,
+        priceCoins,
+        imageUrl: undefined,
+        category: it.category,
+        size: size || undefined,
+        user: userForOrder,
+      });
+
+      // ✅ Mark owned locally so it appears in the Purchases tab immediately
+      markOwned(it.id);
+
+      // 📦 Build rich shipping payload for email + backend record
+      const a: any = addr || {};
+      const shippingName =
+        addr.name ||
+        a.fullName ||
+        a.recipient ||
+        userForOrder?.displayName ||
+        userForOrder?.username ||
+        "Nova customer";
+
+      const phone =
+        a.phone ||
+        a.contactPhone ||
+        a.phoneNumber ||
+        "";
+
+      const address1 =
+        a.address1 ||
+        a.line1 ||
+        a.addressLine1 ||
+        "";
+
+      const address2 =
+        a.address2 ||
+        a.line2 ||
+        a.addressLine2 ||
+        "";
+
+      const city = a.city || "";
+      const state = a.state || a.region || "";
+      const postalCode = a.postalCode || a.zip || "";
+      const country = a.country || "";
+
+      const notes = a.notes || "";
+
+      // Notify backend to send email + log a coin-order with full address
+      void notifyCoinOrder({
+        coins: priceCoins,
+        user: userForOrder ?? null,
+        item: {
+          id: it.id,
+          sku: it.id,
+          title: it.title,
+          category: it.category,
+          size: size ?? null,
+          quantity: 1,
+        },
+        sessionId: null,
+
+        // top-level shipping fields (server.py looks at these)
+        shippingName,
+        name: shippingName,
+        phone,
+        contactPhone: phone,
+        address1,
+        address2,
+        city,
+        state,
+        zip: postalCode,
+        postalCode,
+        country,
+        notes,
+
+        // nested shipping object as an extra
+        shipping: {
+          name: shippingName,
+          fullName: shippingName,
+          recipient: shippingName,
+          phone,
+          address1,
+          address2,
+          city,
+          state,
+          postalCode,
+          country,
+          notes,
+        },
+      } as any);
+
+      // Also mirror this into local Orders list for the UI
+      const order: Order = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        sku: it.id,
+        title: it.title,
+        status: "paid",
+        createdAt: Date.now(),
+      };
+      setOrders((prev) => {
+        const next = [order, ...prev];
+        void saveOrders(next);
+        track("shop_order_created", {
+          sku: it.id,
+          title: it.title,
+          via: "coins",
+        });
+        return next;
+      });
+
+      setLastOrderTitle(it.title);
+      setShowOrderSuccess(true);
+
+      // Close the sheet & clear pending state – this is our “first & only” form
+      setAddressVisible(false);
+      setPendingItem(null);
+      setPendingSize(null);
+    } catch (e: any) {
+      console.log("[coin-order] error", e);
+      Alert.alert(
+        "Order error",
+        e?.message
+          ? String(e.message)
+          : "Sorry, we couldn’t place your order. Please try again."
+      );
+    } finally {
+      setAddressSubmitting(false);
+    }
   }
 
   async function moneyBuy(it: any, meta?: { size?: string }) {
@@ -2155,6 +2346,23 @@ export default function Shop() {
           </View>
         )}
       </ScrollView>
+
+      {/* Address sheet for coin-based physical orders */}
+      <AddressSheet
+        visible={addressVisible}
+        onClose={() => {
+          if (addressSubmitting) return;
+          setAddressVisible(false);
+          setPendingItem(null);
+          setPendingSize(null);
+        }}
+        onConfirm={handleAddressConfirm}
+        submitting={addressSubmitting}
+        primaryLabel={
+          pendingItem ? `Place order` : "Place order"
+        }
+        initialValues={initialAddressValues}
+      />
 
       {/* Floating companion in bottom-right, draggable & animated */}
       {floatingCompanion && (
