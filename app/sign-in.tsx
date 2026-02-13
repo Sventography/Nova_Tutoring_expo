@@ -1,4 +1,3 @@
-// app/sign-in.tsx
 import React, { useState } from "react";
 import {
   View,
@@ -66,6 +65,15 @@ export default function SignInScreen() {
       return;
     }
 
+    // Hard limit: 8 characters for username (matches Account screen + normalizeUsername)
+    if (username.length > 8) {
+      Alert.alert(
+        "Username too long",
+        "Usernames can be up to 8 characters long."
+      );
+      return;
+    }
+
     if (password.length < 6) {
       Alert.alert(
         "Weak password",
@@ -89,10 +97,32 @@ export default function SignInScreen() {
       router.replace("/(tabs)/account");
     } catch (e: any) {
       console.log("signUp error:", e);
-      Alert.alert(
-        "Sign up error",
-        e?.message ? String(e.message) : "Could not sign up right now."
-      );
+      const code = e?.code;
+      const rawMessage = String(e?.message || "");
+
+      const lower = rawMessage.toLowerCase();
+
+      if (code === "USERNAME_TAKEN") {
+        Alert.alert(
+          "Username taken",
+          "That username is already taken. Please choose another."
+        );
+      } else if (lower.includes("rate limit")) {
+        Alert.alert(
+          "Too many sign ups",
+          "You’ve tried to sign up too many times in a short period. Please wait a little while and try again."
+        );
+      } else if (lower.includes("user already registered")) {
+        Alert.alert(
+          "Email already used",
+          "There is already an account using that email. Try logging in instead."
+        );
+      } else {
+        Alert.alert(
+          "Sign up error",
+          rawMessage || "Could not sign up right now."
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -110,14 +140,33 @@ export default function SignInScreen() {
     setLoading(true);
     try {
       await loginWithEmailPassword(email, password);
+
+      // tiny delay so auth listeners + contexts can settle
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
       showToast("Welcome back! You’re signed in.");
       router.replace("/(tabs)/account");
     } catch (e: any) {
       console.log("login error:", e);
-      Alert.alert(
-        "Login error",
-        e?.message ? String(e.message) : "Could not log you in right now."
-      );
+      const rawMessage = String(e?.message || "");
+      const lower = rawMessage.toLowerCase();
+
+      if (lower.includes("invalid login") || lower.includes("invalid credentials")) {
+        Alert.alert(
+          "Login error",
+          "Email or password is incorrect. Please double-check and try again."
+        );
+      } else if (lower.includes("email not confirmed")) {
+        Alert.alert(
+          "Email not confirmed",
+          "Please confirm your email address using the link we sent you before logging in."
+        );
+      } else {
+        Alert.alert(
+          "Login error",
+          rawMessage || "Could not log you in right now."
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -149,6 +198,7 @@ export default function SignInScreen() {
                   isSignup && styles.headerTabActive,
                 ]}
                 onPress={() => switchMode("signup")}
+                disabled={loading}
               >
                 <Text
                   style={[
@@ -165,6 +215,7 @@ export default function SignInScreen() {
                   !isSignup && styles.headerTabActive,
                 ]}
                 onPress={() => switchMode("login")}
+                disabled={loading}
               >
                 <Text
                   style={[
@@ -186,7 +237,8 @@ export default function SignInScreen() {
                 <TextInput
                   value={suUsername}
                   onChangeText={setSuUsername}
-                  placeholder="Nova Student"
+                  placeholder="NovaStu"
+                  maxLength={32}
                   placeholderTextColor="#6b7685"
                   style={styles.input}
                 />
@@ -284,6 +336,7 @@ export default function SignInScreen() {
             <Pressable
               style={styles.backRow}
               onPress={() => router.replace("/")}
+              disabled={loading}
             >
               <Text style={styles.backText}>← Back to Home</Text>
             </Pressable>

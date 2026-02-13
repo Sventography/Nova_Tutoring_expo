@@ -1,4 +1,3 @@
-// app/context/PurchasesContext.tsx
 import React, {
   createContext,
   useCallback,
@@ -178,6 +177,7 @@ function toRemotePayload(map: PurchaseMap) {
 export function PurchasesProvider({ children }: { children: React.ReactNode }) {
   const { supabaseUserId } = useUser();
   const [purchases, setPurchases] = useState<PurchaseMap>({});
+  const [hydrated, setHydrated] = useState(false);
 
   console.log("[PurchasesContext DEBUG] supabaseUserId =", supabaseUserId);
   console.log("[PurchasesContext DEBUG] purchases =", purchases);
@@ -281,12 +281,19 @@ export function PurchasesProvider({ children }: { children: React.ReactNode }) {
       } catch (e) {
         console.warn("[PurchasesContext] init purchases error:", e);
         setPurchases({});
+      } finally {
+        setHydrated(true);
       }
     })();
   }, [supabaseUserId]);
 
   /* ---------------------- persist when purchases change ---------------------- */
   useEffect(() => {
+    // Don’t sync to Supabase until we’ve done the initial hydrate
+    if (!hydrated) {
+      return;
+    }
+
     const key = storageKey(supabaseUserId);
     const normalized = normalizePurchases(purchases);
 
@@ -379,7 +386,7 @@ export function PurchasesProvider({ children }: { children: React.ReactNode }) {
         console.warn("[PurchasesContext] sync purchases threw:", e);
       }
     })();
-  }, [purchases, supabaseUserId]);
+  }, [purchases, supabaseUserId, hydrated]);
 
   /* ------------------------------ public helpers ----------------------------- */
 
@@ -529,7 +536,10 @@ export function PurchasesProvider({ children }: { children: React.ReactNode }) {
           );
 
         if (profileError) {
-          console.warn("[PurchasesContext] clearAll Supabase error:", profileError);
+          console.warn(
+            "[PurchasesContext] clearAll Supabase error:",
+            profileError
+          );
         } else {
           console.log("[PurchasesContext] clearAll Supabase OK");
         }

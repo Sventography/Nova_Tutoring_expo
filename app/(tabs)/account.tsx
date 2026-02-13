@@ -1,4 +1,3 @@
-// app/(tabs)/account.tsx
 import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
@@ -315,6 +314,33 @@ export default function AccountScreen() {
         "You can email us at contact.novatutoring@gmail.com."
       );
     }
+  }
+
+  // While user profile is hydrating, keep this screen light too
+  if (!ready) {
+    return (
+      <LinearGradient colors={tokens.gradient} style={{ flex: 1 }}>
+        <View
+          style={{
+            flex: 1,
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+          }}
+        >
+          <Text
+            style={{
+              color: tokens.text,
+              fontSize: 16,
+              fontWeight: "600",
+              textAlign: "center",
+            }}
+          >
+            Loading your account…
+          </Text>
+        </View>
+      </LinearGradient>
+    );
   }
 
   return (

@@ -11,9 +11,11 @@ import {
 import { useRouter } from "expo-router";
 import { getCheckoutDraft, clearCheckoutDraft } from "./lib/checkout";
 import { placeOrderEmail } from "./lib/order";
+import { usePurchases } from "./context/PurchasesContext";
 
 export default function Billing() {
   const router = useRouter();
+  const { grant } = usePurchases(); // 🔥 hook into purchases
   const draft = getCheckoutDraft();
   const [cardName, setCardName] = useState("");
   const [cardNum, setCardNum] = useState("");
@@ -23,7 +25,6 @@ export default function Billing() {
   useEffect(() => {
     if (!draft) {
       Alert.alert("Nothing to pay", "Your checkout draft is empty.");
-      // ✅ Use the full route into the tabs group
       router.replace("/(tabs)/shop");
     }
   }, [draft, router]);
@@ -31,7 +32,6 @@ export default function Billing() {
   if (!draft) return null;
 
   const pay = async () => {
-    // Place real payment here (Stripe, etc). After success:
     try {
       await placeOrderEmail({
         item: {
@@ -40,7 +40,6 @@ export default function Billing() {
           cashPrice: draft.item.cashPrice,
           method: "cash",
         },
-        // Only include address for tangible items
         address: draft.shipping
           ? {
               name: draft.shipping.name,
@@ -54,9 +53,11 @@ export default function Billing() {
           : undefined,
       });
 
+      // 🔥 Mark item as owned so it flows into Purchases tab + Supabase
+      await grant(draft.item.id);
+
       clearCheckoutDraft();
       Alert.alert("Payment complete", "Thanks! We’ll email you a receipt.");
-      // ✅ Send them back to the Shop tab properly
       router.replace("/(tabs)/shop");
     } catch (e) {
       console.warn("billing email failed", e);
@@ -130,6 +131,7 @@ function Field({
   return (
     <View style={{ marginBottom: 12 }}>
       <Text style={s.label}>{label}</Text>
+      <Text style={s.input} />
       <TextInput placeholderTextColor="#7aa8b0" style={s.input} {...rest} />
     </View>
   );

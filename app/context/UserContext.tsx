@@ -1,4 +1,3 @@
-// app/context/UserContext.tsx
 import React, {
   createContext,
   useContext,
@@ -127,7 +126,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // ⬇️ FIXED: only request columns that exist: no "avatar"
+      // ⬇️ only request columns that exist: no "avatar"
       const { data: row, error } = await supabase
         .from("profiles")
         .select("id, username, contact_email, avatar_url")
@@ -445,6 +444,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
       if (error) {
         console.warn("[UserContext] signUp error:", error);
+        // Just forward the Supabase error; UI will map it (rate limit, etc.)
         throw error;
       }
 
@@ -475,6 +475,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
         setProfile(next);
         await persistProfile(next);
 
+        // Try to seed profiles table, but DO NOT block sign-up
+        // on row-level security errors or other non-unique issues.
         const { error: profileError } = await supabase
           .from("profiles")
           .upsert({
@@ -489,6 +491,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
             profileError
           );
 
+          // Only block sign-up if username is actually taken
           if ((profileError as any).code === "23505") {
             const err = new Error(
               "That username is already taken. Please choose another."
@@ -497,7 +500,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
             throw err;
           }
 
-          throw profileError;
+          // For row-level security or other policy issues, just log.
+          console.log(
+            "[UserContext] continuing sign-up despite profiles RLS/policy error"
+          );
         }
       }
     } catch (e) {

@@ -1,12 +1,13 @@
-# 🔥🔥 RUNNING FIXED SERVER VERSION v8-PURCHASES-DEBUG
+# 🔥🔥 RUNNING FIXED SERVER VERSION v9-FULFILL-PURCHASES-DEBUG
 # (CHECKOUT + ASK MEMORY + COIN ORDER EMAILS via RESEND HTTP ONLY) 🔥🔥
 print(
-  "🔥🔥 RUNNING FIXED SERVER VERSION v8-PURCHASES-DEBUG "
+  "🔥🔥 RUNNING FIXED SERVER VERSION v9-FULFILL-PURCHASES-DEBUG "
   "(CHECKOUT + ASK MEMORY + COIN ORDER EMAILS via RESEND HTTP ONLY) 🔥🔥"
 )
 
 import os
 import json  # used for raw payload pretty-print in owner emails
+import re    # used for simple coin-pack detection in /api/fulfill
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -38,7 +39,7 @@ except Exception:
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
-print("🔥🔥 FLASK APP INITIALIZED (v8-PURCHASES-DEBUG) 🔥🔥")
+print("🔥🔥 FLASK APP INITIALIZED (v9-FULFILL-PURCHASES-DEBUG) 🔥🔥")
 
 # -------------------------------------------------
 # Load environment (prefers server/env/.env.server, else server/.env)
@@ -191,11 +192,11 @@ def record_purchase_row(
   """
   Inserts a row into public.purchases via Supabase REST.
 
-  Supabase table columns:
+  Supabase table columns (you'll want all of these present):
     - user_id (uuid)
     - coins_spent (int4)
     - stripe_session_id (text)
-    - meta (jsonb)
+    - meta (jsonb)  -- { sku?, title?, size?, category? }
   """
   if not (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY):
     print("[coin-order] Supabase REST not configured; skipping purchases row")
@@ -890,6 +891,98 @@ def ask():
 def ask_api():
   return _ask_logic()
 
+# -------------------------------------------------
+# Fulfillment endpoint for Stripe redirects (/checkout/success)
+# -------------------------------------------------
+
+def _infer_coin_pack_from_sku(sku: str) -> int:
+  """
+  Very lightweight coin-pack detector:
+  - If sku looks like it has digits in it, we grab the first integer and return it as 'coins'.
+  - Example: 'coins_1000', 'coins:2500-pack' → 1000 / 2500
+  - If nothing is parsable, returns 0.
+  """
+  if not sku:
+    return 0
+  s = str(sku).lower()
+  if "coin" not in s:
+    return 0
+  nums = re.findall(r"\d+", s)
+  if not nums:
+    return 0
+  try:
+    return int(nums[0])
+  except Exception:
+    return 0
+
+
+@app.post("/api/fulfill")
+def api_fulfill():
+  """
+  Fulfillment endpoint called by the Expo /checkout/success screen.
+
+  Expected body (current client):
+    { "sku": "<sku>", "tx": "<stripe_session_id>" }
+
+  Response shape expected by the client:
+    - For coin packs:
+        { ok: true, type: "coins", sku, tx, coins: <int> }
+    - For ownable items (themes, cursors, plushies, etc.):
+        { ok: true, type: "ownable", sku, tx }
+
+  This endpoint does NOT manage entitlements directly. The front end
+  (PurchasesContext + grant()) is the source of truth for ownership.
+  """
+  body = request.get_json(silent=True) or {}
+  print("[fulfill] incoming body:", body)
+
+  sku = body.get("sku")
+  tx = body.get("tx") or body.get("session_id") or body.get("stripeSessionId")
+
+  if not sku:
+    return jsonify(ok=False, error="missing sku"), 400
+
+  # Optional hint from client: type / kind / purchase_type
+  hinted_type = (
+    body.get("type")
+    or body.get("kind")
+    or body.get("purchase_type")
+    or ""
+  ).strip().lower()
+
+  coins = 0
+  is_coin_pack = False
+
+  if hinted_type == "coins":
+    # If client already knows it's coins, trust that, and use explicit coins if provided
+    coins = int(body.get("coins") or 0)
+    if coins <= 0:
+      coins = _infer_coin_pack_from_sku(str(sku))
+    is_coin_pack = coins > 0
+  else:
+    # Try to infer from SKU itself (coins_1000, coins:2500, etc.)
+    coins = _infer_coin_pack_from_sku(str(sku))
+    is_coin_pack = coins > 0
+
+  if is_coin_pack and coins > 0:
+    print(f"[fulfill] treating sku={sku!r} as coin-pack with {coins} coins")
+    return jsonify(
+      ok=True,
+      type="coins",
+      sku=sku,
+      tx=tx,
+      coins=coins,
+    )
+
+  # Default: treat as an ownable item (theme/cursor/plushie/etc.)
+  print(f"[fulfill] treating sku={sku!r} as ownable (non-coin) item")
+  return jsonify(
+    ok=True,
+    type="ownable",
+    sku=sku,
+    tx=tx,
+  )
+
 # ---------------------- Coin order email endpoint --------------------------
 
 @app.post("/api/coin-order")
@@ -1064,7 +1157,7 @@ def api_coin_order():
       raw_payload=data,
     )
 
-    # 2) Record row in purchases table
+    # 2) Record row in purchases table as a log
     record_purchase_row(
       user_id=user_id,
       coins=coins,
@@ -1122,5 +1215,5 @@ def debug_send_test_email():
 
 if __name__ == "__main__":
   port = int(os.getenv("PORT", "8787"))
-  print(f"🔥🔥 STARTING SERVER v8-PURCHASES-DEBUG ON http://127.0.0.1:{port} 🔥🔥")
+  print(f"🔥🔥 STARTING SERVER v9-FULFILL-PURCHASES-DEBUG ON http://127.0.0.1:{port} 🔥🔥")
   app.run(host="0.0.0.0", port=port, debug=False)
