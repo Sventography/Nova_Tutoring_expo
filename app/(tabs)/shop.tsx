@@ -54,9 +54,7 @@ import { startCheckout } from "../utils/checkout";
 import { startCoinCheckout } from "../utils/coinCheckout";
 import { notifyCoinOrder } from "../utils/coin-order";
 
-import AddressSheet, {
-  AddressPayload,
-} from "../components/AddressSheet";
+import AddressSheet, { AddressPayload } from "../components/AddressSheet";
 
 /* ----------------------------- Local typings ------------------------------ */
 type QuickItem = {
@@ -521,7 +519,7 @@ function OrderSuccessModal({
 
 /* --------------------------------- Screen -------------------------------- */
 export default function Shop() {
-  // ✅ Hooks all at top level, no try/catch, no conditionals
+  // ✅ Hooks all at top level
   const { coins, setCoins } = useCoins();
   const { tokens, setThemeById } = useTheme();
   const { setCursorById } = useCursor();
@@ -555,7 +553,7 @@ export default function Shop() {
 
   const coinsRef = useRef<number>(coins ?? 0);
 
-  // 🔥 DEV CHEAT: tap Shop title 5x → +500,000 coins (dev only) – use ref to avoid nested state updates
+  // 🔥 DEV CHEAT: tap Shop title 5x → +500,000 coins
   const devTapRef = useRef(0);
 
   // companions strip bounce state
@@ -674,7 +672,7 @@ export default function Shop() {
     };
   }, []);
 
-  // 🔥 Dev cheat handler: 5 taps on title → +500k coins (dev only), but no nested setState
+  // 🔥 Dev cheat handler: 5 taps on title → +500k coins
   const handleDevTitlePress = () => {
     if (!__DEV__) return;
 
@@ -688,7 +686,6 @@ export default function Shop() {
 
       coinsRef.current = nextCoins;
 
-      // Defer update so it's not happening during any other render
       setTimeout(() => {
         void setCoins(nextCoins);
       }, 0);
@@ -1153,8 +1150,20 @@ export default function Shop() {
     const price = it.priceCoins ?? 0;
     if (!price) return;
 
-    // Physical items → open address sheet first, then call backend
+    // Physical items → check coins first, then open address sheet
     if (REQUIRES_SHIPPING.has(it.category)) {
+      const curCoins = coinsRef.current ?? coins ?? 0;
+      if (curCoins < price) {
+        setNeed(price - curCoins);
+        setShowInsufficient(true);
+        track("shop_modal_insufficient_shown", {
+          needed: price - curCoins,
+          sku: it.id,
+          via: "coins_shipping",
+        });
+        return;
+      }
+
       const sizeKey =
         it.stripeProductId ||
         it.productId ||
@@ -1181,6 +1190,7 @@ export default function Shop() {
       return;
     }
 
+    // Digital items (themes, cursors, etc.)
     const curCoins = coinsRef.current ?? coins ?? 0;
     if (curCoins < price) {
       setNeed(price - curCoins);
@@ -1230,7 +1240,7 @@ export default function Shop() {
       const size = pendingSize;
       const priceCoins = it.priceCoins ?? 0;
 
-      // 🔍 Ensure user actually has enough coins before we proceed
+      // Double-check coins in case they changed while the sheet was open
       const curCoins = coinsRef.current ?? coins ?? 0;
       if (curCoins < priceCoins) {
         setAddressSubmitting(false);
@@ -1252,6 +1262,9 @@ export default function Shop() {
       const nextCoins = curCoins - priceCoins;
       coinsRef.current = nextCoins;
       await setCoins(nextCoins);
+
+      // Mark as owned locally so Purchases tab updates
+      markOwned(it.id);
 
       const userForOrder =
         currentUser &&
@@ -1287,21 +1300,19 @@ export default function Shop() {
         size: size || null,
       });
 
-      // 💾 Record purchase in Supabase coins + purchases table
-      await startCoinCheckout({
+      // Backend: debit coins + write Supabase purchases row + send emails
+      startCoinCheckout({
         id: it.id,
         title: it.title,
         priceCoins,
         imageUrl: undefined,
         category: it.category,
-        size: size || undefined,
+        size: size || null,
         user: userForOrder,
+        address: addr,
       });
 
-      // ✅ Mark owned locally so it appears in the Purchases tab immediately
-      markOwned(it.id);
-
-      // 📦 Build rich shipping payload for email + backend record
+      // Build rich shipping payload for notifyCoinOrder (for email + logs)
       const a: any = addr || {};
       const shippingName =
         addr.name ||
@@ -1336,7 +1347,7 @@ export default function Shop() {
 
       const notes = a.notes || "";
 
-      // Notify backend to send email + log a coin-order with full address
+      // Notify backend (legacy handler) with explicit shipping fields
       void notifyCoinOrder({
         coins: priceCoins,
         user: userForOrder ?? null,
@@ -1350,7 +1361,6 @@ export default function Shop() {
         },
         sessionId: null,
 
-        // top-level shipping fields (server.py looks at these)
         shippingName,
         name: shippingName,
         phone,
@@ -1364,7 +1374,6 @@ export default function Shop() {
         country,
         notes,
 
-        // nested shipping object as an extra
         shipping: {
           name: shippingName,
           fullName: shippingName,
@@ -1380,7 +1389,7 @@ export default function Shop() {
         },
       } as any);
 
-      // Also mirror this into local Orders list for the UI
+      // Local Orders list for the UI
       const order: Order = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         sku: it.id,
@@ -1402,7 +1411,7 @@ export default function Shop() {
       setLastOrderTitle(it.title);
       setShowOrderSuccess(true);
 
-      // Close the sheet & clear pending state – this is our “first & only” form
+      // Close the sheet & clear pending state – this is our only form
       setAddressVisible(false);
       setPendingItem(null);
       setPendingSize(null);
@@ -1634,7 +1643,6 @@ export default function Shop() {
         ? canonId(equippedCursor ?? "") === cid
         : false;
 
-    // no hooks here – just using closure values
     return (
       <Card key={it.id} color={color}>
         {src ? (
@@ -1904,8 +1912,7 @@ export default function Shop() {
             <Pressable
               onPress={() => {
                 const chosen =
-                  sizeCtl.get(sizeKey) ||
-                  (getSizesFor(sizeKey)[0] ?? null);
+                  sizeCtl.get(sizeKey) || (getSizesFor(sizeKey)[0] ?? null);
                 buyWithCoins(it, { size: chosen as any });
               }}
               style={({ pressed }) => ({
@@ -1927,8 +1934,7 @@ export default function Shop() {
             <Pressable
               onPress={() => {
                 const chosen =
-                  sizeCtl.get(sizeKey) ||
-                  (getSizesFor(sizeKey)[0] ?? null);
+                  sizeCtl.get(sizeKey) || (getSizesFor(sizeKey)[0] ?? null);
                 void moneyBuy(it, { size: chosen as any });
               }}
               style={({ pressed }) => ({
@@ -2040,10 +2046,7 @@ export default function Shop() {
             >
               My Companions
             </Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-            >
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {ownedCompanions.map((it: any) => {
                 const isActive = activeCompanionId === it.id;
                 const scale = isActive ? companionScale : 1;
@@ -2147,18 +2150,15 @@ export default function Shop() {
           )}
         </Section>
 
-        {/* Companions – coin-only, digital pals (1k each) */}
+        {/* Companions – coin-only, digital pals */}
         <Section title="Companions">
           {COMPANIONS.map((it: any) => {
             const owned = isOwned(it.id);
             const src = it.image;
-            const priceCoins = 1_000; // all companions cost 1,000 coins now
+            const priceCoins = 1_000; // all companions cost 1,000 coins
 
             return (
-              <Card
-                key={it.id}
-                color={CATEGORY_BORDER.tangibles}
-              >
+              <Card key={it.id} color={CATEGORY_BORDER.tangibles}>
                 {src ? (
                   <Pressable
                     style={{
@@ -2358,9 +2358,7 @@ export default function Shop() {
         }}
         onConfirm={handleAddressConfirm}
         submitting={addressSubmitting}
-        primaryLabel={
-          pendingItem ? `Place order` : "Place order"
-        }
+        primaryLabel={pendingItem ? "Place order" : "Place order"}
         initialValues={initialAddressValues}
       />
 

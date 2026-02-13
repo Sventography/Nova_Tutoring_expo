@@ -1,6 +1,6 @@
 // app/utils/coinCheckout.ts
-import * as Linking from "expo-linking";
 import Constants from "expo-constants";
+import type { AddressPayload } from "../components/AddressSheet";
 
 type CoinCheckoutOpts = {
   id: string; // sku
@@ -10,8 +10,8 @@ type CoinCheckoutOpts = {
   imageUrl?: string;
   size?: string | null;
   /**
-   * Optional user info – once we pass this from Shop, the backend
-   * can send a confirmation email directly to the customer.
+   * Optional user info – backend can use this to attach the order
+   * to a profile and email a receipt.
    */
   user?: {
     id?: string;
@@ -20,6 +20,11 @@ type CoinCheckoutOpts = {
     contactEmail?: string | null;
     email?: string | null;
   };
+  /**
+   * Optional shipping address, from AddressSheet.
+   * This lets the backend include full address details in the email.
+   */
+  address?: AddressPayload | null;
 };
 
 function stripTrailingSlashes(s: string | null | undefined) {
@@ -55,9 +60,11 @@ function getBackendBase(): string {
  *
  * For coin *tangible* orders (plushies, clothing, etc.):
  * - Fire-and-forget a POST to /api/coin-order so the backend:
- *    - emails the shop owner
- *    - (optionally) emails the customer if we include user.email
- * - Then deep-link to /coin so your in-app checkout screen still works.
+ *    - debits coins and records the purchase in Supabase
+ *    - emails the shop owner and/or customer
+ *
+ * UI (Order Placed modal, going back to Shop) is handled entirely
+ * by the Shop screen now – we no longer deep-link into a /coin screen.
  */
 export function startCoinCheckout(opts: CoinCheckoutOpts) {
   const base = getBackendBase();
@@ -73,7 +80,7 @@ export function startCoinCheckout(opts: CoinCheckoutOpts) {
     itemTitle: opts.title,
     itemSize: opts.size || null,
 
-    // nested item block (used by server v5 for emails)
+    // nested item block (used by server v5/v6 for emails and logs)
     item: {
       id: opts.id,
       title: opts.title,
@@ -93,7 +100,22 @@ export function startCoinCheckout(opts: CoinCheckoutOpts) {
     };
   }
 
-  // Fire-and-forget backend notification so emails can be sent.
+  if (opts.address) {
+    const a = opts.address;
+    payload.address = {
+      name: a.name,
+      email: a.email,
+      phone: a.phone,
+      address1: a.address1,
+      address2: a.address2 ?? null,
+      city: a.city ?? null,
+      state: a.state ?? null,
+      zip: a.zip ?? null,
+      country: a.country ?? null,
+    };
+  }
+
+  // Fire-and-forget backend notification so coins + purchases + emails can happen.
   try {
     console.log("[coinCheckout] POST", apiUrl, payload);
     fetch(apiUrl, {
@@ -124,17 +146,7 @@ export function startCoinCheckout(opts: CoinCheckoutOpts) {
     console.log("[coinCheckout] outer error", err);
   }
 
-  // And still deep-link into the in-app /coin screen (like before)
-  const url = Linking.createURL("/coin", {
-    queryParams: {
-      sku: opts.id,
-      title: opts.title,
-      category: opts.category,
-      priceCoins: String(opts.priceCoins ?? 0),
-      imageUrl: opts.imageUrl ?? "",
-      size: opts.size || "",
-    },
-  });
-
-  return Linking.openURL(url); // expo-router handles this in-app
+  // IMPORTANT: we no longer open a second in-app /coin screen here.
+  // The Shop screen handles success UI (Order Placed modal) itself.
+  return;
 }

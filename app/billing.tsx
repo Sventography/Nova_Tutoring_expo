@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, TextInput, TouchableOpacity, Alert, ScrollView, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  Alert,
+  ScrollView,
+  StyleSheet,
+} from "react-native";
 import { useRouter } from "expo-router";
 import { getCheckoutDraft, clearCheckoutDraft } from "./lib/checkout";
 import { placeOrderEmail } from "./lib/order";
@@ -15,9 +23,10 @@ export default function Billing() {
   useEffect(() => {
     if (!draft) {
       Alert.alert("Nothing to pay", "Your checkout draft is empty.");
-      router.replace("/shop");
+      // ✅ Use the full route into the tabs group
+      router.replace("/(tabs)/shop");
     }
-  }, [draft]);
+  }, [draft, router]);
 
   if (!draft) return null;
 
@@ -47,7 +56,8 @@ export default function Billing() {
 
       clearCheckoutDraft();
       Alert.alert("Payment complete", "Thanks! We’ll email you a receipt.");
-      router.replace("/shop");
+      // ✅ Send them back to the Shop tab properly
+      router.replace("/(tabs)/shop");
     } catch (e) {
       console.warn("billing email failed", e);
       Alert.alert("Payment failed", "Please try again.");
@@ -65,23 +75,42 @@ export default function Billing() {
           <Text style={s.shipTitle}>Ship to</Text>
           <Text style={s.shipLine}>{draft.shipping.name}</Text>
           <Text style={s.shipLine}>{draft.shipping.address1}</Text>
-          {!!draft.shipping.address2 && <Text style={s.shipLine}>{draft.shipping.address2}</Text>}
+          {!!draft.shipping.address2 && (
+            <Text style={s.shipLine}>{draft.shipping.address2}</Text>
+          )}
           <Text style={s.shipLine}>
             {draft.shipping.city}, {draft.shipping.state} {draft.shipping.zip}
           </Text>
-          {!!draft.shipping.country && <Text style={s.shipLine}>{draft.shipping.country}</Text>}
+          {!!draft.shipping.country && (
+            <Text style={s.shipLine}>{draft.shipping.country}</Text>
+          )}
         </View>
       ) : null}
 
       <Text style={s.section}>Card details</Text>
       <Field label="Name on card" value={cardName} onChangeText={setCardName} />
-      <Field label="Card number" value={cardNum} onChangeText={setCardNum} keyboardType="number-pad" />
+      <Field
+        label="Card number"
+        value={cardNum}
+        onChangeText={setCardNum}
+        keyboardType="number-pad"
+      />
       <View style={{ flexDirection: "row", gap: 10 }}>
         <View style={{ flex: 1 }}>
-          <Field label="Expiry (MM/YY)" value={exp} onChangeText={setExp} keyboardType="numbers-and-punctuation" />
+          <Field
+            label="Expiry (MM/YY)"
+            value={exp}
+            onChangeText={setExp}
+            keyboardType="numbers-and-punctuation"
+          />
         </View>
         <View style={{ flex: 1 }}>
-          <Field label="CVC" value={cvc} onChangeText={setCvc} keyboardType="number-pad" />
+          <Field
+            label="CVC"
+            value={cvc}
+            onChangeText={setCvc}
+            keyboardType="number-pad"
+          />
         </View>
       </View>
 
@@ -92,7 +121,12 @@ export default function Billing() {
   );
 }
 
-function Field({ label, ...rest }: { label: string } & React.ComponentProps<typeof TextInput>) {
+function Field({
+  label,
+  ...rest
+}: {
+  label: string;
+} & React.ComponentProps<typeof TextInput>) {
   return (
     <View style={{ marginBottom: 12 }}>
       <Text style={s.label}>{label}</Text>
@@ -128,8 +162,11 @@ const s = StyleSheet.create({
   payTxt: { color: "#00141a", fontWeight: "900", fontSize: 16 },
   shipBox: {
     backgroundColor: "rgba(159,230,255,0.06)",
-    borderWidth: 1, borderColor: "rgba(159,230,255,0.35)",
-    borderRadius: 12, padding: 12, marginBottom: 16
+    borderWidth: 1,
+    borderColor: "rgba(159,230,255,0.35)",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
   },
   shipTitle: { color: "#9fe6ff", fontWeight: "800", marginBottom: 6 },
   shipLine: { color: "#eaffff" },

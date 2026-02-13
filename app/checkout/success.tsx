@@ -5,12 +5,18 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const COINS_KEY = "@nova/coins";
 const PURCHASES_KEY = "@nova/purchases";
-const API_BASE = "http://127.0.0.1:8787"; // match your backend port
+
+// Prefer the Expo public backend URL (Render), fall back to localhost for dev
+const API_BASE =
+  process.env.EXPO_PUBLIC_BACKEND_URL ?? "http://127.0.0.1:8787";
 
 export default function SuccessPage() {
-  const { sku = "", tx = "" } = useLocalSearchParams<{ sku?: string; tx?: string }>();
+  const { sku = "", tx = "" } = useLocalSearchParams<{
+    sku?: string;
+    tx?: string;
+  }>();
   const router = useRouter();
-  const [status, setStatus] = useState<"working"|"done"|"error">("working");
+  const [status, setStatus] = useState<"working" | "done" | "error">("working");
   const [message, setMessage] = useState("Finalizing your purchase…");
 
   useEffect(() => {
@@ -27,14 +33,23 @@ export default function SuccessPage() {
         if (!data.ok) throw new Error(data.error || "Fulfillment failed");
 
         if (data.type === "coins") {
-          const cur = parseInt((await AsyncStorage.getItem(COINS_KEY)) || "0", 10);
-          await AsyncStorage.setItem(COINS_KEY, String(cur + (data.coins || 0)));
+          const cur = parseInt(
+            (await AsyncStorage.getItem(COINS_KEY)) || "0",
+            10
+          );
+          await AsyncStorage.setItem(
+            COINS_KEY,
+            String(cur + (data.coins || 0))
+          );
           setMessage(`Added ${data.coins?.toLocaleString()} coins ✨`);
         } else if (data.type === "ownable") {
           const raw = (await AsyncStorage.getItem(PURCHASES_KEY)) || "{}";
           const purchases = JSON.parse(raw);
           purchases[sku] = true;
-          await AsyncStorage.setItem(PURCHASES_KEY, JSON.stringify(purchases));
+          await AsyncStorage.setItem(
+            PURCHASES_KEY,
+            JSON.stringify(purchases)
+          );
           setMessage(`Unlocked: ${sku}`);
         } else if (data.type === "tangible") {
           setMessage("Order received! Shipping details emailed.");
@@ -43,8 +58,9 @@ export default function SuccessPage() {
         }
 
         setStatus("done");
-        setTimeout(() => router.replace("/shop"), 1000);
-      } catch (e:any) {
+        // ✅ Route back into the tabs group Shop screen
+        setTimeout(() => router.replace("/(tabs)/shop"), 1000);
+      } catch (e: any) {
         setStatus("error");
         setMessage(e.message || "Something went wrong");
       }
@@ -52,9 +68,11 @@ export default function SuccessPage() {
   }, [sku, tx, router]);
 
   return (
-    <View style={{flex:1,alignItems:"center",justifyContent:"center"}}>
-      {status==="working" && <ActivityIndicator />}
-      <Text style={{color:"#cfeaf0",fontSize:18,marginTop:12}}>{message}</Text>
+    <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+      {status === "working" && <ActivityIndicator />}
+      <Text style={{ color: "#cfeaf0", fontSize: 18, marginTop: 12 }}>
+        {message}
+      </Text>
     </View>
   );
 }
