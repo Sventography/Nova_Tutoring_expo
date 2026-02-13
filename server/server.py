@@ -6,7 +6,7 @@ print(
 )
 
 import os
-import json  # <-- added so we can dump raw payloads in owner emails
+import json  # used for raw payload pretty-print in owner emails
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -103,12 +103,16 @@ RESEND_FROM_EMAIL = (
 # SHOP_OWNER_EMAIL for owner notifications
 SHOP_OWNER_EMAIL = (os.getenv("SHOP_OWNER_EMAIL") or RESEND_FROM_EMAIL or "").strip()
 
+# Optional logo URL for emails (served via Flask static, e.g. /static/nova-email-logo.png)
+EMAIL_LOGO_URL = (os.getenv("EMAIL_LOGO_URL") or "").strip()
+
 # ---- Debug prints so you can see what the process actually sees ----
 print("[debug] SUPABASE_URL present:", bool(SUPABASE_URL))
 print("[debug] SUPABASE_SERVICE_ROLE_KEY length:", len(SUPABASE_SERVICE_ROLE_KEY))
 print("[debug] RESEND_API_KEY present:", bool(RESEND_API_KEY))
 print("[debug] RESEND_FROM_EMAIL:", repr(RESEND_FROM_EMAIL))
 print("[debug] SHOP_OWNER_EMAIL:", repr(SHOP_OWNER_EMAIL))
+print("[debug] EMAIL_LOGO_URL:", repr(EMAIL_LOGO_URL))
 
 if RESEND_API_KEY:
   print(f"[server] Resend configured: True, from={RESEND_FROM_EMAIL!r}")
@@ -322,6 +326,17 @@ def send_coin_order_emails(
     f"shipping_name={shipping_name!r} shipping_phone={shipping_phone!r}"
   )
 
+  # Optional logo HTML header
+  logo_html = ""
+  if EMAIL_LOGO_URL:
+    logo_html = (
+      f'<div style="text-align:center;margin-bottom:16px;">'
+      f'<img src="{EMAIL_LOGO_URL}" alt="Nova Tutoring" '
+      f'style="max-width:220px;height:auto;display:inline-block;" />'
+      f"</div>"
+    )
+
+  # ---------- Item block (text) ----------
   item_lines = []
   if item_title:
     item_lines.append(f"Item: {item_title}")
@@ -332,27 +347,24 @@ def send_coin_order_emails(
   if item_category:
     item_lines.append(f"Category: {item_category}")
 
-  item_block = ""
+  item_block_text = ""
   if item_lines:
-    item_block = "\n" + "\n".join(item_lines) + "\n"
+    item_block_text = "\n" + "\n".join(item_lines) + "\n"
 
-  # Build shipping block
+  # ---------- Shipping block (text + HTML) ----------
   shipping_lines: list[str] = []
 
-  # Name + phone
   if shipping_name:
     shipping_lines.append(f"Name: {shipping_name}")
   if shipping_phone:
     shipping_lines.append(f"Phone: {shipping_phone}")
 
-  # Address lines
   address_parts: list[str] = []
   if address1:
     address_parts.append(address1)
   if address2:
     address_parts.append(address2)
 
-  # City/state/postal
   city_line_parts: list[str] = []
   if city:
     city_line_parts.append(city)
@@ -379,14 +391,41 @@ def send_coin_order_emails(
   if extra_notes:
     shipping_lines.append(f"Notes: {extra_notes}")
 
-  shipping_block = ""
+  shipping_block_text = ""
   if shipping_lines:
-    shipping_block = "\nShipping Info:\n" + "\n".join(shipping_lines) + "\n"
+    shipping_block_text = "\nShipping Info:\n" + "\n".join(shipping_lines) + "\n"
 
-  # Owner email
+  # HTML version of shipping info
+  shipping_block_html = ""
+  if shipping_name or shipping_phone or address1 or address2 or city or state or postal_code or country or extra_notes:
+    shipping_block_html = "<h3 style='margin-top:16px;'>Shipping Info</h3><p style='line-height:1.5;font-size:14px;'>"
+    if shipping_name:
+      shipping_block_html += f"<strong>Name:</strong> {shipping_name}<br>"
+    if shipping_phone:
+      shipping_block_html += f"<strong>Phone:</strong> {shipping_phone}<br>"
+    if address1:
+      shipping_block_html += f"{address1}<br>"
+    if address2:
+      shipping_block_html += f"{address2}<br>"
+    if city or state or postal_code:
+      line = ""
+      if city:
+        line += city
+      if state:
+        line += (", " if line else "") + state
+      if postal_code:
+        line += " " + postal_code
+      shipping_block_html += line + "<br>"
+    if country:
+      shipping_block_html += f"{country}<br>"
+    if extra_notes:
+      shipping_block_html += f"<strong>Notes:</strong> {extra_notes}<br>"
+    shipping_block_html += "</p>"
+
+  # ---------- OWNER email ----------
   if SHOP_OWNER_EMAIL:
     owner_subject = f"Nova Tutoring – Coin order: {item_title or 'Unknown item'}"
-    owner_body = (
+    owner_body_text = (
       "A coin-based order has been placed.\n\n"
       f"User: {user_display_name or user_email or 'unknown'}\n"
       f"Email: {user_email or 'unknown'}\n"
@@ -394,15 +433,15 @@ def send_coin_order_emails(
     )
 
     if stripe_session_id:
-      owner_body += f"Stripe session: {stripe_session_id}\n"
+      owner_body_text += f"Stripe session: {stripe_session_id}\n"
 
-    if item_block:
-      owner_body += "\nItem Details:\n" + item_block
+    if item_block_text:
+      owner_body_text += "\nItem Details:\n" + item_block_text
 
-    if shipping_block:
-      owner_body += shipping_block
+    if shipping_block_text:
+      owner_body_text += shipping_block_text
     else:
-      owner_body += "\nShipping Info: (not provided – may be digital or older form)\n"
+      owner_body_text += "\nShipping Info: (not provided – may be digital or older form)\n"
 
     # Append raw payload so dev can see EVERYTHING the form sent
     if raw_payload is not None:
@@ -410,32 +449,115 @@ def send_coin_order_emails(
         pretty_json = json.dumps(raw_payload, indent=2, ensure_ascii=False, sort_keys=True)
       except Exception:
         pretty_json = str(raw_payload)
-      owner_body += "\nRaw payload:\n" + pretty_json + "\n"
+      owner_body_text += "\nRaw payload:\n" + pretty_json + "\n"
+
+    # HTML body for owner (with logo + item + shipping + raw payload)
+    owner_html = (
+      "<html><body style='font-family:system-ui,-apple-system,BlinkMacSystemFont,sans-serif;"
+      "font-size:14px;color:#222;background:#f7f7f7;padding:16px;'>"
+      "<div style='max-width:520px;margin:0 auto;background:#ffffff;border-radius:8px;"
+      "padding:16px;border:1px solid #e2e2e2;'>"
+      f"{logo_html}"
+      "<h2 style='margin-top:0;font-size:18px;'>New coin order received</h2>"
+      "<p style='line-height:1.5;'>"
+      f"<strong>User:</strong> {user_display_name or user_email or 'unknown'}<br>"
+      f"<strong>Email:</strong> {user_email or 'unknown'}<br>"
+      f"<strong>Coins:</strong> {coins_amount}<br>"
+    )
+
+    if stripe_session_id:
+      owner_html += f"<strong>Stripe session:</strong> {stripe_session_id}<br>"
+
+    owner_html += "</p>"
+
+    if item_title or item_sku or item_size or item_category:
+      owner_html += "<h3>Item Details</h3><p style='line-height:1.5;font-size:14px;'>"
+      if item_title:
+        owner_html += f"<strong>Item:</strong> {item_title}<br>"
+      if item_sku:
+        owner_html += f"<strong>SKU:</strong> {item_sku}<br>"
+      if item_size:
+        owner_html += f"<strong>Size:</strong> {item_size}<br>"
+      if item_category:
+        owner_html += f"<strong>Category:</strong> {item_category}<br>"
+      owner_html += "</p>"
+
+    if shipping_block_html:
+      owner_html += shipping_block_html
+    else:
+      owner_html += "<p style='margin-top:16px;'>Shipping Info not provided (may be digital or older form).</p>"
+
+    if raw_payload is not None:
+      try:
+        pretty_json_html = json.dumps(raw_payload, indent=2, ensure_ascii=False, sort_keys=True)
+      except Exception:
+        pretty_json_html = str(raw_payload)
+      owner_html += (
+        "<h3 style='margin-top:16px;'>Raw payload</h3>"
+        "<pre style='font-size:11px;background:#f3f3f3;padding:8px;border-radius:4px;"
+        "white-space:pre-wrap;word-wrap:break-word;'>"
+        f"{pretty_json_html}"
+        "</pre>"
+      )
+
+    owner_html += "</div></body></html>"
 
     print("[mail] sending OWNER coin order email (Resend)... to", SHOP_OWNER_EMAIL)
-    send_email(SHOP_OWNER_EMAIL, owner_subject, owner_body)
+    send_email(SHOP_OWNER_EMAIL, owner_subject, owner_body_text, owner_html)
   else:
     print("[mail] SHOP_OWNER_EMAIL not set; owner will NOT receive order emails.")
 
-  # User email
+  # ---------- USER email ----------
   if user_email:
     user_subject = f"Nova Tutoring – Your coin order: {item_title or 'Unknown item'}"
-    user_body = (
+    user_body_text = (
       f"Hi {user_display_name or 'there'},\n\n"
       f"Thank you for your order paid with {coins_amount} Nova coins.\n"
     )
 
-    if item_block:
-      user_body += "\nHere are your item details:\n" + item_block + "\n"
+    if item_block_text:
+      user_body_text += "\nHere are your item details:\n" + item_block_text + "\n"
 
-    if shipping_block:
-      # For the user we don't need the Raw payload, just the shipping block
-      user_body += shipping_block + "\n"
+    if shipping_block_text:
+      user_body_text += shipping_block_text + "\n"
 
-    user_body += "If you did not make this purchase, please contact support.\n"
+    user_body_text += "If you did not make this purchase, please contact support.\n"
+
+    # HTML body for user (with logo + item + shipping)
+    user_html = (
+      "<html><body style='font-family:system-ui,-apple-system,BlinkMacSystemFont,sans-serif;"
+      "font-size:14px;color:#222;background:#f7f7f7;padding:16px;'>"
+      "<div style='max-width:520px;margin:0 auto;background:#ffffff;border-radius:8px;"
+      "padding:16px;border:1px solid #e2e2e2;'>"
+      f"{logo_html}"
+      f"<h2 style='margin-top:0;font-size:18px;'>Thank you for your order, {user_display_name or 'there'}!</h2>"
+      f"<p style='line-height:1.5;'>You paid with <strong>{coins_amount}</strong> Nova coins.</p>"
+    )
+
+    if item_title or item_sku or item_size or item_category:
+      user_html += "<h3>Item Details</h3><p style='line-height:1.5;font-size:14px;'>"
+      if item_title:
+        user_html += f"<strong>Item:</strong> {item_title}<br>"
+      if item_sku:
+        user_html += f"<strong>SKU:</strong> {item_sku}<br>"
+      if item_size:
+        user_html += f"<strong>Size:</strong> {item_size}<br>"
+      if item_category:
+        user_html += f"<strong>Category:</strong> {item_category}<br>"
+      user_html += "</p>"
+
+    if shipping_block_html:
+      user_html += shipping_block_html
+
+    user_html += (
+      "<p style='margin-top:16px;line-height:1.5;'>"
+      "If you did not make this purchase, please contact support."
+      "</p>"
+      "</div></body></html>"
+    )
 
     print("[mail] sending USER coin order email (Resend)... to", user_email)
-    send_email(user_email, user_subject, user_body)
+    send_email(user_email, user_subject, user_body_text, user_html)
   else:
     print("[mail] no user_email for coin order; only owner was notified (if configured).")
 
@@ -599,6 +721,7 @@ def health():
     supabase=supabase_ok,
     resend=bool(RESEND_API_KEY),
     shop_owner_email=bool(SHOP_OWNER_EMAIL),
+    email_logo_url=bool(EMAIL_LOGO_URL),
   )
 
 # -------------------------------------------------
