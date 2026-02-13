@@ -6,6 +6,7 @@ print(
 )
 
 import os
+import json  # <-- added so we can dump raw payloads in owner emails
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -296,10 +297,20 @@ def send_coin_order_emails(
   item_size: str | None = None,
   item_sku: str | None = None,
   item_category: str | None = None,
+  shipping_name: str | None = None,
+  shipping_phone: str | None = None,
+  address1: str | None = None,
+  address2: str | None = None,
+  city: str | None = None,
+  state: str | None = None,
+  postal_code: str | None = None,
+  country: str | None = None,
+  extra_notes: str | None = None,
+  raw_payload: dict | None = None,
 ):
   """
   Sends:
-    - notification to shop owner
+    - notification to shop owner (with full shipping + raw payload)
     - confirmation to the user (if user_email present)
   via Resend HTTP.
   """
@@ -307,7 +318,8 @@ def send_coin_order_emails(
     "[mail] send_coin_order_emails called with: "
     f"user_email={user_email!r} coins={coins_amount} "
     f"item_title={item_title!r} item_size={item_size!r} "
-    f"item_sku={item_sku!r} item_category={item_category!r}"
+    f"item_sku={item_sku!r} item_category={item_category!r} "
+    f"shipping_name={shipping_name!r} shipping_phone={shipping_phone!r}"
   )
 
   item_lines = []
@@ -324,6 +336,53 @@ def send_coin_order_emails(
   if item_lines:
     item_block = "\n" + "\n".join(item_lines) + "\n"
 
+  # Build shipping block
+  shipping_lines: list[str] = []
+
+  # Name + phone
+  if shipping_name:
+    shipping_lines.append(f"Name: {shipping_name}")
+  if shipping_phone:
+    shipping_lines.append(f"Phone: {shipping_phone}")
+
+  # Address lines
+  address_parts: list[str] = []
+  if address1:
+    address_parts.append(address1)
+  if address2:
+    address_parts.append(address2)
+
+  # City/state/postal
+  city_line_parts: list[str] = []
+  if city:
+    city_line_parts.append(city)
+  if state:
+    if city_line_parts:
+      city_line_parts[-1] = f"{city_line_parts[-1]}, {state}"
+    else:
+      city_line_parts.append(state)
+  if postal_code:
+    city_line_parts.append(postal_code)
+
+  if address_parts:
+    shipping_lines.append("Address:")
+    for line in address_parts:
+      shipping_lines.append(f"  {line}")
+
+  if city_line_parts:
+    shipping_lines.append("Location:")
+    shipping_lines.append("  " + " ".join(city_line_parts))
+
+  if country:
+    shipping_lines.append(f"Country: {country}")
+
+  if extra_notes:
+    shipping_lines.append(f"Notes: {extra_notes}")
+
+  shipping_block = ""
+  if shipping_lines:
+    shipping_block = "\nShipping Info:\n" + "\n".join(shipping_lines) + "\n"
+
   # Owner email
   if SHOP_OWNER_EMAIL:
     owner_subject = f"Nova Tutoring – Coin order: {item_title or 'Unknown item'}"
@@ -338,7 +397,20 @@ def send_coin_order_emails(
       owner_body += f"Stripe session: {stripe_session_id}\n"
 
     if item_block:
-      owner_body += item_block
+      owner_body += "\nItem Details:\n" + item_block
+
+    if shipping_block:
+      owner_body += shipping_block
+    else:
+      owner_body += "\nShipping Info: (not provided – may be digital or older form)\n"
+
+    # Append raw payload so dev can see EVERYTHING the form sent
+    if raw_payload is not None:
+      try:
+        pretty_json = json.dumps(raw_payload, indent=2, ensure_ascii=False, sort_keys=True)
+      except Exception:
+        pretty_json = str(raw_payload)
+      owner_body += "\nRaw payload:\n" + pretty_json + "\n"
 
     print("[mail] sending OWNER coin order email (Resend)... to", SHOP_OWNER_EMAIL)
     send_email(SHOP_OWNER_EMAIL, owner_subject, owner_body)
@@ -355,6 +427,10 @@ def send_coin_order_emails(
 
     if item_block:
       user_body += "\nHere are your item details:\n" + item_block + "\n"
+
+    if shipping_block:
+      # For the user we don't need the Raw payload, just the shipping block
+      user_body += shipping_block + "\n"
 
     user_body += "If you did not make this purchase, please contact support.\n"
 
@@ -703,6 +779,8 @@ def api_coin_order():
     return jsonify(ok=False, error="invalid coins"), 400
 
   user = data.get("user") or {}
+  shipping = data.get("shipping") or {}
+
   user_email = (
     user.get("contactEmail")
     or user.get("email")
@@ -713,6 +791,8 @@ def api_coin_order():
     user.get("displayName")
     or user.get("username")
     or user.get("name")
+    or data.get("displayName")
+    or data.get("name")
     or None
   )
   session_id = data.get("sessionId") or data.get("stripeSessionId")
@@ -745,6 +825,74 @@ def api_coin_order():
     or None
   )
 
+  # Shipping/contact info from scrollable form (and fallbacks)
+  shipping_name = (
+    data.get("shippingName")
+    or data.get("name")
+    or shipping.get("name")
+    or shipping.get("fullName")
+    or shipping.get("recipient")
+    or display_name
+  )
+  shipping_phone = (
+    data.get("phone")
+    or data.get("contactPhone")
+    or shipping.get("phone")
+    or shipping.get("contactPhone")
+    or user.get("phone")
+    or None
+  )
+
+  address1 = (
+    data.get("address1")
+    or data.get("line1")
+    or data.get("addressLine1")
+    or shipping.get("address1")
+    or shipping.get("line1")
+    or shipping.get("addressLine1")
+    or None
+  )
+  address2 = (
+    data.get("address2")
+    or data.get("line2")
+    or data.get("addressLine2")
+    or shipping.get("address2")
+    or shipping.get("line2")
+    or shipping.get("addressLine2")
+    or None
+  )
+  city = (
+    data.get("city")
+    or shipping.get("city")
+    or None
+  )
+  state = (
+    data.get("state")
+    or data.get("region")
+    or shipping.get("state")
+    or shipping.get("region")
+    or None
+  )
+  postal_code = (
+    data.get("zip")
+    or data.get("postalCode")
+    or shipping.get("zip")
+    or shipping.get("postalCode")
+    or None
+  )
+  country = (
+    data.get("country")
+    or shipping.get("country")
+    or None
+  )
+  notes = (
+    data.get("notes")
+    or data.get("instructions")
+    or shipping.get("notes")
+    or shipping.get("instructions")
+    or None
+  )
+
   print(
     "[coin-order] resolved fields:",
     {
@@ -757,12 +905,21 @@ def api_coin_order():
       "item_size": item_size,
       "item_sku": item_sku,
       "item_category": item_category,
+      "shipping_name": shipping_name,
+      "shipping_phone": shipping_phone,
+      "address1": address1,
+      "address2": address2,
+      "city": city,
+      "state": state,
+      "postal_code": postal_code,
+      "country": country,
+      "notes": notes,
       "shop_owner_email": SHOP_OWNER_EMAIL,
     },
   )
 
   try:
-    # 1) Send emails (owner + user)
+    # 1) Send emails (owner + user) with full shipping + raw payload
     send_coin_order_emails(
       user_email=user_email,
       coins_amount=coins,
@@ -772,6 +929,16 @@ def api_coin_order():
       item_size=item_size,
       item_sku=item_sku,
       item_category=item_category,
+      shipping_name=shipping_name,
+      shipping_phone=shipping_phone,
+      address1=address1,
+      address2=address2,
+      city=city,
+      state=state,
+      postal_code=postal_code,
+      country=country,
+      extra_notes=notes,
+      raw_payload=data,
     )
 
     # 2) Record row in purchases table
