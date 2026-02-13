@@ -12,6 +12,28 @@ import { StreakProvider } from "./context/StreakContext";
 import ThemeOverlay from "./components/ThemeOverlay";
 import { FxProvider } from "./context/FxProvider";
 import { coinsAutoBoot } from "./utils/coins-autoboot";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+// 🔧 DEV-ONLY: one-time Supabase auth/profile reset to clear bad refresh tokens
+// Remove or comment out <SupabaseAuthResetOnce /> after it runs once cleanly.
+function SupabaseAuthResetOnce() {
+  React.useEffect(() => {
+    (async () => {
+      try {
+        await AsyncStorage.multiRemove([
+          "user.profile.v1",       // PROFILE_KEY in UserContext
+          "auth.supabase.jwt",     // SUPABASE_JWT_KEY in UserContext
+          "@supabase.auth.token",  // Supabase's own stored token
+        ]);
+        console.log("[Debug] Cleared Supabase auth + profile keys (once)");
+      } catch (e) {
+        console.log("[Debug] Error clearing auth keys", e);
+      }
+    })();
+  }, []);
+
+  return null;
+}
 
 export default function RootLayout() {
   // ✅ client-only autoboot (prevents 'window is not defined' during web bundling)
@@ -21,6 +43,9 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
+      {/* DEV-ONLY: run once to clear stale Supabase tokens, then remove */}
+      <SupabaseAuthResetOnce />
+
       <AppProviders>
         <StreakProvider>
           <FxProvider>

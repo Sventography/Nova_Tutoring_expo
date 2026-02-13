@@ -61,23 +61,12 @@ const UserContext = createContext<UserContextValue | null>(null);
 
 const PROFILE_KEY = "user.profile.v1";
 const SUPABASE_JWT_KEY = "auth.supabase.jwt";
+const SUPABASE_AUTH_TOKEN_KEY = "@supabase.auth.token";
 
-function mapProfileRow(row: any): Partial<LocalUserProfile> {
-  if (!row) return {};
-  // Prefer avatar_url, but fall back to avatar if that's the column you created.
-  const avatarFromRow = row.avatar_url ?? row.avatar ?? null;
-  return {
-    id: row.id,
-    username: row.username ?? null,
-    name: row.username ?? null,
-    displayName: row.username ?? null,
-    contactEmail: row.contact_email ?? null,
-    avatar: avatarFromRow,
-    avatarUrl: avatarFromRow,
-    avatarUri: avatarFromRow,
-    photoURL: avatarFromRow,
-    imageUrl: avatarFromRow,
-  };
+// Normalizes username: trim, default, and limit to 8 chars
+function normalizeUsername(raw: string | null | undefined): string {
+  const base = (raw ?? "").trim() || "Student";
+  return base.slice(0, 8); // keep case, just clamp length
 }
 
 async function persistProfile(profile: LocalUserProfile | null) {
@@ -85,6 +74,22 @@ async function persistProfile(profile: LocalUserProfile | null) {
     await AsyncStorage.removeItem(PROFILE_KEY);
   } else {
     await AsyncStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+  }
+}
+
+// Only clear auth tokens here, not the profile
+async function clearSupabaseAuthStorage(reason?: string) {
+  try {
+    console.log(
+      "[UserContext] clearing Supabase auth tokens",
+      reason ? `(${reason})` : ""
+    );
+    await AsyncStorage.multiRemove([
+      SUPABASE_JWT_KEY,
+      SUPABASE_AUTH_TOKEN_KEY,
+    ]);
+  } catch (e) {
+    console.warn("[UserContext] clearSupabaseAuthStorage error:", e);
   }
 }
 
@@ -101,9 +106,31 @@ export function UserProvider({ children }: { children: ReactNode }) {
     authUser?: SupabaseUser | null
   ) {
     try {
+      // Try to reuse local profile for this user if it exists
+      let local: LocalUserProfile | null = null;
+      try {
+        const stored = await AsyncStorage.getItem(PROFILE_KEY);
+        if (stored) {
+          local = JSON.parse(stored);
+        }
+      } catch {
+        // ignore parse errors
+      }
+
+      if (local && local.id === userId) {
+        console.log(
+          "[UserContext] hydrateProfile: using existing local profile",
+          local.id,
+          local.username
+        );
+        setProfile(local);
+        return;
+      }
+
+      // ⬇️ FIXED: only request columns that exist: no "avatar"
       const { data: row, error } = await supabase
         .from("profiles")
-        .select("id, username, contact_email, avatar_url, avatar")
+        .select("id, username, contact_email, avatar_url")
         .eq("id", userId)
         .maybeSingle();
 
@@ -111,35 +138,43 @@ export function UserProvider({ children }: { children: ReactNode }) {
         console.warn("[UserContext] load profile error:", error);
       }
 
-      let next: LocalUserProfile = {
+      console.log("[UserContext] hydrateProfile row:", row);
+
+      let usernameRaw: string | null =
+        (row && (row as any).username) ?? null;
+      let contactEmailRaw: string | null =
+        (row && (row as any).contact_email) ?? null;
+      let avatarRaw: string | null =
+        (row && (row as any).avatar_url) ?? null;
+
+      const meta: any = authUser?.user_metadata || {};
+      const metaUsername =
+        typeof meta.username === "string" ? meta.username : null;
+      const authEmail = authUser?.email ?? null;
+
+      if (!usernameRaw && metaUsername) {
+        usernameRaw = metaUsername;
+      }
+      if (!contactEmailRaw && authEmail) {
+        contactEmailRaw = authEmail;
+      }
+
+      const normalizedUsername = normalizeUsername(usernameRaw);
+
+      const next: LocalUserProfile = {
         id: userId,
-        username: null,
-        name: null,
-        displayName: null,
-        contactEmail: null,
-        avatar: null,
-        avatarUrl: null,
-        avatarUri: null,
-        photoURL: null,
-        imageUrl: null,
+        username: normalizedUsername || null,
+        name: normalizedUsername || null,
+        displayName: normalizedUsername || null,
+        contactEmail: contactEmailRaw,
+        avatar: avatarRaw,
+        avatarUrl: avatarRaw,
+        avatarUri: avatarRaw,
+        photoURL: avatarRaw,
+        imageUrl: avatarRaw,
       };
 
-      if (authUser) {
-        const meta: any = authUser.user_metadata || {};
-        const usernameFromMeta = meta.username ?? null;
-        const email = authUser.email ?? null;
-
-        next.username = usernameFromMeta ?? row?.username ?? usernameFromMeta;
-        next.name = next.username;
-        next.displayName = next.username;
-        next.contactEmail = row?.contact_email ?? email;
-      }
-
-      if (row) {
-        next = { ...next, ...mapProfileRow(row) };
-      }
-
-      console.log("[UserContext] hydrateProfileFromSupabase result:", next);
+      console.log("[UserContext] hydrateProfile final:", next);
 
       setProfile(next);
       await persistProfile(next);
@@ -153,21 +188,43 @@ export function UserProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     (async () => {
       try {
+        // 1) Load local cached profile first
         const stored = await AsyncStorage.getItem(PROFILE_KEY);
         if (stored) {
           try {
             const parsed = JSON.parse(stored);
+            console.log(
+              "[UserContext] init: loaded local profile",
+              parsed?.id,
+              parsed?.username
+            );
             setProfile(parsed);
           } catch {
             // ignore parse errors
           }
         }
 
+        // 2) Ask Supabase for current session
         const { data, error } = await supabase.auth.getSession();
         if (error) {
           console.warn("[UserContext] getSession error:", error);
+
+          const msg = (error as any)?.message || "";
+          if (
+            msg.includes("Invalid Refresh Token") ||
+            msg.includes("Refresh Token Not Found")
+          ) {
+            await clearSupabaseAuthStorage(
+              "invalid refresh token on getSession"
+            );
+            setSession(null);
+            setSupabaseUserId(null);
+            // NOTE: keep whatever profile we already loaded locally
+            return;
+          }
         }
-        const sess = data.session ?? null;
+
+        const sess = data?.session ?? null;
         setSession(sess);
 
         if (sess?.access_token) {
@@ -193,27 +250,24 @@ export function UserProvider({ children }: { children: ReactNode }) {
   // ----------------- react to auth changes (login / logout) ------------------
 
   useEffect(() => {
-    const { data } = supabase.auth.onAuthStateChange(
-      async (_event, sess) => {
-        setSession(sess);
-        const token = sess?.access_token;
-        if (token) {
-          await AsyncStorage.setItem(SUPABASE_JWT_KEY, token);
-        } else {
-          await AsyncStorage.removeItem(SUPABASE_JWT_KEY);
-        }
-
-        const authUser = sess?.user ?? null;
-        if (authUser) {
-          setSupabaseUserId(authUser.id);
-          await hydrateProfileFromSupabase(authUser.id, authUser);
-        } else {
-          setSupabaseUserId(null);
-          setProfile(null);
-          await persistProfile(null);
-        }
+    const { data } = supabase.auth.onAuthStateChange(async (_event, sess) => {
+      setSession(sess);
+      const token = sess?.access_token;
+      if (token) {
+        await AsyncStorage.setItem(SUPABASE_JWT_KEY, token);
+      } else {
+        await AsyncStorage.removeItem(SUPABASE_JWT_KEY);
       }
-    );
+
+      const authUser = sess?.user ?? null;
+      if (authUser) {
+        setSupabaseUserId(authUser.id);
+        await hydrateProfileFromSupabase(authUser.id, authUser);
+      } else {
+        setSupabaseUserId(null);
+        // don't auto-wipe profile here; signOut() handles that explicitly
+      }
+    });
 
     return () => {
       data.subscription.unsubscribe();
@@ -237,12 +291,65 @@ export function UserProvider({ children }: { children: ReactNode }) {
   };
 
   const updateProfile = async (patch: Partial<LocalUserProfile>) => {
-    baseUpdateProfileLocal(patch);
+    let usernameNormalized: string | null = null;
 
+    if (
+      typeof patch.username === "string" ||
+      typeof patch.name === "string" ||
+      typeof patch.displayName === "string"
+    ) {
+      const rawCandidate =
+        (patch.username as string | undefined) ??
+        (patch.name as string | undefined) ??
+        (patch.displayName as string | undefined) ??
+        null;
+
+      usernameNormalized = normalizeUsername(rawCandidate);
+
+      if (supabaseUserId && usernameNormalized) {
+        try {
+          const { data: existing, error } = await supabase
+            .from("profiles")
+            .select("id")
+            .eq("username", usernameNormalized)
+            .neq("id", supabaseUserId)
+            .maybeSingle();
+
+          if (error && (error as any).code !== "PGRST116") {
+            console.warn(
+              "[UserContext] username uniqueness check error:",
+              error
+            );
+          }
+
+          if (existing && (existing as any).id) {
+            const err = new Error(
+              "That username is already taken. Please choose another."
+            );
+            (err as any).code = "USERNAME_TAKEN";
+            throw err;
+          }
+        } catch (e) {
+          console.warn("[UserContext] updateProfile uniqueness error:", e);
+          throw e;
+        }
+      }
+    }
+
+    const localPatch: Partial<LocalUserProfile> = { ...patch };
+    if (usernameNormalized) {
+      localPatch.username = usernameNormalized;
+      localPatch.name = usernameNormalized;
+      localPatch.displayName = usernameNormalized;
+    }
+
+    baseUpdateProfileLocal(localPatch);
+
+    // Guest: local-only
     if (!supabaseUserId) {
       console.log(
         "[UserContext] updateProfile called while no supabaseUserId (guest); local only",
-        patch
+        localPatch
       );
       return;
     }
@@ -252,29 +359,25 @@ export function UserProvider({ children }: { children: ReactNode }) {
       updated_at: new Date().toISOString(),
     };
 
-    const candidateUsername =
-      patch.username ?? patch.name ?? patch.displayName;
-    if (typeof candidateUsername === "string") {
-      row.username = candidateUsername;
+    if (usernameNormalized) {
+      row.username = usernameNormalized;
     }
 
     const candidateEmail =
-      patch.contactEmail ?? (patch as any).contact_email;
+      localPatch.contactEmail ?? (localPatch as any).contact_email;
     if (typeof candidateEmail === "string") {
       row.contact_email = candidateEmail;
     }
 
     const candidateAvatar =
-      patch.avatar ??
-      patch.avatarUrl ??
-      patch.avatarUri ??
-      patch.photoURL ??
-      patch.imageUrl;
+      localPatch.avatar ??
+      localPatch.avatarUrl ??
+      localPatch.avatarUri ??
+      localPatch.photoURL ??
+      localPatch.imageUrl;
 
     if (typeof candidateAvatar === "string") {
-      // We write to avatar_url. If you also created an `avatar` column, it's fine to mirror it:
       row.avatar_url = candidateAvatar;
-      // row.avatar = candidateAvatar; // uncomment if you want to keep both in sync
     }
 
     console.log("[UserContext] updateProfile Supabase upsert row:", row);
@@ -283,20 +386,31 @@ export function UserProvider({ children }: { children: ReactNode }) {
       const { error } = await supabase.from("profiles").upsert(row);
       if (error) {
         console.warn("[UserContext] updateProfile Supabase error:", error);
+
+        if ((error as any).code === "23505") {
+          const err = new Error(
+            "That username is already taken. Please choose another."
+          );
+          (err as any).code = "USERNAME_TAKEN";
+          throw err;
+        }
+
+        throw error;
       } else {
         console.log("[UserContext] updateProfile Supabase upsert OK");
       }
     } catch (e) {
       console.warn("[UserContext] updateProfile error:", e);
+      throw e;
     }
   };
 
   const setUsername = (name: string) => {
-    const trimmed = name.trim() || "Student";
+    const normalized = normalizeUsername(name);
     return updateProfile({
-      username: trimmed,
-      name: trimmed,
-      displayName: trimmed,
+      username: normalized,
+      name: normalized,
+      displayName: normalized,
     });
   };
 
@@ -319,11 +433,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
     password: string
   ) => {
     try {
+      const normalizedUsername = normalizeUsername(username);
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: { username },
+          data: { username: normalizedUsername },
         },
       });
 
@@ -342,11 +458,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
       if (authUser) {
         setSupabaseUserId(authUser.id);
+
         const next: LocalUserProfile = {
           id: authUser.id,
-          username,
-          name: username,
-          displayName: username,
+          username: normalizedUsername,
+          name: normalizedUsername,
+          displayName: normalizedUsername,
           contactEmail: email,
           avatar: null,
           avatarUrl: null,
@@ -354,6 +471,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
           photoURL: null,
           imageUrl: null,
         };
+
         setProfile(next);
         await persistProfile(next);
 
@@ -361,7 +479,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
           .from("profiles")
           .upsert({
             id: authUser.id,
-            username,
+            username: normalizedUsername,
             contact_email: email,
           });
 
@@ -370,6 +488,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
             "[UserContext] profiles upsert on signUp error:",
             profileError
           );
+
+          if ((profileError as any).code === "23505") {
+            const err = new Error(
+              "That username is already taken. Please choose another."
+            );
+            (err as any).code = "USERNAME_TAKEN";
+            throw err;
+          }
+
+          throw profileError;
         }
       }
     } catch (e) {
@@ -456,12 +584,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
       setProfile(null);
       await AsyncStorage.removeItem(SUPABASE_JWT_KEY);
       await AsyncStorage.removeItem(PROFILE_KEY);
+      await AsyncStorage.removeItem(SUPABASE_AUTH_TOKEN_KEY);
     }
   };
 
   const deleteAccount = async () => {
     // For now, "delete account" just clears local data on this device.
-    // Full remote deletion would go through your backend with the service key.
     await signOut();
   };
 

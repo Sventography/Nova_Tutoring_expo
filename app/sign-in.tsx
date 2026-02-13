@@ -23,18 +23,15 @@ export default function SignInScreen() {
   const router = useRouter();
   const { tokens } = useTheme();
 
-  const {
-    signUpWithEmailPassword,
-    loginWithEmailPassword,
-  } = useUser() as any;
+  const { signUpWithEmailPassword, loginWithEmailPassword } = useUser() as any;
 
   const [mode, setMode] = useState<"signup" | "login">("signup");
 
   // Sign Up fields
   const [suUsername, setSuUsername] = useState("");
   const [suEmail, setSuEmail] = useState("");
-  const [suConfirmEmail, setSuConfirmEmail] = useState("");
   const [suPassword, setSuPassword] = useState("");
+  const [suConfirmPassword, setSuConfirmPassword] = useState("");
 
   // Login fields
   const [liEmail, setLiEmail] = useState("");
@@ -61,19 +58,11 @@ export default function SignInScreen() {
   const handleSignUp = async () => {
     const username = suUsername.trim();
     const email = suEmail.trim().toLowerCase();
-    const confirmEmail = suConfirmEmail.trim().toLowerCase();
     const password = suPassword;
+    const confirmPassword = suConfirmPassword;
 
-    if (!username || !email || !confirmEmail || !password) {
+    if (!username || !email || !password || !confirmPassword) {
       Alert.alert("Missing info", "Please fill out all fields.");
-      return;
-    }
-
-    if (email !== confirmEmail) {
-      Alert.alert(
-        "Emails do not match",
-        "Make sure your email and confirm email are the same."
-      );
       return;
     }
 
@@ -81,6 +70,14 @@ export default function SignInScreen() {
       Alert.alert(
         "Weak password",
         "Please use a password with at least 6 characters."
+      );
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      Alert.alert(
+        "Passwords do not match",
+        "Make sure your password and confirm password are the same."
       );
       return;
     }
@@ -207,23 +204,20 @@ export default function SignInScreen() {
                   style={styles.input}
                 />
 
-                <Text style={styles.label}>Confirm Email</Text>
-                <TextInput
-                  value={suConfirmEmail}
-                  onChangeText={setSuConfirmEmail}
-                  placeholder="Re-enter your email"
-                  autoCapitalize="none"
-                  keyboardType={
-                    Platform.OS === "web" ? "default" : "email-address"
-                  }
-                  placeholderTextColor="#6b7685"
-                  style={styles.input}
-                />
-
                 <Text style={styles.label}>Password</Text>
                 <TextInput
                   value={suPassword}
                   onChangeText={setSuPassword}
+                  placeholder="••••••••"
+                  secureTextEntry
+                  placeholderTextColor="#6b7685"
+                  style={styles.input}
+                />
+
+                <Text style={styles.label}>Confirm Password</Text>
+                <TextInput
+                  value={suConfirmPassword}
+                  onChangeText={setSuConfirmPassword}
                   placeholder="••••••••"
                   secureTextEntry
                   placeholderTextColor="#6b7685"

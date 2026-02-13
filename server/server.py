@@ -1,7 +1,7 @@
-# 🔥🔥 RUNNING FIXED SERVER VERSION v6-HTTP-RESENDONLY
+# 🔥🔥 RUNNING FIXED SERVER VERSION v8-PURCHASES-DEBUG
 # (CHECKOUT + ASK MEMORY + COIN ORDER EMAILS via RESEND HTTP ONLY) 🔥🔥
 print(
-  "🔥🔥 RUNNING FIXED SERVER VERSION v6-HTTP-RESENDONLY "
+  "🔥🔥 RUNNING FIXED SERVER VERSION v8-PURCHASES-DEBUG "
   "(CHECKOUT + ASK MEMORY + COIN ORDER EMAILS via RESEND HTTP ONLY) 🔥🔥"
 )
 
@@ -37,7 +37,7 @@ except Exception:
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
-print("🔥🔥 FLASK APP INITIALIZED (v6-HTTP-RESENDONLY) 🔥🔥")
+print("🔥🔥 FLASK APP INITIALIZED (v8-PURCHASES-DEBUG) 🔥🔥")
 
 # -------------------------------------------------
 # Load environment (prefers server/env/.env.server, else server/.env)
@@ -70,8 +70,20 @@ except Exception as e:
 STRIPE_SECRET_KEY = (os.getenv("STRIPE_SECRET_KEY") or "").strip()
 
 # Supabase
-SUPABASE_URL = (os.getenv("SUPABASE_URL") or "").strip().rstrip("/")
-SUPABASE_SERVICE_ROLE_KEY = (os.getenv("SUPABASE_SERVICE_ROLE_KEY") or "").strip()
+_raw_supabase_url = (
+  os.getenv("SUPABASE_URL")
+  or os.getenv("PUBLIC_SUPABASE_URL")
+  or os.getenv("EXPO_PUBLIC_SUPABASE_URL")
+  or ""
+)
+SUPABASE_URL = _raw_supabase_url.strip().rstrip("/")
+
+SUPABASE_SERVICE_ROLE_KEY = (
+  os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+  or os.getenv("SUPABASE_SERVICE_KEY")
+  or os.getenv("SERVICE_ROLE_KEY")
+  or ""
+).strip()
 
 # OpenAI
 OPENAI_API_KEY = (os.getenv("OPENAI_API_KEY") or "").strip()
@@ -87,13 +99,21 @@ RESEND_FROM_EMAIL = (
   or (os.getenv("SHOP_OWNER_EMAIL") or "").strip()
 )
 
+# SHOP_OWNER_EMAIL for owner notifications
+SHOP_OWNER_EMAIL = (os.getenv("SHOP_OWNER_EMAIL") or RESEND_FROM_EMAIL or "").strip()
+
+# ---- Debug prints so you can see what the process actually sees ----
+print("[debug] SUPABASE_URL present:", bool(SUPABASE_URL))
+print("[debug] SUPABASE_SERVICE_ROLE_KEY length:", len(SUPABASE_SERVICE_ROLE_KEY))
+print("[debug] RESEND_API_KEY present:", bool(RESEND_API_KEY))
+print("[debug] RESEND_FROM_EMAIL:", repr(RESEND_FROM_EMAIL))
+print("[debug] SHOP_OWNER_EMAIL:", repr(SHOP_OWNER_EMAIL))
+
 if RESEND_API_KEY:
   print(f"[server] Resend configured: True, from={RESEND_FROM_EMAIL!r}")
 else:
   print("[server] Resend configured: False (missing RESEND_API_KEY)")
 
-# SHOP_OWNER_EMAIL for owner notifications
-SHOP_OWNER_EMAIL = (os.getenv("SHOP_OWNER_EMAIL") or RESEND_FROM_EMAIL or "").strip()
 if SHOP_OWNER_EMAIL:
   print(f"[server] SHOP_OWNER_EMAIL set to: {SHOP_OWNER_EMAIL!r}")
 else:
@@ -161,10 +181,16 @@ def record_purchase_row(
   item_title: str | None = None,
   item_size: str | None = None,
   item_category: str | None = None,
+  stripe_session_id: str | None = None,
 ):
   """
   Inserts a row into public.purchases via Supabase REST.
-  Safe to call even if Supabase REST isn't configured.
+
+  Supabase table columns:
+    - user_id (uuid)
+    - coins_spent (int4)
+    - stripe_session_id (text)
+    - meta (jsonb)
   """
   if not (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY):
     print("[coin-order] Supabase REST not configured; skipping purchases row")
@@ -175,17 +201,32 @@ def record_purchase_row(
     {"Content-Type": "application/json", "Prefer": "return=minimal"}
   )
 
-  payload = {
+  # Build meta JSON from item info
+  meta: dict = {}
+  if item_sku:
+    meta["sku"] = item_sku
+  if item_title:
+    meta["title"] = item_title
+  if item_size:
+    meta["size"] = item_size
+  if item_category:
+    meta["category"] = item_category
+
+  payload: dict = {
     "user_id": user_id,
-    "coins": coins,
-    "sku": item_sku,
-    "item_title": item_title,
-    "item_size": item_size,
-    "item_category": item_category,
+    "coins_spent": coins,
   }
 
+  if stripe_session_id:
+    payload["stripe_session_id"] = stripe_session_id
+
+  if meta:
+    payload["meta"] = meta
+
   try:
-    print("[coin-order] inserting purchases row:", payload)
+    print("[coin-order] inserting purchases row to", url)
+    print("[coin-order] headers present:", bool(headers))
+    print("[coin-order] payload:", payload)
     resp = requests.post(url, headers=headers, json=payload, timeout=10)
     if resp.status_code >= 400:
       print("[coin-order] purchases insert error:", resp.status_code, resp.text)
@@ -299,7 +340,7 @@ def send_coin_order_emails(
     if item_block:
       owner_body += item_block
 
-    print("[mail] sending OWNER coin order email (Resend)...")
+    print("[mail] sending OWNER coin order email (Resend)... to", SHOP_OWNER_EMAIL)
     send_email(SHOP_OWNER_EMAIL, owner_subject, owner_body)
   else:
     print("[mail] SHOP_OWNER_EMAIL not set; owner will NOT receive order emails.")
@@ -317,7 +358,7 @@ def send_coin_order_emails(
 
     user_body += "If you did not make this purchase, please contact support.\n"
 
-    print("[mail] sending USER coin order email (Resend)...")
+    print("[mail] sending USER coin order email (Resend)... to", user_email)
     send_email(user_email, user_subject, user_body)
   else:
     print("[mail] no user_email for coin order; only owner was notified (if configured).")
@@ -360,7 +401,7 @@ def fetch_profile_memory_settings(user_id: str):
     return 0, "encouraging"
 
 
-def fetch_memory_messages(user_id: int, memory_limit: int):
+def fetch_memory_messages(user_id: str, memory_limit: int):
   """
   Returns list of { role, content } messages for this user_id.
   """
@@ -481,6 +522,7 @@ def health():
     smtp=False,  # SMTP is not used on Render
     supabase=supabase_ok,
     resend=bool(RESEND_API_KEY),
+    shop_owner_email=bool(SHOP_OWNER_EMAIL),
   )
 
 # -------------------------------------------------
@@ -654,7 +696,7 @@ def ask_api():
 @app.post("/api/coin-order")
 def api_coin_order():
   data = request.get_json(silent=True) or {}
-  print("[coin-order] incoming:", data)
+  print("[coin-order] incoming raw data:", data)
 
   coins = int(data.get("coins") or 0)
   if coins <= 0:
@@ -704,18 +746,19 @@ def api_coin_order():
   )
 
   print(
-    "[coin-order] coins={coins} user_email={email!r} "
-    "display_name={name!r} session={sid!r} item_title={title!r} "
-    "item_size={size!r} item_sku={sku!r} item_category={cat!r}".format(
-      coins=coins,
-      email=user_email,
-      name=display_name,
-      sid=session_id,
-      title=item_title,
-      size=item_size,
-      sku=item_sku,
-      cat=item_category,
-    )
+    "[coin-order] resolved fields:",
+    {
+      "coins": coins,
+      "user_email": user_email,
+      "display_name": display_name,
+      "user_id": user_id,
+      "session_id": session_id,
+      "item_title": item_title,
+      "item_size": item_size,
+      "item_sku": item_sku,
+      "item_category": item_category,
+      "shop_owner_email": SHOP_OWNER_EMAIL,
+    },
   )
 
   try:
@@ -739,6 +782,7 @@ def api_coin_order():
       item_title=item_title,
       item_size=item_size,
       item_category=item_category,
+      stripe_session_id=session_id,
     )
 
     return jsonify(ok=True)
@@ -788,5 +832,5 @@ def debug_send_test_email():
 
 if __name__ == "__main__":
   port = int(os.getenv("PORT", "8787"))
-  print(f"🔥🔥 STARTING SERVER v6-HTTP-RESENDONLY ON http://127.0.0.1:{port} 🔥🔥")
+  print(f"🔥🔥 STARTING SERVER v8-PURCHASES-DEBUG ON http://127.0.0.1:{port} 🔥🔥")
   app.run(host="0.0.0.0", port=port, debug=False)

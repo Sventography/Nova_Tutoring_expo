@@ -18,15 +18,25 @@ function stripTrailingSlashes(s: string): string {
   return s.replace(/\/+$/g, "");
 }
 
+// Read from app.config.js -> extra
 const extra = (Constants.expoConfig?.extra || {}) as ExtraConfig;
 
+// Prefer explicit config from extra, then env
 const RAW_BACKEND_URL =
   extra.backendBase ||
   extra.EXPO_PUBLIC_BACKEND_URL ||
   process.env.EXPO_PUBLIC_BACKEND_URL ||
   "";
 
-export const BACKEND_URL = stripTrailingSlashes(RAW_BACKEND_URL || "");
+// FINAL base URL for all backend calls
+export const BACKEND_URL = stripTrailingSlashes(
+  RAW_BACKEND_URL || "https://nove-tutoring-backend.onrender.com"
+);
+
+console.log("[ask] extra.backendBase:", extra.backendBase);
+console.log("[ask] extra.EXPO_PUBLIC_BACKEND_URL:", extra.EXPO_PUBLIC_BACKEND_URL);
+console.log("[ask] process.env.EXPO_PUBLIC_BACKEND_URL:", process.env.EXPO_PUBLIC_BACKEND_URL);
+console.log("[ask] Using BACKEND_URL:", BACKEND_URL);
 
 if (!BACKEND_URL) {
   console.warn(
@@ -54,14 +64,19 @@ export async function askNova(
     return { ok: false, error: "Please enter a question first." };
   }
 
+  const url = `${BACKEND_URL}/api/ask`;
+  const payload = {
+    question: trimmed,
+    user_id: userId ?? null, // match backend expectation
+  };
+
+  console.log("[ask] POST", url, JSON.stringify(payload));
+
   try {
-    const res = await fetch(`${BACKEND_URL}/api/ask`, {
+    const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        question: trimmed,
-        user_id: userId ?? null,
-      }),
+      body: JSON.stringify(payload),
     });
 
     if (!res.ok) {
@@ -99,4 +114,3 @@ export async function askNova(
     };
   }
 }
-
