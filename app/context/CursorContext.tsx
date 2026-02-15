@@ -7,16 +7,15 @@ import React, {
   useState,
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useUser } from "./UserContext";
+import { usePurchases } from "./PurchasesContext";
 
 /**
- * IMPORTANT:
- * These keys MUST match what your Shop uses.
- * In your shop.tsx you have:
- *   PURCHASES_KEY = "@nova/purchases"
- *   CURSOR_KEY    = "@nova/cursor"
+ * Per-user cursor equip key:
+ * - guest:  @nova/cursor.equipped.guest.v1
+ * - user:   @nova/cursor.equipped.user.<uid>.v1
  */
-const KEY_EQUIPPED = "@nova/cursor";
-const KEY_PURCHASES = "@nova/purchases";
+const KEY_EQUIPPED_BASE = "@nova/cursor.equipped.v1";
 
 type OwnedMap = Record<string, boolean>;
 
@@ -62,119 +61,96 @@ export function canonCursorId(id: string | null | undefined): string {
   return v;
 }
 
-async function readJSON(key: string) {
-  try {
-    const raw = await AsyncStorage.getItem(key);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-}
-
-function normalizeOwnedMap(purchases: any): OwnedMap {
-  const out: OwnedMap = {};
-  const obj = purchases && typeof purchases === "object" ? purchases : {};
-
-  for (const k of Object.keys(obj)) {
-    const v = obj[k];
-    const owned = !!(v?.owned ?? v === true);
-    if (!owned) continue;
-
-    // store canonical cursor ids for cursor items
-    const ck = canonCursorId(k);
-    if (ck) out[ck] = true;
-
-    // also honor already-canonical ids like "cursor:glow"
-    if (String(k).includes(":")) out[canonCursorId(k)] = true;
-
-    // if someone stored "glow_cursor" etc:
-    const legacy = canonCursorId(String(k));
-    if (legacy) out[legacy] = true;
-  }
-
-  return out;
-}
+const equippedKeyFor = (uid: string | null) =>
+  uid ? `${KEY_EQUIPPED_BASE}.user.${uid}` : `${KEY_EQUIPPED_BASE}.guest`;
 
 export function CursorProvider({ children }: { children: React.ReactNode }) {
-  // default: no special cursor until something is equipped
+  const { supabaseUserId } = useUser();
+  const { purchases, reload: reloadPurchases } = usePurchases();
+
   const [cursorId, _setCursorId] = useState<string | null>(null);
-  const [owned, setOwned] = useState<OwnedMap>({});
 
-  const hydrate = async () => {
-    const [equippedRaw, purchasesRaw] = await Promise.all([
-      AsyncStorage.getItem(KEY_EQUIPPED),
-      readJSON(KEY_PURCHASES),
-    ]);
-
-    const nextOwned = normalizeOwnedMap(purchasesRaw);
-    setOwned(nextOwned);
-
-    const equippedCanon = canonCursorId(equippedRaw);
-
-    // 🔥 Migration: if an OLD build saved star_trail as the "default",
-    // treat that as *no cursor* now so default is plain.
-    if (equippedCanon === "cursor:star_trail") {
-      _setCursorId(null);
-      try {
-        await AsyncStorage.removeItem(KEY_EQUIPPED);
-      } catch {}
-      return;
+  // derive which cursors are owned from purchases map
+  const owned: OwnedMap = useMemo(() => {
+    const out: OwnedMap = {};
+    for (const sku of Object.keys(purchases || {})) {
+      if (sku.startsWith("cursor:")) {
+        const cid = canonCursorId(sku);
+        if (cid) out[cid] = true;
+      }
     }
+    return out;
+  }, [purchases]);
 
-    if (equippedCanon) {
-      _setCursorId(equippedCanon);
-    } else {
-      _setCursorId(null);
-    }
-  };
-
+  // hydrate equipped cursor per user / guest
   useEffect(() => {
     let alive = true;
+
     (async () => {
-      await hydrate();
-      if (!alive) return;
+      try {
+        const key = equippedKeyFor(supabaseUserId ?? null);
+
+        const raw = await AsyncStorage.getItem(key);
+        const canon = canonCursorId(raw);
+
+        if (!alive) return;
+
+        if (canon) {
+          _setCursorId(canon);
+        } else {
+          _setCursorId(null);
+        }
+      } catch (e) {
+        console.warn("[CursorContext] hydrate error", e);
+        if (alive) _setCursorId(null);
+      }
     })();
+
     return () => {
       alive = false;
     };
-  }, []);
+  }, [supabaseUserId]);
 
   const setCursorId = async (id: string | null) => {
     const c = canonCursorId(id);
     const next: string | null = c || null;
 
     _setCursorId(next);
+    const key = equippedKeyFor(supabaseUserId ?? null);
 
     try {
       if (!next) {
-        await AsyncStorage.removeItem(KEY_EQUIPPED);
+        await AsyncStorage.removeItem(key);
       } else {
-        await AsyncStorage.setItem(KEY_EQUIPPED, next);
+        await AsyncStorage.setItem(key, next);
       }
-    } catch {}
+    } catch (e) {
+      console.warn("[CursorContext] setCursorId error", e);
+    }
   };
 
   const owns = (id: string) => {
     const c = canonCursorId(id);
     if (!c) return false;
-    // ✅ NO special case: star_trail is NOT "free" anymore.
+    // no more "free" star_trail – we respect purchases map
     return !!owned[c];
   };
 
   const reload = async () => {
-    await hydrate();
+    await reloadPurchases();
+    // equipped value is already keyed by user; no extra work needed here
   };
 
   const value = useMemo(
     () => ({
       cursorId,
       setCursorId,
-      setCursorById: setCursorId, // alias for shop.tsx
+      setCursorById: setCursorId,
       owned,
       owns,
       reload,
     }),
-    [cursorId, owned]
+    [cursorId, owned, reload]
   );
 
   return <CursorCtx.Provider value={value}>{children}</CursorCtx.Provider>;

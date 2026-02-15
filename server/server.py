@@ -571,6 +571,7 @@ def fetch_profile_memory_settings(user_id: str):
   Returns (memory_limit, personality) for this user_id, or (0, 'encouraging') if anything fails.
   """
   if not (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY and user_id):
+    print("[ask] fetch_profile_memory_settings skipped (missing config or user_id)")
     return 0, "encouraging"
 
   url = supabase_rest_url("profiles")
@@ -589,11 +590,13 @@ def fetch_profile_memory_settings(user_id: str):
 
     rows = resp.json()
     if not rows:
+      print("[ask] profile fetch: no profile row for user", user_id)
       return 0, "encouraging"
 
     row = rows[0]
     memory_limit = row.get("ask_memory_limit") or 0
     personality = row.get("ask_personality") or "encouraging"
+    print(f"[ask] profile settings for {user_id}: memory_limit={memory_limit}, personality={personality!r}")
     return memory_limit, personality
   except Exception as e:
     print("[ask] profile fetch exception:", e)
@@ -605,6 +608,7 @@ def fetch_memory_messages(user_id: str, memory_limit: int):
   Returns list of { role, content } messages for this user_id.
   """
   if not (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY and user_id and memory_limit > 0):
+    print("[ask] fetch_memory_messages skipped (missing config or memory_limit <= 0)")
     return []
 
   url = supabase_rest_url("ask_messages")
@@ -623,7 +627,7 @@ def fetch_memory_messages(user_id: str, memory_limit: int):
       return []
 
     rows = resp.json()
-    print(f"[ask] fetched {len(rows)} memory messages")
+    print(f"[ask] fetched {len(rows)} memory messages for user {user_id}")
     return rows
   except Exception as e:
     print("[ask] memory fetch exception:", e)
@@ -635,6 +639,7 @@ def insert_memory_messages(user_id: str, question: str, answer: str):
   Inserts the latest user + assistant messages.
   """
   if not (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY and user_id):
+    print("[ask] insert_memory_messages skipped (missing config or user_id)")
     return
 
   url = supabase_rest_url("ask_messages")
@@ -645,6 +650,7 @@ def insert_memory_messages(user_id: str, question: str, answer: str):
   ]
 
   try:
+    print("[ask] inserting memory messages for user", user_id)
     resp = requests.post(url, headers=headers, json=payload, timeout=10)
     if resp.status_code >= 400:
       print("[ask] insert memory error:", resp.status_code, resp.text)
@@ -660,6 +666,7 @@ def trim_memory_non_pinned(user_id: str, memory_limit: int):
   Here we treat memory_limit as the cap for NON-pinned messages (pinned can accumulate).
   """
   if not (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY and user_id and memory_limit > 0):
+    print("[ask] trim_memory_non_pinned skipped (missing config or user_id/memory_limit)")
     return
 
   url = supabase_rest_url("ask_messages")
@@ -681,6 +688,7 @@ def trim_memory_non_pinned(user_id: str, memory_limit: int):
 
     rows = resp.json()
     ids = [row["id"] for row in rows if "id" in row]
+    print(f"[ask] trim check: {len(ids)} non-pinned rows for user {user_id}, limit={memory_limit}")
     if len(ids) <= memory_limit:
       return
 
@@ -857,6 +865,8 @@ def _ask_logic():
     if SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY and user_id and memory_limit > 0:
       insert_memory_messages(user_id, question, answer)
       trim_memory_non_pinned(user_id, memory_limit)
+    else:
+      print("[ask] skipping memory insert/trim (no supabase config, user_id, or memory_limit)")
 
     return jsonify(
       ok=True,

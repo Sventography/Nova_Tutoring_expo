@@ -48,7 +48,11 @@ type UserContextValue = {
     password: string
   ) => Promise<void>;
 
-  loginWithEmailPassword: (email: string, password: string) => Promise<void>;
+  loginWithEmailPassword: (
+    email: string,
+    password: string
+  ) => Promise<void>;
+
   resetPassword: (email: string) => Promise<void>;
   updatePassword: (newPassword: string) => Promise<void>;
 
@@ -92,6 +96,102 @@ async function clearSupabaseAuthStorage(reason?: string) {
   }
 }
 
+// Hard-clear all local game/profile caches so a "new account" starts fresh.
+async function hardClearLocalGameState() {
+  try {
+    const keys = await AsyncStorage.getAllKeys();
+    const toRemove = keys.filter((k) =>
+      k.startsWith("@nova/coins.") ||
+      k.startsWith("@nova/streak.") ||
+      k.startsWith("@nova/purchases") ||
+      k === PROFILE_KEY
+    );
+
+    if (toRemove.length) {
+      console.log(
+        "[UserContext] hardClearLocalGameState removing keys:",
+        toRemove
+      );
+      await AsyncStorage.multiRemove(toRemove);
+    }
+  } catch (e) {
+    console.warn("[UserContext] hardClearLocalGameState error:", e);
+  }
+}
+
+// Force Supabase-side profile to a clean baseline for a (supposed) new user.
+async function hardResetServerProfileForNewUser(
+  userId: string,
+  username: string,
+  email: string
+) {
+  console.log(
+    "[UserContext] hardResetServerProfileForNewUser for",
+    userId,
+    username,
+    email
+  );
+
+  // 1) Delete any existing purchases rows for this user
+  try {
+    const { error: delError } = await supabase
+      .from("purchases")
+      .delete()
+      .eq("user_id", userId);
+
+    if (delError) {
+      console.warn(
+        "[UserContext] hardResetServerProfileForNewUser purchases delete error:",
+        delError
+      );
+    } else {
+      console.log(
+        "[UserContext] hardResetServerProfileForNewUser purchases cleared"
+      );
+    }
+  } catch (e) {
+    console.warn(
+      "[UserContext] hardResetServerProfileForNewUser purchases delete threw:",
+      e
+    );
+  }
+
+  // 2) Upsert a clean profiles row
+  try {
+    const { error: profileError } = await supabase.from("profiles").upsert(
+      {
+        id: userId,
+        username,
+        contact_email: email,
+        coins: 0,
+        daily_streak_current: 0,
+        daily_streak_last_utc: null,
+        daily_streak_best: 0,
+        // mirror purchases JSON as "empty" for backwards compatibility
+        purchases: { owned: {}, version: 1 },
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "id" }
+    );
+
+    if (profileError) {
+      console.warn(
+        "[UserContext] hardResetServerProfileForNewUser profiles upsert error:",
+        profileError
+      );
+    } else {
+      console.log(
+        "[UserContext] hardResetServerProfileForNewUser profiles baseline OK"
+      );
+    }
+  } catch (e) {
+    console.warn(
+      "[UserContext] hardResetServerProfileForNewUser profiles upsert threw:",
+      e
+    );
+  }
+}
+
 export function UserProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<LocalUserProfile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -126,7 +226,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // ⬇️ only request columns that exist: no "avatar"
+      // Metadata hints from auth
+      const meta: any = authUser?.user_metadata || {};
+      const metaUsername =
+        typeof meta.username === "string" ? meta.username : null;
+      const authEmail = authUser?.email ?? null;
+
+      // Only request columns that definitely exist
       const { data: row, error } = await supabase
         .from("profiles")
         .select("id, username, contact_email, avatar_url")
@@ -137,26 +243,51 @@ export function UserProvider({ children }: { children: ReactNode }) {
         console.warn("[UserContext] load profile error:", error);
       }
 
-      console.log("[UserContext] hydrateProfile row:", row);
+      let rowData: any = row;
+
+      // If there's no row yet, seed one so the backend has something real
+      if (!rowData) {
+        const seededUsername = normalizeUsername(metaUsername);
+        const seededEmail = authEmail;
+
+        const seedRow: any = {
+          id: userId,
+          username: seededUsername,
+          contact_email: seededEmail,
+          coins: 0,
+          daily_streak_current: 0,
+          daily_streak_last_utc: null,
+          daily_streak_best: 0,
+        };
+
+        console.log(
+          "[UserContext] hydrateProfile: seeding empty profile row",
+          seedRow
+        );
+        const { data: inserted, error: insertErr } = await supabase
+          .from("profiles")
+          .upsert(seedRow)
+          .select("id, username, contact_email, avatar_url")
+          .maybeSingle();
+
+        if (insertErr) {
+          console.warn(
+            "[UserContext] hydrateProfile seed upsert error (continuing with local only):",
+            insertErr
+          );
+        } else if (inserted) {
+          rowData = inserted;
+        }
+      }
+
+      console.log("[UserContext] hydrateProfile rowData:", rowData);
 
       let usernameRaw: string | null =
-        (row && (row as any).username) ?? null;
+        (rowData && rowData.username) ?? metaUsername ?? null;
       let contactEmailRaw: string | null =
-        (row && (row as any).contact_email) ?? null;
+        (rowData && rowData.contact_email) ?? authEmail ?? null;
       let avatarRaw: string | null =
-        (row && (row as any).avatar_url) ?? null;
-
-      const meta: any = authUser?.user_metadata || {};
-      const metaUsername =
-        typeof meta.username === "string" ? meta.username : null;
-      const authEmail = authUser?.email ?? null;
-
-      if (!usernameRaw && metaUsername) {
-        usernameRaw = metaUsername;
-      }
-      if (!contactEmailRaw && authEmail) {
-        contactEmailRaw = authEmail;
-      }
+        (rowData && rowData.avatar_url) ?? null;
 
       const normalizedUsername = normalizeUsername(usernameRaw);
 
@@ -353,19 +484,28 @@ export function UserProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    // Build a safe row for upsert that always includes username/contact_email
+    const existingUsername =
+      profile?.username || profile?.name || profile?.displayName || null;
+    const existingContactEmail = profile?.contactEmail ?? null;
+
     const row: any = {
       id: supabaseUserId,
       updated_at: new Date().toISOString(),
     };
 
-    if (usernameNormalized) {
-      row.username = usernameNormalized;
+    if (usernameNormalized || existingUsername) {
+      row.username = usernameNormalized || existingUsername;
     }
 
     const candidateEmail =
       localPatch.contactEmail ?? (localPatch as any).contact_email;
-    if (typeof candidateEmail === "string") {
-      row.contact_email = candidateEmail;
+    if (typeof candidateEmail === "string" && candidateEmail.trim()) {
+      row.contact_email = candidateEmail.trim();
+    } else if (existingContactEmail) {
+      row.contact_email = existingContactEmail;
+    } else if (session?.user?.email) {
+      row.contact_email = session.user.email;
     }
 
     const candidateAvatar =
@@ -373,7 +513,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
       localPatch.avatarUrl ??
       localPatch.avatarUri ??
       localPatch.photoURL ??
-      localPatch.imageUrl;
+      localPatch.imageUrl ??
+      profile?.avatar ??
+      profile?.avatarUrl ??
+      profile?.avatarUri ??
+      profile?.photoURL ??
+      profile?.imageUrl;
 
     if (typeof candidateAvatar === "string") {
       row.avatar_url = candidateAvatar;
@@ -383,6 +528,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
     try {
       const { error } = await supabase.from("profiles").upsert(row);
+
       if (error) {
         console.warn("[UserContext] updateProfile Supabase error:", error);
 
@@ -394,12 +540,28 @@ export function UserProvider({ children }: { children: ReactNode }) {
           throw err;
         }
 
+        // For other errors (including RLS), we still keep the local profile
         throw error;
       } else {
         console.log("[UserContext] updateProfile Supabase upsert OK");
+        // Re-hydrate from Supabase so we always match what's actually stored
+        try {
+          if (supabaseUserId) {
+            await hydrateProfileFromSupabase(
+              supabaseUserId,
+              session?.user ?? null
+            );
+          }
+        } catch (rehydrateErr) {
+          console.warn(
+            "[UserContext] updateProfile rehydrate error:",
+            rehydrateErr
+          );
+        }
       }
     } catch (e) {
       console.warn("[UserContext] updateProfile error:", e);
+      // Local profile is already updated; we just surface the error to UI
       throw e;
     }
   };
@@ -434,6 +596,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
     try {
       const normalizedUsername = normalizeUsername(username);
 
+      // Make absolutely sure we aren't accidentally reusing an old session
+      await clearSupabaseAuthStorage("pre signUpWithEmailPassword");
+      await hardClearLocalGameState();
+      setSession(null);
+      setSupabaseUserId(null);
+      setProfile(null);
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -444,7 +613,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
       if (error) {
         console.warn("[UserContext] signUp error:", error);
-        // Just forward the Supabase error; UI will map it (rate limit, etc.)
         throw error;
       }
 
@@ -457,6 +625,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
       }
 
       if (authUser) {
+        // Force server-side profile/purchases to a clean baseline
+        await hardResetServerProfileForNewUser(
+          authUser.id,
+          normalizedUsername,
+          email
+        );
+
         setSupabaseUserId(authUser.id);
 
         const next: LocalUserProfile = {
@@ -475,35 +650,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
         setProfile(next);
         await persistProfile(next);
 
-        // Try to seed profiles table, but DO NOT block sign-up
-        // on row-level security errors or other non-unique issues.
-        const { error: profileError } = await supabase
-          .from("profiles")
-          .upsert({
-            id: authUser.id,
-            username: normalizedUsername,
-            contact_email: email,
-          });
-
-        if (profileError) {
-          console.warn(
-            "[UserContext] profiles upsert on signUp error:",
-            profileError
-          );
-
-          // Only block sign-up if username is actually taken
-          if ((profileError as any).code === "23505") {
-            const err = new Error(
-              "That username is already taken. Please choose another."
-            );
-            (err as any).code = "USERNAME_TAKEN";
-            throw err;
-          }
-
-          // For row-level security or other policy issues, just log.
-          console.log(
-            "[UserContext] continuing sign-up despite profiles RLS/policy error"
-          );
+        // After seeding/resetting, hydrate from Supabase so we exactly match
+        try {
+          await hydrateProfileFromSupabase(authUser.id, authUser);
+        } catch (e) {
+          console.warn("[UserContext] signUp hydrate error:", e);
         }
       }
     } catch (e) {
@@ -533,8 +684,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
       }
 
       if (authUser) {
+        // Just set the ID and let onAuthStateChange hydrate the profile.
         setSupabaseUserId(authUser.id);
-        await hydrateProfileFromSupabase(authUser.id, authUser);
       }
     } catch (e) {
       console.warn("[UserContext] loginWithEmailPassword threw:", e);

@@ -1,3 +1,4 @@
+// app/(tabs)/account.tsx
 import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
@@ -14,6 +15,7 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
 import * as Linking from "expo-linking";
+import * as FileSystem from "expo-file-system";
 import { useRouter } from "expo-router";
 
 import { useUser } from "../context/UserContext";
@@ -103,7 +105,7 @@ export default function AccountScreen() {
           const reader = new FileReader();
           reader.onload = () => resolve(String(reader.result));
           reader.onerror = () => resolve(null);
-          reader.readAsDataURL(file);
+          reader.readAsDataURL(file); // web gets a data: URL already
         };
         input.click();
       } catch {
@@ -133,6 +135,7 @@ export default function AccountScreen() {
       let uri: string | null = null;
 
       if (Platform.OS === "web") {
+        // Web: we already get a data: URL string from FileReader
         uri = await pickAvatarWeb();
       } else {
         const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -153,8 +156,27 @@ export default function AccountScreen() {
 
       if (!uri) return;
 
-      setAvatarLocal(uri);
-      await saveAvatarEverywhere(uri);
+      // 🔒 Persist as a data: URL so it survives restarts
+      let storedUri = uri;
+
+      if (Platform.OS !== "web") {
+        try {
+          const base64 = await FileSystem.readAsStringAsync(uri, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+          // We don't know the exact mime type here; jpeg is a safe default
+          const mime = "image/jpeg";
+          storedUri = `data:${mime};base64,${base64}`;
+        } catch (err) {
+          console.warn(
+            "[Account] Failed to convert avatar to base64, using file URI instead",
+            err
+          );
+        }
+      }
+
+      setAvatarLocal(storedUri);
+      await saveAvatarEverywhere(storedUri);
       showToast("Avatar updated");
     } catch (e: any) {
       console.log("onPickAvatar error:", e);
@@ -314,33 +336,6 @@ export default function AccountScreen() {
         "You can email us at contact.novatutoring@gmail.com."
       );
     }
-  }
-
-  // While user profile is hydrating, keep this screen light too
-  if (!ready) {
-    return (
-      <LinearGradient colors={tokens.gradient} style={{ flex: 1 }}>
-        <View
-          style={{
-            flex: 1,
-            alignItems: "center",
-            justifyContent: "center",
-            padding: 16,
-          }}
-        >
-          <Text
-            style={{
-              color: tokens.text,
-              fontSize: 16,
-              fontWeight: "600",
-              textAlign: "center",
-            }}
-          >
-            Loading your account…
-          </Text>
-        </View>
-      </LinearGradient>
-    );
   }
 
   return (

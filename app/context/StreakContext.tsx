@@ -13,11 +13,9 @@ import { supabase } from "../lib/supabase";
 
 const TZ = "America/New_York";
 
-// Legacy keys from the original implementation (for migration)
-const LEGACY_META = "@nova/streak.meta"; // { count:number,last:string|null }
-const LEGACY_LOGS = "@nova/streak.logs"; // { [yyyy-mm-dd]: true }
+const LEGACY_META = "@nova/streak.meta";
+const LEGACY_LOGS = "@nova/streak.logs";
 
-// New namespaced keys (guest + per-user)
 const GUEST_META = "@nova/streak.meta.guest.v2";
 const GUEST_LOGS = "@nova/streak.logs.guest.v2";
 
@@ -46,12 +44,13 @@ const key = (d = new Date()) =>
     day: "2-digit",
   }).format(d);
 
+function dateFromKey(k: string): Date {
+  const [y, m, d] = k.split("-").map((x) => Number(x));
+  return new Date(Date.UTC(y, m - 1, d));
+}
+
 const dDays = (a: string, b: string) =>
-  Math.round(
-    (+new Date(`${b}T00:00:00-04:00`) -
-      +new Date(`${a}T00:00:00-04:00`)) /
-      86400000
-  );
+  Math.round((+dateFromKey(b) - +dateFromKey(a)) / 86400000);
 
 type MetaShape = { count: number; last: string | null; best: number };
 type LogsShape = Record<string, boolean>;
@@ -100,9 +99,7 @@ export function StreakProvider({ children }: { children: React.ReactNode }) {
         AsyncStorage.removeItem(metaKey),
         AsyncStorage.removeItem(logsKey),
       ]);
-    } catch {
-      // ignore local errors
-    }
+    } catch {}
 
     if (uid) {
       try {
@@ -118,10 +115,7 @@ export function StreakProvider({ children }: { children: React.ReactNode }) {
             { onConflict: "id" }
           );
       } catch (err) {
-        if (__DEV__) {
-          // eslint-disable-next-line no-console
-          console.warn("[StreakContext] Supabase resetStreak error:", err);
-        }
+        if (__DEV__) console.warn("[StreakContext] Supabase resetStreak error:", err);
       }
     }
 
@@ -131,7 +125,6 @@ export function StreakProvider({ children }: { children: React.ReactNode }) {
     setTodayChecked(false);
   }, [supabaseUserId]);
 
-  // Initial load / reload when user changes
   useEffect(() => {
     let alive = true;
 
@@ -146,13 +139,11 @@ export function StreakProvider({ children }: { children: React.ReactNode }) {
         let logs: LogsShape = {};
 
         if (uid) {
-          // ---------- LOGGED-IN: Supabase source of truth ----------
+          // Supabase source of truth
           try {
             const { data, error } = await supabase
               .from("profiles")
-              .select(
-                "daily_streak_current, daily_streak_last_utc, daily_streak_best"
-              )
+              .select("daily_streak_current, daily_streak_last_utc, daily_streak_best")
               .eq("id", uid)
               .maybeSingle();
 
@@ -172,13 +163,9 @@ export function StreakProvider({ children }: { children: React.ReactNode }) {
               };
             }
           } catch (err) {
-            if (__DEV__) {
-              // eslint-disable-next-line no-console
-              console.warn("[StreakContext] Supabase load error:", err);
-            }
+            if (__DEV__) console.warn("[StreakContext] Supabase load error:", err);
           }
 
-          // Local per-user cache (for logs / migration)
           const [metaRawLocal, logsRawLocal] = await Promise.all([
             AsyncStorage.getItem(metaKeyFor(uid)),
             AsyncStorage.getItem(logsKeyFor(uid)),
@@ -186,14 +173,12 @@ export function StreakProvider({ children }: { children: React.ReactNode }) {
 
           if (!meta.last && metaRawLocal) {
             const localMeta = parseMeta(metaRawLocal);
-            if (localMeta.last) {
-              meta = localMeta;
-            }
+            if (localMeta.last) meta = localMeta;
           }
 
           logs = parseLogs(logsRawLocal);
         } else {
-          // ---------- GUEST: AsyncStorage only ----------
+          // Guest: load from guest keys (migrate from legacy once)
           const [metaNew, logsNew, metaLegacy, logsLegacy] = await Promise.all([
             AsyncStorage.getItem(GUEST_META),
             AsyncStorage.getItem(GUEST_LOGS),
@@ -207,18 +192,12 @@ export function StreakProvider({ children }: { children: React.ReactNode }) {
           meta = parseMeta(metaRaw);
           logs = parseLogs(logsRaw);
 
-          // If we loaded from legacy keys, migrate into new guest keys
-          if (metaRaw && !metaNew) {
-            await AsyncStorage.setItem(GUEST_META, metaRaw);
-          }
-          if (logsRaw && !logsNew) {
-            await AsyncStorage.setItem(GUEST_LOGS, logsRaw);
-          }
+          if (metaRaw && !metaNew) await AsyncStorage.setItem(GUEST_META, metaRaw);
+          if (logsRaw && !logsNew) await AsyncStorage.setItem(GUEST_LOGS, logsRaw);
         }
 
-        // ---------- Handle streak break (> 1 day gap) ----------
+        // Break streak if gap > 1 day
         if (meta.last && dDays(meta.last, today) > 1) {
-          // broken streak; clear current but keep best as "lifetime best"
           const uidNow = supabaseUserId ?? null;
           const metaKey = metaKeyFor(uidNow);
           const logsKey = logsKeyFor(uidNow);
@@ -228,9 +207,7 @@ export function StreakProvider({ children }: { children: React.ReactNode }) {
               AsyncStorage.removeItem(metaKey),
               AsyncStorage.removeItem(logsKey),
             ]);
-          } catch {
-            // ignore
-          }
+          } catch {}
 
           if (uidNow) {
             try {
@@ -246,13 +223,7 @@ export function StreakProvider({ children }: { children: React.ReactNode }) {
                   { onConflict: "id" }
                 );
             } catch (err) {
-              if (__DEV__) {
-                // eslint-disable-next-line no-console
-                console.warn(
-                  "[StreakContext] Supabase break-streak upsert error:",
-                  err
-                );
-              }
+              if (__DEV__) console.warn("[StreakContext] break-streak upsert error:", err);
             }
           }
 
@@ -260,7 +231,7 @@ export function StreakProvider({ children }: { children: React.ReactNode }) {
           logs = {};
         }
 
-        // ---------- After we know meta/logs, sync to Supabase once ----------
+        // Sync snapshot to Supabase once (logged-in)
         const uidNow = supabaseUserId ?? null;
         if (uidNow) {
           try {
@@ -276,13 +247,7 @@ export function StreakProvider({ children }: { children: React.ReactNode }) {
                 { onConflict: "id" }
               );
           } catch (err) {
-            if (__DEV__) {
-              // eslint-disable-next-line no-console
-              console.warn(
-                "[StreakContext] Supabase sync-on-load error:",
-                err
-              );
-            }
+            if (__DEV__) console.warn("[StreakContext] sync-on-load error:", err);
           }
         }
 
@@ -293,10 +258,7 @@ export function StreakProvider({ children }: { children: React.ReactNode }) {
         setLast(meta.last || null);
         setTodayChecked(!!logs[today] || meta.last === today);
       } catch (err) {
-        if (__DEV__) {
-          // eslint-disable-next-line no-console
-          console.warn("[StreakContext] load error:", err);
-        }
+        if (__DEV__) console.warn("[StreakContext] load error:", err);
         if (!alive) return;
         setCount(0);
         setBest(0);
@@ -316,12 +278,10 @@ export function StreakProvider({ children }: { children: React.ReactNode }) {
     const today = key();
     const uid = supabaseUserId ?? null;
 
-    // Reload logs so we don't stomp other updates
     const logsKey = logsKeyFor(uid);
     const logsRaw = await AsyncStorage.getItem(logsKey);
     const logs = parseLogs(logsRaw);
 
-    // Already marked for today? just ensure state reflects that
     if (logs[today] || last === today) {
       setTodayChecked(true);
       return;
@@ -331,15 +291,9 @@ export function StreakProvider({ children }: { children: React.ReactNode }) {
 
     if (last) {
       const diff = dDays(last, today);
-      if (diff === 1) {
-        nextCount = (count || 0) + 1;
-      } else if (diff <= 0) {
-        // same day or "earlier" date; don't change
-        nextCount = count || 1;
-      } else {
-        // gap > 1 day → fresh streak from 1
-        nextCount = 1;
-      }
+      if (diff === 1) nextCount = (count || 0) + 1;
+      else if (diff <= 0) nextCount = count || 1;
+      else nextCount = 1;
     }
 
     const nextBest = Math.max(best || 0, nextCount);
@@ -349,13 +303,11 @@ export function StreakProvider({ children }: { children: React.ReactNode }) {
 
     const metaKey = metaKeyFor(uid);
 
-    // Persist locally (guest or per-user cache)
     await Promise.all([
       AsyncStorage.setItem(metaKey, JSON.stringify(newMeta)),
       AsyncStorage.setItem(logsKey, JSON.stringify(newLogs)),
     ]);
 
-    // Sync to Supabase if logged in
     if (uid) {
       try {
         await supabase
@@ -370,10 +322,7 @@ export function StreakProvider({ children }: { children: React.ReactNode }) {
             { onConflict: "id" }
           );
       } catch (err) {
-        if (__DEV__) {
-          // eslint-disable-next-line no-console
-          console.warn("[StreakContext] Supabase markToday error:", err);
-        }
+        if (__DEV__) console.warn("[StreakContext] markToday error:", err);
       }
     }
 

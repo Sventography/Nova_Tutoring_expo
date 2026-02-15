@@ -1,3 +1,4 @@
+// app/context/AchievementsContext.tsx
 import React, {
   createContext,
   useCallback,
@@ -13,13 +14,14 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ACHIEVEMENT_LIST } from "../constants/achievements";
 import { useCoins } from "./CoinsContext";
 import { useToast } from "./ToastContext";
+import { useUser } from "./UserContext";
 
-const STORAGE_KEY_UNLOCKED = "@achieve/unlocked.v1";
-const STORAGE_KEY_QUIZ_COUNT = "@achieve/quizCount.v1";
-const STORAGE_KEY_ASK_COUNT = "@achieve/askCount.v1";
-const STORAGE_KEY_FLASHCARD_COUNT = "@achieve/flashcardCount.v1";
-const STORAGE_KEY_BRAIN_COUNT = "@achieve/brainteaserCount.v1";
-const STORAGE_KEY_RELAX_MIN = "@achieve/relaxMinutes.v1";
+const STORAGE_BASE_UNLOCKED = "@achieve/unlocked.v1";
+const STORAGE_BASE_QUIZ_COUNT = "@achieve/quizCount.v1";
+const STORAGE_BASE_ASK_COUNT = "@achieve/askCount.v1";
+const STORAGE_BASE_FLASHCARD_COUNT = "@achieve/flashcardCount.v1";
+const STORAGE_BASE_BRAIN_COUNT = "@achieve/brainteaserCount.v1";
+const STORAGE_BASE_RELAX_MIN = "@achieve/relaxMinutes.v1";
 
 export const ACHIEVEMENT_EVENT = "ACHIEVEMENT_EVENT";
 
@@ -90,6 +92,17 @@ const FLASH_THRESHOLDS = [1, 5, 10, 25, 50, 100, 200];
 const BRAIN_THRESHOLDS = [1, 3, 5, 10, 20, 50, 100];
 const RELAX_THRESHOLDS = [5, 10, 20, 30, 60, 120];
 
+// ─────────────── HELPERS ───────────────
+
+const storageKey = (base: string, uid: string | null) =>
+  uid ? `${base}.user.${uid}` : `${base}.guest`;
+
+const parseNum = (raw: string | null) => {
+  if (!raw) return 0;
+  const n = parseInt(raw, 10);
+  return Number.isNaN(n) ? 0 : n;
+};
+
 // ─────────────── CONTEXT ───────────────
 
 const AchievementsCtx = createContext<AchievementsContextValue | null>(null);
@@ -103,6 +116,8 @@ export function useAchievements(): AchievementsContextValue {
 }
 
 export function AchievementsProvider({ children }: { children: React.ReactNode }) {
+  const { supabaseUserId } = useUser();
+
   const [unlocked, setUnlocked] = useState<UnlockedMap>({});
   const unlockedRef = useRef<UnlockedMap>({});
   const quizCountRef = useRef<number>(0);
@@ -118,17 +133,31 @@ export function AchievementsProvider({ children }: { children: React.ReactNode }
   const addCoinsFn = useMemo(() => {
     const anyCoins = coinsApi as any;
     if (typeof anyCoins.add === "function") return anyCoins.add.bind(anyCoins);
-    if (typeof anyCoins.addCoins === "function") return anyCoins.addCoins.bind(anyCoins);
-    if (typeof anyCoins.credit === "function") return anyCoins.credit.bind(anyCoins);
+    if (typeof anyCoins.addCoins === "function")
+      return anyCoins.addCoins.bind(anyCoins);
+    if (typeof anyCoins.credit === "function")
+      return anyCoins.credit.bind(anyCoins);
     console.warn("[Achievements] No coin adder function found in useCoins()");
     return null;
   }, [coinsApi]);
 
-  // ─────────────── HYDRATE ───────────────
+  // ─────────────── HYDRATE PER USER ───────────────
 
   useEffect(() => {
     (async () => {
       try {
+        setHydrated(false);
+        // reset in-memory refs when switching users
+        unlockedRef.current = {};
+        quizCountRef.current = 0;
+        askCountRef.current = 0;
+        flashCountRef.current = 0;
+        brainCountRef.current = 0;
+        relaxMinutesRef.current = 0;
+        setUnlocked({});
+
+        const uid = supabaseUserId ?? null;
+
         const [
           rawUnlocked,
           rawQuizCount,
@@ -137,25 +166,23 @@ export function AchievementsProvider({ children }: { children: React.ReactNode }
           rawBrainCount,
           rawRelaxMin,
         ] = await Promise.all([
-          AsyncStorage.getItem(STORAGE_KEY_UNLOCKED),
-          AsyncStorage.getItem(STORAGE_KEY_QUIZ_COUNT),
-          AsyncStorage.getItem(STORAGE_KEY_ASK_COUNT),
-          AsyncStorage.getItem(STORAGE_KEY_FLASHCARD_COUNT),
-          AsyncStorage.getItem(STORAGE_KEY_BRAIN_COUNT),
-          AsyncStorage.getItem(STORAGE_KEY_RELAX_MIN),
+          AsyncStorage.getItem(storageKey(STORAGE_BASE_UNLOCKED, uid)),
+          AsyncStorage.getItem(storageKey(STORAGE_BASE_QUIZ_COUNT, uid)),
+          AsyncStorage.getItem(storageKey(STORAGE_BASE_ASK_COUNT, uid)),
+          AsyncStorage.getItem(storageKey(STORAGE_BASE_FLASHCARD_COUNT, uid)),
+          AsyncStorage.getItem(storageKey(STORAGE_BASE_BRAIN_COUNT, uid)),
+          AsyncStorage.getItem(storageKey(STORAGE_BASE_RELAX_MIN, uid)),
         ]);
 
         if (rawUnlocked) {
-          const parsed: UnlockedMap = JSON.parse(rawUnlocked);
-          unlockedRef.current = parsed || {};
-          setUnlocked(parsed || {});
+          try {
+            const parsed: UnlockedMap = JSON.parse(rawUnlocked);
+            unlockedRef.current = parsed || {};
+            setUnlocked(parsed || {});
+          } catch (e) {
+            console.warn("[Achievements] parse unlocked failed", e);
+          }
         }
-
-        const parseNum = (raw: string | null) => {
-          if (!raw) return 0;
-          const n = parseInt(raw, 10);
-          return Number.isNaN(n) ? 0 : n;
-        };
 
         quizCountRef.current = parseNum(rawQuizCount);
         askCountRef.current = parseNum(rawAskCount);
@@ -168,73 +195,79 @@ export function AchievementsProvider({ children }: { children: React.ReactNode }
         setHydrated(true);
       }
     })();
-  }, []);
+  }, [supabaseUserId]);
 
   const persistUnlocked = useCallback(async () => {
     try {
+      const uid = supabaseUserId ?? null;
       await AsyncStorage.setItem(
-        STORAGE_KEY_UNLOCKED,
+        storageKey(STORAGE_BASE_UNLOCKED, uid),
         JSON.stringify(unlockedRef.current)
       );
     } catch (e) {
       console.warn("[Achievements] persist unlocked failed", e);
     }
-  }, []);
+  }, [supabaseUserId]);
 
   const persistQuizCount = useCallback(async () => {
     try {
+      const uid = supabaseUserId ?? null;
       await AsyncStorage.setItem(
-        STORAGE_KEY_QUIZ_COUNT,
+        storageKey(STORAGE_BASE_QUIZ_COUNT, uid),
         String(quizCountRef.current)
       );
     } catch (e) {
       console.warn("[Achievements] persist quiz count failed", e);
     }
-  }, []);
+  }, [supabaseUserId]);
 
   const persistAskCount = useCallback(async () => {
     try {
+      const uid = supabaseUserId ?? null;
       await AsyncStorage.setItem(
-        STORAGE_KEY_ASK_COUNT,
+        storageKey(STORAGE_BASE_ASK_COUNT, uid),
         String(askCountRef.current)
       );
     } catch (e) {
       console.warn("[Achievements] persist ask count failed", e);
     }
-  }, []);
+  }, [supabaseUserId]);
 
   const persistFlashCount = useCallback(async () => {
     try {
+      const uid = supabaseUserId ?? null;
       await AsyncStorage.setItem(
-        STORAGE_KEY_FLASHCARD_COUNT,
+        storageKey(STORAGE_BASE_FLASHCARD_COUNT, uid),
         String(flashCountRef.current)
       );
     } catch (e) {
       console.warn("[Achievements] persist flashcard count failed", e);
     }
-  }, []);
+  }, [supabaseUserId]);
 
   const persistBrainCount = useCallback(async () => {
     try {
+      const uid = supabaseUserId ?? null;
       await AsyncStorage.setItem(
-        STORAGE_KEY_BRAIN_COUNT,
+        storageKey(STORAGE_BASE_BRAIN_COUNT, uid),
         String(brainCountRef.current)
       );
     } catch (e) {
       console.warn("[Achievements] persist brainteaser count failed", e);
     }
-  }, []);
+  }, [supabaseUserId]);
 
   const persistRelaxMinutes = useCallback(async () => {
     try {
+      const uid = supabaseUserId ?? null;
       await AsyncStorage.setItem(
-        STORAGE_KEY_RELAX_MIN,
+        storageKey(STORAGE_BASE_RELAX_MIN, uid),
         String(relaxMinutesRef.current)
       );
     } catch (e) {
       console.warn("[Achievements] persist relax minutes failed", e);
     }
-  }, []);
+  }, [supabaseUserId]);
 
   // ─────────────── UNLOCK ───────────────
 

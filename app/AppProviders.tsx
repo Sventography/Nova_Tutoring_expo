@@ -119,11 +119,9 @@ export function AppProviders(props: any) {
   const { children } = props;
 
   return (
-    <ThemeProvider>
-      <ThemeGate>
-        {/* 🔐 UserProvider MUST wrap anything that calls useUser() */}
-        <UserProvider>
-          {/* Coins & purchases can safely read user now */}
+    <UserProvider>
+      <ThemeProvider>
+        <ThemeGate>
           <CoinsProvider>
             <PurchasesProvider>
               <CursorProvider>
@@ -144,9 +142,9 @@ export function AppProviders(props: any) {
               </CursorProvider>
             </PurchasesProvider>
           </CoinsProvider>
-        </UserProvider>
-      </ThemeGate>
-    </ThemeProvider>
+        </ThemeGate>
+      </ThemeProvider>
+    </UserProvider>
   );
 }
 

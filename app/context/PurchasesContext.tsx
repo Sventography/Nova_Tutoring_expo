@@ -1,3 +1,4 @@
+// app/context/PurchasesContext.tsx
 import React, {
   createContext,
   useCallback,
@@ -120,7 +121,9 @@ function normalizePurchases(obj: any): PurchaseMap {
   return out;
 }
 
-function normalizeSkusToMap(rows: { sku?: string | null }[] | null): PurchaseMap {
+function normalizeSkusToMap(
+  rows: { sku?: string | null }[] | null
+): PurchaseMap {
   const out: PurchaseMap = {};
   if (!rows) return out;
   for (const row of rows) {
@@ -149,6 +152,9 @@ async function loadLocalPurchases(
     }
   }
 
+  // IMPORTANT:
+  // includeLegacy = true  → also pull from old global keys
+  // includeLegacy = false → ONLY per-user/guest key
   if (includeLegacy) {
     for (const key of LEGACY_KEYS) {
       const raw = await AsyncStorage.getItem(key);
@@ -174,7 +180,11 @@ function toRemotePayload(map: PurchaseMap) {
 
 /* ----------------------------- main provider -------------------------------- */
 
-export function PurchasesProvider({ children }: { children: React.ReactNode }) {
+export function PurchasesProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const { supabaseUserId } = useUser();
   const [purchases, setPurchases] = useState<PurchaseMap>({});
   const [hydrated, setHydrated] = useState(false);
@@ -184,27 +194,36 @@ export function PurchasesProvider({ children }: { children: React.ReactNode }) {
 
   /* --------------------- hydrate whenever the user changes --------------------- */
   useEffect(() => {
+    let alive = true;
+
+    // Clear immediately so we don't flash previous account's purchases
+    setPurchases({});
+    setHydrated(false);
+
     (async () => {
       const key = storageKey(supabaseUserId);
       console.log("[PurchasesContext] init for key =", key);
 
       try {
+        // --------------------- GUEST MODE ---------------------
         if (!supabaseUserId) {
-          // Guest: local only, but also try legacy keys once
           console.log(
             "[PurchasesContext] guest mode, loading from AsyncStorage (with legacy)"
           );
+          // Guests can see legacy keys so old installs don't lose entitlements.
           const guestPurchases = await loadLocalPurchases(key, true);
           console.log(
             "[PurchasesContext] loaded guest purchases (normalized):",
             guestPurchases
           );
-          setPurchases(guestPurchases);
-          await AsyncStorage.setItem(key, JSON.stringify(guestPurchases));
+          if (alive) {
+            setPurchases(guestPurchases);
+            await AsyncStorage.setItem(key, JSON.stringify(guestPurchases));
+          }
           return;
         }
 
-        // Logged-in: primary source is Supabase purchases table
+        // --------------------- LOGGED-IN MODE ---------------------
         console.log(
           "[PurchasesContext] logged in, loading from Supabase purchases table for",
           supabaseUserId
@@ -219,9 +238,15 @@ export function PurchasesProvider({ children }: { children: React.ReactNode }) {
           .eq("user_id", supabaseUserId);
 
         if (rowsError) {
-          console.warn("[PurchasesContext] load purchases table error:", rowsError);
+          console.warn(
+            "[PurchasesContext] load purchases table error:",
+            rowsError
+          );
         } else if (rows && rows.length > 0) {
-          console.log("[PurchasesContext] found rows in purchases table:", rows.length);
+          console.log(
+            "[PurchasesContext] found rows in purchases table:",
+            rows.length
+          );
           next = normalizeSkusToMap(rows);
         }
 
@@ -256,13 +281,15 @@ export function PurchasesProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
-        // 3) If still nothing, fall back to local (and legacy keys)
+        // 3) If still nothing, fall back to *only* this user's local key
         if (!next || Object.keys(next).length === 0) {
           console.log(
             "[PurchasesContext] no remote purchases, checking local storage for user",
             key
           );
-          const local = await loadLocalPurchases(key, true);
+          // IMPORTANT: do NOT pull from LEGACY_KEYS here,
+          // or new accounts inherit old purchases.
+          const local = await loadLocalPurchases(key, false);
           if (Object.keys(local).length > 0) {
             console.log(
               "[PurchasesContext] loaded local purchases for user (normalized):",
@@ -276,15 +303,21 @@ export function PurchasesProvider({ children }: { children: React.ReactNode }) {
           next = {};
         }
 
-        setPurchases(next);
-        await AsyncStorage.setItem(key, JSON.stringify(next));
+        if (alive) {
+          setPurchases(next);
+          await AsyncStorage.setItem(key, JSON.stringify(next));
+        }
       } catch (e) {
         console.warn("[PurchasesContext] init purchases error:", e);
-        setPurchases({});
+        if (alive) setPurchases({});
       } finally {
-        setHydrated(true);
+        if (alive) setHydrated(true);
       }
     })();
+
+    return () => {
+      alive = false;
+    };
   }, [supabaseUserId]);
 
   /* ---------------------- persist when purchases change ---------------------- */
@@ -424,130 +457,143 @@ export function PurchasesProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const reload = useCallback(async () => {
-    const key = storageKey(supabaseUserId);
-    console.log("[PurchasesContext] reload called for key", key);
+  const reload = useCallback(
+    async () => {
+      const key = storageKey(supabaseUserId);
+      console.log("[PurchasesContext] reload called for key", key);
 
-    try {
-      if (supabaseUserId) {
-        // Try purchases table first
-        const { data: rows, error: rowsError } = await supabase
-          .from("purchases")
-          .select("sku")
-          .eq("user_id", supabaseUserId);
-
-        if (!rowsError && rows && rows.length > 0) {
-          console.log(
-            "[PurchasesContext] reload got purchases from table:",
-            rows
-          );
-          const norm = normalizeSkusToMap(rows);
-          setPurchases(norm);
-          await AsyncStorage.setItem(key, JSON.stringify(norm));
-          return;
-        }
-
-        if (rowsError) {
-          console.warn(
-            "[PurchasesContext] reload purchases table error:",
-            rowsError
-          );
-        }
-
-        // Fallback: profiles.purchases JSON
-        const { data: profileRow, error: profileError } = await supabase
-          .from("profiles")
-          .select("purchases")
-          .eq("id", supabaseUserId)
-          .maybeSingle();
-
-        if (
-          !profileError &&
-          profileRow &&
-          profileRow.purchases &&
-          typeof profileRow.purchases === "object"
-        ) {
-          console.log(
-            "[PurchasesContext] reload got purchases from profile JSON:",
-            profileRow.purchases
-          );
-          const norm = normalizePurchases(profileRow.purchases);
-          setPurchases(norm);
-          await AsyncStorage.setItem(key, JSON.stringify(norm));
-          return;
-        }
-
-        if (profileError) {
-          console.warn(
-            "[PurchasesContext] reload profile.purchases error:",
-            profileError
-          );
-        }
-      }
-
-      // Fallback: local + legacy
-      const local = await loadLocalPurchases(key, true);
-      if (Object.keys(local).length > 0) {
-        console.log(
-          "[PurchasesContext] reload got purchases from AsyncStorage:",
-          local
-        );
-        setPurchases(local);
-        return;
-      }
-
-      console.log("[PurchasesContext] reload found nothing, clearing");
-      setPurchases({});
-    } catch (e) {
-      console.warn("[PurchasesContext] reload error:", e);
-    }
-  }, [supabaseUserId]);
-
-  const clearAll = useCallback(async () => {
-    const key = storageKey(supabaseUserId);
-    console.log("[PurchasesContext] clearAll called for", key);
-    const empty: PurchaseMap = {};
-    setPurchases(empty);
-    await AsyncStorage.setItem(key, JSON.stringify(empty));
-
-    if (supabaseUserId) {
       try {
-        // Clear both the table and the profile mirror
-        const { error: delError } = await supabase
-          .from("purchases")
-          .delete()
-          .eq("user_id", supabaseUserId);
+        if (supabaseUserId) {
+          // Try purchases table first
+          const { data: rows, error: rowsError } = await supabase
+            .from("purchases")
+            .select("sku")
+            .eq("user_id", supabaseUserId);
 
-        if (delError) {
-          console.warn("[PurchasesContext] clearAll table error:", delError);
-        } else {
-          console.log("[PurchasesContext] clearAll table OK");
+          if (!rowsError && rows && rows.length > 0) {
+            console.log(
+              "[PurchasesContext] reload got purchases from table:",
+              rows
+            );
+            const norm = normalizeSkusToMap(rows);
+            setPurchases(norm);
+            await AsyncStorage.setItem(key, JSON.stringify(norm));
+            return;
+          }
+
+          if (rowsError) {
+            console.warn(
+              "[PurchasesContext] reload purchases table error:",
+              rowsError
+            );
+          }
+
+          // Fallback: profiles.purchases JSON
+          const { data: profileRow, error: profileError } = await supabase
+            .from("profiles")
+            .select("purchases")
+            .eq("id", supabaseUserId)
+            .maybeSingle();
+
+          if (
+            !profileError &&
+            profileRow &&
+            profileRow.purchases &&
+            typeof profileRow.purchases === "object"
+          ) {
+            console.log(
+              "[PurchasesContext] reload got purchases from profile JSON:",
+              profileRow.purchases
+            );
+            const norm = normalizePurchases(profileRow.purchases);
+            setPurchases(norm);
+            await AsyncStorage.setItem(key, JSON.stringify(norm));
+            return;
+          }
+
+          if (profileError) {
+            console.warn(
+              "[PurchasesContext] reload profile.purchases error:",
+              profileError
+            );
+          }
         }
 
-        const { error: profileError } = await supabase
-          .from("profiles")
-          .upsert(
-            {
-              id: supabaseUserId,
-              purchases: toRemotePayload(empty),
-              updated_at: new Date().toISOString(),
-            },
-            { onConflict: "id" }
+        // Fallback: local only.
+        // IMPORTANT: for logged-in users we do NOT include legacy keys here.
+        const local = await loadLocalPurchases(
+          key,
+          supabaseUserId ? false : true
+        );
+        if (Object.keys(local).length > 0) {
+          console.log(
+            "[PurchasesContext] reload got purchases from AsyncStorage:",
+            local
           );
-
-        if (profileError) {
-          console.warn(
-            "[PurchasesContext] clearAll Supabase error:",
-            profileError
-          );
-        } else {
-          console.log("[PurchasesContext] clearAll Supabase OK");
+          setPurchases(local);
+          return;
         }
+
+        console.log("[PurchasesContext] reload found nothing, clearing");
+        setPurchases({});
       } catch (e) {
-        console.warn("[PurchasesContext] clearAll threw:", e);
+        console.warn("[PurchasesContext] reload error:", e);
       }
-    }
-  }, [supabaseUserId]);
+    },
+    [supabaseUserId]
+  );
+
+  const clearAll = useCallback(
+    async () => {
+      const key = storageKey(supabaseUserId);
+      console.log("[PurchasesContext] clearAll called for", key);
+      const empty: PurchaseMap = {};
+      setPurchases(empty);
+      await AsyncStorage.setItem(key, JSON.stringify(empty));
+
+      if (supabaseUserId) {
+        try {
+          // Clear both the table and the profile mirror
+          const { error: delError } = await supabase
+            .from("purchases")
+            .delete()
+            .eq("user_id", supabaseUserId);
+
+          if (delError) {
+            console.warn(
+              "[PurchasesContext] clearAll table error:",
+              delError
+            );
+          } else {
+            console.log("[PurchasesContext] clearAll table OK");
+          }
+
+          const { error: profileError } = await supabase
+            .from("profiles")
+            .upsert(
+              {
+                id: supabaseUserId,
+                purchases: toRemotePayload(empty),
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: "id" }
+            );
+
+          if (profileError) {
+            console.warn(
+              "[PurchasesContext] clearAll Supabase error:",
+              profileError
+            );
+          } else {
+            console.log("[PurchasesContext] clearAll Supabase OK");
+          }
+        } catch (e) {
+          console.warn("[PurchasesContext] clearAll threw:", e);
+        }
+      }
+    },
+    [supabaseUserId]
+  );
 
   const value = useMemo(
     () => ({ purchases, isOwned, grant, revoke, reload, clearAll }),

@@ -1,6 +1,13 @@
 // app/context/ThemeContext.tsx
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useUser } from "./UserContext";
 
 export type ProviderThemeId =
   | "theme:neon"
@@ -32,7 +39,7 @@ export type Tokens = {
   gradient: [string, string];
   barStyle: "light-content" | "dark-content";
 
-  // ✅ NEW: readability helpers for headers + pills
+  // readability helpers for headers + pills
   titleText: string;
 
   pillBg: string;
@@ -43,7 +50,9 @@ export type Tokens = {
   softShadow: string; // e.g. "rgba(0,0,0,0.18)"
 };
 
-const THEME_KEY = "@nova/themeId";
+const THEME_KEY_BASE = "@nova/themeId";
+const themeStorageKey = (uid: string | null) =>
+  uid ? `${THEME_KEY_BASE}.user.${uid}` : `${THEME_KEY_BASE}.guest`;
 
 /* ------------------------------- Canon IDs -------------------------------- */
 
@@ -86,7 +95,15 @@ function canonId(id?: string | null): ProviderThemeId {
 
 /* -------------------------- Token helper defaults ------------------------- */
 
-function withReadability(t: Omit<Tokens, "titleText" | "pillBg" | "pillText" | "pillBorder" | "softShadow"> & Partial<Pick<Tokens, "titleText" | "pillBg" | "pillText" | "pillBorder" | "softShadow">>): Tokens {
+function withReadability(
+  t: Omit<
+    Tokens,
+    "titleText" | "pillBg" | "pillText" | "pillBorder" | "softShadow"
+  > &
+    Partial<
+      Pick<Tokens, "titleText" | "pillBg" | "pillText" | "pillBorder" | "softShadow">
+    >
+): Tokens {
   const isDark = !!t.isDark;
 
   // Good defaults if caller didn't specify
@@ -131,7 +148,6 @@ export const THEMES: Record<ProviderThemeId, Tokens> = {
     accent: "#00C8FF",
     gradient: ["#00E5FF", "#00121A"],
     barStyle: "light-content",
-    // optional: stronger header readability
     pillBg: "rgba(0,229,255,0.12)",
     pillBorder: "rgba(30,227,255,0.35)",
   }),
@@ -152,7 +168,6 @@ export const THEMES: Record<ProviderThemeId, Tokens> = {
     pillBorder: "rgba(107,167,255,0.28)",
   }),
 
-  // ✅ Light themes need deliberate pill/title contrast
   "theme:pink": withReadability({
     id: "theme:pink",
     name: "Pink Dawn",
@@ -326,30 +341,54 @@ type ThemeContextValue = {
 const ThemeCtx = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const { supabaseUserId } = useUser();
   const [themeId, setThemeId] = useState<ProviderThemeId>("theme:neon");
 
+  // Load the correct theme whenever the user changes
   useEffect(() => {
+    let alive = true;
+
     (async () => {
       try {
-        const saved = await AsyncStorage.getItem(THEME_KEY);
-        if (saved) setThemeId(canonId(saved));
-      } catch {}
+        const key = themeStorageKey(supabaseUserId);
+        const saved = await AsyncStorage.getItem(key);
+        const nextId = saved ? canonId(saved) : ("theme:neon" as ProviderThemeId);
+        if (alive) {
+          setThemeId(nextId);
+        }
+      } catch (e) {
+        console.warn("[ThemeContext] load theme error:", e);
+        if (alive) {
+          setThemeId("theme:neon");
+        }
+      }
     })();
-  }, []);
+
+    return () => {
+      alive = false;
+    };
+  }, [supabaseUserId]);
 
   const setThemeById = (id: string | null | undefined) => {
     const c = canonId(id ?? undefined);
     setThemeId(c);
-    AsyncStorage.setItem(THEME_KEY, c).catch(() => {});
+    const key = themeStorageKey(supabaseUserId);
+    AsyncStorage.setItem(key, c).catch(() => {});
   };
 
-  const tokens = useMemo(() => THEMES[themeId] ?? THEMES["theme:neon"], [themeId]);
+  const tokens = useMemo(
+    () => THEMES[themeId] ?? THEMES["theme:neon"],
+    [themeId]
+  );
 
   useEffect(() => {
     __themeTokensSnapshot = tokens;
   }, [tokens]);
 
-  const value = useMemo(() => ({ themeId, tokens, setThemeById }), [themeId, tokens]);
+  const value = useMemo(
+    () => ({ themeId, tokens, setThemeById }),
+    [themeId, tokens]
+  );
 
   return <ThemeCtx.Provider value={value}>{children}</ThemeCtx.Provider>;
 }

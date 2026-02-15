@@ -1,4 +1,3 @@
-// app/(tabs)/shop.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
@@ -553,7 +552,7 @@ export default function Shop() {
 
   const coinsRef = useRef<number>(coins ?? 0);
 
-  // 🔥 DEV CHEAT: tap Shop title 5x → +500,000 coins
+  // 🔥 DEV CHEAT: tap Shop title 5x → +1,000 coins
   const devTapRef = useRef(0);
 
   // companions strip bounce state
@@ -672,7 +671,7 @@ export default function Shop() {
     };
   }, []);
 
-  // 🔥 Dev cheat handler: 5 taps on title → +500k coins
+  // 🔥 Dev cheat handler: 5 taps on title → +1,000 coins
   const handleDevTitlePress = () => {
     if (!__DEV__) return;
 
@@ -680,7 +679,7 @@ export default function Shop() {
     const taps = devTapRef.current;
 
     if (taps % 5 === 0) {
-      const bonus = 500_000;
+      const bonus = 1_000;
       const cur = coinsRef.current ?? coins ?? 0;
       const nextCoins = cur + bonus;
 
@@ -702,7 +701,7 @@ export default function Shop() {
           } coins from Shop title taps`
         );
       } catch {
-        console.log("[DEV CHEAT] Granted 500,000 coins from Shop title taps");
+        console.log("[DEV CHEAT] Granted 1,000 coins from Shop title taps");
       }
     }
   };
