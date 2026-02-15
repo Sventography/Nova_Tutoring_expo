@@ -1,227 +1,267 @@
 // app/context/CoinsContext.tsx
 import React, {
   createContext,
-  useCallback,
   useContext,
   useEffect,
-  useMemo,
   useState,
   ReactNode,
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useUser } from "./UserContext";
 import { supabase } from "../lib/supabase";
+import { useUser } from "./UserContext";
 
 type CoinsContextValue = {
   coins: number;
   loading: boolean;
-  addCoins: (delta: number) => Promise<void>;
-  setCoins: (value: number) => Promise<void>;
-  resetCoins: () => Promise<void>;
+  ready: boolean;
+  /**
+   * Directly set coins to a value or updater.
+   * This will sync to Supabase for logged-in users
+   * and to AsyncStorage for guests.
+   */
+  setCoins: (
+    valueOrUpdater: number | ((prev: number) => number),
+    opts?: { reason?: string }
+  ) => Promise<void>;
+  /**
+   * Add (or subtract) coins by a delta.
+   */
+  addCoins: (
+    delta: number,
+    reason?: string,
+    meta?: Record<string, any>
+  ) => Promise<void>;
+  /**
+   * Manually trigger a reload from Supabase / storage.
+   */
+  refreshCoins: () => Promise<void>;
 };
 
-const CoinsContext = createContext<CoinsContextValue | null>(null);
+const CoinsContext = createContext<CoinsContextValue | undefined>(undefined);
 
-const GUEST_KEY = "@nova/coins.guest.v1";
-const userKey = (uid: string | null) =>
-  uid ? `@nova/coins.user.${uid}.v1` : GUEST_KEY;
+const GUEST_COINS_KEY = "@nova/coins:guest";
+const USER_COINS_PREFIX = "@nova/coins:user:";
+
+function getUserCoinsKey(userId: string | null): string {
+  if (!userId) return GUEST_COINS_KEY;
+  return `${USER_COINS_PREFIX}${userId}`;
+}
 
 export function CoinsProvider({ children }: { children: ReactNode }) {
-  const { supabaseUserId } = useUser();
-  const [coins, setCoinsState] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const { supabaseUserId, ready: userReady } = useUser() as any;
+
+  const [coins, setCoinsState] = useState<number>(0);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [ready, setReady] = useState<boolean>(false);
+
+  // ---------------------------------------------------------------------------
+  // Internal helpers
+  // ---------------------------------------------------------------------------
+
+  const persistCoins = async (value: number) => {
+    try {
+      const key = getUserCoinsKey(supabaseUserId ?? null);
+
+      // Always keep a local cache so the app feels snappy
+      await AsyncStorage.setItem(key, String(value));
+
+      // If we have a Supabase user, sync to profiles table as source of truth
+      if (supabaseUserId) {
+        const { error } = await supabase
+          .from("profiles")
+          .upsert(
+            {
+              id: supabaseUserId,
+              coins: value,
+            },
+            { onConflict: "id" }
+          );
+
+        if (error) {
+          console.warn("[CoinsContext] Supabase upsert error:", error);
+        }
+      }
+    } catch (err) {
+      console.warn("[CoinsContext] persistCoins error:", err);
+    }
+  };
+
+  const loadFromStorageOnly = async (): Promise<number> => {
+    const key = getUserCoinsKey(supabaseUserId ?? null);
+    const raw = await AsyncStorage.getItem(key);
+    if (raw == null) return 0;
+    const num = Number(raw);
+    return Number.isFinite(num) ? num : 0;
+  };
+
+  const loadFromSupabase = async (): Promise<number> => {
+    if (!supabaseUserId) {
+      // Guest path
+      return loadFromStorageOnly();
+    }
+
+    // Logged-in path: Supabase is source of truth, but we also consider any
+    // existing local guest balance once (for first-time profile creation).
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, coins")
+        .eq("id", supabaseUserId)
+        .maybeSingle();
+
+      if (error && (error as any).code !== "PGRST116") {
+        console.warn("[CoinsContext] Supabase select error:", error);
+      }
+
+      let nextCoins = 0;
+
+      if (data && typeof data.coins === "number") {
+        nextCoins = data.coins;
+      } else {
+        // No profile row yet – use any local cache as a seed if it exists
+        const localSeed = await loadFromStorageOnly();
+        nextCoins = localSeed;
+
+        const { error: upsertError } = await supabase
+          .from("profiles")
+          .upsert(
+            {
+              id: supabaseUserId,
+              coins: nextCoins,
+            },
+            { onConflict: "id" }
+          );
+
+        if (upsertError) {
+          console.warn("[CoinsContext] Supabase upsert (create) error:", upsertError);
+        }
+      }
+
+      // Update local cache for this user
+      const key = getUserCoinsKey(supabaseUserId);
+      await AsyncStorage.setItem(key, String(nextCoins));
+
+      return nextCoins;
+    } catch (err) {
+      console.warn("[CoinsContext] loadFromSupabase error:", err);
+      // Fallback to local cache if Supabase fails
+      return loadFromStorageOnly();
+    }
+  };
+
+  const refreshCoins = async () => {
+    if (!userReady) return;
+    setLoading(true);
+    try {
+      const value = await loadFromSupabase();
+      setCoinsState(value);
+      setReady(true);
+    } catch (err) {
+      console.warn("[CoinsContext] refreshCoins error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ---------------------------------------------------------------------------
+  // Initial / reactive load when auth state changes
+  // ---------------------------------------------------------------------------
 
   useEffect(() => {
-    let alive = true;
+    let cancelled = false;
 
-    (async () => {
+    const run = async () => {
+      if (!userReady) return;
       setLoading(true);
-      // prevent “flash” of prior account coins when user switches
-      setCoinsState(0);
-
       try {
-        const uid = supabaseUserId;
-
-        // ------------------ LOGGED-IN PATH ------------------
-        if (uid) {
-          let remoteCoins: number | null = null;
-          let localCoins: number | null = null;
-
-          // 1) Try Supabase as one source of truth
-          try {
-            const { data, error } = await supabase
-              .from("profiles")
-              .select("coins")
-              .eq("id", uid)
-              .maybeSingle();
-
-            if (error) {
-              console.warn("[CoinsContext] Supabase coins load error:", error);
-            } else if (data && typeof data.coins === "number") {
-              const v = Number(data.coins);
-              if (Number.isFinite(v)) {
-                remoteCoins = Math.max(0, v);
-              }
-            }
-          } catch (err) {
-            console.warn(
-              "[CoinsContext] Supabase coins load threw error:",
-              err
-            );
-          }
-
-          // 2) Load per-user local cache (NEVER guest, NEVER legacy)
-          try {
-            const rawUser = await AsyncStorage.getItem(userKey(uid));
-            if (rawUser != null) {
-              const parsed = Number(rawUser);
-              if (Number.isFinite(parsed)) {
-                localCoins = Math.max(0, parsed);
-              }
-            }
-          } catch (err) {
-            console.warn(
-              "[CoinsContext] local per-user coins load error:",
-              err
-            );
-          }
-
-          // 3) Decide final coins value = max(remote, local, 0)
-          let next = 0;
-          if (remoteCoins !== null && localCoins !== null) {
-            next = Math.max(remoteCoins, localCoins, 0);
-          } else if (remoteCoins !== null) {
-            next = remoteCoins;
-          } else if (localCoins !== null) {
-            next = localCoins;
-          } else {
-            next = 0;
-          }
-
-          // 4) Persist per-user cache
-          try {
-            await AsyncStorage.setItem(userKey(uid), String(next));
-          } catch {
-            // ignore
-          }
-
-          // 5) Try to ensure Supabase matches (best-effort)
-          try {
-            const { error } = await supabase
-              .from("profiles")
-              .upsert({ id: uid, coins: next }, { onConflict: "id" });
-
-            if (error) {
-              console.warn(
-                "[CoinsContext] Supabase coins upsert during load failed:",
-                error
-              );
-            }
-          } catch (err) {
-            console.warn(
-              "[CoinsContext] Supabase coins upsert during load threw:",
-              err
-            );
-          }
-
-          if (alive) setCoinsState(next);
-        } else {
-          // ------------------ GUEST PATH ------------------
-          try {
-            const rawGuest = await AsyncStorage.getItem(GUEST_KEY);
-            let next = rawGuest != null ? Number(rawGuest) : 0;
-            if (!Number.isFinite(next)) next = 0;
-            if (alive) setCoinsState(Math.max(0, next));
-          } catch (err) {
-            console.warn("[CoinsContext] guest coins load error:", err);
-            if (alive) setCoinsState(0);
-          }
+        const value = await loadFromSupabase();
+        if (!cancelled) {
+          setCoinsState(value);
+          setReady(true);
         }
       } catch (err) {
-        console.warn("[CoinsContext] load error:", err);
-        if (alive) setCoinsState(0);
+        console.warn("[CoinsContext] initial load error:", err);
       } finally {
-        if (alive) setLoading(false);
-      }
-    })();
-
-    return () => {
-      alive = false;
-    };
-  }, [supabaseUserId]);
-
-  const persist = useCallback(
-    async (next: number) => {
-      const safe = Math.max(0, Number.isFinite(next) ? next : 0);
-
-      // Update local React state immediately
-      setCoinsState(safe);
-
-      // Always persist per-user or guest cache
-      try {
-        await AsyncStorage.setItem(userKey(supabaseUserId), String(safe));
-      } catch {
-        // ignore
-      }
-
-      // If logged-in, mirror to Supabase (best-effort)
-      if (supabaseUserId) {
-        try {
-          const { error } = await supabase
-            .from("profiles")
-            .upsert(
-              { id: supabaseUserId, coins: safe },
-              { onConflict: "id" }
-            );
-          if (error) {
-            console.warn(
-              "[CoinsContext] Failed to sync coins to Supabase",
-              error
-            );
-          }
-        } catch (err) {
-          console.warn(
-            "[CoinsContext] Failed to sync coins to Supabase (threw)",
-            err
-          );
+        if (!cancelled) {
+          setLoading(false);
         }
       }
-    },
-    [supabaseUserId]
-  );
+    };
 
-  const addCoins = useCallback(
-    async (delta: number) => {
-      if (!Number.isFinite(delta) || delta === 0) return;
-      const next = Math.max(0, coins + delta);
-      await persist(next);
-    },
-    [coins, persist]
-  );
+    run();
 
-  const setCoins = useCallback(
-    async (value: number) => {
-      await persist(value);
-    },
-    [persist]
-  );
+    return () => {
+      cancelled = true;
+    };
+  }, [supabaseUserId, userReady]);
 
-  const resetCoins = useCallback(async () => {
-    await persist(0);
-  }, [persist]);
+  // ---------------------------------------------------------------------------
+  // Public API
+  // ---------------------------------------------------------------------------
 
-  const value = useMemo(
-    () => ({ coins, loading, addCoins, setCoins, resetCoins }),
-    [coins, loading, addCoins, setCoins, resetCoins]
-  );
+  const setCoins = async (
+    valueOrUpdater: number | ((prev: number) => number),
+    _opts?: { reason?: string }
+  ) => {
+    setCoinsState((prev) => {
+      const next =
+        typeof valueOrUpdater === "function"
+          ? (valueOrUpdater as (p: number) => number)(prev)
+          : valueOrUpdater;
+
+      // Fire-and-forget persistence
+      persistCoins(next).catch((err) =>
+        console.warn("[CoinsContext] persistCoins error:", err)
+      );
+
+      return next;
+    });
+  };
+
+  const addCoins = async (
+    delta: number,
+    reason?: string,
+    meta?: Record<string, any>
+  ) => {
+    if (!delta) return;
+    setCoinsState((prev) => {
+      const next = prev + delta;
+      persistCoins(next).catch((err) =>
+        console.warn("[CoinsContext] persistCoins error:", err)
+      );
+
+      try {
+        (globalThis as any).novaTrack?.("coins_change", {
+          delta,
+          reason,
+          meta,
+        });
+      } catch {
+        // tracking is best-effort
+      }
+
+      return next;
+    });
+  };
+
+  const value: CoinsContextValue = {
+    coins,
+    loading,
+    ready,
+    setCoins,
+    addCoins,
+    refreshCoins,
+  };
 
   return (
     <CoinsContext.Provider value={value}>{children}</CoinsContext.Provider>
   );
 }
 
-export function useCoins() {
+export function useCoins(): CoinsContextValue {
   const ctx = useContext(CoinsContext);
-  if (!ctx) throw new Error("useCoins must be used inside <CoinsProvider>");
+  if (!ctx) {
+    throw new Error("useCoins must be used within a CoinsProvider");
+  }
   return ctx;
 }

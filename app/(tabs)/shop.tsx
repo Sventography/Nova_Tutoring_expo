@@ -1,3 +1,4 @@
+// app/(tabs)/shop.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
@@ -23,6 +24,7 @@ import { useCoins } from "../context/CoinsContext";
 import { useTheme } from "../context/ThemeContext";
 import { useCursor } from "../context/CursorContext";
 import { useUser } from "../context/UserContext";
+import { usePurchases } from "../context/PurchasesContext";
 
 import {
   catalog,
@@ -63,7 +65,7 @@ type QuickItem = {
   owned: boolean;
   equipped: boolean;
 };
-type PurchaseMap = Record<string, true>;
+
 type Order = {
   id: string;
   sku: string;
@@ -72,12 +74,7 @@ type Order = {
   createdAt: number;
 };
 
-// 🔐 New versioned purchases key, plus backward-compat with legacy
-const PURCHASES_KEY = "@nova/purchases.v2";
-const PURCHASES_COMPAT_KEYS = ["@nova/purchases", PURCHASES_KEY];
-
-const CURSOR_KEY = "@nova/cursor";
-const THEME_KEY = "@nova/themeId";
+// Local orders list (purely client-side for now)
 const ORDERS_KEY = "@nova/orders";
 
 const REQUIRES_SHIPPING = new Set<Category>([
@@ -176,68 +173,12 @@ function toThemeCtxId(id: string | null) {
   return map[cid] ?? (cid.startsWith("theme:") ? cid.slice(6) : cid);
 }
 
-// normalize all saved purchase keys into canonical IDs
-function normalizePurchases(obj: Record<string, any>): PurchaseMap {
-  const out: Record<string, true> = {};
-  for (const [k, v] of Object.entries(obj || {})) {
-    if (!v) continue;
-    const cid = canonId(k);
-    if (cid) out[cid] = true;
-  }
-  return out;
-}
-
 const track = (event: string, props?: Record<string, any>) => {
   try {
     (globalThis as any).novaTrack?.(event, props ?? {});
   } catch {}
 };
 
-// 🔁 Read from both legacy & v2 keys, merge, normalize, and write back to v2
-async function loadPurchases(): Promise<PurchaseMap> {
-  let merged: Record<string, any> = {};
-  for (const key of PURCHASES_COMPAT_KEYS) {
-    try {
-      const raw = await AsyncStorage.getItem(key);
-      if (!raw) continue;
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === "object") {
-        merged = { ...merged, ...parsed };
-      }
-    } catch {
-      // ignore broken entries; we'll normalize below
-    }
-  }
-  const norm = normalizePurchases(merged);
-  // Ensure v2 (and legacy) are kept in sync with normalized map
-  await savePurchases(norm);
-  return norm;
-}
-
-async function savePurchases(m: PurchaseMap) {
-  const norm = normalizePurchases(m);
-  const serialized = JSON.stringify(norm);
-  await Promise.all(
-    PURCHASES_COMPAT_KEYS.map((key) => AsyncStorage.setItem(key, serialized))
-  );
-}
-
-async function loadCursor(): Promise<string | null> {
-  return (await AsyncStorage.getItem(CURSOR_KEY)) || null;
-}
-async function saveCursor(key: string | null) {
-  key
-    ? await AsyncStorage.setItem(CURSOR_KEY, key)
-    : await AsyncStorage.removeItem(CURSOR_KEY);
-}
-async function loadTheme(): Promise<string | null> {
-  return (await AsyncStorage.getItem(THEME_KEY)) || null;
-}
-async function saveTheme(id: string | null) {
-  id
-    ? await AsyncStorage.setItem(THEME_KEY, id)
-    : await AsyncStorage.removeItem(THEME_KEY);
-}
 async function loadOrders(): Promise<Order[]> {
   const raw = (await AsyncStorage.getItem(ORDERS_KEY)) || "[]";
   try {
@@ -246,6 +187,7 @@ async function loadOrders(): Promise<Order[]> {
     return [];
   }
 }
+
 async function saveOrders(list: Order[]) {
   await AsyncStorage.setItem(ORDERS_KEY, JSON.stringify(list));
 }
@@ -520,15 +462,13 @@ function OrderSuccessModal({
 export default function Shop() {
   // ✅ Hooks all at top level
   const { coins, setCoins } = useCoins();
-  const { tokens, setThemeById } = useTheme();
-  const { setCursorById } = useCursor();
+  const { tokens, setThemeById, themeId } = useTheme();
+  const { cursorId, setCursorById } = useCursor();
   const { user: currentUser } = useUser();
+  const { purchases, isOwned, grant } = usePurchases();
   const router = useRouter();
 
-  const [purchases, setPurchases] = useState<PurchaseMap>({});
   const [orders, setOrders] = useState<Order[]>([]);
-  const [equippedCursor, setEquippedCursor] = useState<string | null>(null);
-  const [equippedTheme, setEquippedTheme] = useState<string | null>(null);
   const [flipped, setFlipped] = useState<Record<string, boolean>>({});
   const [need, setNeed] = useState<number>(0);
   const [showInsufficient, setShowInsufficient] = useState(false);
@@ -623,11 +563,6 @@ export default function Shop() {
   useEffect(() => {
     coinsRef.current = coins ?? 0;
   }, [coins]);
-
-  const isOwned = (id: string) => {
-    const cid = canonId(id);
-    return !!purchases[cid];
-  };
 
   const runPulse = (which: "themes" | "cursors") => {
     const anim = which === "themes" ? themePulse : cursorPulse;
@@ -731,52 +666,20 @@ export default function Shop() {
   /* --------------------------- Initial data load -------------------------- */
   useEffect(() => {
     (async () => {
-      const [pRaw, curRaw, thRaw, ord] = await Promise.all([
-        loadPurchases(),
-        loadCursor(),
-        loadTheme(),
-        loadOrders(),
-      ]);
+      const ord = await loadOrders();
 
-      const p = normalizePurchases(pRaw);
-      if (JSON.stringify(p) !== JSON.stringify(pRaw)) {
-        await savePurchases(p);
-      }
-
-      setPurchases(p);
-
-      const cur = canonId(curRaw);
-      const th = canonId(thRaw);
-
-      setEquippedCursor(cur || null);
-      setEquippedTheme(th || null);
       setOrders(ord);
-
-      if (typeof setCursorById === "function") setCursorById(cur || null);
-
-      const mappedTheme = toThemeCtxId(th);
-      if (typeof setThemeById === "function") setThemeById(mappedTheme);
 
       track("shop_state_hydrated", {
         coins: coinsRef.current ?? coins ?? 0,
-        purchases_count: Object.keys(p).length,
-        cursor: cur,
-        theme: th,
+        purchases_count: Object.keys(purchases || {}).length,
+        cursor: cursorId,
+        theme: themeId,
         orders: ord.length,
       });
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  useEffect(() => {
-    if (typeof setCursorById === "function")
-      setCursorById(equippedCursor ? canonId(equippedCursor) : null);
-  }, [equippedCursor, setCursorById]);
-
-  useEffect(() => {
-    const mapped = toThemeCtxId(equippedTheme);
-    if (typeof setThemeById === "function") setThemeById(mapped);
-  }, [equippedTheme, setThemeById]);
 
   /* --------------------------- Deep link handling ------------------------- */
   useEffect(() => {
@@ -796,22 +699,20 @@ export default function Shop() {
         it.category === "cursor" ||
         it.category === "bundle"
       ) {
-        setPurchases((prev) => {
-          const next: PurchaseMap = { ...prev };
-          if (cid) next[cid] = true;
-          void savePurchases(next);
-          track("shop_purchase_complete", {
-            sku: cid || it.id,
-            category: it.category,
-            mode: "stripe",
-          });
-          return next;
+        const grantId = cid || it.id;
+
+        void grant(grantId);
+
+        track("shop_purchase_complete", {
+          sku: grantId,
+          category: it.category,
+          mode: "stripe",
         });
 
         if (it.category === "theme")
-          equipThemeImmediate(cid || it.id, { source: "deeplink" });
+          equipThemeImmediate(grantId, { source: "deeplink" });
         if (it.category === "cursor")
-          void equipCursorImmediate(cid || it.id, { source: "deeplink" });
+          void equipCursorImmediate(grantId, { source: "deeplink" });
         return;
       }
 
@@ -852,21 +753,16 @@ export default function Shop() {
     const sub = RNLinking.addEventListener("url", onUrl);
     Linking.getInitialURL().then((url) => url && onUrl({ url }));
     return () => sub.remove();
-  }, [setCoins, coins]);
+  }, [setCoins, coins, grant]);
 
   /* -------------------------- Equip helpers ------------------------------- */
 
   function markOwned(id: string) {
     const cid = canonId(id);
-    setPurchases((prev) => {
-      const next: PurchaseMap = { ...prev };
-      if (cid) next[cid] = true;
-      void savePurchases(next);
-      track("shop_owned_marked", {
-        id: cid || id,
-        owned_count: Object.keys(next).length,
-      });
-      return next;
+    const grantId = cid || id;
+    void grant(grantId);
+    track("shop_owned_marked", {
+      id: grantId,
     });
   }
 
@@ -875,9 +771,7 @@ export default function Shop() {
     meta?: Record<string, any>
   ) {
     const cid = canonId(shopThemeId);
-    const mapped = toThemeCtxId(cid);
-    setEquippedTheme(cid);
-    void saveTheme(cid);
+    const mapped = toThemeCtxId(cid) ?? cid;
     if (typeof setThemeById === "function") setThemeById(mapped);
     track("shop_equip", {
       kind: "theme",
@@ -888,10 +782,9 @@ export default function Shop() {
   }
 
   function unequipThemeImmediate(meta?: Record<string, any>) {
-    const prev = equippedTheme;
-    setEquippedTheme(null);
-    void saveTheme(null);
-    if (typeof setThemeById === "function") setThemeById(null);
+    const prev = themeId;
+    // Reset to default Neon theme rather than "no theme"
+    if (typeof setThemeById === "function") setThemeById("theme:neon");
     track("shop_unequip", {
       kind: "theme",
       id: prev,
@@ -904,9 +797,9 @@ export default function Shop() {
     meta?: Record<string, any>
   ) {
     const cid = canonId(shopId);
-    setEquippedCursor(cid);
-    await saveCursor(cid);
-    if (typeof setCursorById === "function") setCursorById(cid);
+    if (typeof setCursorById === "function") {
+      await setCursorById(cid);
+    }
     track("shop_equip", {
       kind: "cursor",
       id: cid,
@@ -916,10 +809,10 @@ export default function Shop() {
   }
 
   async function unequipCursorImmediate(meta?: Record<string, any>) {
-    const prev = equippedCursor;
-    setEquippedCursor(null);
-    await saveCursor(null);
-    if (typeof setCursorById === "function") setCursorById(null);
+    const prev = cursorId;
+    if (typeof setCursorById === "function") {
+      await setCursorById(null);
+    }
     track("shop_unequip", {
       kind: "cursor",
       id: prev,
@@ -929,7 +822,7 @@ export default function Shop() {
 
   /* ----------------------------- Quick menus ------------------------------ */
   const THEMES_MENU: QuickItem[] = useMemo(() => {
-    const eq = canonId(equippedTheme ?? "");
+    const eq = canonId(themeId ?? "");
     return [
       {
         id: "theme:neon",
@@ -1010,10 +903,10 @@ export default function Shop() {
       },
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [purchases, equippedTheme]);
+  }, [purchases, themeId]);
 
   const CURSORS_MENU: QuickItem[] = useMemo(() => {
-    const eq = canonId(equippedCursor ?? "");
+    const eq = canonId(cursorId ?? "");
     return [
       {
         id: "cursor:glow",
@@ -1038,19 +931,19 @@ export default function Shop() {
       },
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [purchases, equippedCursor]);
+  }, [purchases, cursorId]);
 
   const ownedCompanions = useMemo(
     () => COMPANIONS.filter((c: any) => isOwned(c.id)),
-    [purchases]
+    [purchases, isOwned]
   );
 
   function quickEquip(id: string, kind: "theme" | "cursor") {
     const cid = canonId(id);
     const isCurrentlyEq =
       kind === "theme"
-        ? canonId(equippedTheme ?? "") === cid
-        : canonId(equippedCursor ?? "") === cid;
+        ? canonId(themeId ?? "") === cid
+        : canonId(cursorId ?? "") === cid;
 
     track("shop_quick_action", {
       action: isCurrentlyEq ? "unequip" : "equip",
@@ -1206,26 +1099,24 @@ export default function Shop() {
     coinsRef.current = nextCoins;
 
     const cid = canonId(it.id);
-    const nextPurch: PurchaseMap = { ...purchases };
-    if (cid) nextPurch[cid] = true;
+    const grantId = cid || it.id;
 
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     void setCoins(nextCoins);
 
-    setPurchases(nextPurch);
-    void savePurchases(nextPurch);
+    void grant(grantId);
 
     track("shop_purchase_complete", {
-      sku: cid || it.id,
+      sku: grantId,
       category: it.category,
       mode: "coins",
       price,
     });
 
     if (it.category === "theme")
-      equipThemeImmediate(cid || it.id, { source: "coins_purchase" });
+      equipThemeImmediate(grantId, { source: "coins_purchase" });
     if (it.category === "cursor")
-      void equipCursorImmediate(cid || it.id, { source: "coins_purchase" });
+      void equipCursorImmediate(grantId, { source: "coins_purchase" });
   }
 
   // Handle confirm from AddressSheet for coin-based physical orders
@@ -1635,11 +1526,14 @@ export default function Shop() {
     const selected = sizes.length ? sizeCtl.get(sizeKey) || sizes[0] : null;
 
     const cid = canonId(it.id);
+    const eqTheme = canonId(themeId ?? "");
+    const eqCursor = canonId(cursorId ?? "");
+
     const equipped =
       equipable === "theme"
-        ? canonId(equippedTheme ?? "") === cid
+        ? eqTheme === cid
         : equipable === "cursor"
-        ? canonId(equippedCursor ?? "") === cid
+        ? eqCursor === cid
         : false;
 
     return (

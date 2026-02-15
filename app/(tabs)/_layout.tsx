@@ -1,3 +1,4 @@
+// app/(tabs)/_layout.tsx
 import React, { useEffect, useState } from "react";
 import { View, Text, Pressable, StyleSheet, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -7,22 +8,18 @@ import { LinearGradient } from "expo-linear-gradient";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
 
-import { ThemeProvider } from "../context/ThemeContext";
-import { CursorProvider } from "../context/CursorContext";
 import CursorOverlay from "../overlays/CursorOverlay";
 import TouchCursorOverlay from "../overlays/TouchCursorOverlay";
 import ScrollableTabBar from "../components/ScrollableTabBar";
 import HeaderBar from "../components/HeaderBar";
 import StarTrailOverlay from "../components/StarTrailOverlay";
 import { AchieveEmitter } from "../context/AchievementsContext";
-import { CollectionsProvider } from "../context/CollectionsContext";
 import ToastHost from "../components/ToastHost";
 import AchievementsAutoTracker from "../context/AchievementsAutoTracker";
 import AchievementsCoinsBridge from "../context/AchievementsCoinsBridge";
 import FxOverlay from "../components/FxOverlay";
 import GlobalTextDefaults from "../components/GlobalTextDefaults";
-import { UserProvider, useUser } from "../context/UserContext";
-import { StreakProvider } from "../context/StreakContext";
+import { useUser } from "../context/UserContext";
 
 // --------------------
 // DEV-ONLY imports
@@ -66,26 +63,19 @@ function CelebrateToast({
 }
 
 /**
- * Root provider shell – all the global providers live here.
- * The actual tab UI is rendered by <InnerTabsLayout /> so it can
- * safely read useUser() and wait for ready before mounting heavy stuff.
+ * Root tabs layout.
+ * All global providers (User, Theme, Coins, Purchases, Cursor, Toast, etc.)
+ * are wired up in AppProviders + app/_layout.
  */
 export default function TabsLayout() {
   return (
-    <UserProvider>
-      <StreakProvider>
-        <ThemeProvider>
-          <GlobalTextDefaults />
-          <CursorProvider>
-            <ToastHost />
-            <CollectionsProvider>
-              <InnerTabsLayout />
-            </CollectionsProvider>
-            {Platform.OS === "web" ? <CursorOverlay /> : null}
-          </CursorProvider>
-        </ThemeProvider>
-      </StreakProvider>
-    </UserProvider>
+    <>
+      <GlobalTextDefaults />
+      {/* Global toast host lives here, inside ToastProvider from AppProviders */}
+      <ToastHost />
+      <InnerTabsLayout />
+      {Platform.OS === "web" ? <CursorOverlay /> : null}
+    </>
   );
 }
 
@@ -217,6 +207,7 @@ function InnerTabsLayout() {
         <HeaderBar />
       </View>
 
+      {/* Achievements ↔ coins glue + auto tracking */}
       <AchievementsCoinsBridge />
       <AchievementsAutoTracker />
 

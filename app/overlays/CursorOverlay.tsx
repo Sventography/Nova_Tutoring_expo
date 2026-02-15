@@ -1,4 +1,3 @@
-// app/overlays/CursorOverlay.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Platform } from "react-native";
 import { useCursor } from "../context/CursorContext";
@@ -122,6 +121,9 @@ export default function CursorOverlay() {
   /* ---------------- ORB CURSOR: glowing blob that follows ---------------- */
   if (canon === "cursor:orb") {
     const size = 36;
+    const color = tokens.accent as string;
+    const glow = `0 0 16px ${color}, 0 0 32px ${color}`;
+
     const style: React.CSSProperties = {
       position: "fixed",
       left: pos.x - size / 2,
@@ -130,10 +132,8 @@ export default function CursorOverlay() {
       height: size,
       borderRadius: size,
       pointerEvents: "none",
-      background: `radial-gradient(circle at 30% 30%, ${
-        tokens.accent
-      }, transparent 65%)`,
-      boxShadow: tokens.glow,
+      background: `radial-gradient(circle at 30% 30%, ${color}, transparent 65%)`,
+      boxShadow: glow,
       opacity: 0.95,
       zIndex: 2147483647,
       mixBlendMode: "screen",
@@ -141,7 +141,7 @@ export default function CursorOverlay() {
     return <div style={style} />;
   }
 
-  /* ----------------- STAR TRAIL: same sparkling tail as before ----------- */
+  /* ----------------- STAR TRAIL: sparkling tail -------------------------- */
   if (canon === "cursor:star_trail") {
     return <NeonStarTrail />;
   }

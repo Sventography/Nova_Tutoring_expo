@@ -1,13 +1,14 @@
-// app/context/ThemeContext.tsx
 import React, {
   createContext,
   useContext,
   useEffect,
   useMemo,
   useState,
+  useCallback,
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useUser } from "./UserContext";
+import { usePurchases } from "./PurchasesContext";
 
 export type ProviderThemeId =
   | "theme:neon"
@@ -54,6 +55,8 @@ const THEME_KEY_BASE = "@nova/themeId";
 const themeStorageKey = (uid: string | null) =>
   uid ? `${THEME_KEY_BASE}.user.${uid}` : `${THEME_KEY_BASE}.guest`;
 
+const DEFAULT_THEME: ProviderThemeId = "theme:neon";
+
 /* ------------------------------- Canon IDs -------------------------------- */
 
 const canonMap: Record<string, ProviderThemeId> = {
@@ -87,10 +90,15 @@ const canonMap: Record<string, ProviderThemeId> = {
 };
 
 function canonId(id?: string | null): ProviderThemeId {
-  const raw = (id ?? "theme:neon").trim().toLowerCase();
+  const raw = (id ?? DEFAULT_THEME).trim().toLowerCase();
   if (canonMap[raw]) return canonMap[raw];
-  if (!raw.includes(":")) return canonMap[`theme:${raw}`] ?? "theme:neon";
-  return canonMap[raw] ?? "theme:neon";
+
+  if (!raw.includes(":")) {
+    const prefixed = `theme:${raw}`;
+    if (canonMap[prefixed]) return canonMap[prefixed];
+  }
+
+  return DEFAULT_THEME;
 }
 
 /* -------------------------- Token helper defaults ------------------------- */
@@ -101,7 +109,10 @@ function withReadability(
     "titleText" | "pillBg" | "pillText" | "pillBorder" | "softShadow"
   > &
     Partial<
-      Pick<Tokens, "titleText" | "pillBg" | "pillText" | "pillBorder" | "softShadow">
+      Pick<
+        Tokens,
+        "titleText" | "pillBg" | "pillText" | "pillBorder" | "softShadow"
+      >
     >
 ): Tokens {
   const isDark = !!t.isDark;
@@ -329,7 +340,7 @@ export const THEMES: Record<ProviderThemeId, Tokens> = {
 // runtime snapshot (for non-hook callers)
 let __themeTokensSnapshot: Tokens | null = null;
 export function getTokensSnapshot(): Tokens {
-  return (__themeTokensSnapshot as Tokens) || THEMES["theme:neon"];
+  return (__themeTokensSnapshot as Tokens) || THEMES[DEFAULT_THEME];
 }
 
 type ThemeContextValue = {
@@ -342,7 +353,34 @@ const ThemeCtx = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const { supabaseUserId } = useUser();
-  const [themeId, setThemeId] = useState<ProviderThemeId>("theme:neon");
+  const { purchases } = usePurchases();
+
+  const [themeId, setThemeId] = useState<ProviderThemeId>(DEFAULT_THEME);
+
+  // Which themes does this user own?
+  const ownedThemes = useMemo(() => {
+    const owned = new Set<ProviderThemeId>();
+
+    if (purchases && typeof purchases === "object") {
+      for (const sku of Object.keys(purchases)) {
+        if (!sku.startsWith("theme:")) continue;
+        const c = canonId(sku) as ProviderThemeId;
+        owned.add(c);
+      }
+    }
+
+    // Default theme is always considered "owned"
+    owned.add(DEFAULT_THEME);
+    return owned;
+  }, [purchases]);
+
+  const ensureOwned = useCallback(
+    (id: ProviderThemeId): ProviderThemeId => {
+      if (ownedThemes.has(id)) return id;
+      return DEFAULT_THEME;
+    },
+    [ownedThemes]
+  );
 
   // Load the correct theme whenever the user changes
   useEffect(() => {
@@ -350,16 +388,21 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
     (async () => {
       try {
-        const key = themeStorageKey(supabaseUserId);
+        const key = themeStorageKey(supabaseUserId ?? null);
         const saved = await AsyncStorage.getItem(key);
-        const nextId = saved ? canonId(saved) : ("theme:neon" as ProviderThemeId);
-        if (alive) {
-          setThemeId(nextId);
-        }
+        const canon = canonId(saved);
+        const next = ensureOwned(canon);
+
+        if (!alive) return;
+
+        setThemeId(next);
+
+        // Normalize what's stored (canonical + ownership-safe)
+        await AsyncStorage.setItem(key, next);
       } catch (e) {
         console.warn("[ThemeContext] load theme error:", e);
         if (alive) {
-          setThemeId("theme:neon");
+          setThemeId(DEFAULT_THEME);
         }
       }
     })();
@@ -367,17 +410,22 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     return () => {
       alive = false;
     };
-  }, [supabaseUserId]);
+  }, [supabaseUserId, ensureOwned]);
 
-  const setThemeById = (id: string | null | undefined) => {
-    const c = canonId(id ?? undefined);
-    setThemeId(c);
-    const key = themeStorageKey(supabaseUserId);
-    AsyncStorage.setItem(key, c).catch(() => {});
-  };
+  const setThemeById = useCallback(
+    (id: string | null | undefined) => {
+      const canon = canonId(id ?? undefined);
+      const safe = ensureOwned(canon);
+      setThemeId(safe);
+
+      const key = themeStorageKey(supabaseUserId ?? null);
+      AsyncStorage.setItem(key, safe).catch(() => {});
+    },
+    [supabaseUserId, ensureOwned]
+  );
 
   const tokens = useMemo(
-    () => THEMES[themeId] ?? THEMES["theme:neon"],
+    () => THEMES[themeId] ?? THEMES[DEFAULT_THEME],
     [themeId]
   );
 
@@ -387,7 +435,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo(
     () => ({ themeId, tokens, setThemeById }),
-    [themeId, tokens]
+    [themeId, tokens, setThemeById]
   );
 
   return <ThemeCtx.Provider value={value}>{children}</ThemeCtx.Provider>;

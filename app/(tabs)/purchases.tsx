@@ -1,19 +1,17 @@
 // app/(tabs)/purchases.tsx
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import {
   View,
   Text,
   ScrollView,
   Image,
   Pressable,
-  StyleSheet,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { useTheme } from "../context/ThemeContext";
 import { useCursor } from "../context/CursorContext";
-import { useUser } from "../context/UserContext";
+import { usePurchases } from "../context/PurchasesContext";
 import { showToast } from "../utils/toast";
 
 import {
@@ -23,16 +21,7 @@ import {
 } from "../_lib/catalog";
 import { COMPANIONS } from "../_lib/companionsCatalog";
 
-type PurchaseMap = Record<string, true>;
-
-// 🔐 Versioned purchases key + backward-compat (same as Shop)
-const PURCHASES_KEY = "@nova/purchases.v2";
-const PURCHASES_COMPAT_KEYS = ["@nova/purchases", PURCHASES_KEY];
-
-const CURSOR_KEY = "@nova/cursor";
-const THEME_KEY = "@nova/themeId";
-
-// --------------------------- Canonical helpers ----------------------------
+/* --------------------------- Canonical helpers ---------------------------- */
 
 // Same canonId logic as in the Shop so everything lines up
 function canonId(raw: string | null | undefined): string {
@@ -101,64 +90,7 @@ function canonId(raw: string | null | undefined): string {
   return v;
 }
 
-// Map canonical theme ids to what ThemeContext expects
-function toThemeCtxId(id: string | null | undefined) {
-  if (!id) return null;
-  const cid = canonId(id);
-  const map: Record<string, string> = {
-    "theme:neon": "neon",
-    "theme:starry": "theme:starry",
-    "theme:pink": "pink",
-    "theme:dark": "dark",
-    "theme:mint": "mint",
-    "theme:glitter": "glitter",
-    "theme:blackgold": "theme:blackgold",
-    "theme:crimson": "crimson",
-    "theme:emerald": "emerald",
-    "theme:neonpurple": "theme:neonpurple",
-    "theme:silver": "silver",
-  };
-  return map[cid] ?? (cid.startsWith("theme:") ? cid.slice(6) : cid);
-}
-
-function normalizePurchases(
-  obj: Record<string, any> | null | undefined
-): PurchaseMap {
-  const out: PurchaseMap = {};
-  if (!obj) return out;
-  for (const [k, v] of Object.entries(obj)) {
-    if (!v) continue;
-    const cid = canonId(k);
-    if (cid) out[cid] = true;
-  }
-  return out;
-}
-
-async function loadPurchasesFromStorage(): Promise<Record<string, any>> {
-  let merged: Record<string, any> = {};
-  for (const key of PURCHASES_COMPAT_KEYS) {
-    try {
-      const raw = await AsyncStorage.getItem(key);
-      if (!raw) continue;
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === "object") {
-        merged = { ...merged, ...parsed };
-      }
-    } catch {
-      // ignore broken entries; we'll normalize later
-    }
-  }
-  return merged;
-}
-
-async function savePurchases(m: PurchaseMap) {
-  const serialized = JSON.stringify(m);
-  await Promise.all(
-    PURCHASES_COMPAT_KEYS.map((key) => AsyncStorage.setItem(key, serialized))
-  );
-}
-
-// ----------------------------- UI helpers ---------------------------------
+/* ----------------------------- UI helpers --------------------------------- */
 
 function Section({
   title,
@@ -220,11 +152,11 @@ function Card({
   );
 }
 
-// ----------------------------- Screen -------------------------------------
+/* ----------------------------- Screen ------------------------------------- */
 
 export default function PurchasesScreen() {
-  const { tokens, setThemeById } = useTheme();
-  const { user } = useUser();
+  const { tokens, themeId, setThemeById } = useTheme();
+  const { isOwned } = usePurchases();
 
   // Cursor context may be fussy on web if overlay not mounted yet, so guard it
   const cursorApi = (() => {
@@ -235,66 +167,14 @@ export default function PurchasesScreen() {
     }
   })();
 
+  const cursorId: string | null = cursorApi?.cursorId ?? null;
   const setCursorById = cursorApi?.setCursorById as
     | undefined
     | ((id: string | null) => void);
 
-  const [purchases, setPurchases] = useState<PurchaseMap>({});
-  const [equippedTheme, setEquippedTheme] = useState<string | null>(null);
-  const [equippedCursor, setEquippedCursor] = useState<string | null>(null);
-
-  // Load purchases + equipped theme/cursor on mount and when user changes
-  useEffect(() => {
-    (async () => {
-      try {
-        const [storageRaw, rawCursor, rawTheme] = await Promise.all([
-          loadPurchasesFromStorage(),
-          AsyncStorage.getItem(CURSOR_KEY),
-          AsyncStorage.getItem(THEME_KEY),
-        ]);
-
-        // merge Supabase purchases (if present) with local storage
-        const supaPurchRaw =
-          user && (user as any).purchases && typeof (user as any).purchases === "object"
-            ? ((user as any).purchases as Record<string, any>)
-            : {};
-
-        const mergedRaw = {
-          ...(storageRaw || {}),
-          ...(supaPurchRaw || {}),
-        };
-
-        const normalized = normalizePurchases(mergedRaw);
-        setPurchases(normalized);
-        // keep local storage in sync with the normalized map
-        await savePurchases(normalized);
-
-        const cur = canonId(rawCursor);
-        const th = canonId(rawTheme);
-
-        setEquippedCursor(cur || null);
-        setEquippedTheme(th || null);
-
-        const mappedTheme = toThemeCtxId(th);
-        if (typeof setThemeById === "function") {
-          setThemeById(mappedTheme);
-        }
-        if (typeof setCursorById === "function") {
-          setCursorById(cur || null);
-        }
-      } catch {
-        // ignore; worst case, screen just shows empty state
-      }
-    })();
-  }, [setThemeById, setCursorById, user]);
-
-  const isOwned = useCallback(
-    (id: string) => {
-      const cid = canonId(id);
-      return !!purchases[cid];
-    },
-    [purchases]
-  );
+  // canonical "equipped" ids from the contexts
+  const equippedTheme = canonId(themeId as any);
+  const equippedCursor = canonId(cursorId as any);
 
   const ownedThemes = useMemo(
     () => catalog.filter((it) => it.category === "theme" && isOwned(it.id)),
@@ -330,57 +210,30 @@ export default function PurchasesScreen() {
     const cid = canonId(id);
     if (!cid) return;
 
-    const mapped = toThemeCtxId(cid);
-    setEquippedTheme(cid);
-    try {
-      await AsyncStorage.setItem(THEME_KEY, cid);
-    } catch {}
-    if (typeof setThemeById === "function") {
-      setThemeById(mapped);
-    }
+    // ThemeContext handles canonicalization + per-user storage
+    setThemeById(cid);
     showToast("Theme equipped");
   }
 
   async function unequipTheme() {
-    const prev = equippedTheme;
-    setEquippedTheme(null);
-    try {
-      await AsyncStorage.removeItem(THEME_KEY);
-    } catch {}
-    if (typeof setThemeById === "function") {
-      setThemeById(null);
-    }
-    if (prev) {
-      showToast("Theme unequipped");
-    }
+    // Reset to default theme (ThemeContext will pick the default)
+    setThemeById(null);
+    showToast("Theme reset");
   }
 
   async function equipCursor(id: string) {
+    if (!setCursorById) return;
     const cid = canonId(id);
     if (!cid) return;
 
-    setEquippedCursor(cid);
-    try {
-      await AsyncStorage.setItem(CURSOR_KEY, cid);
-    } catch {}
-    if (typeof setCursorById === "function") {
-      setCursorById(cid);
-    }
+    setCursorById(cid);
     showToast("Cursor equipped");
   }
 
   async function unequipCursor() {
-    const prev = equippedCursor;
-    setEquippedCursor(null);
-    try {
-      await AsyncStorage.removeItem(CURSOR_KEY);
-    } catch {}
-    if (typeof setCursorById === "function") {
-      setCursorById(null);
-    }
-    if (prev) {
-      showToast("Cursor unequipped");
-    }
+    if (!setCursorById) return;
+    setCursorById(null);
+    showToast("Cursor unequipped");
   }
 
   return (
@@ -444,7 +297,7 @@ export default function PurchasesScreen() {
           <Section title="Themes">
             {ownedThemes.map((it) => {
               const cid = canonId(it.id);
-              const equipped = cid && equippedTheme && cid === equippedTheme;
+              const isEquipped = cid && equippedTheme && cid === equippedTheme;
 
               return (
                 <Card key={it.id} color={CATEGORY_BORDER.theme}>
@@ -491,7 +344,7 @@ export default function PurchasesScreen() {
 
                   <Pressable
                     onPress={() =>
-                      equipped ? unequipTheme() : equipTheme(it.id)
+                      isEquipped ? unequipTheme() : equipTheme(it.id)
                     }
                     style={({ pressed }) => ({
                       alignItems: "center",
@@ -501,7 +354,7 @@ export default function PurchasesScreen() {
                       borderColor: CATEGORY_BORDER.theme,
                       backgroundColor: pressed
                         ? "rgba(56,189,248,0.25)"
-                        : equipped
+                        : isEquipped
                         ? "rgba(56,189,248,0.22)"
                         : "transparent",
                     })}
@@ -512,7 +365,7 @@ export default function PurchasesScreen() {
                         fontWeight: "800",
                       }}
                     >
-                      {equipped ? "Equipped ✓" : "Equip"}
+                      {isEquipped ? "Equipped ✓" : "Equip"}
                     </Text>
                   </Pressable>
                 </Card>
@@ -525,7 +378,8 @@ export default function PurchasesScreen() {
           <Section title="Cursors">
             {ownedCursors.map((it) => {
               const cid = canonId(it.id);
-              const equipped = cid && equippedCursor && cid === equippedCursor;
+              const isEquipped =
+                cid && equippedCursor && cid === equippedCursor;
 
               return (
                 <Card key={it.id} color={CATEGORY_BORDER.cursor}>
@@ -572,7 +426,7 @@ export default function PurchasesScreen() {
 
                   <Pressable
                     onPress={() =>
-                      equipped ? unequipCursor() : equipCursor(it.id)
+                      isEquipped ? unequipCursor() : equipCursor(it.id)
                     }
                     style={({ pressed }) => ({
                       alignItems: "center",
@@ -582,7 +436,7 @@ export default function PurchasesScreen() {
                       borderColor: CATEGORY_BORDER.cursor,
                       backgroundColor: pressed
                         ? "rgba(251,146,60,0.25)"
-                        : equipped
+                        : isEquipped
                         ? "rgba(251,146,60,0.22)"
                         : "transparent",
                     })}
@@ -593,7 +447,7 @@ export default function PurchasesScreen() {
                         fontWeight: "800",
                       }}
                     >
-                      {equipped ? "Equipped ✓" : "Equip"}
+                      {isEquipped ? "Equipped ✓" : "Equip"}
                     </Text>
                   </Pressable>
                 </Card>
@@ -745,5 +599,3 @@ export default function PurchasesScreen() {
     </LinearGradient>
   );
 }
-
-const S = StyleSheet.create({});

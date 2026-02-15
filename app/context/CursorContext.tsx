@@ -82,6 +82,12 @@ export function CursorProvider({ children }: { children: React.ReactNode }) {
     return out;
   }, [purchases]);
 
+  const owns = (id: string) => {
+    const c = canonCursorId(id);
+    if (!c) return false;
+    return !!owned[c];
+  };
+
   // hydrate equipped cursor per user / guest
   useEffect(() => {
     let alive = true;
@@ -95,11 +101,19 @@ export function CursorProvider({ children }: { children: React.ReactNode }) {
 
         if (!alive) return;
 
-        if (canon) {
-          _setCursorId(canon);
-        } else {
+        if (!canon) {
           _setCursorId(null);
+          return;
         }
+
+        // If logged in and this cursor isn't owned, clear it
+        if (supabaseUserId && !owned[canon]) {
+          _setCursorId(null);
+          await AsyncStorage.removeItem(key);
+          return;
+        }
+
+        _setCursorId(canon);
       } catch (e) {
         console.warn("[CursorContext] hydrate error", e);
         if (alive) _setCursorId(null);
@@ -109,36 +123,38 @@ export function CursorProvider({ children }: { children: React.ReactNode }) {
     return () => {
       alive = false;
     };
-  }, [supabaseUserId]);
+  }, [supabaseUserId, owned]);
 
   const setCursorId = async (id: string | null) => {
     const c = canonCursorId(id);
     const next: string | null = c || null;
-
-    _setCursorId(next);
     const key = equippedKeyFor(supabaseUserId ?? null);
 
     try {
       if (!next) {
+        _setCursorId(null);
         await AsyncStorage.removeItem(key);
-      } else {
-        await AsyncStorage.setItem(key, next);
+        return;
       }
+
+      // If logged in and this cursor isn't owned, ignore + clear
+      if (supabaseUserId && !owned[next]) {
+        console.warn("[CursorContext] refusing to equip unowned cursor", next);
+        _setCursorId(null);
+        await AsyncStorage.removeItem(key);
+        return;
+      }
+
+      _setCursorId(next);
+      await AsyncStorage.setItem(key, next);
     } catch (e) {
       console.warn("[CursorContext] setCursorId error", e);
     }
   };
 
-  const owns = (id: string) => {
-    const c = canonCursorId(id);
-    if (!c) return false;
-    // no more "free" star_trail – we respect purchases map
-    return !!owned[c];
-  };
-
   const reload = async () => {
     await reloadPurchases();
-    // equipped value is already keyed by user; no extra work needed here
+    // equipped value is already keyed by user; hydrate effect will react when owned map changes
   };
 
   const value = useMemo(
@@ -150,7 +166,7 @@ export function CursorProvider({ children }: { children: React.ReactNode }) {
       owns,
       reload,
     }),
-    [cursorId, owned, reload]
+    [cursorId, owned]
   );
 
   return <CursorCtx.Provider value={value}>{children}</CursorCtx.Provider>;

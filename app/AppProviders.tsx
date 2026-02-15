@@ -120,10 +120,10 @@ export function AppProviders(props: any) {
 
   return (
     <UserProvider>
-      <ThemeProvider>
-        <ThemeGate>
-          <CoinsProvider>
-            <PurchasesProvider>
+      <CoinsProvider>
+        <PurchasesProvider>
+          <ThemeProvider>
+            <ThemeGate>
               <CursorProvider>
                 <CollectionsProvider>
                   <CertificatesProvider>
@@ -140,10 +140,10 @@ export function AppProviders(props: any) {
                   </CertificatesProvider>
                 </CollectionsProvider>
               </CursorProvider>
-            </PurchasesProvider>
-          </CoinsProvider>
-        </ThemeGate>
-      </ThemeProvider>
+            </ThemeGate>
+          </ThemeProvider>
+        </PurchasesProvider>
+      </CoinsProvider>
     </UserProvider>
   );
 }

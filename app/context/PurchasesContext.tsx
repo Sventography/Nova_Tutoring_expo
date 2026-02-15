@@ -230,6 +230,7 @@ export function PurchasesProvider({
         );
 
         let next: PurchaseMap | null = null;
+        let remoteError = false;
 
         // 1) Try purchases table
         const { data: rows, error: rowsError } = await supabase
@@ -238,6 +239,7 @@ export function PurchasesProvider({
           .eq("user_id", supabaseUserId);
 
         if (rowsError) {
+          remoteError = true;
           console.warn(
             "[PurchasesContext] load purchases table error:",
             rowsError
@@ -250,8 +252,8 @@ export function PurchasesProvider({
           next = normalizeSkusToMap(rows);
         }
 
-        // 2) If table is empty, try legacy profiles.purchases JSON
-        if (!next || Object.keys(next).length === 0) {
+        // 2) If table is empty but no error, try legacy profiles.purchases JSON
+        if (!remoteError && (!next || Object.keys(next).length === 0)) {
           console.log(
             "[PurchasesContext] no purchases in table, checking profiles.purchases"
           );
@@ -262,13 +264,12 @@ export function PurchasesProvider({
             .maybeSingle();
 
           if (profileError) {
+            remoteError = true;
             console.warn(
               "[PurchasesContext] load profile.purchases error:",
               profileError
             );
-          }
-
-          if (
+          } else if (
             profileRow &&
             profileRow.purchases &&
             typeof profileRow.purchases === "object"
@@ -281,14 +282,12 @@ export function PurchasesProvider({
           }
         }
 
-        // 3) If still nothing, fall back to *only* this user's local key
-        if (!next || Object.keys(next).length === 0) {
+        // 3) If remote errored out entirely, fall back to *only* this user's local key
+        if (remoteError) {
           console.log(
-            "[PurchasesContext] no remote purchases, checking local storage for user",
+            "[PurchasesContext] remote error, checking local storage for user",
             key
           );
-          // IMPORTANT: do NOT pull from LEGACY_KEYS here,
-          // or new accounts inherit old purchases.
           const local = await loadLocalPurchases(key, false);
           if (Object.keys(local).length > 0) {
             console.log(
@@ -394,16 +393,14 @@ export function PurchasesProvider({
         }
 
         // 2) Mirror into profiles.purchases JSON for backwards compatibility
+        //    IMPORTANT: use UPDATE, not UPSERT, so we don't hit username NOT NULL.
         const { error: profileError } = await supabase
           .from("profiles")
-          .upsert(
-            {
-              id: supabaseUserId,
-              purchases: toRemotePayload(normalized),
-              updated_at: new Date().toISOString(),
-            },
-            { onConflict: "id" }
-          );
+          .update({
+            purchases: toRemotePayload(normalized),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", supabaseUserId);
 
         if (profileError) {
           console.warn(
@@ -464,13 +461,21 @@ export function PurchasesProvider({
 
       try {
         if (supabaseUserId) {
+          let remoteError = false;
+
           // Try purchases table first
           const { data: rows, error: rowsError } = await supabase
             .from("purchases")
             .select("sku")
             .eq("user_id", supabaseUserId);
 
-          if (!rowsError && rows && rows.length > 0) {
+          if (rowsError) {
+            remoteError = true;
+            console.warn(
+              "[PurchasesContext] reload purchases table error:",
+              rowsError
+            );
+          } else if (rows && rows.length > 0) {
             console.log(
               "[PurchasesContext] reload got purchases from table:",
               rows
@@ -481,61 +486,72 @@ export function PurchasesProvider({
             return;
           }
 
-          if (rowsError) {
-            console.warn(
-              "[PurchasesContext] reload purchases table error:",
-              rowsError
-            );
+          // Fallback: profiles.purchases JSON if table empty but no error
+          if (!remoteError) {
+            const { data: profileRow, error: profileError } = await supabase
+              .from("profiles")
+              .select("purchases")
+              .eq("id", supabaseUserId)
+              .maybeSingle();
+
+            if (profileError) {
+              remoteError = true;
+              console.warn(
+                "[PurchasesContext] reload profile.purchases error:",
+                profileError
+              );
+            } else if (
+              profileRow &&
+              profileRow.purchases &&
+              typeof profileRow.purchases === "object"
+            ) {
+              console.log(
+                "[PurchasesContext] reload got purchases from profile JSON:",
+                profileRow.purchases
+              );
+              const norm = normalizePurchases(profileRow.purchases);
+              setPurchases(norm);
+              await AsyncStorage.setItem(key, JSON.stringify(norm));
+              return;
+            }
           }
 
-          // Fallback: profiles.purchases JSON
-          const { data: profileRow, error: profileError } = await supabase
-            .from("profiles")
-            .select("purchases")
-            .eq("id", supabaseUserId)
-            .maybeSingle();
-
-          if (
-            !profileError &&
-            profileRow &&
-            profileRow.purchases &&
-            typeof profileRow.purchases === "object"
-          ) {
-            console.log(
-              "[PurchasesContext] reload got purchases from profile JSON:",
-              profileRow.purchases
-            );
-            const norm = normalizePurchases(profileRow.purchases);
-            setPurchases(norm);
-            await AsyncStorage.setItem(key, JSON.stringify(norm));
-            return;
+          // Only if remote errored do we fall back to local
+          if (remoteError) {
+            const local = await loadLocalPurchases(key, false);
+            if (Object.keys(local).length > 0) {
+              console.log(
+                "[PurchasesContext] reload got purchases from AsyncStorage:",
+                local
+              );
+              setPurchases(local);
+              return;
+            }
           }
 
-          if (profileError) {
-            console.warn(
-              "[PurchasesContext] reload profile.purchases error:",
-              profileError
-            );
-          }
+          console.log("[PurchasesContext] reload found nothing, clearing");
+          setPurchases({});
+          await AsyncStorage.setItem(key, JSON.stringify({}));
+          return;
         }
 
-        // Fallback: local only.
-        // IMPORTANT: for logged-in users we do NOT include legacy keys here.
+        // Guest reload: local only, with legacy merge
         const local = await loadLocalPurchases(
           key,
           supabaseUserId ? false : true
         );
         if (Object.keys(local).length > 0) {
           console.log(
-            "[PurchasesContext] reload got purchases from AsyncStorage:",
+            "[PurchasesContext] reload got guest purchases from AsyncStorage:",
             local
           );
           setPurchases(local);
           return;
         }
 
-        console.log("[PurchasesContext] reload found nothing, clearing");
+        console.log("[PurchasesContext] reload found nothing for guest, clearing");
         setPurchases({});
+        await AsyncStorage.setItem(key, JSON.stringify({}));
       } catch (e) {
         console.warn("[PurchasesContext] reload error:", e);
       }
@@ -570,14 +586,11 @@ export function PurchasesProvider({
 
           const { error: profileError } = await supabase
             .from("profiles")
-            .upsert(
-              {
-                id: supabaseUserId,
-                purchases: toRemotePayload(empty),
-                updated_at: new Date().toISOString(),
-              },
-              { onConflict: "id" }
-            );
+            .update({
+              purchases: toRemotePayload(empty),
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", supabaseUserId);
 
           if (profileError) {
             console.warn(
