@@ -19,6 +19,7 @@ import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Linking from "expo-linking";
 import { Linking as RNLinking } from "react-native";
+import * as Haptics from "expo-haptics"; // 🫧 haptics for size taps
 
 import { useCoins } from "../context/CoinsContext";
 import { useTheme } from "../context/ThemeContext";
@@ -1614,13 +1615,22 @@ export default function Shop() {
             <SizeSelector
               sizes={sizes}
               value={selected}
-              onChange={(s: any) => {
+              onChange={async (s: any) => {
                 sizeCtl.set(sizeKey, s);
                 track("shop_size_change", {
                   sku: it.id,
                   sizeKey,
                   size: s,
                 });
+
+                // 💥 haptic tap for clothing sizes
+                if (it.category === "clothing") {
+                  try {
+                    await Haptics.selectionAsync();
+                  } catch {
+                    // fail-safe: ignore haptics errors
+                  }
+                }
               }}
             />
           </View>
