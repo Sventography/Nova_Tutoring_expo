@@ -1,13 +1,13 @@
-# 🔥🔥 RUNNING FIXED SERVER VERSION v9-FULFILL-PURCHASES-DEBUG
+# 🔥🔥 RUNNING FIXED SERVER VERSION v10-COIN-ORDER-ROWS
 # (CHECKOUT + ASK MEMORY + COIN ORDER EMAILS via RESEND HTTP ONLY) 🔥🔥
 print(
-  "🔥🔥 RUNNING FIXED SERVER VERSION v9-FULFILL-PURCHASES-DEBUG "
+  "🔥🔥 RUNNING FIXED SERVER VERSION v10-COIN-ORDER-ROWS "
   "(CHECKOUT + ASK MEMORY + COIN ORDER EMAILS via RESEND HTTP ONLY) 🔥🔥"
 )
 
 import os
 import json  # used for raw payload pretty-print in owner emails
-import re    # used for simple coin-pack detection in /api/fulfill
+import re    # used for simple coin-pack detection + helpers
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -39,7 +39,7 @@ except Exception:
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
-print("🔥🔥 FLASK APP INITIALIZED (v9-FULFILL-PURCHASES-DEBUG) 🔥🔥")
+print("🔥🔥 FLASK APP INITIALIZED (v10-COIN-ORDER-ROWS) 🔥🔥")
 
 # -------------------------------------------------
 # Load environment (prefers server/env/.env.server, else server/.env)
@@ -157,6 +157,46 @@ else:
     print("[server] OpenAI configured: False (unknown reason)")
 
 # -------------------------------------------------
+# Small helpers (NEW)
+# -------------------------------------------------
+
+def norm(v):
+  """
+  Normalize string-ish values:
+  - convert numbers to str
+  - strip whitespace
+  - return None if empty/whitespace
+  """
+  if v is None:
+    return None
+  if isinstance(v, (int, float)):
+    return str(v)
+  s = str(v).strip()
+  return s or None
+
+def pick(*vals):
+  """
+  Return the first non-empty value (after norm).
+  If everything is empty/None, returns None.
+  """
+  for v in vals:
+    nv = norm(v)
+    if nv is not None:
+      return nv
+  return None
+
+def dig(d, *path):
+  """
+  Safely dig nested dict keys, e.g. dig(obj, "shipping", "address", "line1").
+  """
+  cur = d
+  for key in path:
+    if not isinstance(cur, dict):
+      return None
+    cur = cur.get(key)
+  return cur
+
+# -------------------------------------------------
 # Supabase REST helpers
 # -------------------------------------------------
 
@@ -175,7 +215,6 @@ def supabase_headers(extra: dict | None = None):
 def supabase_rest_url(table: str) -> str:
   return f"{SUPABASE_URL}/rest/v1/{table}"
 
-
 # -------------------------------------------------
 # Purchases table helper (record each coin order)
 # -------------------------------------------------
@@ -188,6 +227,16 @@ def record_purchase_row(
   item_size: str | None = None,
   item_category: str | None = None,
   stripe_session_id: str | None = None,
+  *,
+  shipping_name: str | None = None,
+  shipping_phone: str | None = None,
+  shipping_address1: str | None = None,
+  shipping_address2: str | None = None,
+  shipping_city: str | None = None,
+  shipping_state: str | None = None,
+  shipping_postal_code: str | None = None,
+  shipping_country: str | None = None,
+  shipping_notes: str | None = None,
 ):
   """
   Inserts a row into public.purchases via Supabase REST.
@@ -196,19 +245,31 @@ def record_purchase_row(
     - user_id (uuid)
     - coins_spent (int4)
     - stripe_session_id (text)
-    - meta (jsonb)  -- { sku?, title?, size?, category? }
+    - meta (jsonb)  -- { sku?, title?, size?, category?, shipping? }
+    - bought_at (timestamptz, default now())
+    - shipping_name (text)
+    - shipping_phone (text)
+    - shipping_address1 (text)
+    - shipping_address2 (text)
+    - shipping_city (text)
+    - shipping_state (text)
+    - shipping_postal_code (text)
+    - shipping_country (text)
+    - shipping_notes (text)
   """
   if not (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY):
     print("[coin-order] Supabase REST not configured; skipping purchases row")
     return
 
   url = supabase_rest_url("purchases")
+  # return=representation so we see what actually got written
   headers = supabase_headers(
-    {"Content-Type": "application/json", "Prefer": "return=minimal"}
+    {"Content-Type": "application/json", "Prefer": "return=representation"}
   )
 
-  # Build meta JSON from item info
+  # Build meta JSON from item + shipping info
   meta: dict = {}
+
   if item_sku:
     meta["sku"] = item_sku
   if item_title:
@@ -218,9 +279,34 @@ def record_purchase_row(
   if item_category:
     meta["category"] = item_category
 
+  # Optional nested shipping blob for debugging / redundancy
+  shipping_meta: dict = {}
+  if shipping_name:
+    shipping_meta["name"] = shipping_name
+  if shipping_phone:
+    shipping_meta["phone"] = shipping_phone
+  if shipping_address1:
+    shipping_meta["address1"] = shipping_address1
+  if shipping_address2:
+    shipping_meta["address2"] = shipping_address2
+  if shipping_city:
+    shipping_meta["city"] = shipping_city
+  if shipping_state:
+    shipping_meta["state"] = shipping_state
+  if shipping_postal_code:
+    shipping_meta["postal_code"] = shipping_postal_code
+  if shipping_country:
+    shipping_meta["country"] = shipping_country
+  if shipping_notes:
+    shipping_meta["notes"] = shipping_notes
+
+  if shipping_meta:
+    meta["shipping"] = shipping_meta
+
   payload: dict = {
     "user_id": user_id,
     "coins_spent": coins,
+    # bought_at will use DEFAULT now() in the DB
   }
 
   if stripe_session_id:
@@ -229,11 +315,33 @@ def record_purchase_row(
   if meta:
     payload["meta"] = meta
 
+  # Also store shipping in dedicated columns for easy reading.
+  # NOTE: include field whenever it's *not None* (after earlier normalization).
+  if shipping_name is not None:
+    payload["shipping_name"] = shipping_name
+  if shipping_phone is not None:
+    payload["shipping_phone"] = shipping_phone
+  if shipping_address1 is not None:
+    payload["shipping_address1"] = shipping_address1
+  if shipping_address2 is not None:
+    payload["shipping_address2"] = shipping_address2
+  if shipping_city is not None:
+    payload["shipping_city"] = shipping_city
+  if shipping_state is not None:
+    payload["shipping_state"] = shipping_state
+  if shipping_postal_code is not None:
+    payload["shipping_postal_code"] = shipping_postal_code
+  if shipping_country is not None:
+    payload["shipping_country"] = shipping_country
+  if shipping_notes is not None:
+    payload["shipping_notes"] = shipping_notes
+
   try:
     print("[coin-order] inserting purchases row to", url)
-    print("[coin-order] headers present:", bool(headers))
     print("[coin-order] payload:", payload)
     resp = requests.post(url, headers=headers, json=payload, timeout=10)
+    print("[coin-order] insert status:", resp.status_code)
+    print("[coin-order] insert body:", resp.text[:2000])
     if resp.status_code >= 400:
       print("[coin-order] purchases insert error:", resp.status_code, resp.text)
     else:
@@ -283,9 +391,15 @@ def send_email(to_address: str, subject: str, body_text: str, body_html: str | N
       json=payload,
       timeout=10,
     )
+
+    # 🔍 Extra debug logging so we see exactly what Resend says
+    print("[mail] Resend status_code:", resp.status_code)
+    print("[mail] Resend response text:", repr(resp.text))
+
     if resp.status_code >= 400:
       print("[mail] Resend error:", resp.status_code, resp.text)
       raise Exception(f"Resend error {resp.status_code}: {resp.text}")
+
     print("[mail] email sent OK via Resend")
   except Exception as e:
     print("[mail] Resend exception:", repr(e))
@@ -657,7 +771,7 @@ def insert_memory_messages(user_id: str, question: str, answer: str):
     else:
       print("[ask] inserted memory messages ok")
   except Exception as e:
-    print("[ask] insert memory exception:", e)
+    print("[ask] insert_memory exception:", e)
 
 
 def trim_memory_non_pinned(user_id: str, memory_limit: int):
@@ -993,7 +1107,7 @@ def api_fulfill():
     tx=tx,
   )
 
-# ---------------------- Coin order email endpoint --------------------------
+# ---------------------- Coin order email + purchases endpoint --------------------------
 
 @app.post("/api/coin-order")
 def api_coin_order():
@@ -1007,116 +1121,160 @@ def api_coin_order():
   user = data.get("user") or {}
   shipping = data.get("shipping") or {}
 
-  user_email = (
-    user.get("contactEmail")
-    or user.get("email")
-    or data.get("contactEmail")
-    or data.get("email")
+  # User + identity info
+  user_email = pick(
+    dig(user, "contactEmail"),
+    dig(user, "email"),
+    data.get("contactEmail"),
+    data.get("email"),
   )
-  display_name = (
-    user.get("displayName")
-    or user.get("username")
-    or user.get("name")
-    or data.get("displayName")
-    or data.get("name")
-    or None
+  display_name = pick(
+    dig(user, "displayName"),
+    dig(user, "username"),
+    dig(user, "name"),
+    data.get("displayName"),
+    data.get("name"),
   )
-  session_id = data.get("sessionId") or data.get("stripeSessionId")
+  session_id = pick(
+    data.get("sessionId"),
+    data.get("stripeSessionId"),
+  )
+  user_id = pick(
+    data.get("user_id"),
+    dig(user, "id"),
+  )
 
-  # optional user_id, if frontend sends it
-  user_id = data.get("user_id") or user.get("id") or None
-
+  # Item info
   item = data.get("item") or {}
-  item_title = (
-    item.get("title")
-    or data.get("itemTitle")
-    or data.get("title")
-    or None
+  item_title = pick(
+    item.get("title"),
+    data.get("itemTitle"),
+    data.get("title"),
   )
-  item_size = (
-    item.get("size")
-    or data.get("itemSize")
-    or data.get("size")
-    or None
+  item_size = pick(
+    item.get("size"),
+    data.get("itemSize"),
+    data.get("size"),
   )
-  item_sku = (
-    item.get("id")
-    or item.get("sku")
-    or data.get("sku")
-    or None
+  item_sku = pick(
+    item.get("id"),
+    item.get("sku"),
+    data.get("sku"),
   )
-  item_category = (
-    item.get("category")
-    or data.get("category")
-    or None
+  item_category = pick(
+    item.get("category"),
+    data.get("category"),
   )
 
   # Shipping/contact info from scrollable form (and fallbacks)
-  shipping_name = (
-    data.get("shippingName")
-    or data.get("name")
-    or shipping.get("name")
-    or shipping.get("fullName")
-    or shipping.get("recipient")
-    or display_name
+  shipping_name = pick(
+    data.get("shippingName"),
+    data.get("name"),
+    shipping.get("name"),
+    shipping.get("fullName"),
+    shipping.get("recipient"),
+    display_name,
   )
-  shipping_phone = (
-    data.get("phone")
-    or data.get("contactPhone")
-    or shipping.get("phone")
-    or shipping.get("contactPhone")
-    or user.get("phone")
-    or None
+  shipping_phone = pick(
+    data.get("phone"),
+    data.get("contactPhone"),
+    data.get("shippingPhone"),
+    data.get("shipping_phone"),
+    shipping.get("phone"),
+    shipping.get("contactPhone"),
+    shipping.get("shippingPhone"),
+    user.get("phone"),
   )
 
-  address1 = (
-    data.get("address1")
-    or data.get("line1")
-    or data.get("addressLine1")
-    or shipping.get("address1")
-    or shipping.get("line1")
-    or shipping.get("addressLine1")
-    or None
+  # Strong alias handling for address1 / address2 / city / state / postal / country
+  address1 = pick(
+    data.get("address1"),
+    data.get("address_1"),
+    data.get("shippingAddress1"),
+    data.get("shipping_address1"),
+    data.get("shippingLine1"),
+    data.get("line1"),
+    data.get("addressLine1"),
+    data.get("street1"),
+    shipping.get("address1"),
+    shipping.get("address_1"),
+    shipping.get("shippingAddress1"),
+    shipping.get("shipping_address1"),
+    shipping.get("line1"),
+    shipping.get("addressLine1"),
+    shipping.get("street1"),
+    dig(shipping, "address", "line1"),
+    dig(shipping, "address", "address1"),
   )
-  address2 = (
-    data.get("address2")
-    or data.get("line2")
-    or data.get("addressLine2")
-    or shipping.get("address2")
-    or shipping.get("line2")
-    or shipping.get("addressLine2")
-    or None
+  address2 = pick(
+    data.get("address2"),
+    data.get("address_2"),
+    data.get("shippingAddress2"),
+    data.get("shipping_address2"),
+    data.get("shippingLine2"),
+    data.get("line2"),
+    data.get("addressLine2"),
+    data.get("street2"),
+    shipping.get("address2"),
+    shipping.get("address_2"),
+    shipping.get("shippingAddress2"),
+    shipping.get("shipping_address2"),
+    shipping.get("line2"),
+    shipping.get("addressLine2"),
+    shipping.get("street2"),
+    dig(shipping, "address", "line2"),
+    dig(shipping, "address", "address2"),
   )
-  city = (
-    data.get("city")
-    or shipping.get("city")
-    or None
+  city = pick(
+    data.get("city"),
+    data.get("shippingCity"),
+    data.get("shipping_city"),
+    shipping.get("city"),
+    shipping.get("shippingCity"),
+    dig(shipping, "address", "city"),
   )
-  state = (
-    data.get("state")
-    or data.get("region")
-    or shipping.get("state")
-    or shipping.get("region")
-    or None
+  state = pick(
+    data.get("state"),
+    data.get("region"),
+    data.get("shippingState"),
+    data.get("shipping_state"),
+    shipping.get("state"),
+    shipping.get("region"),
+    shipping.get("shippingState"),
+    dig(shipping, "address", "state"),
   )
-  postal_code = (
-    data.get("zip")
-    or data.get("postalCode")
-    or shipping.get("zip")
-    or shipping.get("postalCode")
-    or None
+  postal_code = pick(
+    data.get("postal_code"),
+    data.get("postalCode"),
+    data.get("zip"),
+    data.get("zipCode"),
+    data.get("shippingPostalCode"),
+    data.get("shipping_postal_code"),
+    shipping.get("postal_code"),
+    shipping.get("postalCode"),
+    shipping.get("zip"),
+    shipping.get("zipCode"),
+    shipping.get("shippingPostalCode"),
+    dig(shipping, "address", "postal_code"),
+    dig(shipping, "address", "postalCode"),
+    dig(shipping, "address", "zip"),
   )
-  country = (
-    data.get("country")
-    or shipping.get("country")
-    or None
+  country = pick(
+    data.get("country"),
+    data.get("shippingCountry"),
+    data.get("shipping_country"),
+    shipping.get("country"),
+    shipping.get("shippingCountry"),
+    dig(shipping, "address", "country"),
   )
-  notes = (
-    data.get("notes")
-    or data.get("instructions")
-    or shipping.get("notes")
-    or shipping.get("instructions")
-    or None
+  notes = pick(
+    data.get("notes"),
+    data.get("instructions"),
+    data.get("shippingNotes"),
+    data.get("shipping_notes"),
+    shipping.get("notes"),
+    shipping.get("instructions"),
+    shipping.get("shippingNotes"),
   )
 
   print(
@@ -1167,7 +1325,7 @@ def api_coin_order():
       raw_payload=data,
     )
 
-    # 2) Record row in purchases table as a log
+    # 2) Record row in purchases table as a log (with shipping columns)
     record_purchase_row(
       user_id=user_id,
       coins=coins,
@@ -1176,6 +1334,15 @@ def api_coin_order():
       item_size=item_size,
       item_category=item_category,
       stripe_session_id=session_id,
+      shipping_name=shipping_name,
+      shipping_phone=shipping_phone,
+      shipping_address1=address1,
+      shipping_address2=address2,
+      shipping_city=city,
+      shipping_state=state,
+      shipping_postal_code=postal_code,
+      shipping_country=country,
+      shipping_notes=notes,
     )
 
     return jsonify(ok=True)
@@ -1184,46 +1351,62 @@ def api_coin_order():
     return jsonify(ok=False, error=str(e)), 500
 
 # -------------------------------------------------
-# Debug route – send a test email to the shop owner
+# Debug route – send a test email
 # -------------------------------------------------
 
 @app.post("/debug/send-test-email")
 def debug_send_test_email():
   """
   Simple debug endpoint to verify email sending from Render via Resend HTTP.
+
+  You can optionally pass in:
+    - code: your ADMIN_SUPER_SECRET_CODE
+    - to: override target inbox (e.g. your Gmail)
   """
   body = request.get_json(silent=True) or {}
   code = body.get("code") or ""
+  override_to = (body.get("to") or body.get("email") or "").strip()
 
-  if not ADMIN_SUPER_SECRET_CODE:
-    return jsonify(ok=False, error="ADMIN_SUPER_SECRET_CODE not set"), 403
+  # If an admin code is set, enforce it. If not, just log and continue.
+  if ADMIN_SUPER_SECRET_CODE:
+    if code != ADMIN_SUPER_SECRET_CODE:
+      return jsonify(ok=False, error="invalid code"), 403
+  else:
+    print("[debug] ADMIN_SUPER_SECRET_CODE not set; skipping code check")
 
-  if code != ADMIN_SUPER_SECRET_CODE:
-    return jsonify(ok=False, error="invalid code"), 403
+  # Target priority:
+  #   1) explicit "to" in request body
+  #   2) DEBUG_TEST_EMAIL env var
+  #   3) SHOP_OWNER_EMAIL
+  #   4) RESEND_FROM_EMAIL
+  target = (
+    override_to
+    or (os.getenv("DEBUG_TEST_EMAIL") or "").strip()
+    or SHOP_OWNER_EMAIL
+    or RESEND_FROM_EMAIL
+  )
 
-  if not (SHOP_OWNER_EMAIL or RESEND_FROM_EMAIL):
-    return jsonify(ok=False, error="No target email configured"), 400
-
-  target = SHOP_OWNER_EMAIL or RESEND_FROM_EMAIL
-
-  print("[debug] debug_send_test_email triggered → target:", target)
-
-  try:
-    send_email(
-      target,
-      "Nova Tutoring – Test email from Render (Resend HTTP)",
-      "If you see this, email from Render via Resend HTTP is working!",
+  if not target:
+    print(
+      "[debug] No target email configured for debug_send_test_email",
+      "override_to:", override_to,
+      "SHOP_OWNER_EMAIL:", SHOP_OWNER_EMAIL,
+      "RESEND_FROM_EMAIL:", RESEND_FROM_EMAIL,
     )
-    return jsonify(ok=True)
-  except Exception as e:
-    print("[debug] error in debug_send_test_email:", repr(e))
-    return jsonify(ok=False, error=str(e)), 500
+    return jsonify(ok=False, error="no target email configured"), 400
+
+  send_email(
+    target,
+    "Nova Tutoring Test Email",
+    "If you got this, Resend HTTP works ✅",
+    "<p>If you got this, Resend HTTP works ✅</p>",
+  )
+  return jsonify(ok=True, to=target)
 
 # -------------------------------------------------
-# Entrypoint
+# Main (for local dev)
 # -------------------------------------------------
 
 if __name__ == "__main__":
-  port = int(os.getenv("PORT", "8787"))
-  print(f"🔥🔥 STARTING SERVER v9-FULFILL-PURCHASES-DEBUG ON http://127.0.0.1:{port} 🔥🔥")
-  app.run(host="0.0.0.0", port=port, debug=False)
+  port = int(os.getenv("PORT") or 8787)
+  app.run(host="0.0.0.0", port=port)
