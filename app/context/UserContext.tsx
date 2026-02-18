@@ -1,3 +1,4 @@
+// app/context/UserContext.tsx
 import React, {
   createContext,
   useContext,
@@ -64,6 +65,7 @@ const UserContext = createContext<UserContextValue | null>(null);
 
 const PROFILE_KEY = "user.profile.v1";
 const SUPABASE_JWT_KEY = "auth.supabase.jwt";
+// This is a best-guess key for older Supabase auth storage; we clear it defensively.
 const SUPABASE_AUTH_TOKEN_KEY = "@supabase.auth.token";
 
 // Normalizes username: trim, default, and limit to 8 chars
@@ -334,7 +336,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
           }
         }
 
-        // 2) Ask Supabase for current session
+        // 2) Ask Supabase for current session (this now reads from AsyncStorage
+        //    because we enabled storage + persistSession in supabase.ts)
         const { data, error } = await supabase.auth.getSession();
         if (error) {
           console.warn("[UserContext] getSession error:", error);
@@ -382,6 +385,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange(async (_event, sess) => {
       setSession(sess);
+
       const token = sess?.access_token;
       if (token) {
         await AsyncStorage.setItem(SUPABASE_JWT_KEY, token);
@@ -681,6 +685,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
       if (sess?.access_token) {
         await AsyncStorage.setItem(SUPABASE_JWT_KEY, sess.access_token);
+      } else {
+        await AsyncStorage.removeItem(SUPABASE_JWT_KEY);
       }
 
       if (authUser) {

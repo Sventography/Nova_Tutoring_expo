@@ -1,4 +1,6 @@
 // app/lib/supabase.ts
+import "react-native-url-polyfill/auto";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createClient } from "@supabase/supabase-js";
 
 // These MUST match the names in your .env file.
@@ -18,9 +20,16 @@ if (!SUPABASE_ANON_KEY) {
   );
 }
 
-// For the Expo app we don't persist sessions here; UserContext handles local JWT if needed.
+// ✅ For the Expo app we DO persist sessions here using AsyncStorage.
+// Supabase will:
+// - Store session + refresh token in AsyncStorage
+// - Auto-refresh tokens when they expire
+// - Let us hydrate with auth.getSession() on app start
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
-    persistSession: false,
+    storage: AsyncStorage,
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: false,
   },
 });
