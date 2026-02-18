@@ -21,7 +21,7 @@ type CoinsContextValue = {
    */
   setCoins: (
     valueOrUpdater: number | ((prev: number) => number),
-    opts?: { reason?: string }
+    opts?: { reason?: string; meta?: Record<string, any> }
   ) => Promise<void>;
   /**
    * Add (or subtract) coins by a delta.
@@ -86,6 +86,35 @@ export function CoinsProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const logTransaction = async (
+    delta: number,
+    reason?: string,
+    meta?: Record<string, any>
+  ) => {
+    if (!supabaseUserId) return;
+    if (!delta) return;
+    try {
+      const payload: {
+        user_id: string;
+        amount: number;
+        type: string;
+        reference?: string | null;
+      } = {
+        user_id: supabaseUserId,
+        amount: delta,
+        type: reason || "coins_change",
+        reference: meta ? JSON.stringify(meta).slice(0, 1000) : null,
+      };
+
+      const { error } = await supabase.from("transactions").insert(payload);
+      if (error) {
+        console.warn("[CoinsContext] logTransaction error:", error);
+      }
+    } catch (err) {
+      console.warn("[CoinsContext] logTransaction threw:", err);
+    }
+  };
+
   const loadFromStorageOnly = async (): Promise<number> => {
     const key = getUserCoinsKey(supabaseUserId ?? null);
     const raw = await AsyncStorage.getItem(key);
@@ -133,7 +162,10 @@ export function CoinsProvider({ children }: { children: ReactNode }) {
           );
 
         if (upsertError) {
-          console.warn("[CoinsContext] Supabase upsert (create) error:", upsertError);
+          console.warn(
+            "[CoinsContext] Supabase upsert (create) error:",
+            upsertError
+          );
         }
       }
 
@@ -201,7 +233,7 @@ export function CoinsProvider({ children }: { children: ReactNode }) {
 
   const setCoins = async (
     valueOrUpdater: number | ((prev: number) => number),
-    _opts?: { reason?: string }
+    opts?: { reason?: string; meta?: Record<string, any> }
   ) => {
     setCoinsState((prev) => {
       const next =
@@ -209,10 +241,19 @@ export function CoinsProvider({ children }: { children: ReactNode }) {
           ? (valueOrUpdater as (p: number) => number)(prev)
           : valueOrUpdater;
 
-      // Fire-and-forget persistence
+      const delta = next - prev;
+
+      // Fire-and-forget persistence + transaction logging
       persistCoins(next).catch((err) =>
         console.warn("[CoinsContext] persistCoins error:", err)
       );
+
+      if (delta) {
+        logTransaction(delta, opts?.reason || "set_coins", opts?.meta).catch(
+          (err) =>
+            console.warn("[CoinsContext] logTransaction(setCoins) error:", err)
+        );
+      }
 
       return next;
     });
@@ -226,8 +267,15 @@ export function CoinsProvider({ children }: { children: ReactNode }) {
     if (!delta) return;
     setCoinsState((prev) => {
       const next = prev + delta;
+
+      // Persist new balance
       persistCoins(next).catch((err) =>
         console.warn("[CoinsContext] persistCoins error:", err)
+      );
+
+      // Log transaction row for Supabase ledger
+      logTransaction(delta, reason || "add_coins", meta).catch((err) =>
+        console.warn("[CoinsContext] logTransaction(addCoins) error:", err)
       );
 
       try {

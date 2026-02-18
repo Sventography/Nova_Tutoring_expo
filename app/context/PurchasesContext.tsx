@@ -121,13 +121,17 @@ function normalizePurchases(obj: any): PurchaseMap {
   return out;
 }
 
-function normalizeSkusToMap(
-  rows: { sku?: string | null }[] | null
-): PurchaseMap {
+type PurchaseRow = {
+  sku?: string | null;
+  item_id?: string | null;
+};
+
+function normalizeRowsToMap(rows: PurchaseRow[] | null): PurchaseMap {
   const out: PurchaseMap = {};
   if (!rows) return out;
   for (const row of rows) {
-    const cid = canonId(row.sku || null);
+    const rawId = row.item_id ?? row.sku ?? null;
+    const cid = canonId(rawId || null);
     if (!cid) continue;
     out[cid] = true;
   }
@@ -232,11 +236,31 @@ export function PurchasesProvider({
         let next: PurchaseMap | null = null;
         let remoteError = false;
 
-        // 1) Try purchases table
-        const { data: rows, error: rowsError } = await supabase
-          .from("purchases")
-          .select("sku")
-          .eq("user_id", supabaseUserId);
+        // 1) Try purchases table (prefer new schema: item_id/source).
+        let rows: PurchaseRow[] | null = null;
+        let rowsError: any = null;
+
+        try {
+          const { data: rowsV1, error: errV1 } = await supabase
+            .from("purchases")
+            .select("item_id")
+            .eq("user_id", supabaseUserId);
+
+          if (errV1 && (errV1 as any).code === "42703") {
+            // item_id doesn't exist → older schema (sku)
+            const { data: rowsV2, error: errV2 } = await supabase
+              .from("purchases")
+              .select("sku")
+              .eq("user_id", supabaseUserId);
+            rows = (rowsV2 as PurchaseRow[]) || null;
+            rowsError = errV2;
+          } else {
+            rows = (rowsV1 as PurchaseRow[]) || null;
+            rowsError = errV1;
+          }
+        } catch (err: any) {
+          rowsError = err;
+        }
 
         if (rowsError) {
           remoteError = true;
@@ -249,7 +273,7 @@ export function PurchasesProvider({
             "[PurchasesContext] found rows in purchases table:",
             rows.length
           );
-          next = normalizeSkusToMap(rows);
+          next = normalizeRowsToMap(rows);
         }
 
         // 2) If table is empty but no error, try legacy profiles.purchases JSON
@@ -366,23 +390,50 @@ export function PurchasesProvider({
         }
 
         if (skus.length > 0) {
-          const rows = skus.map((sku) => ({
+          // Try new schema first: item_id + source
+          const rowsNew = skus.map((id) => ({
             user_id: supabaseUserId,
-            sku,
+            item_id: id,
+            source: "coins" as const,
           }));
-          const { error: insError } = await supabase
-            .from("purchases")
-            .insert(rows);
 
-          if (insError) {
+          const { error: insNew } = await supabase
+            .from("purchases")
+            .insert(rowsNew);
+
+          if (insNew && (insNew as any).code === "42703") {
+            // item_id/source doesn't exist → fall back to legacy schema (sku)
             console.warn(
-              "[PurchasesContext] error inserting purchases rows:",
-              insError
+              "[PurchasesContext] purchases table missing item_id/source; falling back to sku-only schema"
+            );
+            const rowsLegacy = skus.map((id) => ({
+              user_id: supabaseUserId,
+              sku: id,
+            }));
+            const { error: insLegacy } = await supabase
+              .from("purchases")
+              .insert(rowsLegacy);
+            if (insLegacy) {
+              console.warn(
+                "[PurchasesContext] error inserting purchases rows (legacy):",
+                insLegacy
+              );
+            } else {
+              console.log(
+                "[PurchasesContext] purchases table (legacy schema) updated OK with",
+                rowsLegacy.length,
+                "rows"
+              );
+            }
+          } else if (insNew) {
+            console.warn(
+              "[PurchasesContext] error inserting purchases rows (new schema):",
+              insNew
             );
           } else {
             console.log(
               "[PurchasesContext] purchases table updated OK with",
-              rows.length,
+              rowsNew.length,
               "rows"
             );
           }
@@ -463,11 +514,30 @@ export function PurchasesProvider({
         if (supabaseUserId) {
           let remoteError = false;
 
-          // Try purchases table first
-          const { data: rows, error: rowsError } = await supabase
-            .from("purchases")
-            .select("sku")
-            .eq("user_id", supabaseUserId);
+          // Try purchases table first (new schema, then fallback)
+          let rows: PurchaseRow[] | null = null;
+          let rowsError: any = null;
+
+          try {
+            const { data: rowsV1, error: errV1 } = await supabase
+              .from("purchases")
+              .select("item_id")
+              .eq("user_id", supabaseUserId);
+
+            if (errV1 && (errV1 as any).code === "42703") {
+              const { data: rowsV2, error: errV2 } = await supabase
+                .from("purchases")
+                .select("sku")
+                .eq("user_id", supabaseUserId);
+              rows = (rowsV2 as PurchaseRow[]) || null;
+              rowsError = errV2;
+            } else {
+              rows = (rowsV1 as PurchaseRow[]) || null;
+              rowsError = errV1;
+            }
+          } catch (err: any) {
+            rowsError = err;
+          }
 
           if (rowsError) {
             remoteError = true;
@@ -480,7 +550,7 @@ export function PurchasesProvider({
               "[PurchasesContext] reload got purchases from table:",
               rows
             );
-            const norm = normalizeSkusToMap(rows);
+            const norm = normalizeRowsToMap(rows);
             setPurchases(norm);
             await AsyncStorage.setItem(key, JSON.stringify(norm));
             return;
