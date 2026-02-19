@@ -384,6 +384,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange(async (_event, sess) => {
+      console.log("[UserContext] onAuthStateChange event:", _event);
+
       setSession(sess);
 
       const token = sess?.access_token;
@@ -669,6 +671,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   const loginWithEmailPassword = async (email: string, password: string) => {
     try {
+      console.log("[UserContext] loginWithEmailPassword start");
+
+      // 🧹 Clear any stale tokens that might cause weird "Invalid Refresh Token" or double-login flows
+      await clearSupabaseAuthStorage("pre loginWithEmailPassword");
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -681,6 +688,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
       const sess = data.session ?? null;
       const authUser = data.user ?? null;
+
+      console.log(
+        "[UserContext] login success, session?",
+        !!sess,
+        "user id:",
+        authUser?.id
+      );
+
       setSession(sess);
 
       if (sess?.access_token) {
@@ -690,9 +705,18 @@ export function UserProvider({ children }: { children: ReactNode }) {
       }
 
       if (authUser) {
-        // Just set the ID and let onAuthStateChange hydrate the profile.
+        // Set the ID immediately so consumers don't have to wait for onAuthStateChange
         setSupabaseUserId(authUser.id);
+
+        // Hydrate profile right away so UI sees a fully formed user after a single login
+        try {
+          await hydrateProfileFromSupabase(authUser.id, authUser);
+        } catch (e) {
+          console.warn("[UserContext] login hydrate error:", e);
+        }
       }
+
+      console.log("[UserContext] loginWithEmailPassword done");
     } catch (e) {
       console.warn("[UserContext] loginWithEmailPassword threw:", e);
       throw e;
