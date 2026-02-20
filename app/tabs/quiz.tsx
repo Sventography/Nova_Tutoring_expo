@@ -18,13 +18,18 @@ import { useUser } from "../context/UserContext";
 import { useTheme } from "../context/ThemeContext";
 import { unlockQuizAchievements } from "../utils/achievements-bridge";
 import { logQuizResult } from "../utils/quiz-history-bridge";
+import { useCoins } from "../context/CoinsContext";
+import { usePurchases } from "../context/PurchasesContext";
 
 type QA = { question: string; answer: string };
 type QItem = { question: string; answer: string; choices: string[] };
 
 const QUIZ_LEN = 20;
-const TOTAL_TIME = 300;
+const DEFAULT_TOTAL_TIME = 300; // base = 5 minutes
 const ADVANCE_DELAY = 650;
+
+// Astral Nova legendary bonus for certificates
+const ASTRAL_NOVA_CERT_BONUS = 500;
 
 /**
  * BIG fake distractor bank.
@@ -210,15 +215,13 @@ function buildQuizLocal(qas: QA[], len: number): QItem[] {
 
   const picked = shuffle(pool).slice(0, Math.min(len, pool.length));
 
-  return picked.map((p, idx) => {
+  return picked.map((p) => {
     const correct = p.answer || "Correct answer";
 
     // Always take 3 distractors from the global bank
     const distractors = pickDistractorsFromBank(correct, 3);
 
-    const choices = shuffle(
-      uniqStrings([correct, ...distractors])
-    ).slice(0, 4);
+    const choices = shuffle(uniqStrings([correct, ...distractors])).slice(0, 4);
 
     // Just in case something goes weird, pad to at least 2 choices
     while (choices.length < 2) choices.push("—");
@@ -242,6 +245,20 @@ export default function QuizScreen() {
 
   const { user } = useUser();
   const { tokens } = useTheme();
+  const { addCoins } = useCoins();
+  const { isOwned } = usePurchases();
+
+  const hasChronoFox = isOwned("companion:chrono_fox");
+  const hasAstralNova = isOwned("companion:astral_nova");
+
+  // Base quiz time becomes 7 minutes if Chrono Fox is owned
+  const quizTotalTime = useMemo(
+    () =>
+      hasChronoFox
+        ? DEFAULT_TOTAL_TIME + 120 // +2 minutes
+        : DEFAULT_TOTAL_TIME,
+    [hasChronoFox]
+  );
 
   const gradient = tokens.gradient;
   const headerTextColor = tokens.text;
@@ -269,13 +286,14 @@ export default function QuizScreen() {
   const [locked, setLocked] = useState(false);
   const [noData, setNoData] = useState(false);
 
-  const [totalLeft, setTotalLeft] = useState(TOTAL_TIME);
+  const [totalLeft, setTotalLeft] = useState(quizTotalTime);
   const [done, setDone] = useState(false);
   const [showCert, setShowCert] = useState(false);
 
   const loggedRef = useRef(false);
   const autoRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const totalTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const certBonusGivenRef = useRef(false);
 
   const current = items[idx];
   const total = items.length;
@@ -335,13 +353,14 @@ export default function QuizScreen() {
     setSelected(null);
     setLocked(false);
     setDone(false);
-    setTotalLeft(TOTAL_TIME);
+    setTotalLeft(quizTotalTime);
     setNoData(false);
     setShowCert(false);
+    certBonusGivenRef.current = false;
     loggedRef.current = false;
 
     setLoading(false);
-  }, [topicId]);
+  }, [topicId, quizTotalTime]);
 
   const logResultIfNeeded = async (reason: string) => {
     if (loggedRef.current) return;
@@ -381,14 +400,29 @@ export default function QuizScreen() {
     void logResultIfNeeded("done");
   }, [done]);
 
-  // auto-pop certificate modal on 80%+
+  // 80%+: show certificate modal AND pay Astral Nova bonus if owned
   useEffect(() => {
     if (!done || !total) return;
     const pct = Math.round((correct / total) * 100);
     if (pct >= 80) {
       setShowCert(true);
+
+      // Astral Nova legendary: +500 coins whenever a certificate is earned
+      if (
+        hasAstralNova &&
+        !certBonusGivenRef.current &&
+        ASTRAL_NOVA_CERT_BONUS > 0
+      ) {
+        certBonusGivenRef.current = true;
+        // fire-and-forget; no need to await here
+        addCoins(ASTRAL_NOVA_CERT_BONUS, "astral_nova_certificate_bonus", {
+          topicId,
+          title: headerTitle,
+          pct,
+        }).catch(() => {});
+      }
     }
-  }, [done, correct, total]);
+  }, [done, total, correct, hasAstralNova, addCoins, headerTitle, topicId]);
 
   function goNext() {
     if (idx + 1 >= total) {
@@ -564,8 +598,9 @@ export default function QuizScreen() {
               setSelected(null);
               setLocked(false);
               setDone(false);
-              setTotalLeft(TOTAL_TIME);
+              setTotalLeft(quizTotalTime);
               setShowCert(false);
+              certBonusGivenRef.current = false;
               loggedRef.current = false;
             }}
           >

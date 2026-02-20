@@ -15,6 +15,8 @@ import { ACHIEVEMENT_LIST } from "../constants/achievements";
 import { useCoins } from "./CoinsContext";
 import { useToast } from "./ToastContext";
 import { useUser } from "./UserContext";
+import { useCompanion } from "./CompanionContext";
+import { canonId } from "../_lib/canonId";
 
 const STORAGE_BASE_UNLOCKED = "@achieve/unlocked.v1";
 const STORAGE_BASE_QUIZ_COUNT = "@achieve/quizCount.v1";
@@ -39,6 +41,15 @@ type AchievementsContextValue = {
 };
 
 type Listener = (payload: any) => void;
+
+// Local meta type so we can carry group info
+type AchMeta = {
+  id: string;
+  title: string;
+  coins: number;
+  group: string;
+  desc?: string;
+};
 
 // ─────────────── SIMPLE EMITTER ───────────────
 
@@ -71,18 +82,19 @@ class SimpleEmitter {
 export const AchieveEmitter = new SimpleEmitter();
 
 // quick lookup map from ACHIEVEMENT_LIST
-const ACH_MAP: Record<
-  string,
-  { id: string; title: string; coins: number; desc?: string }
-> = ACHIEVEMENT_LIST.reduce((acc, a) => {
-  acc[a.id] = {
-    id: a.id,
-    title: a.title,
-    coins: a.coins ?? 0,
-    desc: a.desc,
-  };
-  return acc;
-}, {} as Record<string, { id: string; title: string; coins: number; desc?: string }>);
+const ACH_MAP: Record<string, AchMeta> = ACHIEVEMENT_LIST.reduce(
+  (acc, a) => {
+    acc[a.id] = {
+      id: a.id,
+      title: a.title,
+      coins: a.coins ?? 0,
+      group: a.group,
+      desc: a.desc,
+    };
+    return acc;
+  },
+  {} as Record<string, AchMeta>
+);
 
 // thresholds
 const ASK_THRESHOLDS = [
@@ -117,6 +129,7 @@ export function useAchievements(): AchievementsContextValue {
 
 export function AchievementsProvider({ children }: { children: React.ReactNode }) {
   const { supabaseUserId } = useUser();
+  const { activeCompanionId } = useCompanion();
 
   const [unlocked, setUnlocked] = useState<UnlockedMap>({});
   const unlockedRef = useRef<UnlockedMap>({});
@@ -140,6 +153,45 @@ export function AchievementsProvider({ children }: { children: React.ReactNode }
     console.warn("[Achievements] No coin adder function found in useCoins()");
     return null;
   }, [coinsApi]);
+
+  // Active companion & legendary flags
+  const activeCompanionCid = useMemo(
+    () => (activeCompanionId ? canonId(activeCompanionId) : null),
+    [activeCompanionId]
+  );
+
+  const hasAetherwyrm = activeCompanionCid === "companion:aetherwyrm";
+  const hasMechaOwl = activeCompanionCid === "companion:mecha_owl";
+  const hasCelestra = activeCompanionCid === "companion:celestra";
+
+  // Companion-based coin multiplier for achievements
+  const computeAchievementCoins = useCallback(
+    (base: number, id: string): number => {
+      if (!base || base <= 0) return 0;
+      let amount = base;
+
+      const meta = ACH_MAP[id];
+
+      // Mecha Owl: +10% on all achievement rewards
+      if (hasMechaOwl) {
+        amount = Math.round(amount * 1.1);
+      }
+
+      // Celestra: +25% on streak achievements only
+      if (meta && meta.group === "streaks" && hasCelestra) {
+        amount = Math.round(amount * 1.25);
+      }
+
+      // Aetherwyrm: +20% on all achievements (global coin booster)
+      if (hasAetherwyrm) {
+        amount = Math.round(amount * 1.2);
+      }
+
+      if (amount < 1) amount = 1;
+      return amount;
+    },
+    [hasMechaOwl, hasCelestra, hasAetherwyrm]
+  );
 
   // ─────────────── HYDRATE PER USER ───────────────
 
@@ -284,12 +336,22 @@ export function AchievementsProvider({ children }: { children: React.ReactNode }
       if (ach) {
         if (ach.coins && ach.coins > 0 && addCoinsFn) {
           try {
-            console.log("[Achievements] awarding coins", ach.coins, "for", id);
-            const res = addCoinsFn(ach.coins);
-            if (res && typeof (res as any).catch === "function") {
-              (res as any).catch((e: any) =>
-                console.warn("[Achievements] addCoins async failed", e)
+            const base = ach.coins;
+            const coinsToAward = computeAchievementCoins(base, id);
+
+            if (coinsToAward > 0) {
+              console.log(
+                "[Achievements] awarding coins",
+                coinsToAward,
+                "for",
+                id
               );
+              const res = addCoinsFn(coinsToAward);
+              if (res && typeof (res as any).catch === "function") {
+                (res as any).catch((e: any) =>
+                  console.warn("[Achievements] addCoins async failed", e)
+                );
+              }
             }
           } catch (e) {
             console.warn("[Achievements] addCoins failed", e);
@@ -298,11 +360,15 @@ export function AchievementsProvider({ children }: { children: React.ReactNode }
 
         if (!opts?.silent) {
           try {
+            const label =
+              ach.coins && ach.coins > 0
+                ? `${ach.title}`
+                : ach.title;
             showToast({
               title: "Achievement unlocked!",
               message:
                 ach.coins && ach.coins > 0
-                  ? `${ach.title} • +${ach.coins} coins`
+                  ? label
                   : ach.title,
               type: "success",
               icon: "🎉",
@@ -324,7 +390,7 @@ export function AchievementsProvider({ children }: { children: React.ReactNode }
         console.warn("[Achievements] DeviceEventEmitter emit failed", e);
       }
     },
-    [addCoinsFn, showToast, persistUnlocked]
+    [addCoinsFn, showToast, persistUnlocked, computeAchievementCoins]
   );
 
   // ─────────────── QUIZ ───────────────

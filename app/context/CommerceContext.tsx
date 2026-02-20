@@ -320,6 +320,57 @@ export function CommerceProvider({ children }: { children: React.ReactNode }) {
         tangible: false,
         virtualPriceCoins: 1000,
       },
+
+      /* -------- Legendary Companions – cash-only microtransactions -------- */
+
+      {
+        id: "companion:astral_nova",
+        name: "Astral Nova",
+        desc: "Legendary starlit Nova companion.",
+        tag: "companion",
+        tangible: false,
+        priceCashUSD: 12.99,
+      },
+      {
+        id: "companion:axolotl_oracle",
+        name: "Axolotl Oracle",
+        desc: "Mystic little axolotl guide.",
+        tag: "companion",
+        tangible: false,
+        priceCashUSD: 12.99,
+      },
+      {
+        id: "companion:celestra",
+        name: "Celestra",
+        desc: "Celestial guardian of your study space.",
+        tag: "companion",
+        tangible: false,
+        priceCashUSD: 12.99,
+      },
+      {
+        id: "companion:chrono_fox",
+        name: "Chrono Fox",
+        desc: "Time-twisting fox that watches your streaks.",
+        tag: "companion",
+        tangible: false,
+        priceCashUSD: 12.99,
+      },
+      {
+        id: "companion:mecha_owl",
+        name: "Mecha Owl",
+        desc: "Mechanical owl who loves late-night grinds.",
+        tag: "companion",
+        tangible: false,
+        priceCashUSD: 12.99,
+      },
+      {
+        id: "companion:aetherwyrm",
+        name: "Aetherwyrm",
+        desc: "Tiny dragon drifting through ether and notes.",
+        tag: "companion",
+        tangible: false,
+        priceCashUSD: 12.99,
+      },
     ],
     []
   );

@@ -6,11 +6,13 @@ import React, {
   useEffect,
   useMemo,
   useState,
+  ReactNode,
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useUser } from "./UserContext";
-import { useCoins } from "./CoinsContext";
 import { supabase } from "../lib/supabase";
+import { useCompanion } from "./CompanionContext";
+import { canonId } from "../_lib/canonId";
 
 // All streak logic is anchored to Eastern Time (America/New_York)
 const EASTERN_TZ = "America/New_York";
@@ -21,10 +23,20 @@ const LEGACY_LOGS = "@nova/streak.logs";
 const GUEST_META = "@nova/streak.meta.guest.v2";
 const GUEST_LOGS = "@nova/streak.logs.guest.v2";
 
+const AXOLOTL_BASE = "@nova/streak.axolotlLastUsed";
+
 const metaKeyFor = (uid: string | null) =>
   uid ? `@nova/streak.meta.user.${uid}.v1` : GUEST_META;
 const logsKeyFor = (uid: string | null) =>
   uid ? `@nova/streak.logs.user.${uid}.v1` : GUEST_LOGS;
+const axolotlKeyFor = (uid: string | null) =>
+  uid ? `${AXOLOTL_BASE}.user.${uid}.v1` : `${AXOLOTL_BASE}.guest.v1`;
+
+type StreakMeta = {
+  count: number;
+  best: number;
+  lastDate: string | null; // YYYY-MM-DD in Eastern
+};
 
 type State = {
   loaded: boolean;
@@ -34,6 +46,7 @@ type State = {
   lastDate: string | null;
   markToday: () => Promise<void>;
   resetStreak: () => Promise<void>;
+  reload: () => Promise<void>;
 };
 
 const C = createContext<State | null>(null);
@@ -54,374 +67,303 @@ function getEasternDayId(date: Date = new Date()): string {
   const month = parts.find((p) => p.type === "month")?.value ?? "00";
   const day = parts.find((p) => p.type === "day")?.value ?? "00";
 
-  return `${year}-${month}-${day}`; // "YYYY-MM-DD"
+  return `${year}-${month}-${day}`;
 }
 
-/**
- * Input is a YYYY-MM-DD "day id".
- * We treat it as midnight UTC for distance math; the actual timezone
- * meaning is already baked into the string itself (Eastern).
- */
-function dateFromKey(k: string): Date {
-  const [y, m, d] = k.split("-").map((x) => Number(x));
-  return new Date(Date.UTC(y, m - 1, d));
+function parseDayId(id: string | null): Date | null {
+  if (!id) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(id);
+  if (!m) return null;
+  const year = Number(m[1]);
+  const month = Number(m[2]);
+  const day = Number(m[3]);
+  if (!year || !month || !day) return null;
+  return new Date(Date.UTC(year, month - 1, day));
 }
 
-const dDays = (a: string, b: string) =>
-  Math.round((+dateFromKey(b) - +dateFromKey(a)) / 86400000);
-
-type MetaShape = { count: number; last: string | null; best: number };
-type LogsShape = Record<string, boolean>;
-
-/**
- * Normalizes any `last` value (from Supabase or AsyncStorage) into a
- * Eastern day id ("YYYY-MM-DD"), or null if invalid.
- * This lets us survive older formats (e.g. full ISO timestamps).
- */
-function normalizeDayId(raw: string | null): string | null {
-  if (!raw) return null;
-
-  // Already a YYYY-MM-DD key
-  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
-
-  // Try to parse as a timestamp and convert to Eastern day id
-  const d = new Date(raw);
-  if (Number.isNaN(+d)) return null;
-
-  return getEasternDayId(d);
+function daysBetween(a: string | null, b: string | null): number | null {
+  const da = parseDayId(a);
+  const db = parseDayId(b);
+  if (!da || !db) return null;
+  const diffMs = db.getTime() - da.getTime();
+  const oneDay = 24 * 60 * 60 * 1000;
+  return Math.round(diffMs / oneDay);
 }
 
-function parseMeta(raw: string | null): MetaShape {
-  if (!raw) return { count: 0, last: null, best: 0 };
+async function safeGetJSON<T>(key: string): Promise<T | null> {
   try {
-    const obj = JSON.parse(raw);
-    const count = Number.isFinite(Number(obj.count)) ? Number(obj.count) : 0;
-    const best = Number.isFinite(Number(obj.best)) ? Number(obj.best) : 0;
-
-    const lastRaw =
-      typeof obj.last === "string" && obj.last.length > 0 ? obj.last : null;
-    const last = normalizeDayId(lastRaw);
-
-    return { count, last, best };
+    const raw = await AsyncStorage.getItem(key);
+    if (!raw) return null;
+    return JSON.parse(raw) as T;
   } catch {
-    return { count: 0, last: null, best: 0 };
+    return null;
   }
 }
 
-function parseLogs(raw: string | null): LogsShape {
-  if (!raw) return {};
+async function safeSetJSON(key: string, value: any): Promise<void> {
   try {
-    const obj = JSON.parse(raw);
-    return obj && typeof obj === "object" ? (obj as LogsShape) : {};
+    await AsyncStorage.setItem(key, JSON.stringify(value));
   } catch {
-    return {};
+    // ignore
   }
 }
 
-export function StreakProvider({ children }: { children: React.ReactNode }) {
-  const { supabaseUserId } = useUser();
-  const { addCoins } = useCoins() as any; // typed as any so we don't fight TS if signature changes
+/**
+ * Migrate any legacy guest keys into the v2 guest keys (one-time).
+ */
+async function migrateLegacyGuestIfNeeded(): Promise<void> {
+  try {
+    const legacyMeta = await AsyncStorage.getItem(LEGACY_META);
+    const legacyLogs = await AsyncStorage.getItem(LEGACY_LOGS);
+    const newMeta = await AsyncStorage.getItem(GUEST_META);
+    const newLogs = await AsyncStorage.getItem(GUEST_LOGS);
+
+    if (legacyMeta && !newMeta) {
+      await AsyncStorage.setItem(GUEST_META, legacyMeta);
+      await AsyncStorage.removeItem(LEGACY_META);
+    }
+    if (legacyLogs && !newLogs) {
+      await AsyncStorage.setItem(GUEST_LOGS, legacyLogs);
+      await AsyncStorage.removeItem(LEGACY_LOGS);
+    }
+  } catch (err) {
+    console.warn("[StreakContext] migrateLegacyGuestIfNeeded error:", err);
+  }
+}
+
+/**
+ * Mirror streak info to Supabase profiles table, but *never* treat Supabase
+ * as the source of truth (local AsyncStorage wins).
+ */
+async function syncStreakToSupabase(
+  userId: string | null,
+  meta: StreakMeta
+): Promise<void> {
+  if (!userId) return;
+  try {
+    const payload: any = {
+      id: userId,
+      // These column names are flexible; if they don't exist,
+      // Supabase will throw and we'll just log a warning.
+      streak_current: meta.count,
+      streak_best: meta.best,
+      streak_last_date: meta.lastDate,
+    };
+
+    const { error } = await supabase
+      .from("profiles")
+      .upsert(payload, { onConflict: "id" });
+
+    if (error) {
+      console.warn("[StreakContext] Supabase upsert streak error:", error);
+    }
+  } catch (err) {
+    console.warn("[StreakContext] syncStreakToSupabase error:", err);
+  }
+}
+
+export function StreakProvider({ children }: { children: ReactNode }) {
+  const { supabaseUserId } = useUser() as any;
+  const { activeCompanionId } = useCompanion();
 
   const [loaded, setLoaded] = useState(false);
-  const [count, setCount] = useState(0);
-  const [best, setBest] = useState(0);
-  const [last, setLast] = useState<string | null>(null);
-  const [todayChecked, setTodayChecked] = useState(false);
+  const [meta, setMeta] = useState<StreakMeta>({
+    count: 0,
+    best: 0,
+    lastDate: null,
+  });
 
-  const resetStreak = useCallback(async () => {
-    const uid = supabaseUserId ?? null;
-    const metaKey = metaKeyFor(uid);
-    const logsKey = logsKeyFor(uid);
+  // logs are just a list of dayIds; mostly for future UX / debugging
+  const [logs, setLogs] = useState<string[]>([]);
 
-    try {
-      await Promise.all([
-        AsyncStorage.removeItem(metaKey),
-        AsyncStorage.removeItem(logsKey),
-      ]);
-    } catch {}
+  const todayId = getEasternDayId();
+  const todayChecked = meta.lastDate === todayId;
 
-    if (uid) {
-      try {
-        await supabase
-          .from("profiles")
-          .upsert(
-            {
-              id: uid,
-              daily_streak_current: 0,
-              daily_streak_last_utc: null,
-              daily_streak_best: 0,
-            },
-            { onConflict: "id" }
-          );
-      } catch (err) {
-        if (__DEV__)
-          console.warn("[StreakContext] Supabase resetStreak error:", err);
-      }
+  const metaKey = useMemo(
+    () => metaKeyFor(supabaseUserId ?? null),
+    [supabaseUserId]
+  );
+  const logsKey = useMemo(
+    () => logsKeyFor(supabaseUserId ?? null),
+    [supabaseUserId]
+  );
+  const axolotlKey = useMemo(
+    () => axolotlKeyFor(supabaseUserId ?? null),
+    [supabaseUserId]
+  );
+
+  const activeCompanionCid = useMemo(
+    () => (activeCompanionId ? canonId(activeCompanionId) : null),
+    [activeCompanionId]
+  );
+  const hasAxolotl = activeCompanionCid === "companion:axolotl_oracle";
+
+  const hydrate = useCallback(async () => {
+    setLoaded(false);
+
+    if (!supabaseUserId) {
+      // only guests use legacy keys
+      await migrateLegacyGuestIfNeeded();
     }
 
-    setCount(0);
-    setBest(0);
-    setLast(null);
-    setTodayChecked(false);
-  }, [supabaseUserId]);
+    try {
+      const storedMeta =
+        (await safeGetJSON<StreakMeta>(metaKey)) ?? undefined;
+      const storedLogs =
+        (await safeGetJSON<string[]>(logsKey)) ?? undefined;
+
+      const nextMeta: StreakMeta = storedMeta || {
+        count: 0,
+        best: 0,
+        lastDate: null,
+      };
+      const nextLogs: string[] = storedLogs || [];
+
+      setMeta(nextMeta);
+      setLogs(nextLogs);
+    } catch (err) {
+      console.warn("[StreakContext] hydrate error:", err);
+      setMeta({ count: 0, best: 0, lastDate: null });
+      setLogs([]);
+    } finally {
+      setLoaded(true);
+    }
+  }, [metaKey, logsKey, supabaseUserId]);
 
   useEffect(() => {
-    let alive = true;
+    void hydrate();
+  }, [hydrate]);
 
-    (async () => {
-      setLoaded(false);
-      const today = getEasternDayId(); // "today" anchored to midnight Eastern
-
-      try {
-        const uid = supabaseUserId ?? null;
-
-        let meta: MetaShape = { count: 0, last: null, best: 0 };
-        let logs: LogsShape = {};
-
-        if (uid) {
-          // Supabase source of truth
-          try {
-            const { data, error } = await supabase
-              .from("profiles")
-              .select(
-                "daily_streak_current, daily_streak_last_utc, daily_streak_best"
-              )
-              .eq("id", uid)
-              .maybeSingle();
-
-            if (!error && data) {
-              const last = normalizeDayId(
-                typeof data.daily_streak_last_utc === "string" &&
-                  data.daily_streak_last_utc.length > 0
-                  ? data.daily_streak_last_utc
-                  : null
-              );
-
-              meta = {
-                count: Number.isFinite(Number(data.daily_streak_current))
-                  ? Number(data.daily_streak_current)
-                  : 0,
-                last,
-                best: Number.isFinite(Number(data.daily_streak_best))
-                  ? Number(data.daily_streak_best)
-                  : 0,
-              };
-            }
-          } catch (err) {
-            if (__DEV__)
-              console.warn("[StreakContext] Supabase load error:", err);
-          }
-
-          const [metaRawLocal, logsRawLocal] = await Promise.all([
-            AsyncStorage.getItem(metaKeyFor(uid)),
-            AsyncStorage.getItem(logsKeyFor(uid)),
-          ]);
-
-          if (!meta.last && metaRawLocal) {
-            const localMeta = parseMeta(metaRawLocal);
-            if (localMeta.last) meta = localMeta;
-          }
-
-          logs = parseLogs(logsRawLocal);
-        } else {
-          // Guest: load from guest keys (migrate from legacy once)
-          const [metaNew, logsNew, metaLegacy, logsLegacy] = await Promise.all([
-            AsyncStorage.getItem(GUEST_META),
-            AsyncStorage.getItem(GUEST_LOGS),
-            AsyncStorage.getItem(LEGACY_META),
-            AsyncStorage.getItem(LEGACY_LOGS),
-          ]);
-
-          const metaRaw = metaNew ?? metaLegacy;
-          const logsRaw = logsNew ?? logsLegacy;
-
-          meta = parseMeta(metaRaw);
-          logs = parseLogs(logsRaw);
-
-          if (metaRaw && !metaNew) await AsyncStorage.setItem(GUEST_META, metaRaw);
-          if (logsRaw && !logsNew) await AsyncStorage.setItem(GUEST_LOGS, logsRaw);
-        }
-
-        // Break streak if gap > 1 Eastern day
-        if (meta.last && dDays(meta.last, today) > 1) {
-          const uidNow = supabaseUserId ?? null;
-          const metaKey = metaKeyFor(uidNow);
-          const logsKey = logsKeyFor(uidNow);
-
-          try {
-            await Promise.all([
-              AsyncStorage.removeItem(metaKey),
-              AsyncStorage.removeItem(logsKey),
-            ]);
-          } catch {}
-
-          if (uidNow) {
-            try {
-              await supabase
-                .from("profiles")
-                .upsert(
-                  {
-                    id: uidNow,
-                    daily_streak_current: 0,
-                    daily_streak_last_utc: null,
-                    daily_streak_best: meta.best || 0,
-                  },
-                  { onConflict: "id" }
-                );
-            } catch (err) {
-              if (__DEV__)
-                console.warn(
-                  "[StreakContext] break-streak upsert error:",
-                  err
-                );
-            }
-          }
-
-          meta = { count: 0, last: null, best: meta.best || 0 };
-          logs = {};
-        }
-
-        // Sync snapshot to Supabase once (logged-in)
-        const uidNow = supabaseUserId ?? null;
-        if (uidNow) {
-          try {
-            await supabase
-              .from("profiles")
-              .upsert(
-                {
-                  id: uidNow,
-                  daily_streak_current: meta.count || 0,
-                  daily_streak_last_utc: meta.last,
-                  daily_streak_best: meta.best || meta.count || 0,
-                },
-                { onConflict: "id" }
-              );
-          } catch (err) {
-            if (__DEV__)
-              console.warn("[StreakContext] sync-on-load error:", err);
-          }
-        }
-
-        if (!alive) return;
-
-        setCount(meta.count || 0);
-        setBest(meta.best || 0);
-        setLast(meta.last || null);
-        setTodayChecked(!!logs[today] || meta.last === today);
-      } catch (err) {
-        if (__DEV__) console.warn("[StreakContext] load error:", err);
-        if (!alive) return;
-        setCount(0);
-        setBest(0);
-        setLast(null);
-        setTodayChecked(false);
-      } finally {
-        if (alive) setLoaded(true);
-      }
-    })();
-
-    return () => {
-      alive = false;
-    };
-  }, [supabaseUserId]);
+  const persistAll = useCallback(
+    async (nextMeta: StreakMeta, nextLogs: string[]) => {
+      setMeta(nextMeta);
+      setLogs(nextLogs);
+      await Promise.all([
+        safeSetJSON(metaKey, nextMeta),
+        safeSetJSON(logsKey, nextLogs),
+        syncStreakToSupabase(supabaseUserId ?? null, nextMeta),
+      ]).catch((err) =>
+        console.warn("[StreakContext] persistAll error:", err)
+      );
+    },
+    [metaKey, logsKey, supabaseUserId]
+  );
 
   const markToday = useCallback(async () => {
-    const today = getEasternDayId(); // new day hits exactly at midnight Eastern
-    const uid = supabaseUserId ?? null;
+    const nowId = getEasternDayId();
 
-    const logsKey = logsKeyFor(uid);
-    const logsRaw = await AsyncStorage.getItem(logsKey);
-    const logs = parseLogs(logsRaw);
-
-    // Already marked for today → no streak change, no coins
-    if (logs[today] || last === today) {
-      setTodayChecked(true);
+    // If we've already marked today as checked, don't double-count
+    if (meta.lastDate === nowId && meta.count > 0) {
       return;
     }
 
+    const prevDate = meta.lastDate;
+    const prevCount = meta.count;
+    const prevBest = meta.best;
+
     let nextCount = 1;
 
-    if (last) {
-      const diff = dDays(last, today);
-      if (diff === 1) nextCount = (count || 0) + 1; // consecutive Eastern day
-      else if (diff <= 0) nextCount = count || 1; // same or earlier day, keep current
-      else nextCount = 1; // gap > 1 handled in load; this is just extra safety
-    }
+    if (prevDate) {
+      const diff = daysBetween(prevDate, nowId);
 
-    const nextBest = Math.max(best || 0, nextCount);
+      if (diff === 0) {
+        // weird edge case; treat as already marked
+        nextCount = prevCount || 1;
+      } else if (diff === 1) {
+        // consecutive day – streak continues
+        nextCount = prevCount + 1;
+      } else if (diff && diff > 1) {
+        // Missed at least one day – Axolotl Oracle may save you once per 7 days
+        let usedShield = false;
 
-    const newMeta: MetaShape = { count: nextCount, last: today, best: nextBest };
-    const newLogs: LogsShape = { ...logs, [today]: true };
+        if (hasAxolotl) {
+          try {
+            const lastUsed = await AsyncStorage.getItem(axolotlKey);
+            let canUseShield = false;
 
-    const metaKey = metaKeyFor(uid);
+            if (!lastUsed) {
+              canUseShield = true;
+            } else {
+              const since = daysBetween(lastUsed, nowId);
+              if (since === null || since >= 7) {
+                canUseShield = true;
+              }
+            }
 
-    await Promise.all([
-      AsyncStorage.setItem(metaKey, JSON.stringify(newMeta)),
-      AsyncStorage.setItem(logsKey, JSON.stringify(newLogs)),
-    ]);
+            if (canUseShield) {
+              // Treat it like the streak never broke: continue counting
+              nextCount = prevCount + 1;
+              usedShield = true;
+              await AsyncStorage.setItem(axolotlKey, nowId);
+              console.log(
+                "[StreakContext] Axolotl Oracle shield used – streak preserved."
+              );
+            }
+          } catch (err) {
+            console.warn(
+              "[StreakContext] Axolotl Oracle shield error:",
+              err
+            );
+          }
+        }
 
-    if (uid) {
-      try {
-        await supabase
-          .from("profiles")
-          .upsert(
-            {
-              id: uid,
-              daily_streak_current: nextCount,
-              daily_streak_last_utc: today,
-              daily_streak_best: nextBest,
-            },
-            { onConflict: "id" }
-          );
-      } catch (err) {
-        if (__DEV__) console.warn("[StreakContext] markToday error:", err);
-      }
-    }
-
-    // 🔹 Daily login coin rewards (Eastern-day based)
-    try {
-      if (typeof addCoins === "function") {
-        const baseReward = 20;
-        const isSeventh = nextCount > 0 && nextCount % 7 === 0;
-
-        // If you want 20 + 100 on the 7th, change this to: baseReward + (isSeventh ? 100 : 0)
-        const reward = isSeventh ? 100 : baseReward;
-
-        if (reward > 0) {
-          (addCoins as any)(reward, {
-            reason: isSeventh ? "daily_login_7" : "daily_login",
-          });
+        if (!usedShield) {
+          // No shield available: streak resets
+          nextCount = 1;
         }
       }
-    } catch (err) {
-      if (__DEV__)
-        console.warn("[StreakContext] daily reward coins error:", err);
     }
 
-    setCount(nextCount);
-    setBest(nextBest);
-    setLast(today);
-    setTodayChecked(true);
-  }, [supabaseUserId, count, last, best, addCoins]);
+    const nextBest = Math.max(prevBest, nextCount);
+    const nextMeta: StreakMeta = {
+      count: nextCount,
+      best: nextBest,
+      lastDate: nowId,
+    };
 
-  const v = useMemo(
+    const existingLogs = new Set(logs);
+    existingLogs.add(nowId);
+    const nextLogsArr = Array.from(existingLogs).sort(); // keeps ordering nice
+
+    await persistAll(nextMeta, nextLogsArr);
+  }, [meta, logs, persistAll, hasAxolotl, axolotlKey]);
+
+  const resetStreak = useCallback(async () => {
+    const nowId = getEasternDayId();
+    const nextMeta: StreakMeta = {
+      count: 0,
+      best: meta.best, // keep best streak for bragging rights
+      lastDate: nowId,
+    };
+    // we don't clear logs; we just add a new "break" day implicitly
+    await persistAll(nextMeta, logs);
+  }, [meta.best, logs, persistAll]);
+
+  const reload = useCallback(async () => {
+    await hydrate();
+  }, [hydrate]);
+
+  const value: State = useMemo(
     () => ({
       loaded,
-      count,
-      best,
+      count: meta.count,
+      best: meta.best,
       todayChecked,
-      lastDate: last,
+      lastDate: meta.lastDate,
       markToday,
       resetStreak,
+      reload,
     }),
-    [loaded, count, best, todayChecked, last, markToday, resetStreak]
+    [loaded, meta, todayChecked, markToday, resetStreak, reload]
   );
 
-  return <C.Provider value={v}>{children}</C.Provider>;
+  return <C.Provider value={value}>{children}</C.Provider>;
 }
 
-export function useStreak() {
-  const v = useContext(C);
-  if (!v) throw new Error("useStreak must be used inside StreakProvider");
-  return v;
+export function useStreak(): State {
+  const ctx = useContext(C);
+  if (!ctx) {
+    throw new Error("useStreak must be used inside <StreakProvider>");
+  }
+  return ctx;
 }

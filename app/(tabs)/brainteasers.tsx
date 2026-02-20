@@ -1,9 +1,25 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+// app/(tabs)/brainteasers.tsx (adjust path if yours is different)
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { brainteaserSolved, awardCoins } from "../utils/achievements-api";
-import { View, Text, TextInput, Pressable, StyleSheet, Alert } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  StyleSheet,
+  Alert,
+} from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "../context/ThemeContext";
+import { useCompanion } from "../context/CompanionContext";
+import { canonId } from "../_lib/canonId";
 
 function norm(s: string) {
   return (s ?? "")
@@ -258,6 +274,36 @@ export default function BrainteasersTab() {
   const coins = useCoinsSafe();
   const toast = useToastSafe();
   const { tokens } = useTheme();
+  const { activeCompanionId } = useCompanion();
+
+  const activeCid = useMemo(
+    () => (activeCompanionId ? canonId(activeCompanionId) : null),
+    [activeCompanionId]
+  );
+
+  const hasAetherwyrm = activeCid === "companion:aetherwyrm";
+  const hasAstralNova = activeCid === "companion:astral_nova";
+
+  // Apply legendary effects to brainteaser coin rewards
+  const applyBrainteaserCoins = useCallback(
+    (base: number): number => {
+      if (!base || base <= 0) return 0;
+      let amount = base;
+
+      // Astral Nova: bonus rewards on brainteasers (50% more here)
+      if (hasAstralNova) {
+        amount = Math.round(amount * 1.5);
+      }
+      // Aetherwyrm: global +20% coin booster
+      if (hasAetherwyrm) {
+        amount = Math.round(amount * 1.2);
+      }
+
+      if (amount < 1) amount = 1;
+      return amount;
+    },
+    [hasAetherwyrm, hasAstralNova]
+  );
 
   const pairRef = useRef<Riddle[]>(todayPair());
   const pair = pairRef.current;
@@ -312,9 +358,12 @@ export default function BrainteasersTab() {
     setLeftToday(Math.max(0, 2 - newUsed));
 
     if (ok && !alreadyCorrect) {
-      coins?.addCoins?.(2);
-      toast.success("Correct! +2 coins");
-      show("Correct! +2 coins");
+      const baseReward = 2;
+      const reward = applyBrainteaserCoins(baseReward);
+      coins?.addCoins?.(reward);
+      const label = `Correct! +${reward} coins`;
+      toast.success(label);
+      show(label);
       const nextMap = { ...correctMap, [cur.q]: true };
 
       try {
@@ -348,10 +397,21 @@ export default function BrainteasersTab() {
           (c1 && c2) || (ok && (correctMap[pair[0].q] || correctMap[pair[1].q]));
         const bonusGiven = (await AsyncStorage.getItem(STORAGE_BONUS)) === "1";
         if (both && !bonusGiven) {
-          coins?.addCoins?.(10);
+          const baseBonus = 10;
+          let bonus = baseBonus;
+
+          // Astral Nova: extra flat +5 on perfect pair before multipliers
+          if (hasAstralNova) {
+            bonus += 5;
+          }
+
+          bonus = applyBrainteaserCoins(bonus);
+
+          coins?.addCoins?.(bonus);
           await AsyncStorage.setItem(STORAGE_BONUS, "1");
-          toast.success("Perfect! +10 bonus");
-          show("Perfect! +10 bonus ✨", 1800);
+          const label = `Perfect! +${bonus} bonus`;
+          toast.success(label);
+          show(`${label} ✨`, 1800);
         } else {
           show("Nice try! See you tomorrow ✨", 1800);
         }

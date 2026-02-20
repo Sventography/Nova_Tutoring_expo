@@ -11,6 +11,8 @@ import { AchievementsProvider } from "./context/AchievementsContext";
 import { ToastProvider } from "./context/ToastContext";
 import { CertificatesProvider } from "./context/CertificatesContext";
 import { UserProvider } from "./context/UserContext";
+import { CompanionProvider } from "./context/CompanionContext";
+import { StreakProvider } from "./context/StreakContext";
 import AchievementConfettiOverlay from "./components/AchievementConfettiOverlay";
 
 function ThemeGate({ children }: { children: React.ReactNode }) {
@@ -122,26 +124,30 @@ export function AppProviders(props: any) {
     <UserProvider>
       <CoinsProvider>
         <PurchasesProvider>
-          <ThemeProvider>
-            <ThemeGate>
-              <CursorProvider>
-                <CollectionsProvider>
-                  <CertificatesProvider>
-                    <ToastProvider>
-                      <AchievementsProvider>
-                        <DevCoinsListener />
-                        <DevThemeListener />
-                        <DevGrantListener />
-                        {/* Global overlay that watches unlocked achievements */}
-                        <AchievementConfettiOverlay />
-                        {children}
-                      </AchievementsProvider>
-                    </ToastProvider>
-                  </CertificatesProvider>
-                </CollectionsProvider>
-              </CursorProvider>
-            </ThemeGate>
-          </ThemeProvider>
+          <CompanionProvider>
+            <StreakProvider>
+              <ThemeProvider>
+                <ThemeGate>
+                  <CursorProvider>
+                    <CollectionsProvider>
+                      <CertificatesProvider>
+                        <ToastProvider>
+                          <AchievementsProvider>
+                            <DevCoinsListener />
+                            <DevThemeListener />
+                            <DevGrantListener />
+                            {/* Global overlay that watches unlocked achievements */}
+                            <AchievementConfettiOverlay />
+                            {children}
+                          </AchievementsProvider>
+                        </ToastProvider>
+                      </CertificatesProvider>
+                    </CollectionsProvider>
+                  </CursorProvider>
+                </ThemeGate>
+              </ThemeProvider>
+            </StreakProvider>
+          </CompanionProvider>
         </PurchasesProvider>
       </CoinsProvider>
     </UserProvider>

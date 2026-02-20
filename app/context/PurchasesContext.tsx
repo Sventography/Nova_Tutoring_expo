@@ -619,7 +619,9 @@ export function PurchasesProvider({
           return;
         }
 
-        console.log("[PurchasesContext] reload found nothing for guest, clearing");
+        console.log(
+          "[PurchasesContext] reload found nothing for guest, clearing"
+        );
         setPurchases({});
         await AsyncStorage.setItem(key, JSON.stringify({}));
       } catch (e) {

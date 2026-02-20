@@ -19,13 +19,14 @@ import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Linking from "expo-linking";
 import { Linking as RNLinking } from "react-native";
-import * as Haptics from "expo-haptics"; // 🫧 haptics for size taps
+import * as Haptics from "expo-haptics";
 
 import { useCoins } from "../context/CoinsContext";
 import { useTheme } from "../context/ThemeContext";
 import { useCursor } from "../context/CursorContext";
 import { useUser } from "../context/UserContext";
 import { usePurchases } from "../context/PurchasesContext";
+import { useCompanion } from "../context/CompanionContext";
 
 import {
   catalog,
@@ -75,6 +76,17 @@ type Order = {
   createdAt: number;
 };
 
+// Extended companion effect types
+type CompanionEffectType =
+  | "hearts"
+  | "stars"
+  | "stardust"
+  | "sparkles"
+  | "orbs"
+  | "balloons"
+  | "moons"
+  | null;
+
 // Local orders list (purely client-side for now)
 const ORDERS_KEY = "@nova/orders";
 
@@ -86,7 +98,6 @@ const REQUIRES_SHIPPING = new Set<Category>([
 
 /* ------------------------------- Utilities -------------------------------- */
 
-// Canonical ID for themes & cursors so everything agrees (shop, context, overlay)
 function canonId(raw: string | null | undefined): string {
   if (!raw) return "";
   let v = String(raw).trim().toLowerCase();
@@ -95,7 +106,7 @@ function canonId(raw: string | null | undefined): string {
   v = v.replace(/-/g, "_");
 
   if (!v.includes(":")) {
-    // known cursors (handles old saves like "glow", "cursor_glow", etc.)
+    // cursors
     if (v === "glow" || v === "cursor_glow") {
       v = "cursor:glow";
     } else if (v === "orb" || v === "cursor_orb") {
@@ -108,7 +119,7 @@ function canonId(raw: string | null | undefined): string {
     ) {
       v = "cursor:star_trail";
     }
-    // known themes (base names and long variants)
+    // themes
     else if (
       [
         "neon",
@@ -124,7 +135,6 @@ function canonId(raw: string | null | undefined): string {
         "neonpurple",
         "neon_purple",
         "silver",
-        // long-name variants
         "crimson_dream",
         "emerald_wave",
         "silver_frost",
@@ -132,7 +142,7 @@ function canonId(raw: string | null | undefined): string {
     ) {
       v = "theme:" + v;
     }
-    // generic "cursorX" / "themeX" strings
+    // generic prefixes
     else if (v.startsWith("cursor")) {
       v = "cursor:" + v.replace(/^cursor[_:]?/, "");
     } else if (v.startsWith("theme")) {
@@ -140,14 +150,12 @@ function canonId(raw: string | null | undefined): string {
     }
   }
 
-  // cursor aliases
+  // aliases
   if (v === "cursor:startrail") v = "cursor:star_trail";
-
-  // theme aliases (underscore/hyphen versions & long names)
   if (v === "theme:black_gold") v = "theme:blackgold";
   if (v === "theme:neon_purple") v = "theme:neonpurple";
 
-  // long-name → base ids
+  // long-name → base
   if (v === "theme:crimson_dream") v = "theme:crimson";
   if (v === "theme:emerald_wave") v = "theme:emerald";
   if (v === "theme:silver_frost") v = "theme:silver";
@@ -193,34 +201,64 @@ async function saveOrders(list: Order[]) {
   await AsyncStorage.setItem(ORDERS_KEY, JSON.stringify(list));
 }
 
-/* ----------------- Stripe wrapper for $$ buttons -------------------------- */
-async function startCheckoutRequest(opts: {
-  priceId?: string;
-  amount?: number;
-  currency?: string;
-  success_url?: string;
-  cancel_url?: string;
-  quantity?: number;
-  meta?: any;
-}) {
-  const origin =
-    (typeof window !== "undefined" && (window as any).location?.origin) ||
-    "http://localhost:8081";
+/**
+ * Build a stable, per-companion effect map so each one
+ * gets a distinct animated effect and we don't spam stars.
+ */
+function buildCompanionEffectMap(): Record<string, CompanionEffectType> {
+  const map: Record<string, CompanionEffectType> = {};
 
-  const payload: any = {
-    quantity: opts?.quantity ?? 1,
-    success_url: opts?.success_url || `${origin}/?purchase=success`,
-    cancel_url: opts?.cancel_url || `${origin}/?purchase=cancel`,
-    meta: opts?.meta,
-  };
+  const EFFECT_SEQUENCE: CompanionEffectType[] = [
+    "hearts",
+    "balloons",
+    "moons",
+    "stardust",
+    "sparkles",
+    "orbs",
+    "stars",
+  ];
 
-  if (typeof opts?.amount === "number") {
-    payload.amount = opts.amount;
-    payload.currency = (opts.currency || "usd").toLowerCase();
-  }
-  if (opts?.priceId) payload.priceId = opts.priceId;
+  let seqIdx = 0;
 
-  return startCheckout(payload);
+  (COMPANIONS as any[]).forEach((comp) => {
+    const text = `${comp?.title ?? ""} ${comp?.desc ?? ""}`.toLowerCase();
+    let type: CompanionEffectType = null;
+
+    // Strong keyword matches first
+    if (text.includes("balloon")) {
+      type = "balloons";
+    } else if (text.includes("moon") || text.includes("luna")) {
+      type = "moons";
+    } else if (text.includes("stardust") || text.includes("star dust")) {
+      type = "stardust";
+    } else if (text.includes("heart") || text.includes("love")) {
+      type = "hearts";
+    } else if (
+      text.includes("sparkle") ||
+      text.includes("sparkly") ||
+      text.includes("glitter")
+    ) {
+      type = "sparkles";
+    } else if (text.includes("orb") || text.includes("nova")) {
+      type = "orbs";
+    }
+
+    // Remaining companions get assigned from the rotating sequence.
+    if (!type) {
+      type = EFFECT_SEQUENCE[seqIdx % EFFECT_SEQUENCE.length];
+      seqIdx += 1;
+    }
+
+    map[comp.id] = type;
+  });
+
+  return map;
+}
+
+const COMPANION_EFFECT_MAP = buildCompanionEffectMap();
+
+function getCompanionEffect(id: string): CompanionEffectType {
+  return COMPANION_EFFECT_MAP[id] ?? "stars";
 }
 
 /* --------------------------------- UI bits ------------------------------- */
@@ -459,28 +497,355 @@ function OrderSuccessModal({
   );
 }
 
+/* -------------------- Item Detail Modal (zoomed view) --------------------- */
+
+function ItemDetailModal({
+  visible,
+  item,
+  onClose,
+}: {
+  visible: boolean;
+  item: any | null;
+  onClose: () => void;
+}) {
+  const { tokens } = useTheme();
+  const [showAlt, setShowAlt] = useState(false);
+
+  useEffect(() => {
+    // reset flip when switching items
+    setShowAlt(false);
+  }, [item?.id]);
+
+  if (!item) return null;
+
+  const hasAlt = !!(item.altImageKey && altImages[item.altImageKey]);
+  const imgSrc =
+    showAlt && hasAlt
+      ? altImages[item.altImageKey]
+      : item.image || (hasAlt ? altImages[item.altImageKey] : null);
+
+  const priceCoins = item.priceCoins ?? item.coinPrice ?? null;
+  const priceUSD = item.priceUSD ?? null;
+  const abilityNote = item.ability?.note ?? null;
+
+  return (
+    <Modal visible={visible} transparent animationType="fade">
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: "rgba(0,0,0,0.6)",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 24,
+        }}
+      >
+        <View
+          style={{
+            width: "100%",
+            maxWidth: 420,
+            borderRadius: 18,
+            overflow: "hidden",
+            borderWidth: 1,
+            borderColor: tokens.border as any,
+            backgroundColor: tokens.isDark
+              ? "rgba(15,23,42,0.98)"
+              : "rgba(255,255,255,0.98)",
+          }}
+        >
+          <LinearGradient
+            colors={
+              tokens.isDark ? ["#020617", "#020617"] : ["#EFF6FF", "#F9FAFB"]
+            }
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{ padding: 16 }}
+          >
+            <ScrollView>
+              {imgSrc ? (
+                <View
+                  style={{
+                    width: "100%",
+                    height: 240,
+                    borderRadius: 14,
+                    overflow: "hidden",
+                    borderWidth: 1,
+                    borderColor: tokens.border as any,
+                    marginBottom: 12,
+                  }}
+                >
+                  <Image
+                    source={imgSrc}
+                    style={{ width: "100%", height: "100%" }}
+                    resizeMode="contain"
+                  />
+                </View>
+              ) : null}
+
+              {hasAlt && (
+                <Pressable
+                  onPress={() => setShowAlt((v) => !v)}
+                  style={({ pressed }) => ({
+                    alignSelf: "center",
+                    marginBottom: 12,
+                    paddingHorizontal: 14,
+                    paddingVertical: 6,
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    borderColor: tokens.border as any,
+                    backgroundColor: pressed
+                      ? tokens.isDark
+                        ? "rgba(148,163,184,0.3)"
+                        : "rgba(148,163,184,0.2)"
+                      : tokens.isDark
+                      ? "rgba(15,23,42,0.9)"
+                      : "rgba(255,255,255,0.9)",
+                  })}
+                >
+                  <Text
+                    style={{
+                      color: tokens.text as any,
+                      fontSize: 12,
+                      fontWeight: "800",
+                    }}
+                  >
+                    View {showAlt ? "front" : "back"} art
+                  </Text>
+                </Pressable>
+              )}
+
+              <Text
+                style={{
+                  color: tokens.titleText as any,
+                  fontSize: 18,
+                  fontWeight: "900",
+                  marginBottom: 8,
+                  textAlign: "center",
+                }}
+              >
+                {item.title}
+              </Text>
+
+              {item.desc ? (
+                <Text
+                  style={{
+                    color: tokens.text as any,
+                    fontSize: 14,
+                    lineHeight: 20,
+                    marginBottom: 10,
+                    textAlign: "left",
+                  }}
+                >
+                  {item.desc}
+                </Text>
+              ) : null}
+
+              {abilityNote ? (
+                <Text
+                  style={{
+                    color: tokens.text as any,
+                    fontSize: 13,
+                    lineHeight: 18,
+                    marginBottom: 10,
+                    fontStyle: "italic",
+                  }}
+                >
+                  Ability: {abilityNote}
+                </Text>
+              ) : null}
+
+              {(priceCoins || priceUSD) && (
+                <View
+                  style={{
+                    marginTop: 8,
+                    marginBottom: 16,
+                    flexDirection: "row",
+                    flexWrap: "wrap",
+                    gap: 8,
+                  }}
+                >
+                  {priceCoins ? (
+                    <View
+                      style={{
+                        paddingHorizontal: 10,
+                        paddingVertical: 6,
+                        borderRadius: 999,
+                        borderWidth: 1,
+                        borderColor: tokens.border as any,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: tokens.text as any,
+                          fontWeight: "800",
+                          fontSize: 13,
+                        }}
+                      >
+                        {(priceCoins as number).toLocaleString()} coins
+                      </Text>
+                    </View>
+                  ) : null}
+                  {priceUSD ? (
+                    <View
+                      style={{
+                        paddingHorizontal: 10,
+                        paddingVertical: 6,
+                        borderRadius: 999,
+                        borderWidth: 1,
+                        borderColor: tokens.border as any,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: tokens.text as any,
+                          fontWeight: "800",
+                          fontSize: 13,
+                        }}
+                      >
+                        ${priceUSD.toFixed(0)}
+                      </Text>
+                    </View>
+                  ) : null}
+                </View>
+              )}
+
+              <Pressable
+                onPress={onClose}
+                style={({ pressed }) => ({
+                  marginTop: 8,
+                  alignSelf: "center",
+                  paddingHorizontal: 18,
+                  paddingVertical: 10,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor: tokens.border as any,
+                  backgroundColor: pressed
+                    ? tokens.isDark
+                      ? "rgba(148,163,184,0.25)"
+                      : "rgba(148,163,184,0.16)"
+                    : tokens.isDark
+                    ? "rgba(15,23,42,0.9)"
+                    : "rgba(255,255,255,0.9)",
+                })}
+              >
+                <Text
+                  style={{
+                    color: tokens.text as any,
+                    fontWeight: "800",
+                    fontSize: 14,
+                  }}
+                >
+                  Close
+                </Text>
+              </Pressable>
+            </ScrollView>
+          </LinearGradient>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+/* --------- Visual overlay for companion click effects (hearts/stars/etc) -- */
+
+function CompanionEffectOverlay({
+  type,
+  effectKey,
+}: {
+  type: CompanionEffectType;
+  effectKey: number;
+}) {
+  const anim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!type) return;
+    anim.setValue(0);
+    Animated.timing(anim, {
+      toValue: 1,
+      duration: 1400,
+      useNativeDriver: true,
+    }).start();
+  }, [type, effectKey, anim]);
+
+  if (!type) return null;
+
+  const icons =
+    type === "hearts"
+      ? ["💜", "🩷", "❤️", "💙", "💜", "🩵"]
+      : type === "stardust"
+      ? ["✨", "✧", "⋆", "✦", "✨", "⋆"]
+      : type === "sparkles"
+      ? ["✨", "💫", "✨", "💫", "✨", "💫"]
+      : type === "balloons"
+      ? ["🎈", "🎈", "🎉", "🎈", "🎈", "🎉"]
+      : type === "moons"
+      ? ["🌙", "🌘", "🌖", "🌙", "⭐", "🌙"]
+      : type === "orbs"
+      ? ["💫", "🟣", "🔮", "💫", "🔮", "🟣"]
+      : /* stars */ ["⭐", "🌟", "⭐", "✦", "✧", "⭐"];
+
+  return (
+    <>
+      {icons.map((icon, index) => {
+        const offsetX = (index - icons.length / 2) * 14;
+        const translateY = anim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0, -110 - index * 10],
+        });
+        const opacity = anim.interpolate({
+          inputRange: [0, 0.3, 1],
+          outputRange: [0, 1, 0],
+        });
+        const translateX = anim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0, offsetX],
+        });
+
+        return (
+          <Animated.Text
+            key={`${type}-${index}-${effectKey}`}
+            style={{
+              position: "absolute",
+              bottom: 4,
+              fontSize: 26,
+              transform: [{ translateY }, { translateX }],
+              opacity,
+            }}
+          >
+            {icon}
+          </Animated.Text>
+        );
+      })}
+    </>
+  );
+}
+
 /* --------------------------------- Screen -------------------------------- */
 export default function Shop() {
-  // ✅ Hooks all at top level
   const { coins, setCoins } = useCoins();
   const { tokens, setThemeById, themeId } = useTheme();
   const { cursorId, setCursorById } = useCursor();
   const { user: currentUser } = useUser();
   const { purchases, isOwned, grant } = usePurchases();
+  const {
+    activeCompanionId: equippedCompanionId,
+    ownedCompanions: ownedCompanionIds,
+    equipCompanion,
+  } = useCompanion();
   const router = useRouter();
 
   const [orders, setOrders] = useState<Order[]>([]);
-  const [flipped, setFlipped] = useState<Record<string, boolean>>({});
   const [need, setNeed] = useState<number>(0);
   const [showInsufficient, setShowInsufficient] = useState(false);
   const [showOrderSuccess, setShowOrderSuccess] = useState(false);
   const [lastOrderTitle, setLastOrderTitle] = useState<string | null>(null);
 
-  // 📨 Address sheet state for coin-based physical orders
   const [addressVisible, setAddressVisible] = useState(false);
   const [addressSubmitting, setAddressSubmitting] = useState(false);
   const [pendingItem, setPendingItem] = useState<any | null>(null);
   const [pendingSize, setPendingSize] = useState<string | null>(null);
+
+  // Item detail modal
+  const [detailItem, setDetailItem] = useState<any | null>(null);
 
   const scrollRef = useRef<ScrollView | null>(null);
   const sizeCtl = useSelectedSizes();
@@ -493,20 +858,15 @@ export default function Shop() {
 
   const coinsRef = useRef<number>(coins ?? 0);
 
-  // 🔥 DEV CHEAT: tap Shop title 5x → +1,000 coins
   const devTapRef = useRef(0);
 
-  // companions strip bounce state
-  const [activeCompanionId, setActiveCompanionId] = useState<string | null>(
-    null
-  );
+  const [stripActiveId, setStripActiveId] = useState<string | null>(null);
   const companionAnim = useRef(new Animated.Value(0)).current;
   const companionScale = companionAnim.interpolate({
     inputRange: [0, 1],
     outputRange: [1, 1.12],
   });
 
-  // floating companion (bottom-right, draggable, with multiple tap actions)
   const [floatingCompanion, setFloatingCompanion] = useState<any | null>(null);
   const windowDims = Dimensions.get("window");
   const FLOAT_SIZE = 80;
@@ -516,7 +876,6 @@ export default function Shop() {
     y: windowDims.height - FLOAT_SIZE - 160,
   });
 
-  // plain numbers for top/left
   const [floatPos, setFloatPos] = useState({
     x: floatBasePos.current.x,
     y: floatBasePos.current.y,
@@ -533,6 +892,9 @@ export default function Shop() {
   });
 
   const clickModeRef = useRef(0);
+
+  const [activeEffect, setActiveEffect] = useState<CompanionEffectType>(null);
+  const [effectKey, setEffectKey] = useState(0);
 
   const panResponder = useRef(
     PanResponder.create({
@@ -607,7 +969,6 @@ export default function Shop() {
     };
   }, []);
 
-  // 🔥 Dev cheat handler: 5 taps on title → +1,000 coins
   const handleDevTitlePress = () => {
     if (!__DEV__) return;
 
@@ -620,7 +981,6 @@ export default function Shop() {
       const nextCoins = cur + bonus;
 
       coinsRef.current = nextCoins;
-
       setTimeout(() => {
         void setCoins(nextCoins);
       }, 0);
@@ -642,7 +1002,6 @@ export default function Shop() {
     }
   };
 
-  // Prefill name/email for AddressSheet from currentUser
   const initialAddressValues = useMemo<Partial<AddressPayload>>(
     () => ({
       name:
@@ -664,7 +1023,6 @@ export default function Shop() {
     ]
   );
 
-  /* --------------------------- Initial data load -------------------------- */
   useEffect(() => {
     (async () => {
       const ord = await loadOrders();
@@ -682,7 +1040,6 @@ export default function Shop() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /* --------------------------- Deep link handling ------------------------- */
   useEffect(() => {
     const onUrl = async (event: { url: string }) => {
       const { queryParams, path } = Linking.parse(event.url);
@@ -756,8 +1113,6 @@ export default function Shop() {
     return () => sub.remove();
   }, [setCoins, coins, grant]);
 
-  /* -------------------------- Equip helpers ------------------------------- */
-
   function markOwned(id: string) {
     const cid = canonId(id);
     const grantId = cid || id;
@@ -784,7 +1139,6 @@ export default function Shop() {
 
   function unequipThemeImmediate(meta?: Record<string, any>) {
     const prev = themeId;
-    // Reset to default Neon theme rather than "no theme"
     if (typeof setThemeById === "function") setThemeById("theme:neon");
     track("shop_unequip", {
       kind: "theme",
@@ -821,7 +1175,6 @@ export default function Shop() {
     });
   }
 
-  /* ----------------------------- Quick menus ------------------------------ */
   const THEMES_MENU: QuickItem[] = useMemo(() => {
     const eq = canonId(themeId ?? "");
     return [
@@ -934,9 +1287,22 @@ export default function Shop() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [purchases, cursorId]);
 
+  // My Companions strip uses both CompanionContext + PurchasesContext
   const ownedCompanions = useMemo(
-    () => COMPANIONS.filter((c: any) => isOwned(c.id)),
-    [purchases, isOwned]
+    () =>
+      COMPANIONS.filter((c: any) => {
+        const cid = c.canonId || canonId(c.id);
+        const fromContext = (ownedCompanionIds || []).some(
+          (ownedId: string) =>
+            ownedId === cid ||
+            ownedId === c.id ||
+            ownedId === canonId(c.id)
+        );
+        const fromPurchases =
+          isOwned(c.id) || isOwned(cid) || isOwned(canonId(c.id));
+        return fromContext || fromPurchases;
+      }),
+    [ownedCompanionIds, purchases]
   );
 
   function quickEquip(id: string, kind: "theme" | "cursor") {
@@ -987,14 +1353,7 @@ export default function Shop() {
 
     const it = catalog.find((x) => canonId(x.id) === cid);
     if (it?.priceUSD) {
-      const amount = Math.round((it.priceUSD ?? 1) * 100);
-      const success = Linking.createURL("/", { queryParams: { sku: it.id } });
-      void startCheckoutRequest({
-        amount,
-        currency: "usd",
-        success_url: success,
-        cancel_url: success,
-      });
+      void moneyBuy(it);
       return;
     }
 
@@ -1010,7 +1369,6 @@ export default function Shop() {
     );
   }
 
-  /* ----------------------------- Group catalog ---------------------------- */
   const groups = useMemo(() => {
     const byCat: Record<Category, typeof catalog> = {
       plushies: [],
@@ -1023,7 +1381,6 @@ export default function Shop() {
     };
 
     for (const it of catalog) {
-      // 🚫 Remove the Neon bundle from the shop
       if (it.category === "bundle") {
         const idLc = (it.id ?? "").toLowerCase();
         const titleLc =
@@ -1037,13 +1394,10 @@ export default function Shop() {
     return byCat;
   }, []);
 
-  /* ---------------------------- Purchase flows ---------------------------- */
-
   function buyWithCoins(it: any, meta?: { size?: string }) {
     const price = it.priceCoins ?? 0;
     if (!price) return;
 
-    // Physical items → check coins first, then open address sheet
     if (REQUIRES_SHIPPING.has(it.category)) {
       const curCoins = coinsRef.current ?? coins ?? 0;
       if (curCoins < price) {
@@ -1083,7 +1437,6 @@ export default function Shop() {
       return;
     }
 
-    // Digital items (themes, cursors, etc.)
     const curCoins = coinsRef.current ?? coins ?? 0;
     if (curCoins < price) {
       setNeed(price - curCoins);
@@ -1118,9 +1471,11 @@ export default function Shop() {
       equipThemeImmediate(grantId, { source: "coins_purchase" });
     if (it.category === "cursor")
       void equipCursorImmediate(grantId, { source: "coins_purchase" });
+    if (it.category === "companions") {
+      void equipCompanion(grantId).catch(() => {});
+    }
   }
 
-  // Handle confirm from AddressSheet for coin-based physical orders
   async function handleAddressConfirm(addr: AddressPayload) {
     const it = pendingItem;
     if (!it) return;
@@ -1131,7 +1486,6 @@ export default function Shop() {
       const size = pendingSize;
       const priceCoins = it.priceCoins ?? 0;
 
-      // Double-check coins in case they changed while the sheet was open
       const curCoins = coinsRef.current ?? coins ?? 0;
       if (curCoins < priceCoins) {
         setAddressSubmitting(false);
@@ -1149,12 +1503,10 @@ export default function Shop() {
         return;
       }
 
-      // 🧮 Locally deduct coins so UI updates immediately
       const nextCoins = curCoins - priceCoins;
       coinsRef.current = nextCoins;
       await setCoins(nextCoins);
 
-      // Mark as owned locally so Purchases tab updates
       markOwned(it.id);
 
       const userForOrder =
@@ -1191,7 +1543,6 @@ export default function Shop() {
         size: size || null,
       });
 
-      // Backend: debit coins + write Supabase purchases row + send emails
       startCoinCheckout({
         id: it.id,
         title: it.title,
@@ -1203,7 +1554,6 @@ export default function Shop() {
         address: addr,
       });
 
-      // Build rich shipping payload for notifyCoinOrder (for email + logs)
       const a: any = addr || {};
       const shippingName =
         addr.name ||
@@ -1238,7 +1588,6 @@ export default function Shop() {
 
       const notes = a.notes || "";
 
-      // Notify backend (legacy handler) with explicit shipping fields
       void notifyCoinOrder({
         coins: priceCoins,
         user: userForOrder ?? null,
@@ -1251,7 +1600,6 @@ export default function Shop() {
           quantity: 1,
         },
         sessionId: null,
-
         shippingName,
         name: shippingName,
         phone,
@@ -1264,7 +1612,6 @@ export default function Shop() {
         postalCode,
         country,
         notes,
-
         shipping: {
           name: shippingName,
           fullName: shippingName,
@@ -1280,7 +1627,6 @@ export default function Shop() {
         },
       } as any);
 
-      // Local Orders list for the UI
       const order: Order = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         sku: it.id,
@@ -1302,7 +1648,6 @@ export default function Shop() {
       setLastOrderTitle(it.title);
       setShowOrderSuccess(true);
 
-      // Close the sheet & clear pending state – this is our only form
       setAddressVisible(false);
       setPendingItem(null);
       setPendingSize(null);
@@ -1319,31 +1664,42 @@ export default function Shop() {
     }
   }
 
+  // ✅ NEW: call startCheckout with a proper amount in dollars
   async function moneyBuy(it: any, meta?: { size?: string }) {
-    const amount = Math.round((it.priceUSD ?? 1) * 100);
-    const success = Linking.createURL("/", {
-      queryParams: { sku: it.id, size: meta?.size || "" },
-    });
+    try {
+      const amount =
+        typeof it.priceUSD === "number" && isFinite(it.priceUSD)
+          ? it.priceUSD
+          : undefined;
 
-    track("shop_money_buy", {
-      sku: it.id,
-      amount_cents: amount,
-      meta,
-    });
+      track("shop_money_buy_click", {
+        sku: it.id,
+        category: it.category,
+        amount,
+      });
 
-    await startCheckoutRequest({
-      amount,
-      currency: "usd",
-      success_url: success,
-      cancel_url: success,
-    });
-
-    if (
-      it.category === "theme" ||
-      it.category === "cursor" ||
-      it.category === "bundle"
-    )
-      markOwned(it.id);
+      await startCheckout({
+        sku: it.id,
+        productId: it.stripeProductId || it.productId || undefined,
+        priceId: it.stripePriceId || it.priceId || undefined,
+        amount, // dollars — checkout.ts will convert to cents
+        currency: "usd",
+        quantity: 1,
+        meta: {
+          size: meta?.size || null,
+          category: it.category,
+          title: it.title,
+        },
+      } as any);
+    } catch (e: any) {
+      console.error("moneyBuy error", e);
+      Alert.alert(
+        "Checkout error",
+        e?.message
+          ? String(e.message)
+          : "We couldn't start checkout. Please try again."
+      );
+    }
   }
 
   function equipTheme(it: any) {
@@ -1442,8 +1798,44 @@ export default function Shop() {
     ]).start();
   }
 
+  function swirlAction() {
+    floatScale.setValue(1);
+    floatRotate.setValue(0);
+    Animated.parallel([
+      Animated.sequence([
+        Animated.timing(floatScale, {
+          toValue: 1.2,
+          duration: 160,
+          useNativeDriver: true,
+        }),
+        Animated.timing(floatScale, {
+          toValue: 0.95,
+          duration: 140,
+          useNativeDriver: true,
+        }),
+        Animated.timing(floatScale, {
+          toValue: 1,
+          duration: 140,
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.sequence([
+        Animated.timing(floatRotate, {
+          toValue: 1,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+        Animated.timing(floatRotate, {
+          toValue: 0,
+          duration: 0,
+          useNativeDriver: true,
+        }),
+      ]),
+    ]).start();
+  }
+
   function handleFloatingPress() {
-    clickModeRef.current = (clickModeRef.current + 1) % 4;
+    clickModeRef.current = (clickModeRef.current + 1) % 5;
     const mode = clickModeRef.current;
 
     track("companion_click", { mode, id: floatingCompanion?.id });
@@ -1461,8 +1853,14 @@ export default function Shop() {
       case 3:
         shimmyAction();
         break;
+      case 4:
       default:
-        wiggleAction();
+        swirlAction();
+        break;
+    }
+
+    if (activeEffect) {
+      setEffectKey((k) => k + 1);
     }
   }
 
@@ -1470,8 +1868,8 @@ export default function Shop() {
     const comp = COMPANIONS.find((c: any) => c.id === id);
     if (comp) {
       setFloatingCompanion(comp);
+      setActiveEffect(getCompanionEffect(id));
 
-      // reset starting position bottom-right, but above tab bar
       const dims = Dimensions.get("window");
       const startX = dims.width - FLOAT_SIZE - 16;
       const startY = dims.height - FLOAT_SIZE - 160;
@@ -1482,9 +1880,11 @@ export default function Shop() {
       wiggleAction();
     }
 
-    setActiveCompanionId(id);
+    setStripActiveId(id);
     companionAnim.setValue(0);
     track("companion_triggered", { id });
+
+    equipCompanion(id).catch(() => {});
 
     Animated.sequence([
       Animated.timing(companionAnim, {
@@ -1498,7 +1898,7 @@ export default function Shop() {
         useNativeDriver: true,
       }),
     ]).start(() => {
-      setActiveCompanionId(null);
+      setStripActiveId(null);
     });
   }
 
@@ -1507,13 +1907,15 @@ export default function Shop() {
   const renderItem = (
     it: any,
     color: string,
-    equipable?: "theme" | "cursor"
+    equipable?: "theme" | "cursor",
+    onOpenDetail?: (item: any) => void
   ) => {
     const owned = isOwned(it.id);
 
-    const showAlt =
-      flipped[it.id] && it.altImageKey && altImages[it.altImageKey];
-    const src = showAlt ? altImages[it.altImageKey!] : it.image;
+    const src =
+      it.image ||
+      (it.altImageKey && altImages[it.altImageKey]) ||
+      null;
 
     const sizeKey =
       it.stripeProductId ||
@@ -1542,17 +1944,12 @@ export default function Shop() {
         {src ? (
           <Pressable
             onPress={() => {
-              if (it.altImageKey) {
-                setFlipped((f) => {
-                  const next = { ...f, [it.id]: !f[it.id] };
-                  track("shop_image_flip", {
-                    sku: it.id,
-                    flipped: !!next[it.id],
-                  });
-                  return next;
-                });
-              }
+              if (onOpenDetail) onOpenDetail(it);
             }}
+            onLongPress={() => {
+              if (onOpenDetail) onOpenDetail(it);
+            }}
+            delayLongPress={180}
             style={{
               width: "100%",
               height: 110,
@@ -1623,13 +2020,10 @@ export default function Shop() {
                   size: s,
                 });
 
-                // 💥 haptic tap for clothing sizes
                 if (it.category === "clothing") {
                   try {
                     await Haptics.selectionAsync();
-                  } catch {
-                    // fail-safe: ignore haptics errors
-                  }
+                  } catch {}
                 }
               }}
             />
@@ -1661,9 +2055,7 @@ export default function Shop() {
                   : "rgba(62,211,162,0.08)",
               })}
             >
-              <Text
-                style={{ color: tokens.text as any, fontWeight: "800" }}
-              >
+              <Text style={{ color: tokens.text as any, fontWeight: "800" }}>
                 {equipped ? "Equipped ✓" : "Equip"}
               </Text>
             </Pressable>
@@ -1700,10 +2092,10 @@ export default function Shop() {
                   alignItems: "center",
                   paddingVertical: 10,
                   borderRadius: 10,
-                  borderWidth: 1,
                   borderColor: color,
                   backgroundColor: "transparent",
                   opacity: pressed ? 0.9 : 1,
+                  borderWidth: 1,
                 })}
               >
                 <Text style={{ color: color, fontWeight: "800" }}>
@@ -1735,9 +2127,7 @@ export default function Shop() {
                   : "rgba(62,211,162,0.08)",
               })}
             >
-              <Text
-                style={{ color: tokens.text as any, fontWeight: "800" }}
-              >
+              <Text style={{ color: tokens.text as any, fontWeight: "800" }}>
                 {equipped ? "Equipped ✓" : "Equip"}
               </Text>
             </Pressable>
@@ -1887,7 +2277,6 @@ export default function Shop() {
             justifyContent: "space-between",
           }}
         >
-          {/* Shop title – with dev tap cheat in dev builds */}
           <Pressable onPress={handleDevTitlePress} hitSlop={10}>
             <Text
               style={{
@@ -1936,7 +2325,7 @@ export default function Shop() {
           </View>
         </View>
 
-        {/* Owned companions quick access strip */}
+        {/* Owned companions quick strip */}
         {ownedCompanions.length > 0 && (
           <View style={{ marginTop: 16, marginBottom: 12 }}>
             <Text
@@ -1951,7 +2340,7 @@ export default function Shop() {
             </Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {ownedCompanions.map((it: any) => {
-                const isActive = activeCompanionId === it.id;
+                const isActive = stripActiveId === it.id;
                 const scale = isActive ? companionScale : 1;
 
                 return (
@@ -2037,33 +2426,44 @@ export default function Shop() {
 
         <Section title="Plushies">
           {groups.plushies.map((it) =>
-            renderItem(it, CATEGORY_BORDER.plushies)
+            renderItem(it, CATEGORY_BORDER.plushies, undefined, setDetailItem)
           )}
         </Section>
 
         <Section title="Clothing">
           {groups.clothing.map((it) =>
-            renderItem(it, CATEGORY_BORDER.clothing)
+            renderItem(it, CATEGORY_BORDER.clothing, undefined, setDetailItem)
           )}
         </Section>
 
         <Section title="Tangibles">
           {groups.tangibles.map((it) =>
-            renderItem(it, CATEGORY_BORDER.tangibles)
+            renderItem(it, CATEGORY_BORDER.tangibles, undefined, setDetailItem)
           )}
         </Section>
 
-        {/* Companions – coin-only, digital pals */}
+        {/* Companions */}
         <Section title="Companions">
           {COMPANIONS.map((it: any) => {
-            const owned = isOwned(it.id);
+            const owned =
+              isOwned(it.id) ||
+              isOwned(it.canonId) ||
+              (ownedCompanionIds || []).some(
+                (ownedId: string) =>
+                  ownedId === it.canonId ||
+                  ownedId === it.id ||
+                  ownedId === canonId(it.id)
+              );
             const src = it.image;
-            const priceCoins = 1_000; // all companions cost 1,000 coins
+            const priceCoins = it.coinPrice ?? 25000;
 
             return (
               <Card key={it.id} color={CATEGORY_BORDER.tangibles}>
                 {src ? (
                   <Pressable
+                    onPress={() => setDetailItem(it)}
+                    onLongPress={() => setDetailItem(it)}
+                    delayLongPress={180}
                     style={{
                       width: "100%",
                       height: 110,
@@ -2113,17 +2513,19 @@ export default function Shop() {
 
                 {owned ? (
                   <Pressable
-                    disabled
-                    style={{
+                    onPress={() => triggerCompanion(it.id)}
+                    style={({ pressed }) => ({
                       alignItems: "center",
                       paddingVertical: 10,
                       borderRadius: 10,
                       borderWidth: 1,
                       borderColor: tokens.border as any,
-                      backgroundColor: tokens.isDark
+                      backgroundColor: pressed
+                        ? "rgba(96,165,250,0.18)"
+                        : tokens.isDark
                         ? "rgba(148,163,184,0.16)"
                         : "rgba(148,163,184,0.12)",
-                    }}
+                    })}
                   >
                     <Text
                       style={{
@@ -2131,12 +2533,14 @@ export default function Shop() {
                         fontWeight: "800",
                       }}
                     >
-                      Owned ✓
+                      Summon ✓
                     </Text>
                   </Pressable>
                 ) : (
                   <Pressable
-                    onPress={() => buyWithCoins({ ...it, priceCoins })}
+                    onPress={() =>
+                      buyWithCoins({ ...it, priceCoins, category: "companions" })
+                    }
                     style={({ pressed }) => ({
                       alignItems: "center",
                       paddingVertical: 10,
@@ -2170,7 +2574,7 @@ export default function Shop() {
         />
         <Section title="Cursors" pulseAnim={cursorPulse}>
           {groups.cursor.map((it) =>
-            renderItem(it, CATEGORY_BORDER.cursor, "cursor")
+            renderItem(it, CATEGORY_BORDER.cursor, "cursor", setDetailItem)
           )}
         </Section>
 
@@ -2181,21 +2585,21 @@ export default function Shop() {
         />
         <Section title="Themes" pulseAnim={themePulse}>
           {groups.theme.map((it) =>
-            renderItem(it, CATEGORY_BORDER.theme, "theme")
+            renderItem(it, CATEGORY_BORDER.theme, "theme", setDetailItem)
           )}
         </Section>
 
         {groups.bundle.length > 0 && (
           <Section title="Bundles">
             {groups.bundle.map((it) =>
-              renderItem(it, CATEGORY_BORDER.bundle)
+              renderItem(it, CATEGORY_BORDER.bundle, undefined, setDetailItem)
             )}
           </Section>
         )}
 
         <Section title="Coin Packs">
           {groups.coin_pack.map((it) =>
-            renderItem(it, CATEGORY_BORDER.coin_pack)
+            renderItem(it, CATEGORY_BORDER.coin_pack, undefined, setDetailItem)
           )}
         </Section>
 
@@ -2250,7 +2654,6 @@ export default function Shop() {
         )}
       </ScrollView>
 
-      {/* Address sheet for coin-based physical orders */}
       <AddressSheet
         visible={addressVisible}
         onClose={() => {
@@ -2265,7 +2668,7 @@ export default function Shop() {
         initialValues={initialAddressValues}
       />
 
-      {/* Floating companion in bottom-right, draggable & animated */}
+      {/* Floating companion */}
       {floatingCompanion && (
         <Animated.View
           {...panResponder.panHandlers}
@@ -2335,6 +2738,8 @@ export default function Shop() {
               </View>
             )}
           </Pressable>
+
+          <CompanionEffectOverlay type={activeEffect} effectKey={effectKey} />
         </Animated.View>
       )}
 
@@ -2367,6 +2772,13 @@ export default function Shop() {
             scrollRef.current?.scrollTo({ y: 0, animated: true })
           );
         }}
+      />
+
+      {/* Zoomed item detail modal */}
+      <ItemDetailModal
+        visible={!!detailItem}
+        item={detailItem}
+        onClose={() => setDetailItem(null)}
       />
     </LinearGradient>
   );

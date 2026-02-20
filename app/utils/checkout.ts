@@ -1,5 +1,5 @@
 // app/utils/checkout.ts
-import { Platform, Linking as RNLinking } from "react-native";
+import { Platform, Linking as RNLinking, Alert } from "react-native";
 import Constants from "expo-constants";
 
 /** Public types for callers */
@@ -7,7 +7,12 @@ export type CheckoutPayload = {
   sku?: string;
   priceId?: string;
   productId?: string;
-  amount?: number; // cents
+  /**
+   * amount in **DOLLARS** (e.g. 12.99)
+   *
+   * We will convert this to **cents** before sending to the backend.
+   */
+  amount?: number;
   currency?: string; // "usd"
   quantity?: number;
   meta?: Record<string, any>;
@@ -147,6 +152,10 @@ function openUrl(url: string) {
   } else {
     RNLinking.openURL(url).catch((e) => {
       console.error("[checkout] failed to open url", e);
+      Alert.alert(
+        "Checkout error",
+        "We couldn't open the checkout page. Please try again."
+      );
     });
   }
 }
@@ -158,11 +167,27 @@ export async function startCheckout(
   const BACKEND = getBackend();
   if (__DEV__) console.log("[checkout] using BACKEND", BACKEND);
 
+  // Treat input.amount as **DOLLARS** (e.g. 12.99) coming from the shop.
+  const amountDollars =
+    typeof input.amount === "number" ? input.amount : undefined;
+
+  // Convert to integer cents for the backend / Stripe.
+  const amountCents =
+    typeof amountDollars === "number"
+      ? Math.round(amountDollars * 100)
+      : undefined;
+
   const payload: Record<string, any> = {
     sku: input.sku,
     priceId: input.priceId,
     productId: input.productId,
-    amount: typeof input.amount === "number" ? input.amount : undefined,
+
+    // ✅ Send cents for maximum compatibility with your Flask v9 backend.
+    // If the backend uses `amount` as cents → correct.
+    // If it uses `amount_cents` → also correct.
+    amount: amountCents,
+    amount_cents: amountCents,
+
     currency: (input.currency || "usd").toLowerCase(),
     quantity: input.quantity ?? 1,
     success_url: input.success_url,
@@ -177,12 +202,14 @@ export async function startCheckout(
     description: (input as any).description,
   };
 
-  // We ONLY call the routes that exist on your Flask backend:
-  //   POST /checkout/start
-  //   POST /api/checkout/start
+  // Try the real Flask endpoints that exist for you.
+  // Priority: /api/checkout (your v9 “CHECKOUT” route),
+  // then some legacy fallbacks.
   const endpoints = [
-    `${BACKEND}/checkout/start`,
+    `${BACKEND}/api/checkout`,
+    `${BACKEND}/checkout`,
     `${BACKEND}/api/checkout/start`,
+    `${BACKEND}/checkout/start`,
   ];
 
   let lastErr: any = null;
@@ -192,7 +219,9 @@ export async function startCheckout(
 
     if (!ok) {
       lastErr = new Error(
-        `[${status || "no-status"}] ${text || json?.error || "bad status"}`
+        `[${status || "no-status"}] ${
+          text || json?.error || "bad status from checkout"
+        }`
       );
       continue;
     }
@@ -239,11 +268,21 @@ export async function startCheckout(
     }
 
     // If we got here, the response didn't have url or sessionId
-    lastErr = new Error("No url/sessionId in response");
+    lastErr = new Error("No url/sessionId in checkout response");
   }
 
   const msg =
     (lastErr && (lastErr.message || String(lastErr))) ||
     "All checkout endpoints failed.";
+
+  console.error("[checkout] final error", msg);
+
+  // 🔔 IMPORTANT: show a visible error so it never “does nothing”
+  if (Platform.OS === "web" && typeof window !== "undefined") {
+    window.alert?.(`Checkout error: ${msg}`);
+  } else {
+    Alert.alert("Checkout error", msg);
+  }
+
   return { ok: false, error: msg };
 }

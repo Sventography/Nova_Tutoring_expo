@@ -140,6 +140,17 @@ if stripe and STRIPE_SECRET_KEY:
 else:
   print("[server] Stripe secret loaded: False")
 
+# Map SKUs to Stripe Product IDs for legendary companions
+SKU_TO_PRODUCT_ID: dict[str, str] = {
+  # Legendary companions – these use existing Stripe Products
+  "companion:mecha_owl":      "prod_U0c6OkAwebm80d",
+  "companion:chrono_fox":     "prod_U0c0zLPdtVZuUG",
+  "companion:celestra":       "prod_U0bzgsK8mCGCAa",
+  "companion:axolotl_oracle": "prod_U0bxgNFYPhkOcW",
+  "companion:astral_nova":    "prod_U0bvNvwU8u7hCG",
+  "companion:aetherwyrm":     "prod_U0btlQ9ZuFnH5F",
+}
+
 # -------------------------------------------------
 # OpenAI setup
 # -------------------------------------------------
@@ -879,19 +890,31 @@ def _checkout_logic():
   if not (stripe and STRIPE_SECRET_KEY):
     return jsonify(ok=False, error="stripe not configured"), 500
 
+  # Try to attach to an existing Stripe Product for known SKUs
+  product_id = SKU_TO_PRODUCT_ID.get(str(sku))
+
+  if product_id:
+    price_data = {
+      "currency": currency,
+      "product": product_id,
+      "unit_amount": int(amount),
+    }
+  else:
+    price_data = {
+      "currency": currency,
+      "product_data": {
+        "name": title,
+      },
+      "unit_amount": int(amount),
+    }
+
   try:
     session = stripe.checkout.Session.create(
       mode="payment",
       payment_method_types=["card"],
       line_items=[
         {
-          "price_data": {
-            "currency": currency,
-            "product_data": {
-              "name": title,
-            },
-            "unit_amount": int(amount),
-          },
+          "price_data": price_data,
           "quantity": quantity,
         }
       ],
@@ -1360,7 +1383,7 @@ def debug_send_test_email():
   Simple debug endpoint to verify email sending from Render via Resend HTTP.
 
   You can optionally pass in:
-    - code: your ADMIN_SUPER_SECRET_CODE
+    - code: your ADMIN_SUPER_SUPER_SECRET_CODE
     - to: override target inbox (e.g. your Gmail)
   """
   body = request.get_json(silent=True) or {}
@@ -1372,7 +1395,7 @@ def debug_send_test_email():
     if code != ADMIN_SUPER_SECRET_CODE:
       return jsonify(ok=False, error="invalid code"), 403
   else:
-    print("[debug] ADMIN_SUPER_SECRET_CODE not set; skipping code check")
+    print("[debug] ADMIN_SUPER_SUPER_SECRET_CODE not set; skipping code check")
 
   # Target priority:
   #   1) explicit "to" in request body
