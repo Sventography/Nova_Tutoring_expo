@@ -110,7 +110,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         userId
       );
 
-      // Try to reuse local profile for this user if it exists
+      // Load local profile as a *fallback*, not the source of truth.
       let local: LocalUserProfile | null = null;
       try {
         const stored = await AsyncStorage.getItem(PROFILE_KEY);
@@ -121,26 +121,18 @@ export function UserProvider({ children }: { children: ReactNode }) {
         // ignore parse errors
       }
 
-      if (local && local.id === userId) {
-        console.log(
-          "[UserContext] hydrateProfile: using existing local profile",
-          local.id,
-          local.username
-        );
-        setProfile(local);
-        return;
-      }
-
       // Metadata hints from auth
       const meta: any = authUser?.user_metadata || {};
       const metaUsername =
         typeof meta.username === "string" ? meta.username : null;
       const authEmail = authUser?.email ?? null;
 
-      // Only request columns that definitely exist
+      // 1) Try to fetch the row from Supabase (canonical for logged-in users)
       const { data: row, error } = await supabase
         .from("profiles")
-        .select("id, username, contact_email, avatar_url, coins, daily_streak_current, daily_streak_best")
+        .select(
+          "id, username, contact_email, avatar_url, coins, daily_streak_current, daily_streak_best, daily_streak_last_utc"
+        )
         .eq("id", userId)
         .maybeSingle();
 
@@ -150,7 +142,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
       let rowData: any = row;
 
-      // If there's no row yet, seed one so the backend has something real
+      // 2) If there's no row yet, seed one so the backend has something real
       if (!rowData) {
         const seededUsername = normalizeUsername(metaUsername);
         const seededEmail = authEmail;
@@ -163,6 +155,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
           daily_streak_current: 0,
           daily_streak_last_utc: null,
           daily_streak_best: 0,
+          avatar_url: null,
         };
 
         console.log(
@@ -185,36 +178,76 @@ export function UserProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      console.log("[UserContext] hydrateProfile rowData:", rowData);
+      // 3) If we successfully have a row (fetched or seeded), build profile from it
+      if (rowData) {
+        console.log("[UserContext] hydrateProfile rowData:", rowData);
 
-      let usernameRaw: string | null =
-        (rowData && rowData.username) ?? metaUsername ?? null;
-      let contactEmailRaw: string | null =
-        (rowData && rowData.contact_email) ?? authEmail ?? null;
-      let avatarRaw: string | null =
-        (rowData && rowData.avatar_url) ?? null;
+        let usernameRaw: string | null =
+          (rowData && rowData.username) ?? metaUsername ?? null;
+        let contactEmailRaw: string | null =
+          (rowData && rowData.contact_email) ?? authEmail ?? null;
+        let avatarRaw: string | null =
+          (rowData && rowData.avatar_url) ?? null;
 
-      const normalizedUsername = normalizeUsername(usernameRaw);
+        const normalizedUsername = normalizeUsername(usernameRaw);
 
-      const next: LocalUserProfile = {
+        const next: LocalUserProfile = {
+          id: userId,
+          username: normalizedUsername || null,
+          name: normalizedUsername || null,
+          displayName: normalizedUsername || null,
+          contactEmail: contactEmailRaw,
+          avatar: avatarRaw,
+          avatarUrl: avatarRaw,
+          avatarUri: avatarRaw,
+          photoURL: avatarRaw,
+          imageUrl: avatarRaw,
+        };
+
+        console.log("[UserContext] hydrateProfile final (from Supabase):", next);
+
+        setProfile(next);
+        await persistProfile(next);
+        return;
+      }
+
+      // 4) If we *still* don't have rowData, fall back to local if it's for this user
+      if (local && local.id === userId) {
+        console.log(
+          "[UserContext] hydrateProfile: using fallback local profile",
+          local.id,
+          local.username
+        );
+        setProfile(local);
+        return;
+      }
+
+      // 5) Last-resort fallback: synthesize a minimal local profile from auth
+      const normalizedUsername = normalizeUsername(metaUsername);
+
+      const fallback: LocalUserProfile = {
         id: userId,
         username: normalizedUsername || null,
         name: normalizedUsername || null,
         displayName: normalizedUsername || null,
-        contactEmail: contactEmailRaw,
-        avatar: avatarRaw,
-        avatarUrl: avatarRaw,
-        avatarUri: avatarRaw,
-        photoURL: avatarRaw,
-        imageUrl: avatarRaw,
+        contactEmail: authEmail,
+        avatar: null,
+        avatarUrl: null,
+        avatarUri: null,
+        photoURL: null,
+        imageUrl: null,
       };
 
-      console.log("[UserContext] hydrateProfile final:", next);
+      console.log(
+        "[UserContext] hydrateProfile final (fallback synthesized):",
+        fallback
+      );
 
-      setProfile(next);
-      await persistProfile(next);
+      setProfile(fallback);
+      await persistProfile(fallback);
     } catch (e) {
       console.warn("[UserContext] hydrateProfileFromSupabase error:", e);
+      // If something blows up (network, JSON, etc.), keep whatever local profile we had.
     }
   }
 
@@ -223,7 +256,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     (async () => {
       try {
-        // 1) Load local cached profile first
+        // 1) Load local cached profile first (fast UI), but Supabase can override it later
         const stored = await AsyncStorage.getItem(PROFILE_KEY);
         if (stored) {
           try {
@@ -587,6 +620,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         daily_streak_current: 0,
         daily_streak_last_utc: null,
         daily_streak_best: 0,
+        avatar_url: null,
       };
 
       const { error: profileError } = await supabase

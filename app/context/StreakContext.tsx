@@ -132,8 +132,78 @@ async function migrateLegacyGuestIfNeeded(): Promise<void> {
 }
 
 /**
- * Mirror streak info to Supabase profiles table, but *never* treat Supabase
- * as the source of truth (local AsyncStorage wins).
+ * Read streak info from Supabase profiles table.
+ *
+ * We treat Supabase as the *source of truth* for logged-in users so that
+ * streaks follow the account across devices and installs.
+ */
+async function fetchStreakFromSupabase(
+  userId: string | null
+): Promise<StreakMeta | null> {
+  if (!userId) return null;
+  try {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select(
+        "daily_streak_current, daily_streak_best, daily_streak_last_utc"
+      )
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (error) {
+      console.warn("[StreakContext] Supabase fetch streak error:", error);
+      return null;
+    }
+    if (!data) return null;
+
+    const rawCount = (data as any).daily_streak_current;
+    const rawBest = (data as any).daily_streak_best;
+    const rawLast = (data as any).daily_streak_last_utc as
+      | string
+      | null
+      | undefined;
+
+    const count =
+      typeof rawCount === "number" && Number.isFinite(rawCount)
+        ? rawCount
+        : 0;
+    const best =
+      typeof rawBest === "number" && Number.isFinite(rawBest)
+        ? rawBest
+        : count;
+
+    let lastDate: string | null = null;
+
+    if (rawLast) {
+      // If it's already YYYY-MM-DD, keep as-is.
+      if (/^\d{4}-\d{2}-\d{2}$/.test(rawLast)) {
+        lastDate = rawLast;
+      } else {
+        // Otherwise, try to parse as a timestamp and convert to Eastern day id.
+        const parsed = new Date(rawLast);
+        if (!Number.isNaN(parsed.getTime())) {
+          lastDate = getEasternDayId(parsed);
+        }
+      }
+    }
+
+    return {
+      count,
+      best,
+      lastDate,
+    };
+  } catch (err) {
+    console.warn("[StreakContext] fetchStreakFromSupabase exception:", err);
+    return null;
+  }
+}
+
+/**
+ * Mirror streak info to Supabase profiles table, using the daily_streak_*
+ * columns so streaks persist per account across devices.
+ *
+ * Logged-in users: Supabase is canonical; local is just a cache.
+ * Guests: this is a no-op.
  */
 async function syncStreakToSupabase(
   userId: string | null,
@@ -142,20 +212,20 @@ async function syncStreakToSupabase(
   if (!userId) return;
   try {
     const payload: any = {
-      id: userId,
-      // These column names are flexible; if they don't exist,
-      // Supabase will throw and we'll just log a warning.
-      streak_current: meta.count,
-      streak_best: meta.best,
-      streak_last_date: meta.lastDate,
+      daily_streak_current: meta.count,
+      daily_streak_best: meta.best,
+      // We store the Eastern day-id string in daily_streak_last_utc.
+      // If the column is timestamptz, Postgres will coerce it to a date.
+      daily_streak_last_utc: meta.lastDate,
     };
 
     const { error } = await supabase
       .from("profiles")
-      .upsert(payload, { onConflict: "id" });
+      .update(payload)
+      .eq("id", userId);
 
     if (error) {
-      console.warn("[StreakContext] Supabase upsert streak error:", error);
+      console.warn("[StreakContext] Supabase update streak error:", error);
     }
   } catch (err) {
     console.warn("[StreakContext] syncStreakToSupabase error:", err);
@@ -201,23 +271,43 @@ export function StreakProvider({ children }: { children: ReactNode }) {
   const hydrate = useCallback(async () => {
     setLoaded(false);
 
+    // Only guests use legacy keys
     if (!supabaseUserId) {
-      // only guests use legacy keys
       await migrateLegacyGuestIfNeeded();
     }
 
     try {
-      const storedMeta =
-        (await safeGetJSON<StreakMeta>(metaKey)) ?? undefined;
-      const storedLogs =
-        (await safeGetJSON<string[]>(logsKey)) ?? undefined;
+      const [storedMeta, storedLogs, remoteMeta] = await Promise.all([
+        safeGetJSON<StreakMeta>(metaKey),
+        safeGetJSON<string[]>(logsKey),
+        fetchStreakFromSupabase(supabaseUserId ?? null),
+      ]);
 
-      const nextMeta: StreakMeta = storedMeta || {
+      let nextMeta: StreakMeta = {
         count: 0,
         best: 0,
         lastDate: null,
       };
-      const nextLogs: string[] = storedLogs || [];
+      let nextLogs: string[] = storedLogs || [];
+
+      if (remoteMeta && (remoteMeta.count > 0 || remoteMeta.lastDate)) {
+        // For logged-in users with real data, Supabase is canonical.
+        nextMeta = {
+          count: remoteMeta.count,
+          best: remoteMeta.best,
+          lastDate: remoteMeta.lastDate,
+        };
+
+        if (remoteMeta.lastDate) {
+          const set = new Set(nextLogs);
+          set.add(remoteMeta.lastDate);
+          nextLogs = Array.from(set).sort();
+        }
+      } else if (storedMeta) {
+        // Guest, or user with no streak data in Supabase yet
+        nextMeta = storedMeta;
+        nextLogs = storedLogs || [];
+      }
 
       setMeta(nextMeta);
       setLogs(nextLogs);

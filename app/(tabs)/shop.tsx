@@ -85,6 +85,14 @@ type CompanionEffectType =
   | "orbs"
   | "balloons"
   | "moons"
+  | "books"
+  | "fire"
+  | "shield"
+  | "legend_fire"
+  | "legend_lightning"
+  | "legend_bubbles"
+  | "legend_sparkles"
+  | "legend_spiral"
   | null;
 
 // Local orders list (purely client-side for now)
@@ -221,29 +229,60 @@ function buildCompanionEffectMap(): Record<string, CompanionEffectType> {
   let seqIdx = 0;
 
   (COMPANIONS as any[]).forEach((comp) => {
+    const id = ((comp?.id ?? "") as string).toLowerCase();
     const text = `${comp?.title ?? ""} ${comp?.desc ?? ""}`.toLowerCase();
     let type: CompanionEffectType = null;
 
-    // Strong keyword matches first
-    if (text.includes("balloon")) {
-      type = "balloons";
-    } else if (text.includes("moon") || text.includes("luna")) {
-      type = "moons";
-    } else if (text.includes("stardust") || text.includes("star dust")) {
-      type = "stardust";
-    } else if (text.includes("heart") || text.includes("love")) {
-      type = "hearts";
-    } else if (
-      text.includes("sparkle") ||
-      text.includes("sparkly") ||
-      text.includes("glitter")
-    ) {
-      type = "sparkles";
-    } else if (text.includes("orb") || text.includes("nova")) {
-      type = "orbs";
+    // 🔱 Legendary explicit matches
+    if (id.includes("chrono") || text.includes("chrono fox")) {
+      type = "legend_fire"; // Chrono Fox – fire FX
+    } else if (id.includes("mecha") || text.includes("mecha owl")) {
+      type = "legend_lightning"; // Mecha Owl – lightning FX
+    } else if (id.includes("axolotl") || text.includes("axolotl") || text.includes("oracle")) {
+      type = "shield"; // Axolotl Oracle – shield rings that spill out
+    } else if (id.includes("celestra") || text.includes("celestra")) {
+      type = "legend_bubbles"; // Celestra – bubble aura
+    } else if (id.includes("astral") || text.includes("astral nova") || text.includes("astral")) {
+      type = "legend_sparkles"; // Astral Nova – gold spark diamonds
+    } else if (id.includes("aetherwyrm") || text.includes("aetherwyrm") || text.includes("wyrm")) {
+      type = "legend_spiral"; // Aetherwyrm – spiral rings
     }
 
-    // Remaining companions get assigned from the rotating sequence.
+    // 🌙📚✨ Thematic matches for common companions (only if not set above)
+    if (!type) {
+      if (text.includes("balloon")) {
+        type = "balloons";
+      } else if (text.includes("moon") || text.includes("luna")) {
+        type = "moons";
+      } else if (text.includes("stardust") || text.includes("star dust")) {
+        type = "stardust";
+      } else if (text.includes("heart") || text.includes("love")) {
+        type = "hearts";
+      } else if (
+        text.includes("sparkle") ||
+        text.includes("sparkly") ||
+        text.includes("glitter")
+      ) {
+        type = "sparkles";
+      } else if (text.includes("orb") || text.includes("nova") || text.includes("star")) {
+        type = "stars";
+      } else if (
+        text.includes("book") ||
+        text.includes("study") ||
+        text.includes("reading") ||
+        text.includes("reader")
+      ) {
+        type = "books";
+      } else if (
+        text.includes("flame") ||
+        text.includes("fire") ||
+        text.includes("ember")
+      ) {
+        type = "fire";
+      }
+    }
+
+    // Fallback sequence so everything gets *something*
     if (!type) {
       type = EFFECT_SEQUENCE[seqIdx % EFFECT_SEQUENCE.length];
       seqIdx += 1;
@@ -768,6 +807,436 @@ function CompanionEffectOverlay({
 
   if (!type) return null;
 
+  // 🛡 Axolotl Oracle-style aura: expanding rings that spill out of the bubble
+  if (type === "shield") {
+    const rings = [0, 1, 2];
+    return (
+      <>
+        {rings.map((idx) => {
+          const baseSize = 110 + idx * 26;
+          const scale = anim.interpolate({
+            inputRange: [0, 1],
+            outputRange: [1, 1.35],
+          });
+          const opacity = anim.interpolate({
+            inputRange: [0, 0.4, 1],
+            outputRange: [0, 0.8 - idx * 0.2, 0],
+          });
+
+          return (
+            <Animated.View
+              key={`shield-${idx}-${effectKey}`}
+              style={{
+                position: "absolute",
+                left: "50%",
+                top: "50%",
+                width: baseSize,
+                height: baseSize,
+                marginLeft: -baseSize / 2,
+                marginTop: -baseSize / 2,
+                borderRadius: baseSize / 2,
+                borderWidth: 2,
+                borderColor: `rgba(96,165,250,${0.7 - idx * 0.2})`,
+                opacity,
+                transform: [{ scale }],
+              }}
+            />
+          );
+        })}
+      </>
+    );
+  }
+
+  // 🌋 Legendary special FX (non-emoji)
+  if (
+    type === "legend_fire" ||
+    type === "legend_lightning" ||
+    type === "legend_bubbles" ||
+    type === "legend_sparkles" ||
+    type === "legend_spiral"
+  ) {
+    // 🔥 Chrono Fox — more realistic fire plume + embers
+    if (type === "legend_fire") {
+      const tongues = [0, 1, 2, 3, 4];
+      const embers = [0, 1, 2, 3, 4, 5];
+
+      return (
+        <>
+          {/* soft base glow under the fox */}
+          <Animated.View
+            style={{
+              position: "absolute",
+              left: "50%",
+              bottom: -4,
+              width: 120,
+              height: 70,
+              marginLeft: -60,
+              borderRadius: 60,
+              backgroundColor: "rgba(248,113,113,0.35)", // soft orange-red
+              opacity: anim.interpolate({
+                inputRange: [0, 0.4, 0.8, 1],
+                outputRange: [0, 0.9, 0.5, 0],
+              }),
+              transform: [
+                {
+                  scale: anim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.8, 1.15],
+                  }),
+                },
+              ],
+            }}
+          />
+
+          {/* main flame tongues */}
+          {tongues.map((idx) => {
+            const baseHeight = 60 + idx * 8;
+            const baseWidth = 16 + (idx % 2) * 2;
+            const offsetX = (idx - (tongues.length - 1) / 2) * 8;
+
+            // keep the base near the bubble and just let the top dance
+            const translateY = anim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [8, -24],
+            });
+
+            const scaleY = anim.interpolate({
+              inputRange: [0, 0.4, 0.9, 1],
+              outputRange: [0.5, 1.3, 0.95, 0.6],
+            });
+
+            const opacity = anim.interpolate({
+              inputRange: [0, 0.3, 0.7, 1],
+              outputRange: [0, 1, 0.9, 0],
+            });
+
+            return (
+              <Animated.View
+                key={`lf2-tongue-${idx}-${effectKey}`}
+                style={{
+                  position: "absolute",
+                  bottom: 0,
+                  left: "50%",
+                  width: baseWidth,
+                  height: baseHeight,
+                  marginLeft: -baseWidth / 2 + offsetX,
+                  borderRadius: baseWidth,
+                  opacity,
+                  transform: [{ translateY }, { scaleY }],
+                  backgroundColor: "rgba(239,68,68,0.95)", // deep red/orange edge
+                  overflow: "hidden",
+                }}
+              >
+                {/* hot bright core */}
+                <View
+                  style={{
+                    position: "absolute",
+                    bottom: 0,
+                    left: 3,
+                    right: 3,
+                    top: baseHeight * 0.3,
+                    borderRadius: baseWidth,
+                    backgroundColor: "rgba(252,211,77,0.98)", // yellow core
+                  }}
+                />
+                {/* extra white-hot center near the base */}
+                <View
+                  style={{
+                    position: "absolute",
+                    bottom: 0,
+                    left: 5,
+                    right: 5,
+                    height: baseHeight * 0.35,
+                    borderRadius: baseWidth,
+                    backgroundColor: "rgba(254,249,195,0.95)", // almost white
+                  }}
+                />
+              </Animated.View>
+            );
+          })}
+
+          {/* drifting embers around the fox */}
+          {embers.map((idx) => {
+            const size = 5 + (idx % 3);
+            const baseRadius = 30 + idx * 10;
+            const angle = (idx / embers.length) * Math.PI + Math.PI / 6; // mainly above/around
+
+            const translateX = anim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0, Math.cos(angle) * baseRadius],
+            });
+            const translateY = anim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0, -Math.sin(angle) * baseRadius - 20],
+            });
+
+            const opacity = anim.interpolate({
+              inputRange: [0, 0.2, 0.8, 1],
+              outputRange: [0, 1, 0.9, 0],
+            });
+
+            return (
+              <Animated.View
+                key={`lf2-ember-${idx}-${effectKey}`}
+                style={{
+                  position: "absolute",
+                  left: "50%",
+                  bottom: 30,
+                  width: size,
+                  height: size,
+                  marginLeft: -size / 2,
+                  borderRadius: size / 2,
+                  backgroundColor: "rgba(252,211,77,0.98)",
+                  opacity,
+                  transform: [{ translateX }, { translateY }],
+                }}
+              />
+            );
+          })}
+        </>
+      );
+    }
+
+    // ⚡ Mecha Owl — jagged lightning with glow + flicker
+    if (type === "legend_lightning") {
+      const bolts = [0, 1];
+
+      const glowOpacity = anim.interpolate({
+        inputRange: [0, 0.3, 0.6, 1],
+        outputRange: [0, 0.7, 0.2, 0],
+      });
+
+      return (
+        <>
+          {/* soft glow behind the bolts */}
+          <Animated.View
+            style={{
+              position: "absolute",
+              left: "50%",
+              bottom: 10,
+              width: 120,
+              height: 120,
+              marginLeft: -60,
+              borderRadius: 60,
+              backgroundColor: "rgba(250,250,210,0.35)",
+              opacity: glowOpacity,
+              transform: [
+                {
+                  scale: anim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.6, 1.1],
+                  }),
+                },
+              ],
+            }}
+          />
+
+          {bolts.map((idx) => {
+            const baseX = idx === 0 ? -8 : 10;
+            const baseHeight = 90;
+            const translateY = anim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [-10, -100],
+            });
+            const opacity = anim.interpolate({
+              inputRange: [0, 0.25, 0.6, 1],
+              outputRange: [0, 1, 0.8, 0],
+            });
+
+            return (
+              <Animated.View
+                key={`ll-bolt-${idx}-${effectKey}`}
+                style={{
+                  position: "absolute",
+                  left: "50%",
+                  bottom: 10,
+                  marginLeft: baseX,
+                  opacity,
+                  transform: [{ translateY }],
+                }}
+              >
+                {/* three jagged segments to fake a Z-bolt */}
+                <View
+                  style={{
+                    position: "absolute",
+                    left: 0,
+                    top: 0,
+                    width: 6,
+                    height: baseHeight * 0.35,
+                    borderRadius: 4,
+                    backgroundColor: "rgba(250,250,210,1)",
+                    transform: [{ rotate: idx === 0 ? "-18deg" : "10deg" }],
+                  }}
+                />
+                <View
+                  style={{
+                    position: "absolute",
+                    left: -6,
+                    top: baseHeight * 0.3,
+                    width: 7,
+                    height: baseHeight * 0.32,
+                    borderRadius: 4,
+                    backgroundColor: "rgba(253,224,71,0.95)",
+                    transform: [{ rotate: idx === 0 ? "28deg" : "-22deg" }],
+                  }}
+                />
+                <View
+                  style={{
+                    position: "absolute",
+                    left: -2,
+                    top: baseHeight * 0.55,
+                    width: 5,
+                    height: baseHeight * 0.28,
+                    borderRadius: 4,
+                    backgroundColor: "rgba(234,179,8,0.95)",
+                    transform: [{ rotate: idx === 0 ? "-26deg" : "18deg" }],
+                  }}
+                />
+              </Animated.View>
+            );
+          })}
+        </>
+      );
+    }
+
+    // 🫧 Celestra bubbles
+    if (type === "legend_bubbles") {
+      const bubbles = [0, 1, 2, 3, 4, 5];
+      return (
+        <>
+          {bubbles.map((idx) => {
+            const size = 12 + (idx % 3) * 6;
+            const offsetX = (idx - 2.5) * 10;
+            const translateY = anim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [4, -110 - idx * 6],
+            });
+            const opacity = anim.interpolate({
+              inputRange: [0, 0.3, 1],
+              outputRange: [0, 0.9, 0],
+            });
+
+            return (
+              <Animated.View
+                key={`lb-${idx}-${effectKey}`}
+                style={{
+                  position: "absolute",
+                  bottom: 10,
+                  left: "50%",
+                  width: size,
+                  height: size,
+                  marginLeft: offsetX - size / 2,
+                  borderRadius: size / 2,
+                  borderWidth: 1,
+                  borderColor: "rgba(191,219,254,0.9)",
+                  backgroundColor: "rgba(59,130,246,0.20)",
+                  opacity,
+                  transform: [{ translateY }],
+                }}
+              />
+            );
+          })}
+        </>
+      );
+    }
+
+    // ✨ Astral Nova sparkles
+    if (type === "legend_sparkles") {
+      const sparks = [0, 1, 2, 3, 4, 5];
+      return (
+        <>
+          {sparks.map((idx) => {
+            const size = 14 + (idx % 2) * 4;
+            const radius = 32 + idx * 4;
+            const angle = (idx / sparks.length) * Math.PI * 2;
+
+            const translateX = anim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0, Math.cos(angle) * radius],
+            });
+            const translateY = anim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0, -Math.sin(angle) * radius],
+            });
+            const scale = anim.interpolate({
+              inputRange: [0, 0.5, 1],
+              outputRange: [0.4, 1.1, 0.4],
+            });
+            const opacity = anim.interpolate({
+              inputRange: [0, 0.3, 1],
+              outputRange: [0, 1, 0],
+            });
+
+            return (
+              <Animated.View
+                key={`ls-${idx}-${effectKey}`}
+                style={{
+                  position: "absolute",
+                  left: "50%",
+                  top: "50%",
+                  width: size,
+                  height: size,
+                  marginLeft: -size / 2,
+                  marginTop: -size / 2,
+                  opacity,
+                  backgroundColor: "rgba(251,191,36,0.95)",
+                  transform: [
+                    { translateX },
+                    { translateY },
+                    { rotate: "45deg" },
+                    { scale },
+                  ],
+                  borderRadius: 4,
+                }}
+              />
+            );
+          })}
+        </>
+      );
+    }
+
+    // 🐉 Aetherwyrm spiral aura
+    if (type === "legend_spiral") {
+      const rings = [0, 1, 2, 3];
+      return (
+        <>
+          {rings.map((idx) => {
+            const baseSize = 80 + idx * 16;
+            const rotation = anim.interpolate({
+              inputRange: [0, 1],
+              outputRange: ["0deg", `${40 + idx * 10}deg`],
+            });
+            const opacity = anim.interpolate({
+              inputRange: [0, 0.3, 1],
+              outputRange: [0, 0.85 - idx * 0.15, 0],
+            });
+
+            return (
+              <Animated.View
+                key={`lspr-${idx}-${effectKey}`}
+                style={{
+                  position: "absolute",
+                  left: "50%",
+                  top: "50%",
+                  width: baseSize,
+                  height: baseSize,
+                  marginLeft: -baseSize / 2,
+                  marginTop: -baseSize / 2,
+                  borderRadius: baseSize / 2,
+                  borderWidth: 2,
+                  borderColor: `rgba(129,140,248,${0.9 - idx * 0.18})`,
+                  opacity,
+                  transform: [{ rotate: rotation }],
+                }}
+              />
+            );
+          })}
+        </>
+      );
+    }
+  }
+
+  // 💜 Default: emoji-based burst FX (KEEP for common companions)
   const icons =
     type === "hearts"
       ? ["💜", "🩷", "❤️", "💙", "💜", "🩵"]
@@ -781,16 +1250,23 @@ function CompanionEffectOverlay({
       ? ["🌙", "🌘", "🌖", "🌙", "⭐", "🌙"]
       : type === "orbs"
       ? ["💫", "🟣", "🔮", "💫", "🔮", "🟣"]
-      : /* stars */ ["⭐", "🌟", "⭐", "✦", "✧", "⭐"];
+      : type === "books"
+      ? ["📚", "📖", "📘", "📙", "📗", "📕"]
+      : type === "fire"
+      ? ["🔥", "🔥", "🔥", "✨", "🔥", "🔥"]
+      : /* stars */
+        ["⭐", "🌟", "⭐", "✦", "✧", "⭐"];
 
   return (
     <>
       {icons.map((icon, index) => {
         const offsetX = (index - icons.length / 2) * 14;
+
         const translateY = anim.interpolate({
           inputRange: [0, 1],
           outputRange: [0, -110 - index * 10],
         });
+
         const opacity = anim.interpolate({
           inputRange: [0, 0.3, 1],
           outputRange: [0, 1, 0],
@@ -800,13 +1276,16 @@ function CompanionEffectOverlay({
           outputRange: [0, offsetX],
         });
 
+        const fontSize =
+          type === "books" ? 22 : type === "fire" ? 28 : 26;
+
         return (
           <Animated.Text
             key={`${type}-${index}-${effectKey}`}
             style={{
               position: "absolute",
               bottom: 4,
-              fontSize: 26,
+              fontSize,
               transform: [{ translateY }, { translateX }],
               opacity,
             }}
@@ -2063,7 +2542,7 @@ export default function Shop() {
             <View
               style={{
                 flexDirection: "row",
-                justifyContent: "space-between",
+                justifyContent: "space_between",
                 columnGap: 8,
               }}
             >
@@ -2690,7 +3169,8 @@ export default function Shop() {
               { rotate: floatRotation },
             ],
             borderRadius: 24,
-            overflow: "hidden",
+            // ✨ allow effects to flow outside the box
+            overflow: "visible",
             borderWidth: 1,
             borderColor: CATEGORY_BORDER.tangibles,
             backgroundColor: tokens.isDark
