@@ -25,6 +25,7 @@ export type ToastOptions = {
   message?: string;
   type?: ToastType;
   durationMs?: number;
+  icon?: string; // e.g. "🎉"
 };
 
 type ToastContextValue = {
@@ -133,19 +134,31 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 },
               ]}
             >
-              {!!toast.title && (
-                <Text style={[S.title, { color: textColor }]} numberOfLines={1}>
-                  {toast.title}
-                </Text>
-              )}
-              {!!toast.message && (
-                <Text
-                  style={[S.message, { color: textColor }]}
-                  numberOfLines={Platform.OS === "web" ? 3 : 2}
-                >
-                  {toast.message}
-                </Text>
-              )}
+              <View style={S.row}>
+                {toast.icon ? (
+                  <Text style={[S.icon, { color: textColor }]}>
+                    {toast.icon}
+                  </Text>
+                ) : null}
+                <View style={{ flex: 1 }}>
+                  {!!toast.title && (
+                    <Text
+                      style={[S.title, { color: textColor }]}
+                      numberOfLines={1}
+                    >
+                      {toast.title}
+                    </Text>
+                  )}
+                  {!!toast.message && (
+                    <Text
+                      style={[S.message, { color: textColor }]}
+                      numberOfLines={Platform.OS === "web" ? 3 : 2}
+                    >
+                      {toast.message}
+                    </Text>
+                  )}
+                </View>
+              </View>
             </Animated.View>
           </View>
         </TouchableWithoutFeedback>
@@ -176,6 +189,14 @@ const S = StyleSheet.create({
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
     elevation: 4,
+  },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  icon: {
+    fontSize: 20,
+    marginRight: 8,
   },
   title: {
     fontWeight: "700",

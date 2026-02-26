@@ -71,7 +71,12 @@ export function buildAchievements() {
 
   // ────────── QUIZ performance (global) ──────────
   for (let pct of [80, 85, 90, 95, 100]) {
-    const coins = pct < 100 ? 100 : 250;
+    let coins: number;
+    if (pct === 80) coins = 60;
+    else if (pct === 85) coins = 80;
+    else if (pct === 90) coins = 110;
+    else if (pct === 95) coins = 150;
+    else coins = 250; // 100%
     list.push(
       make(
         `quiz_${pct}`,
@@ -86,7 +91,12 @@ export function buildAchievements() {
   // ────────── QUIZ performance (per subject) ──────────
   for (const sub of SUBJECTS) {
     for (let pct of [80, 85, 90, 95, 100]) {
-      const coins = pct < 100 ? 110 : 275; // slight premium
+      let coins: number;
+      if (pct === 80) coins = 70;    // slight premium over global
+      else if (pct === 85) coins = 90;
+      else if (pct === 90) coins = 120;
+      else if (pct === 95) coins = 160;
+      else coins = 275;             // 100% subject = premium
       const id = `quiz_${sub}_${pct}`;
       const title = `${titleCase(sub)} Master ${pct}%`;
       list.push(

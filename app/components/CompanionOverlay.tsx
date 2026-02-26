@@ -26,4 +26,4 @@ export default function CompanionOverlay() {
 const S = StyleSheet.create({
   wrap: { position: "absolute", right: 12, zIndex: 950 },
   img: { width: 92, height: 92, opacity: 0.98 },
-});
+})

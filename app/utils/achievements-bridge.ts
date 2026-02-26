@@ -1,3 +1,4 @@
+// app/utils/achievements-bridge.ts
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   AchieveEmitter,
@@ -35,7 +36,8 @@ async function saveQuizFlags(flags: QuizFlags) {
 function unlockAchievement(id: string) {
   if (!id) return;
   console.log("[achievements-bridge] unlocking achievement", id);
-  // 🔹 Notify the global emitter — Achievements screen + coins bridge listen here
+
+  // 🔹 Notify the global emitter — AchievementsContext listens and will call unlock(id)
   AchieveEmitter.emit(ACHIEVEMENT_EVENT, { id });
 }
 
@@ -46,7 +48,7 @@ function unlockAchievement(id: string) {
  * - Unlocks: first quiz with >= 80% (maps to quiz_80)
  * - Unlocks: first quiz with 100% (maps to quiz_100)
  *
- * It only unlocks each of these **once** per profile.
+ * It only unlocks each of these **once** per profile (per device for now).
  */
 export async function quizFinished(
   correct: number,
@@ -55,7 +57,7 @@ export async function quizFinished(
   subjectRaw?: string
 ) {
   const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
-  const subject = subjectKey(subjectRaw); // "math", "science", etc. if you want later
+  const subject = subjectKey(subjectRaw); // "math", "science", etc. (future use)
 
   console.log("[achievements-bridge] quizFinished()", {
     correct,
@@ -68,7 +70,7 @@ export async function quizFinished(
   const flags = await loadQuizFlags();
   const next: QuizFlags = { ...flags };
 
-  // 🔹 1) First quiz ever finished -> use existing global achievement id
+  // 🔹 1) First quiz ever finished -> existing global achievement id
   if (!next.firstQuiz) {
     next.firstQuiz = true;
     unlockAchievement("quiz_taken_1");

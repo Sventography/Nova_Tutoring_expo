@@ -127,7 +127,11 @@ export function useAchievements(): AchievementsContextValue {
   return ctx;
 }
 
-export function AchievementsProvider({ children }: { children: React.ReactNode }) {
+export function AchievementsProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const { supabaseUserId } = useUser();
   const { activeCompanionId } = useCompanion();
 
@@ -140,19 +144,8 @@ export function AchievementsProvider({ children }: { children: React.ReactNode }
   const relaxMinutesRef = useRef<number>(0);
   const [hydrated, setHydrated] = useState(false);
 
-  const coinsApi = useCoins();
+  const { addCoins } = useCoins();
   const { show: showToast } = useToast();
-
-  const addCoinsFn = useMemo(() => {
-    const anyCoins = coinsApi as any;
-    if (typeof anyCoins.add === "function") return anyCoins.add.bind(anyCoins);
-    if (typeof anyCoins.addCoins === "function")
-      return anyCoins.addCoins.bind(anyCoins);
-    if (typeof anyCoins.credit === "function")
-      return anyCoins.credit.bind(anyCoins);
-    console.warn("[Achievements] No coin adder function found in useCoins()");
-    return null;
-  }, [coinsApi]);
 
   // Active companion & legendary flags
   const activeCompanionCid = useMemo(
@@ -334,24 +327,25 @@ export function AchievementsProvider({ children }: { children: React.ReactNode }
 
       const ach = ACH_MAP[id];
       if (ach) {
-        if (ach.coins && ach.coins > 0 && addCoinsFn) {
+        let coinsAwarded = 0;
+
+        if (ach.coins && ach.coins > 0 && typeof addCoins === "function") {
           try {
             const base = ach.coins;
-            const coinsToAward = computeAchievementCoins(base, id);
+            coinsAwarded = computeAchievementCoins(base, id);
 
-            if (coinsToAward > 0) {
+            if (coinsAwarded > 0) {
               console.log(
                 "[Achievements] awarding coins",
-                coinsToAward,
+                coinsAwarded,
                 "for",
                 id
               );
-              const res = addCoinsFn(coinsToAward);
-              if (res && typeof (res as any).catch === "function") {
-                (res as any).catch((e: any) =>
-                  console.warn("[Achievements] addCoins async failed", e)
-                );
-              }
+              // fire-and-forget; we don't need to await
+              void addCoins(coinsAwarded, "achievement", {
+                achievementId: id,
+                baseCoins: base,
+              });
             }
           } catch (e) {
             console.warn("[Achievements] addCoins failed", e);
@@ -360,16 +354,14 @@ export function AchievementsProvider({ children }: { children: React.ReactNode }
 
         if (!opts?.silent) {
           try {
-            const label =
-              ach.coins && ach.coins > 0
-                ? `${ach.title}`
-                : ach.title;
+            const hasCoins = coinsAwarded > 0;
+            const message = hasCoins
+              ? `${ach.title} • +${coinsAwarded.toLocaleString()} coins`
+              : ach.title;
+
             showToast({
               title: "Achievement unlocked!",
-              message:
-                ach.coins && ach.coins > 0
-                  ? label
-                  : ach.title,
+              message,
               type: "success",
               icon: "🎉",
             });
@@ -390,7 +382,7 @@ export function AchievementsProvider({ children }: { children: React.ReactNode }
         console.warn("[Achievements] DeviceEventEmitter emit failed", e);
       }
     },
-    [addCoinsFn, showToast, persistUnlocked, computeAchievementCoins]
+    [addCoins, showToast, persistUnlocked, computeAchievementCoins]
   );
 
   // ─────────────── QUIZ ───────────────
@@ -418,6 +410,7 @@ export function AchievementsProvider({ children }: { children: React.ReactNode }
     [unlock, persistQuizCount]
   );
 
+  // Public API used by Quiz screens: emits a "quizFinished" event
   const onQuizFinished = useCallback((pct: number, subject: string) => {
     AchieveEmitter.emit(ACHIEVEMENT_EVENT, {
       type: "quizFinished",
@@ -426,18 +419,29 @@ export function AchievementsProvider({ children }: { children: React.ReactNode }
     });
   }, []);
 
+  // Listen to AchieveEmitter — handle both quizFinished payloads and id-based unlocks
   useEffect(() => {
     if (!hydrated) return;
 
     const sub = AchieveEmitter.addListener(ACHIEVEMENT_EVENT, (payload) => {
-      if (!payload || payload.type !== "quizFinished") return;
-      const pct = Number(payload.scorePct ?? 0);
-      const subject = String(payload.subject || "Quiz");
-      handleQuizFinished(pct, subject);
+      if (!payload) return;
+
+      // Quiz completed with a percentage
+      if (payload.type === "quizFinished") {
+        const pct = Number(payload.scorePct ?? 0);
+        const subject = String(payload.subject || "Quiz");
+        handleQuizFinished(pct, subject);
+        return;
+      }
+
+      // Direct unlock from achievements-bridge: { id }
+      if (payload.id && typeof payload.id === "string") {
+        unlock(payload.id);
+      }
     });
 
     return () => sub.remove();
-  }, [hydrated, handleQuizFinished]);
+  }, [hydrated, handleQuizFinished, unlock]);
 
   // ─────────────── ASK ───────────────
 

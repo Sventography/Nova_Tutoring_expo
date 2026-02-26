@@ -24,6 +24,7 @@ import { useTheme } from "../context/ThemeContext";
 import { useAchievements } from "../context/AchievementsContext";
 import { useUser } from "../context/UserContext";
 import { askNova, AskResponse } from "../utils/ask";
+import { supabase } from "../lib/supabase";
 
 /* ────────────────────────────────────────── */
 /* ✨ Nova Thinking — Bounce + Dark Shimmer   */
@@ -215,6 +216,40 @@ export default function Ask() {
           text: res.answer,
         };
         setMessages((m) => [...m, assistantMsg]);
+
+        // 💾 Persist Ask conversation to Supabase when logged in
+        if (supabaseUserId) {
+          try {
+            const { error: insertError } = await supabase
+              .from("ask_messages")
+              .insert([
+                {
+                  user_id: supabaseUserId,
+                  role: "user",
+                  content: trimmed,
+                },
+                {
+                  user_id: supabaseUserId,
+                  role: "assistant",
+                  content: res.answer,
+                },
+              ]);
+
+            if (insertError) {
+              console.log(
+                "[Ask] ask_messages insert error:",
+                insertError
+              );
+            } else {
+              console.log(
+                "[Ask] ask_messages inserted for user",
+                supabaseUserId
+              );
+            }
+          } catch (e) {
+            console.log("[Ask] ask_messages insert threw:", e);
+          }
+        }
 
         const newCount = await bumpCount();
         setCount(newCount);

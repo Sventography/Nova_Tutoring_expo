@@ -29,15 +29,25 @@ type CompanionContextValue = {
   reload: () => Promise<void>;
   /** Whether we've finished hydrating from storage */
   ready: boolean;
+  /** Convenience helper: is this id the currently active one? */
+  isActive: (id: string | null | undefined) => boolean;
 };
 
 const CompanionContext = createContext<CompanionContextValue | null>(null);
 
-const BASE_KEY = "@nova/active-companion";
+// New canonical base key for per-user active companion
+const BASE_KEY = "@nova/companion.active";
+
+// Legacy key prefix for backward-compatibility
+const LEGACY_BASE_KEY = "@nova/active-companion";
 
 function storageKey(userId: string | null): string {
   // Per-user active companion, fallback to a guest key
   return userId ? `${BASE_KEY}/${userId}` : `${BASE_KEY}/guest`;
+}
+
+function legacyStorageKey(userId: string | null): string {
+  return userId ? `${LEGACY_BASE_KEY}/${userId}` : `${LEGACY_BASE_KEY}/guest`;
 }
 
 type CompanionProviderProps = {
@@ -59,15 +69,32 @@ export const CompanionProvider: React.FC<CompanionProviderProps> = ({
     () => storageKey(supabaseUserId ?? null),
     [supabaseUserId]
   );
+  const legacyKey = useMemo(
+    () => legacyStorageKey(supabaseUserId ?? null),
+    [supabaseUserId]
+  );
 
   const loadFromStorage = useCallback(async () => {
     try {
-      const raw = await AsyncStorage.getItem(key);
+      // Prefer the new key, but fall back to the legacy one if needed
+      let raw = await AsyncStorage.getItem(key);
+
+      if (!raw) {
+        raw = await AsyncStorage.getItem(legacyKey);
+      }
+
       if (raw) {
         const cid = canonId(raw);
         setActiveCompanionId(cid);
+        console.log(
+          "[CompanionContext] loaded active companion from storage:",
+          cid
+        );
       } else {
         setActiveCompanionId(null);
+        console.log(
+          "[CompanionContext] no active companion stored for this user"
+        );
       }
     } catch (err) {
       console.warn("[CompanionContext] Failed to load active companion", err);
@@ -75,7 +102,7 @@ export const CompanionProvider: React.FC<CompanionProviderProps> = ({
     } finally {
       setReady(true);
     }
-  }, [key]);
+  }, [key, legacyKey]);
 
   useEffect(() => {
     setReady(false);
@@ -106,6 +133,7 @@ export const CompanionProvider: React.FC<CompanionProviderProps> = ({
       const cid = canonId(id);
       setActiveCompanionId(cid);
       await persist(cid);
+      console.log("[CompanionContext] equipped companion:", cid);
     },
     [persist]
   );
@@ -113,6 +141,7 @@ export const CompanionProvider: React.FC<CompanionProviderProps> = ({
   const clearCompanion = useCallback(async () => {
     setActiveCompanionId(null);
     await persist(null);
+    console.log("[CompanionContext] cleared active companion");
   }, [persist]);
 
   const reload = useCallback(async () => {
@@ -137,8 +166,19 @@ export const CompanionProvider: React.FC<CompanionProviderProps> = ({
   const activeCompanion: CompanionItem | null = useMemo(() => {
     if (!activeCompanionId) return null;
     const cid = canonId(activeCompanionId);
-    return COMPANIONS.find((c) => c.canonId === cid) ?? null;
+    const found =
+      COMPANIONS.find((c) => c.canonId === cid || c.id === activeCompanionId) ??
+      null;
+    return found;
   }, [activeCompanionId]);
+
+  const isActive = useCallback(
+    (id: string | null | undefined): boolean => {
+      if (!id || !activeCompanionId) return false;
+      return canonId(id) === canonId(activeCompanionId);
+    },
+    [activeCompanionId]
+  );
 
   const value: CompanionContextValue = useMemo(
     () => ({
@@ -149,6 +189,7 @@ export const CompanionProvider: React.FC<CompanionProviderProps> = ({
       equipCompanion,
       clearCompanion,
       reload,
+      isActive,
     }),
     [
       ready,
@@ -158,6 +199,7 @@ export const CompanionProvider: React.FC<CompanionProviderProps> = ({
       equipCompanion,
       clearCompanion,
       reload,
+      isActive,
     ]
   );
 

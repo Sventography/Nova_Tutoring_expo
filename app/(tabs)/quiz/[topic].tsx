@@ -35,6 +35,9 @@ const BLUE = "#0B2239";
 const BLACK = "#000000";
 const NEON = "#39FF14"; // neon green
 
+// 🔧 Turn this off before shipping if you want to hide cheats
+const DEV_ENABLE_QUIZ_CHEATS = true;
+
 export default function TopicQuiz() {
   const { id = "", title = "" } =
     useLocalSearchParams<{ id?: string; title?: string }>();
@@ -74,18 +77,14 @@ export default function TopicQuiz() {
     React.useCallback(() => {
       const onBack = () => {
         if (!done && !loading && !noData) {
-          Alert.alert(
-            "Exit quiz?",
-            "Your progress will be lost.",
-            [
-              { text: "Cancel", style: "cancel" },
-              {
-                text: "Exit",
-                style: "destructive",
-                onPress: () => router.replace("/(tabs)/quiz"),
-              },
-            ]
-          );
+          Alert.alert("Exit quiz?", "Your progress will be lost.", [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Exit",
+              style: "destructive",
+              onPress: () => router.replace("/(tabs)/quiz"),
+            },
+          ]);
           return true;
         }
         return false;
@@ -213,6 +212,31 @@ export default function TopicQuiz() {
     setShowCongrats(false);
   }
 
+  // 🔧 Dev helper: instantly finish a quiz with a target percentage
+  function devFinish(targetPct: number) {
+    if (!DEV_ENABLE_QUIZ_CHEATS) return;
+    if (!total) return;
+
+    const rawCorrect = Math.round((targetPct / 100) * total);
+    const clamped = Math.min(total, Math.max(0, rawCorrect));
+
+    // stop timer
+    if (totalTimerRef.current) {
+      clearInterval(totalTimerRef.current);
+      totalTimerRef.current = null;
+    }
+
+    setCorrect(clamped);
+    setIdx(total - 1);
+    setSelected(null);
+    setLocked(true);
+    setTotalLeft(0);
+
+    // make sure logging uses this final score
+    loggedRef.current = false;
+    setDone(true);
+  }
+
   const mm = Math.floor(totalLeft / 60);
   const ss = String(totalLeft % 60).padStart(2, "0");
 
@@ -230,7 +254,7 @@ export default function TopicQuiz() {
 
     const pct = total ? Math.round((correct / total) * 100) : 0;
 
-    // ✅ FIX: remove topicTitle (was undefined)
+    // ✅ Shared funnel for history + certificates
     reportQuizFinished(pct, headerTitle || "Quiz").catch(() => {});
     loggedRef.current = true;
 
@@ -295,7 +319,9 @@ export default function TopicQuiz() {
       <Shell>
         <View style={S.center}>
           <ActivityIndicator color={CYAN} />
-          <Text style={[S.dim, { color: CYAN }]}>Loading {headerTitle}…</Text>
+          <Text style={[S.dim, { color: CYAN }]}>
+            Loading {headerTitle}…
+          </Text>
         </View>
       </Shell>
     );
@@ -305,9 +331,14 @@ export default function TopicQuiz() {
     return (
       <Shell>
         <Text style={S.title}>{headerTitle}</Text>
-        <Text style={S.result}>No questions are available for this topic yet.</Text>
+        <Text style={S.result}>
+          No questions are available for this topic yet.
+        </Text>
         <View style={{ height: 12 }} />
-        <Pressable style={[S.btn, S.outline]} onPress={() => router.replace("/(tabs)/quiz")}>
+        <Pressable
+          style={[S.btn, S.outline]}
+          onPress={() => router.replace("/(tabs)/quiz")}
+        >
           <Text style={S.btnTxt}>Topics</Text>
         </Pressable>
       </Shell>
@@ -316,6 +347,7 @@ export default function TopicQuiz() {
 
   if (done || !current) {
     const pct = total ? Math.round((correct / total) * 100) : 0;
+    const earnedCert = pct >= 80;
 
     return (
       <Shell>
@@ -326,7 +358,10 @@ export default function TopicQuiz() {
 
         <View style={{ height: 12 }} />
         <View style={S.row}>
-          <Pressable style={[S.btn, S.outline]} onPress={() => router.replace("/(tabs)/quiz")}>
+          <Pressable
+            style={[S.btn, S.outline]}
+            onPress={() => router.replace("/(tabs)/quiz")}
+          >
             <Text style={S.btnTxt}>Topics</Text>
           </Pressable>
           <View style={{ width: 10 }} />
@@ -340,16 +375,34 @@ export default function TopicQuiz() {
           <View style={S.modalBackdrop}>
             <View style={S.modalCard}>
               <Text style={S.modalTitle}>
-                {pct >= 80 ? "Quiz complete! 🎉" : "Quiz complete"}
+                {earnedCert ? "Quiz complete! 🎉" : "Quiz complete"}
               </Text>
               <Text style={S.modalText}>
-                You scored {pct}%.{"\n"}
-                Check the Achievements tab to see what you’ve unlocked and what’s next.
+                You scored {pct}%.
+                {"\n"}
+                {earnedCert
+                  ? "You also unlocked a certificate for this quiz. Tap below to view it, or open the Achievements tab to see what you’ve unlocked."
+                  : "Check the Achievements tab to see what you’ve unlocked and what’s next."}
               </Text>
 
               <View style={S.modalButtons}>
+                {earnedCert && (
+                  <>
+                    <Pressable
+                      style={[S.btn, S.solid, { flex: 1 }]}
+                      onPress={() => {
+                        setShowCongrats(false);
+                        router.push("/certificates");
+                      }}
+                    >
+                      <Text style={S.btnTxt}>View Certificate</Text>
+                    </Pressable>
+                    <View style={{ width: 10 }} />
+                  </>
+                )}
+
                 <Pressable
-                  style={[S.btn, S.solid, { flex: 1 }]}
+                  style={[S.btn, S.outline, { flex: 1 }]}
                   onPress={() => {
                     setShowCongrats(false);
                     router.push("/achievements");
@@ -357,14 +410,15 @@ export default function TopicQuiz() {
                 >
                   <Text style={S.btnTxt}>View Achievements</Text>
                 </Pressable>
-                <View style={{ width: 10 }} />
-                <Pressable
-                  style={[S.btn, S.outline, { flex: 0.7 }]}
-                  onPress={() => setShowCongrats(false)}
-                >
-                  <Text style={S.btnTxt}>Close</Text>
-                </Pressable>
               </View>
+
+              <View style={{ height: 10 }} />
+              <Pressable
+                style={[S.btn, S.outline, { marginTop: 4 }]}
+                onPress={() => setShowCongrats(false)}
+              >
+                <Text style={S.btnTxt}>Close</Text>
+              </Pressable>
             </View>
           </View>
         )}
@@ -375,6 +429,41 @@ export default function TopicQuiz() {
   // 🔹 Active quiz state
   return (
     <Shell>
+      {/* 🔧 Dev Cheats bar */}
+      {DEV_ENABLE_QUIZ_CHEATS && (
+        <View style={S.devRow}>
+          <Text style={S.devLabel}>Dev Cheats — Finish As:</Text>
+          <View style={S.devButtonsRow}>
+            <Pressable
+              style={S.devBtn}
+              onPress={() => devFinish(50)}
+              disabled={!total}
+            >
+              <Text style={S.devBtnText}>50%</Text>
+            </Pressable>
+            <Pressable
+              style={S.devBtn}
+              onPress={() => devFinish(80)}
+              disabled={!total}
+            >
+              <Text style={S.devBtnText}>80%</Text>
+            </Pressable>
+            <Pressable
+              style={S.devBtn}
+              onPress={() => devFinish(100)}
+              disabled={!total}
+            >
+              <Text style={S.devBtnText}>100%</Text>
+            </Pressable>
+          </View>
+          {!total ? (
+            <Text style={S.devHint}>
+              Cheats will work once questions finish loading.
+            </Text>
+          ) : null}
+        </View>
+      )}
+
       <View style={S.headerRow}>
         <Text style={S.title}>{headerTitle}</Text>
         <Text style={[S.meta, totalLeft <= 20 ? S.danger : undefined]}>
@@ -422,7 +511,10 @@ export default function TopicQuiz() {
 
       <View style={{ height: 14 }} />
       <View style={S.row}>
-        <Pressable style={[S.btn, S.outline]} onPress={() => router.replace("/(tabs)/quiz")}>
+        <Pressable
+          style={[S.btn, S.outline]}
+          onPress={() => router.replace("/(tabs)/quiz")}
+        >
           <Text style={S.btnTxt}>Topics</Text>
         </Pressable>
         <View style={{ width: 10 }} />
@@ -570,5 +662,49 @@ export const S = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+  },
+
+  // 🔧 Dev cheats styling
+  devRow: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: CYAN,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginBottom: 10,
+  },
+  devLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
+    color: CYAN,
+    marginBottom: 6,
+  },
+  devButtonsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  devBtn: {
+    flex: 1,
+    paddingVertical: 6,
+    marginHorizontal: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: CYAN,
+    alignItems: "center",
+    backgroundColor: "rgba(0, 229, 255, 0.16)",
+  },
+  devBtnText: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: CYAN,
+  },
+  devHint: {
+    fontSize: 11,
+    marginTop: 4,
+    color: "#CFEAF7",
   },
 });

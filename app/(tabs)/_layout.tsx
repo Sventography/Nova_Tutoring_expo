@@ -1,6 +1,16 @@
 // app/(tabs)/_layout.tsx
-import React, { useEffect, useState } from "react";
-import { View, Text, Pressable, StyleSheet, Platform } from "react-native";
+import React, { useEffect, useState, useRef } from "react";
+import {
+  View,
+  Text,
+  Pressable,
+  StyleSheet,
+  Platform,
+  Image,
+  Animated,
+  Easing,
+  PanResponder,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -20,6 +30,8 @@ import AchievementsCoinsBridge from "../context/AchievementsCoinsBridge";
 import FxOverlay from "../components/FxOverlay";
 import GlobalTextDefaults from "../components/GlobalTextDefaults";
 import { useUser } from "../context/UserContext";
+import { useCompanion } from "../context/CompanionContext";
+import { COMPANIONS } from "../_lib/companionsCatalog";
 
 // --------------------
 // DEV-ONLY imports
@@ -38,6 +50,638 @@ type Pt = { x: number; y: number };
 // use a namespaced key so it doesn't collide with anything else
 const CURSOR_EQUIPPED_KEY = "@nova/cursor.equipped.v1";
 
+/* ------------------------- Companion FX types/map ------------------------- */
+
+type CompanionEffectType =
+  | "hearts"
+  | "stars"
+  | "stardust"
+  | "sparkles"
+  | "orbs"
+  | "balloons"
+  | "moons"
+  | "books"
+  | "fire"
+  | "party_confetti"
+  | "party_streamers"
+  | "shield"
+  | "legend_fire"
+  | "legend_lightning"
+  | "legend_bubbles"
+  | "legend_sparkles"
+  | "legend_spiral"
+  | null;
+
+/**
+ * Build a stable, per-companion effect map so each one
+ * gets a distinct animated effect and we don't spam stars.
+ * This mirrors the shop tab logic so everything stays in sync.
+ */
+function buildCompanionEffectMap(): Record<string, CompanionEffectType> {
+  const map: Record<string, CompanionEffectType> = {};
+
+  const EFFECT_SEQUENCE: CompanionEffectType[] = [
+    "hearts",
+    "balloons",
+    "moons",
+    "stardust",
+    "sparkles",
+    "orbs",
+    "stars",
+  ];
+
+  let seqIdx = 0;
+  let firstPartyAssigned = false;
+
+  (COMPANIONS as any[]).forEach((comp) => {
+    const rawId = (comp?.id ?? "") as string;
+    const rawCanon = (comp as any)?.canonId as string | undefined;
+    const id = rawId.toLowerCase();
+    const text = `${comp?.title ?? ""} ${comp?.desc ?? ""}`.toLowerCase();
+    let type: CompanionEffectType = null;
+
+    // 🔱 Legendary explicit matches
+    if (id.includes("chrono") || text.includes("chrono fox")) {
+      type = "legend_fire"; // Chrono Fox – fire FX
+    } else if (id.includes("mecha") || text.includes("mecha owl")) {
+      type = "legend_lightning"; // Mecha Owl – lightning FX
+    } else if (
+      id.includes("axolotl") ||
+      text.includes("axolotl") ||
+      text.includes("oracle")
+    ) {
+      type = "shield"; // Axolotl Oracle – shield rings
+    } else if (id.includes("celestra") || text.includes("celestra")) {
+      type = "legend_bubbles"; // Celestra – bubble aura
+    } else if (
+      id.includes("astral") ||
+      text.includes("astral nova") ||
+      text.includes("astral")
+    ) {
+      type = "legend_sparkles"; // Astral Nova – spark diamonds
+    } else if (
+      id.includes("aetherwyrm") ||
+      text.includes("aetherwyrm") ||
+      text.includes("wyrm")
+    ) {
+      type = "legend_spiral"; // Aetherwyrm – spiral rings
+    }
+
+    // 🌙📚✨ Thematic matches for common companions (only if not set above)
+    if (!type) {
+      const isParty = text.includes("party");
+
+      // 🥳 Party companions
+      if (isParty) {
+        if (!firstPartyAssigned) {
+          type = "party_confetti";
+          firstPartyAssigned = true;
+        } else {
+          type = "party_streamers";
+        }
+      } else if (text.includes("balloon")) {
+        type = "balloons";
+      } else if (text.includes("moon") || text.includes("luna")) {
+        type = "moons";
+      } else if (text.includes("stardust") || text.includes("star dust")) {
+        type = "stardust";
+      } else if (text.includes("heart") || text.includes("love")) {
+        type = "hearts";
+      } else if (
+        text.includes("sparkle") ||
+        text.includes("sparkly") ||
+        text.includes("glitter")
+      ) {
+        type = "sparkles";
+      } else if (
+        text.includes("orb") ||
+        text.includes("nova") ||
+        text.includes("star")
+      ) {
+        type = "stars";
+      } else if (
+        text.includes("book") ||
+        text.includes("study") ||
+        text.includes("reading") ||
+        text.includes("reader")
+      ) {
+        type = "books";
+      } else if (
+        text.includes("flame") ||
+        text.includes("fire") ||
+        text.includes("ember")
+      ) {
+        type = "fire";
+      }
+    }
+
+    // Fallback sequence so everything gets *something*
+    if (!type) {
+      type = EFFECT_SEQUENCE[seqIdx % EFFECT_SEQUENCE.length];
+      seqIdx += 1;
+    }
+
+    // ✅ Key by BOTH id and canonId so legend FX work everywhere
+    if (rawId) {
+      map[rawId] = type;
+    }
+    if (rawCanon) {
+      map[rawCanon] = type;
+    }
+  });
+
+  return map;
+}
+
+const COMPANION_EFFECT_MAP = buildCompanionEffectMap();
+
+function getCompanionEffect(id: string | null | undefined): CompanionEffectType {
+  if (!id) return "stars";
+  const key = String(id);
+  return COMPANION_EFFECT_MAP[key] ?? "stars";
+}
+
+/* --------- Visual overlay for companion click effects (hearts/stars/etc) -- */
+
+function CompanionEffectOverlay({
+  type,
+  effectKey,
+}: {
+  type: CompanionEffectType;
+  effectKey: number;
+}) {
+  const anim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!type) return;
+    anim.setValue(0);
+    Animated.timing(anim, {
+      toValue: 1,
+      duration: 1400,
+      useNativeDriver: true,
+    }).start();
+  }, [type, effectKey, anim]);
+
+  if (!type) return null;
+
+  // 🛡 Axolotl Oracle-style aura: expanding rings that spill out
+  if (type === "shield") {
+    const rings = [0, 1, 2];
+    return (
+      <>
+        {rings.map((idx) => {
+          const baseSize = 110 + idx * 26;
+          const scale = anim.interpolate({
+            inputRange: [0, 1],
+            outputRange: [1, 1.35],
+          });
+          const opacity = anim.interpolate({
+            inputRange: [0, 0.4, 1],
+            outputRange: [0, 0.8 - idx * 0.2, 0],
+          });
+
+          return (
+            <Animated.View
+              key={`shield-${idx}-${effectKey}`}
+              style={{
+                position: "absolute",
+                left: "50%",
+                top: "50%",
+                width: baseSize,
+                height: baseSize,
+                marginLeft: -baseSize / 2,
+                marginTop: -baseSize / 2,
+                borderRadius: baseSize / 2,
+                borderWidth: 2,
+                borderColor: `rgba(96,165,250,${0.7 - idx * 0.2})`,
+                opacity,
+                transform: [{ scale }],
+              }}
+            />
+          );
+        })}
+      </>
+    );
+  }
+
+  // 🌋 Legendary special FX (non-emoji)
+  if (
+    type === "legend_fire" ||
+    type === "legend_lightning" ||
+    type === "legend_bubbles" ||
+    type === "legend_sparkles" ||
+    type === "legend_spiral"
+  ) {
+    // 🔥 Chrono Fox — layered flames + embers
+    if (type === "legend_fire") {
+      const tongues = [0, 1, 2, 3, 4, 5, 6];
+      const embers = [0, 1, 2, 3];
+
+      return (
+        <>
+          {/* Flame tongues */}
+          {tongues.map((idx) => {
+            const baseHeight = 50 + idx * 4;
+            const baseWidth = 12 + (idx % 3) * 2;
+            const offsetX = (idx - tongues.length / 2) * 6;
+
+            const translateY = anim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [8, -baseHeight - 16],
+            });
+
+            const scaleY = anim.interpolate({
+              inputRange: [0, 0.4, 0.8, 1],
+              outputRange: [0.4, 1.2, 0.9, 0.5],
+            });
+
+            const opacity = anim.interpolate({
+              inputRange: [0, 0.3, 0.8, 1],
+              outputRange: [0, 1, 0.8, 0],
+            });
+
+            return (
+              <Animated.View
+                key={`lf-tongue-${idx}-${effectKey}`}
+                style={{
+                  position: "absolute",
+                  bottom: 2,
+                  left: "50%",
+                  width: baseWidth,
+                  height: baseHeight,
+                  marginLeft: -baseWidth / 2 + offsetX,
+                  borderRadius: baseWidth,
+                  opacity,
+                  transform: [{ translateY }, { scaleY }],
+                  backgroundColor: "rgba(239,68,68,0.9)",
+                  overflow: "hidden",
+                }}
+              >
+                {/* inner bright core */}
+                <View
+                  style={{
+                    position: "absolute",
+                    bottom: 0,
+                    left: 2,
+                    right: 2,
+                    top: baseHeight * 0.25,
+                    borderRadius: baseWidth,
+                    backgroundColor: "rgba(252,211,77,0.95)",
+                  }}
+                />
+              </Animated.View>
+            );
+          })}
+
+          {/* Floating embers */}
+          {embers.map((idx) => {
+            const size = 6 + (idx % 2) * 2;
+            const baseRadius = 40 + idx * 8;
+            const angle = (idx / embers.length) * Math.PI * 2;
+
+            const translateX = anim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0, Math.cos(angle) * baseRadius],
+            });
+            const translateY = anim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0, -Math.sin(angle) * baseRadius - 30],
+            });
+            const opacity = anim.interpolate({
+              inputRange: [0, 0.2, 1],
+              outputRange: [0, 1, 0],
+            });
+
+            return (
+              <Animated.View
+                key={`lf-ember-${idx}-${effectKey}`}
+                style={{
+                  position: "absolute",
+                  left: "50%",
+                  bottom: 40,
+                  width: size,
+                  height: size,
+                  marginLeft: -size / 2,
+                  borderRadius: size / 2,
+                  backgroundColor: "rgba(252,211,77,0.95)",
+                  opacity,
+                  transform: [{ translateX }, { translateY }],
+                }}
+              />
+            );
+          })}
+        </>
+      );
+    }
+
+    // ⚡ Mecha Owl — jagged lightning with glow
+    if (type === "legend_lightning") {
+      const bolts = [0, 1];
+
+      const glowOpacity = anim.interpolate({
+        inputRange: [0, 0.3, 0.6, 1],
+        outputRange: [0, 0.7, 0.2, 0],
+      });
+
+      return (
+        <>
+          {/* soft glow behind the bolts */}
+          <Animated.View
+            style={{
+              position: "absolute",
+              left: "50%",
+              bottom: 10,
+              width: 120,
+              height: 120,
+              marginLeft: -60,
+              borderRadius: 60,
+              backgroundColor: "rgba(250,250,210,0.35)",
+              opacity: glowOpacity,
+              transform: [
+                {
+                  scale: anim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.6, 1.1],
+                  }),
+                },
+              ],
+            }}
+          />
+
+          {bolts.map((idx) => {
+            const baseX = idx === 0 ? -8 : 10;
+            const baseHeight = 90;
+            const translateY = anim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [-10, -100],
+            });
+            const opacity = anim.interpolate({
+              inputRange: [0, 0.25, 0.6, 1],
+              outputRange: [0, 1, 0.8, 0],
+            });
+
+            return (
+              <Animated.View
+                key={`ll-bolt-${idx}-${effectKey}`}
+                style={{
+                  position: "absolute",
+                  left: "50%",
+                  bottom: 10,
+                  marginLeft: baseX,
+                  opacity,
+                  transform: [{ translateY }],
+                }}
+              >
+                {/* three jagged segments to fake a Z-bolt */}
+                <View
+                  style={{
+                    position: "absolute",
+                    left: 0,
+                    top: 0,
+                    width: 6,
+                    height: baseHeight * 0.35,
+                    borderRadius: 4,
+                    backgroundColor: "rgba(250,250,210,1)",
+                    transform: [{ rotate: idx === 0 ? "-18deg" : "10deg" }],
+                  }}
+                />
+                <View
+                  style={{
+                    position: "absolute",
+                    left: -6,
+                    top: baseHeight * 0.3,
+                    width: 7,
+                    height: baseHeight * 0.32,
+                    borderRadius: 4,
+                    backgroundColor: "rgba(253,224,71,0.95)",
+                    transform: [{ rotate: idx === 0 ? "28deg" : "-22deg" }],
+                  }}
+                />
+                <View
+                  style={{
+                    position: "absolute",
+                    left: -2,
+                    top: baseHeight * 0.55,
+                    width: 5,
+                    height: baseHeight * 0.28,
+                    borderRadius: 4,
+                    backgroundColor: "rgba(234,179,8,0.95)",
+                    transform: [{ rotate: idx === 0 ? "-26deg" : "18deg" }],
+                  }}
+                />
+              </Animated.View>
+            );
+          })}
+        </>
+      );
+    }
+
+    // 🫧 Celestra bubbles
+    if (type === "legend_bubbles") {
+      const bubbles = [0, 1, 2, 3, 4, 5];
+      return (
+        <>
+          {bubbles.map((idx) => {
+            const size = 12 + (idx % 3) * 6;
+            const offsetX = (idx - 2.5) * 10;
+            const translateY = anim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [4, -110 - idx * 6],
+            });
+            const opacity = anim.interpolate({
+              inputRange: [0, 0.3, 1],
+              outputRange: [0, 0.9, 0],
+            });
+
+            return (
+              <Animated.View
+                key={`lb-${idx}-${effectKey}`}
+                style={{
+                  position: "absolute",
+                  bottom: 10,
+                  left: "50%",
+                  width: size,
+                  height: size,
+                  marginLeft: offsetX - size / 2,
+                  borderRadius: size / 2,
+                  borderWidth: 1,
+                  borderColor: "rgba(191,219,254,0.9)",
+                  backgroundColor: "rgba(59,130,246,0.20)",
+                  opacity,
+                  transform: [{ translateY }],
+                }}
+              />
+            );
+          })}
+        </>
+      );
+    }
+
+    // ✨ Astral Nova sparkles
+    if (type === "legend_sparkles") {
+      const sparks = [0, 1, 2, 3, 4, 5];
+      return (
+        <>
+          {sparks.map((idx) => {
+            const size = 14 + (idx % 2) * 4;
+            const radius = 32 + idx * 4;
+            const angle = (idx / sparks.length) * Math.PI * 2;
+
+            const translateX = anim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0, Math.cos(angle) * radius],
+            });
+            const translateY = anim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0, -Math.sin(angle) * radius],
+            });
+            const scale = anim.interpolate({
+              inputRange: [0, 0.5, 1],
+              outputRange: [0.4, 1.1, 0.4],
+            });
+            const opacity = anim.interpolate({
+              inputRange: [0, 0.3, 1],
+              outputRange: [0, 1, 0],
+            });
+
+            return (
+              <Animated.View
+                key={`ls-${idx}-${effectKey}`}
+                style={{
+                  position: "absolute",
+                  left: "50%",
+                  top: "50%",
+                  width: size,
+                  height: size,
+                  marginLeft: -size / 2,
+                  marginTop: -size / 2,
+                  opacity,
+                  backgroundColor: "rgba(251,191,36,0.95)",
+                  transform: [
+                    { translateX },
+                    { translateY },
+                    { rotate: "45deg" },
+                    { scale },
+                  ],
+                  borderRadius: 4,
+                }}
+              />
+            );
+          })}
+        </>
+      );
+    }
+
+    // 🐉 Aetherwyrm spiral aura
+    if (type === "legend_spiral") {
+      const rings = [0, 1, 2, 3];
+      return (
+        <>
+          {rings.map((idx) => {
+            const baseSize = 80 + idx * 16;
+            const rotation = anim.interpolate({
+              inputRange: [0, 1],
+              outputRange: ["0deg", `${40 + idx * 10}deg`],
+            });
+            const opacity = anim.interpolate({
+              inputRange: [0, 0.3, 1],
+              outputRange: [0, 0.85 - idx * 0.15, 0],
+            });
+
+            return (
+              <Animated.View
+                key={`lspr-${idx}-${effectKey}`}
+                style={{
+                  position: "absolute",
+                  left: "50%",
+                  top: "50%",
+                  width: baseSize,
+                  height: baseSize,
+                  marginLeft: -baseSize / 2,
+                  marginTop: -baseSize / 2,
+                  borderRadius: baseSize / 2,
+                  borderWidth: 2,
+                  borderColor: `rgba(129,140,248,${0.9 - idx * 0.18})`,
+                  opacity,
+                  transform: [{ rotate: rotation }],
+                }}
+              />
+            );
+          })}
+        </>
+      );
+    }
+  }
+
+  // 💜 Default: emoji-based burst FX (common companions)
+  const icons =
+    type === "party_confetti"
+      ? ["🎉", "🎊", "🎉", "🎊", "🎉", "🎊"]
+      : type === "party_streamers"
+      ? ["🎊", "🎉", "🎊", "🎉", "🎊", "🎉"]
+      : type === "hearts"
+      ? ["💜", "🩷", "❤️", "💙", "💜", "🩵"]
+      : type === "stardust"
+      ? ["✨", "✧", "⋆", "✦", "✨", "⋆"]
+      : type === "sparkles"
+      ? ["✨", "💫", "✨", "💫", "✨", "💫"]
+      : type === "balloons"
+      ? ["🎈", "🎈", "🎉", "🎈", "🎈", "🎉"]
+      : type === "moons"
+      ? ["🌙", "🌘", "🌖", "🌙", "⭐", "🌙"]
+      : type === "orbs"
+      ? ["💫", "🟣", "🔮", "💫", "🔮", "🟣"]
+      : type === "books"
+      ? ["📚", "📖", "📘", "📙", "📗", "📕"]
+      : type === "fire"
+      ? ["🔥", "🔥", "🔥", "✨", "🔥", "🔥"]
+      : /* stars */
+        ["⭐", "🌟", "⭐", "✦", "✧", "⭐"];
+
+  return (
+    <>
+      {icons.map((icon, index) => {
+        const offsetX = (index - icons.length / 2) * 14;
+
+        const translateY = anim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0, -110 - index * 10],
+        });
+
+        const opacity = anim.interpolate({
+          inputRange: [0, 0.3, 1],
+          outputRange: [0, 1, 0],
+        });
+        const translateX = anim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0, offsetX],
+        });
+
+        const fontSize =
+          type === "books" ? 22 : type === "fire" ? 28 : 26;
+
+        return (
+          <Animated.Text
+            key={`${type}-${index}-${effectKey}`}
+            style={{
+              position: "absolute",
+              bottom: 4,
+              fontSize,
+              transform: [{ translateY }, { translateX }],
+              opacity,
+            }}
+          >
+            {icon}
+          </Animated.Text>
+        );
+      })}
+    </>
+  );
+}
+
+/**
+ * CelebrateToast
+ */
 function CelebrateToast({
   message,
   onClose,
@@ -63,6 +707,312 @@ function CelebrateToast({
 }
 
 /**
+ * Global floating companion bubble that:
+ * - Uses the currently equipped companion
+ * - Is visible on every tab (shop can show its own if desired)
+ * - Bobs gently
+ * - Wiggles / hops / spins / shimmies / swirls on tap
+ * - Shows the same FX as the Shop tab
+ * - Can be dragged by holding and moving your finger
+ */
+function FloatingCompanionOverlay() {
+  const { activeCompanion } = useCompanion();
+
+  const bob = useRef(new Animated.Value(0)).current;
+  const pan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+
+  // multi-mode animation controls
+  const floatScale = useRef(new Animated.Value(1)).current;
+  const floatHop = useRef(new Animated.Value(0)).current;
+  const floatShake = useRef(new Animated.Value(0)).current;
+  const floatRotate = useRef(new Animated.Value(0)).current;
+  const clickModeRef = useRef(0);
+
+  const rotation = floatRotate.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0deg", "360deg"],
+  });
+
+  // FX type + key (to retrigger CompanionEffectOverlay)
+  const [effectType, setEffectType] = useState<CompanionEffectType>("stars");
+  const [effectKey, setEffectKey] = useState(0);
+
+  const isTapRef = useRef(true);
+  const offsetRef = useRef({ x: 0, y: 0 });
+
+  // gentle idle bobbing
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(bob, {
+          toValue: -6,
+          duration: 800,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(bob, {
+          toValue: 0,
+          duration: 800,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [bob]);
+
+  // sync FX type with currently equipped companion
+  useEffect(() => {
+    if (!activeCompanion) {
+      setEffectType("stars");
+      return;
+    }
+
+    const id =
+      (activeCompanion as any).canonId ||
+      (activeCompanion as any).id ||
+      "";
+    const eff = getCompanionEffect(id);
+    setEffectType(eff);
+    setEffectKey((k) => k + 1);
+  }, [activeCompanion]);
+
+  /* --------------------- Tap animation modes (like shop) ------------------ */
+
+  function wiggleAction() {
+    floatScale.setValue(1);
+    Animated.sequence([
+      Animated.timing(floatScale, {
+        toValue: 1.18,
+        duration: 120,
+        useNativeDriver: true,
+      }),
+      Animated.timing(floatScale, {
+        toValue: 0.95,
+        duration: 110,
+        useNativeDriver: true,
+      }),
+      Animated.timing(floatScale, {
+        toValue: 1.05,
+        duration: 110,
+        useNativeDriver: true,
+      }),
+      Animated.timing(floatScale, {
+        toValue: 1,
+        duration: 110,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }
+
+  function hopAction() {
+    floatHop.setValue(0);
+    Animated.sequence([
+      Animated.timing(floatHop, {
+        toValue: -14,
+        duration: 120,
+        useNativeDriver: true,
+      }),
+      Animated.timing(floatHop, {
+        toValue: 0,
+        duration: 160,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }
+
+  function spinAction() {
+    floatRotate.setValue(0);
+    Animated.sequence([
+      Animated.timing(floatRotate, {
+        toValue: 1,
+        duration: 260,
+        useNativeDriver: true,
+      }),
+      Animated.timing(floatRotate, {
+        toValue: 0,
+        duration: 0,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }
+
+  function shimmyAction() {
+    floatShake.setValue(0);
+    Animated.sequence([
+      Animated.timing(floatShake, {
+        toValue: 1,
+        duration: 70,
+        useNativeDriver: true,
+      }),
+      Animated.timing(floatShake, {
+        toValue: -1,
+        duration: 70,
+        useNativeDriver: true,
+      }),
+      Animated.timing(floatShake, {
+        toValue: 0.5,
+        duration: 60,
+        useNativeDriver: true,
+      }),
+      Animated.timing(floatShake, {
+        toValue: 0,
+        duration: 60,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }
+
+  function swirlAction() {
+    floatScale.setValue(1);
+    floatRotate.setValue(0);
+    Animated.parallel([
+      Animated.sequence([
+        Animated.timing(floatScale, {
+          toValue: 1.2,
+          duration: 160,
+          useNativeDriver: true,
+        }),
+        Animated.timing(floatScale, {
+          toValue: 0.95,
+          duration: 140,
+          useNativeDriver: true,
+        }),
+        Animated.timing(floatScale, {
+          toValue: 1,
+          duration: 140,
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.sequence([
+        Animated.timing(floatRotate, {
+          toValue: 1,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+        Animated.timing(floatRotate, {
+          toValue: 0,
+          duration: 0,
+          useNativeDriver: true,
+        }),
+      ]),
+    ]).start();
+  }
+
+  const handleTap = () => {
+    try {
+      if (Platform.OS !== "web") {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+    } catch {
+      // ignore
+    }
+
+    // cycle through the same 5 modes as the shop bubble
+    clickModeRef.current = (clickModeRef.current + 1) % 5;
+    const mode = clickModeRef.current;
+
+    switch (mode) {
+      case 0:
+        wiggleAction();
+        break;
+      case 1:
+        hopAction();
+        break;
+      case 2:
+        spinAction();
+        break;
+      case 3:
+        shimmyAction();
+        break;
+      case 4:
+      default:
+        swirlAction();
+        break;
+    }
+
+    // retrigger FX burst
+    setEffectKey((k) => k + 1);
+  };
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        isTapRef.current = true;
+      },
+      onPanResponderMove: (_evt, gesture) => {
+        if (Math.abs(gesture.dx) > 8 || Math.abs(gesture.dy) > 8) {
+          isTapRef.current = false;
+        }
+        const nx = offsetRef.current.x + gesture.dx;
+        const ny = offsetRef.current.y + gesture.dy;
+        pan.setValue({ x: nx, y: ny });
+      },
+      onPanResponderRelease: () => {
+        if (isTapRef.current) {
+          handleTap();
+        } else {
+          // persist new offset
+          const current: { x: number; y: number } =
+            (pan as any).__getValue?.() ?? { x: 0, y: 0 };
+          offsetRef.current = current;
+        }
+      },
+      onPanResponderTerminationRequest: () => false,
+    })
+  ).current;
+
+  if (!activeCompanion) return null;
+
+  return (
+    <Animated.View
+      {...panResponder.panHandlers}
+      style={[
+        S.companionWrap,
+        {
+          transform: [
+            {
+              translateX: Animated.add(pan.x, floatShake),
+            },
+            {
+              translateY: Animated.add(
+                Animated.add(bob, pan.y),
+                floatHop
+              ),
+            },
+            { scale: floatScale },
+            { rotate: rotation },
+          ],
+        },
+      ]}
+    >
+      <View style={S.companionBadge}>
+        {/* FX burst overlay (same as shop tab) */}
+        <View
+          pointerEvents="none"
+          style={StyleSheet.absoluteFillObject}
+        >
+          <CompanionEffectOverlay
+            type={effectType}
+            effectKey={effectKey}
+          />
+        </View>
+
+        <Image
+          source={(activeCompanion as any).image}
+          style={S.companionImage}
+          resizeMode="contain"
+        />
+      </View>
+      {/* label removed – just the bubble */}
+    </Animated.View>
+  );
+}
+
+/**
  * Root tabs layout.
  * All global providers (User, Theme, Coins, Purchases, Cursor, Toast, etc.)
  * are wired up in AppProviders + app/_layout.
@@ -80,8 +1030,9 @@ export default function TabsLayout() {
 }
 
 /**
- * Inner layout that uses useUser() and only renders the Tabs once
- * the user context is hydrated, so first-login doesn't feel like a freeze.
+ * Inner layout that uses useUser().
+ * We no longer *block* rendering on `ready`; we always render the tabs and let
+ * profile hydration happen in the background so login can't get stuck.
  */
 function InnerTabsLayout() {
   const insets = useSafeAreaInsets();
@@ -93,18 +1044,25 @@ function InnerTabsLayout() {
   const [p, setP] = useState<Pt>({ x: -1, y: -1 });
   const [down, setDown] = useState(false);
 
-  const { ready } = useUser() as any;
+  const { ready } = useUser();
+  // (we keep `ready` so the context is used, but we don't gate on it anymore)
 
   // listen for achievement celebration events
   useEffect(() => {
-    const sub = (msg: string) => {
+    const handler = (msg: string) => {
       setCelebrate(msg || "🎉 Achievement unlocked!");
       const t = setTimeout(() => setCelebrate(null), 6000);
       return () => clearTimeout(t);
     };
 
-    const listener = AchieveEmitter?.addListener?.("celebrate", sub);
-    return () => listener?.remove?.();
+    const listener = AchieveEmitter?.addListener?.("celebrate", handler);
+    return () => {
+      try {
+        listener?.remove?.();
+      } catch {
+        // ignore
+      }
+    };
   }, []);
 
   // ensure mobile has a default cursor trail (star) if none is set yet
@@ -138,30 +1096,9 @@ function InnerTabsLayout() {
     };
   }, []);
 
-  // While the user context is hydrating (first login / first app open),
-  // show a simple friendly loading state instead of mounting everything.
-  if (!ready) {
-    return (
-      <View
-        style={{
-          flex: 1,
-          backgroundColor: "#000814",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <Text
-          style={{
-            color: "#e8fbff",
-            fontSize: 16,
-            fontWeight: "600",
-          }}
-        >
-          Loading your profile...
-        </Text>
-      </View>
-    );
-  }
+  // NOTE: we intentionally do NOT do:
+  // if (!ready) return <Loading ... />
+  // so that TestFlight can't get stuck on that screen.
 
   return (
     <View
@@ -238,7 +1175,6 @@ function InnerTabsLayout() {
               {...props}
               onPress={(e) => {
                 if (Platform.OS !== "web") {
-                  // haptics for tab presses (kept light)
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                 }
                 props.onPress?.(e);
@@ -253,11 +1189,7 @@ function InnerTabsLayout() {
           options={{
             title: "ASK",
             tabBarIcon: ({ color, size }) => (
-              <Ionicons
-                name="chatbubbles-outline"
-                color={color}
-                size={size}
-              />
+              <Ionicons name="chatbubbles-outline" color={color} size={size} />
             ),
           }}
         />
@@ -328,11 +1260,7 @@ function InnerTabsLayout() {
           options={{
             title: "RELAX",
             tabBarIcon: ({ color, size }) => (
-              <Ionicons
-                name="sparkles-outline"
-                color={color}
-                size={size}
-              />
+              <Ionicons name="sparkles-outline" color={color} size={size} />
             ),
           }}
         />
@@ -354,11 +1282,7 @@ function InnerTabsLayout() {
           options={{
             title: "CERTIFICATES",
             tabBarIcon: ({ color, size }) => (
-              <Ionicons
-                name="ribbon-outline"
-                color={color}
-                size={size}
-              />
+              <Ionicons name="ribbon-outline" color={color} size={size} />
             ),
           }}
         />
@@ -367,11 +1291,7 @@ function InnerTabsLayout() {
           options={{
             title: "COLLECTIONS",
             tabBarIcon: ({ color, size }) => (
-              <Ionicons
-                name="bookmarks-outline"
-                color={color}
-                size={size}
-              />
+              <Ionicons name="bookmarks-outline" color={color} size={size} />
             ),
           }}
         />
@@ -386,12 +1306,13 @@ function InnerTabsLayout() {
         />
       </Tabs>
 
-      <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+      {/* Global overlays */}
+      <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
         <FxOverlay />
         {Platform.OS === "web" ? <StarTrailOverlay /> : null}
-        {Platform.OS !== "web" ? (
-          <TouchCursorOverlay p={p} down={down} />
-        ) : null}
+        {Platform.OS !== "web" ? <TouchCursorOverlay p={p} down={down} /> : null}
+        {/* 🌟 Global floating companion bubble with shop-style FX */}
+        <FloatingCompanionOverlay />
       </View>
 
       {celebrate ? (
@@ -435,4 +1356,42 @@ export const S = StyleSheet.create({
   },
   closeBtn: { position: "absolute", right: 10, top: 6, padding: 4 },
   closeText: { color: "white", fontSize: 22, lineHeight: 22 },
+
+  // 🌟 Floating companion styles
+  companionWrap: {
+    position: "absolute",
+    right: 16,
+    bottom: Platform.OS === "web" ? 96 : 88, // above tab bar
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 9998,
+  },
+  companionBadge: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "rgba(0, 8, 20, 0.88)",
+    borderWidth: 1.5,
+    borderColor: "rgba(0,229,255,0.95)",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#00e5ff",
+    shadowOpacity: 0.55,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    overflow: "visible",
+  },
+  companionImage: {
+    width: 48,
+    height: 48,
+  },
+  companionLabel: {
+    marginTop: 4,
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#e8fbff",
+    textShadowColor: "rgba(0, 0, 0, 0.6)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
 });

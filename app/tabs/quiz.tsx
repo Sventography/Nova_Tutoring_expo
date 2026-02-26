@@ -19,7 +19,11 @@ import { useTheme } from "../context/ThemeContext";
 import { unlockQuizAchievements } from "../utils/achievements-bridge";
 import { logQuizResult } from "../utils/quiz-history-bridge";
 import { useCoins } from "../context/CoinsContext";
-import { usePurchases } from "../context/PurchasesContext";
+import { useCompanion } from "../context/CompanionContext";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+// 🔧 Toggle this to false before App Store release if you want to hide cheats
+const DEV_ENABLE_QUIZ_CHEATS = true;
 
 type QA = { question: string; answer: string };
 type QItem = { question: string; answer: string; choices: string[] };
@@ -246,17 +250,22 @@ export default function QuizScreen() {
   const { user } = useUser();
   const { tokens } = useTheme();
   const { addCoins } = useCoins();
-  const { isOwned } = usePurchases();
+  const { activeCompanion } = useCompanion();
 
-  const hasChronoFox = isOwned("companion:chrono_fox");
-  const hasAstralNova = isOwned("companion:astral_nova");
+  // Legendary ability gating: must be EQUIPPED, not just owned
+  const hasChronoFox =
+    activeCompanion?.id === "companion:chrono_fox" ||
+    activeCompanion?.id === "chrono_fox" ||
+    activeCompanion?.id === "chrono-fox";
 
-  // Base quiz time becomes 7 minutes if Chrono Fox is owned
+  const hasAstralNova =
+    activeCompanion?.id === "companion:astral_nova" ||
+    activeCompanion?.id === "astral_nova" ||
+    activeCompanion?.id === "astral-nova";
+
+  // Base quiz time becomes 7 minutes if Chrono Fox is equipped
   const quizTotalTime = useMemo(
-    () =>
-      hasChronoFox
-        ? DEFAULT_TOTAL_TIME + 120 // +2 minutes
-        : DEFAULT_TOTAL_TIME,
+    () => (hasChronoFox ? DEFAULT_TOTAL_TIME + 120 : DEFAULT_TOTAL_TIME),
     [hasChronoFox]
   );
 
@@ -276,7 +285,7 @@ export default function QuizScreen() {
     : "rgba(0,180,120,0.18)";
   const wrongBg = tokens.isDark
     ? "rgba(255,80,80,0.22)"
-    : "rgba(255,120,120,0.20)";
+    : "rgba(255,120,120,0.2)";
 
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<QItem[]>([]);
@@ -378,10 +387,23 @@ export default function QuizScreen() {
       });
     } catch {}
 
+    // Store local quiz history (used by History tab)
     try {
-      await reportQuizFinished(pct, headerTitle ?? String(topicId));
+      await reportQuizFinished({
+        topicId: String(topicId),
+        topicTitle: headerTitle,
+        scorePct: pct,
+        correct,
+        total,
+        username:
+          user?.username ||
+          user?.displayName ||
+          user?.name ||
+          null,
+      });
     } catch {}
 
+    // Fire achievement logic (thresholds, etc.)
     try {
       await unlockQuizAchievements({
         correct,
@@ -400,7 +422,7 @@ export default function QuizScreen() {
     void logResultIfNeeded("done");
   }, [done]);
 
-  // 80%+: show certificate modal AND pay Astral Nova bonus if owned
+  // 80%+: show certificate modal AND pay Astral Nova bonus if equipped
   useEffect(() => {
     if (!done || !total) return;
     const pct = Math.round((correct / total) * 100);
@@ -414,7 +436,6 @@ export default function QuizScreen() {
         ASTRAL_NOVA_CERT_BONUS > 0
       ) {
         certBonusGivenRef.current = true;
-        // fire-and-forget; no need to await here
         addCoins(ASTRAL_NOVA_CERT_BONUS, "astral_nova_certificate_bonus", {
           topicId,
           title: headerTitle,
@@ -457,6 +478,35 @@ export default function QuizScreen() {
   function finishNow() {
     setDone(true);
     void logResultIfNeeded("finish");
+  }
+
+  // 🔧 Dev helper: instantly finish a quiz with a target percentage
+  function devFinish(targetPct: number) {
+    if (!DEV_ENABLE_QUIZ_CHEATS) return;
+    if (!total) return;
+
+    const rawCorrect = Math.round((targetPct / 100) * total);
+    const clamped = Math.min(total, Math.max(0, rawCorrect));
+
+    // stop the timer
+    if (totalTimerRef.current) {
+      clearInterval(totalTimerRef.current);
+      totalTimerRef.current = null;
+    }
+
+    // set the score + state
+    setCorrect(clamped);
+    setIdx(total - 1);
+    setSelected(null);
+    setLocked(true);
+    setTotalLeft(0);
+
+    // make sure the finish pipeline runs fresh
+    setShowCert(false);
+    certBonusGivenRef.current = false;
+    loggedRef.current = false;
+
+    setDone(true);
   }
 
   const mm = Math.floor(totalLeft / 60);
@@ -696,6 +746,78 @@ export default function QuizScreen() {
 
   return renderShell(
     <>
+      {/* 🔧 Dev cheats panel (visible while quiz running) */}
+      {DEV_ENABLE_QUIZ_CHEATS ? (
+        <View
+          style={[
+            S.devRow,
+            {
+              borderColor,
+              backgroundColor: tokens.isDark
+                ? "rgba(0,0,0,0.55)"
+                : "rgba(255,255,255,0.8)",
+            },
+          ]}
+        >
+          <Text
+            style={[
+              S.devLabel,
+              { color: headerTextColor },
+            ]}
+          >
+            Dev Cheats — Finish As:
+          </Text>
+          <View style={S.devButtonsRow}>
+            <Pressable
+              onPress={() => devFinish(50)}
+              style={[
+                S.devBtn,
+                { borderColor, backgroundColor: cardBg },
+              ]}
+              disabled={!total}
+            >
+              <Text style={[S.devBtnText, { color: headerTextColor }]}>
+                {"50%"}
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => devFinish(80)}
+              style={[
+                S.devBtn,
+                { borderColor, backgroundColor: cardBg },
+              ]}
+              disabled={!total}
+            >
+              <Text style={[S.devBtnText, { color: headerTextColor }]}>
+                {"80%"}
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => devFinish(100)}
+              style={[
+                S.devBtn,
+                { borderColor, backgroundColor: cardBg },
+              ]}
+              disabled={!total}
+            >
+              <Text style={[S.devBtnText, { color: headerTextColor }]}>
+                {"100%"}
+              </Text>
+            </Pressable>
+          </View>
+          {!total ? (
+            <Text
+              style={[
+                S.devHint,
+                { color: metaColor },
+              ]}
+            >
+              Cheats will work once questions finish loading.
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
+
       <View style={S.row}>
         <Text style={[S.title, { color: headerTextColor }]}>
           {headerTitle}
@@ -962,4 +1084,73 @@ export const S = StyleSheet.create({
   },
   modalTitle: { fontSize: 20, fontWeight: "800" },
   modalBody: { marginTop: 8 },
+
+  // 🔧 Dev cheats styling
+  devRow: {
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginBottom: 10,
+  },
+  devLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
+    opacity: 0.9,
+    marginBottom: 6,
+  },
+  devButtonsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  devBtn: {
+    flex: 1,
+    paddingVertical: 6,
+    marginHorizontal: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: "center",
+  },
+  devBtnText: {
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  devHint: {
+    fontSize: 11,
+    marginTop: 4,
+  },
 });
+
+// ─────────────────────────────────────
+// Local certificate helpers (v1 store)
+// ─────────────────────────────────────
+
+export type CertificateInput = {
+  name: string;
+  quizTitle: string;
+  scorePct: number;
+  dateISO?: string;
+};
+
+const KEY = "certificates:v1";
+
+export async function createCertificate(i: CertificateInput) {
+  const raw = (await AsyncStorage.getItem(KEY)) || "[]";
+  const list = JSON.parse(raw);
+  const cert = {
+    id: String(Date.now()),
+    ...i,
+    dateISO: i.dateISO || new Date().toISOString(),
+  };
+  list.unshift(cert);
+  await AsyncStorage.setItem(KEY, JSON.stringify(list));
+  return cert;
+}
+
+export async function listCertificates() {
+  const raw = (await AsyncStorage.getItem(KEY)) || "[]";
+  return JSON.parse(raw);
+}

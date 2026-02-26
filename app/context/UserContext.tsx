@@ -49,10 +49,7 @@ type UserContextValue = {
     password: string
   ) => Promise<void>;
 
-  loginWithEmailPassword: (
-    email: string,
-    password: string
-  ) => Promise<void>;
+  loginWithEmailPassword: (email: string, password: string) => Promise<void>;
 
   resetPassword: (email: string) => Promise<void>;
   updatePassword: (newPassword: string) => Promise<void>;
@@ -65,13 +62,13 @@ const UserContext = createContext<UserContextValue | null>(null);
 
 const PROFILE_KEY = "user.profile.v1";
 const SUPABASE_JWT_KEY = "auth.supabase.jwt";
-// This is a best-guess key for older Supabase auth storage; we clear it defensively.
+// Best-guess legacy key; cleared defensively.
 const SUPABASE_AUTH_TOKEN_KEY = "@supabase.auth.token";
 
 // Normalizes username: trim, default, and limit to 8 chars
 function normalizeUsername(raw: string | null | undefined): string {
   const base = (raw ?? "").trim() || "Student";
-  return base.slice(0, 8); // keep case, just clamp length
+  return base.slice(0, 8);
 }
 
 async function persistProfile(profile: LocalUserProfile | null) {
@@ -89,10 +86,7 @@ async function clearSupabaseAuthStorage(reason?: string) {
       "[UserContext] clearing Supabase auth tokens",
       reason ? `(${reason})` : ""
     );
-    await AsyncStorage.multiRemove([
-      SUPABASE_JWT_KEY,
-      SUPABASE_AUTH_TOKEN_KEY,
-    ]);
+    await AsyncStorage.multiRemove([SUPABASE_JWT_KEY, SUPABASE_AUTH_TOKEN_KEY]);
   } catch (e) {
     console.warn("[UserContext] clearSupabaseAuthStorage error:", e);
   }
@@ -102,11 +96,12 @@ async function clearSupabaseAuthStorage(reason?: string) {
 async function hardClearLocalGameState() {
   try {
     const keys = await AsyncStorage.getAllKeys();
-    const toRemove = keys.filter((k) =>
-      k.startsWith("@nova/coins.") ||
-      k.startsWith("@nova/streak.") ||
-      k.startsWith("@nova/purchases") ||
-      k === PROFILE_KEY
+    const toRemove = keys.filter(
+      (k) =>
+        k.startsWith("@nova/coins.") ||
+        k.startsWith("@nova/streak.") ||
+        k.startsWith("@nova/purchases") ||
+        k === PROFILE_KEY
     );
 
     if (toRemove.length) {
@@ -318,7 +313,18 @@ export function UserProvider({ children }: { children: ReactNode }) {
   // --------------------- initial load (local + Supabase) ---------------------
 
   useEffect(() => {
+    let cancelled = false;
+
+    // hard guard: never let ready stay false forever
+    const failSafe = setTimeout(() => {
+      if (!cancelled) {
+        console.log("[UserContext] FAILSAFE setReady(true)");
+        setReady(true);
+      }
+    }, 5000);
+
     (async () => {
+      console.log("[UserContext] init effect start");
       try {
         // 1) Load local cached profile first
         const stored = await AsyncStorage.getItem(PROFILE_KEY);
@@ -330,14 +336,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
               parsed?.id,
               parsed?.username
             );
-            setProfile(parsed);
+            if (!cancelled) {
+              setProfile(parsed);
+            }
           } catch {
             // ignore parse errors
           }
         }
 
-        // 2) Ask Supabase for current session (this now reads from AsyncStorage
-        //    because we enabled storage + persistSession in supabase.ts)
+        // 2) Ask Supabase for current session
         const { data, error } = await supabase.auth.getSession();
         if (error) {
           console.warn("[UserContext] getSession error:", error);
@@ -350,15 +357,19 @@ export function UserProvider({ children }: { children: ReactNode }) {
             await clearSupabaseAuthStorage(
               "invalid refresh token on getSession"
             );
-            setSession(null);
-            setSupabaseUserId(null);
-            // NOTE: keep whatever profile we already loaded locally
-            return;
+            if (!cancelled) {
+              setSession(null);
+              setSupabaseUserId(null);
+            }
+            // keep whatever profile we already loaded locally
           }
         }
 
         const sess = data?.session ?? null;
-        setSession(sess);
+        console.log("[UserContext] init: session?", !!sess);
+        if (!cancelled) {
+          setSession(sess);
+        }
 
         if (sess?.access_token) {
           await AsyncStorage.setItem(SUPABASE_JWT_KEY, sess.access_token);
@@ -368,45 +379,98 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
         const authUser = sess?.user ?? null;
         if (authUser) {
-          setSupabaseUserId(authUser.id);
+          console.log(
+            "[UserContext] init: found authUser, hydrating profile for",
+            authUser.id
+          );
+          if (!cancelled) {
+            setSupabaseUserId(authUser.id);
+          }
           await hydrateProfileFromSupabase(authUser.id, authUser);
+        } else {
+          console.log("[UserContext] init: no auth user (guest mode)");
         }
       } catch (e) {
         console.warn("[UserContext] init error:", e);
       } finally {
-        setReady(true);
+        if (!cancelled) {
+          console.log("[UserContext] init: setReady(true)");
+          setReady(true);
+        }
+        clearTimeout(failSafe);
       }
     })();
+
+    return () => {
+      cancelled = true;
+      clearTimeout(failSafe);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ----------------- react to auth changes (login / logout) ------------------
 
   useEffect(() => {
-    const { data } = supabase.auth.onAuthStateChange(async (_event, sess) => {
-      console.log("[UserContext] onAuthStateChange event:", _event);
+    const { data } = supabase.auth.onAuthStateChange(
+      async (event, sess) => {
+        console.log("[UserContext] onAuthStateChange event:", event);
 
-      setSession(sess);
+        try {
+          setSession(sess ?? null);
 
-      const token = sess?.access_token;
-      if (token) {
-        await AsyncStorage.setItem(SUPABASE_JWT_KEY, token);
-      } else {
-        await AsyncStorage.removeItem(SUPABASE_JWT_KEY);
+          const token = sess?.access_token;
+          if (token) {
+            await AsyncStorage.setItem(SUPABASE_JWT_KEY, token);
+          } else {
+            await AsyncStorage.removeItem(SUPABASE_JWT_KEY);
+          }
+
+          const authUser = sess?.user ?? null;
+          if (authUser) {
+            console.log(
+              "[UserContext] onAuthStateChange: hydrating profile for",
+              authUser.id
+            );
+            setSupabaseUserId(authUser.id);
+            await hydrateProfileFromSupabase(authUser.id, authUser);
+          } else {
+            console.log(
+              "[UserContext] onAuthStateChange: no auth user, clearing supabaseUserId"
+            );
+            setSupabaseUserId(null);
+            // signOut() handles wiping profile + local state explicitly
+          }
+
+          // If we just signed in or refreshed, we know auth state is valid:
+          // make sure ready is true so UI can move past splash immediately.
+          if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+            setReady(true);
+          }
+
+          if (event === "SIGNED_OUT") {
+            // Nothing extra here; signOut() already clears local state.
+            setReady(true);
+          }
+        } catch (e) {
+          console.warn(
+            "[UserContext] onAuthStateChange handler error:",
+            e
+          );
+        }
       }
+    );
 
-      const authUser = sess?.user ?? null;
-      if (authUser) {
-        setSupabaseUserId(authUser.id);
-        await hydrateProfileFromSupabase(authUser.id, authUser);
-      } else {
-        setSupabaseUserId(null);
-        // don't auto-wipe profile here; signOut() handles that explicitly
-      }
-    });
+    const subscription = data?.subscription;
 
     return () => {
-      data.subscription.unsubscribe();
+      try {
+        subscription?.unsubscribe();
+      } catch (e) {
+        console.warn(
+          "[UserContext] onAuthStateChange cleanup error:",
+          e
+        );
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -421,7 +485,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         }),
         ...patch,
       };
-      persistProfile(next);
+      void persistProfile(next);
       return next;
     });
   };
@@ -670,12 +734,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
   };
 
   const loginWithEmailPassword = async (email: string, password: string) => {
+    console.log("[UserContext] loginWithEmailPassword start");
     try {
-      console.log("[UserContext] loginWithEmailPassword start");
+      // We briefly mark not-ready so any UI that listens to this can show a
+      // clean transition, and so we don't render stale "guest" state.
+      setReady(false);
 
-      // 🧹 Clear any stale tokens that might cause weird "Invalid Refresh Token" or double-login flows
-      await clearSupabaseAuthStorage("pre loginWithEmailPassword");
-
+      console.log("[UserContext] login: calling signInWithPassword");
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -696,7 +761,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         authUser?.id
       );
 
-      setSession(sess);
+      setSession(sess ?? null);
 
       if (sess?.access_token) {
         await AsyncStorage.setItem(SUPABASE_JWT_KEY, sess.access_token);
@@ -708,17 +773,31 @@ export function UserProvider({ children }: { children: ReactNode }) {
         // Set the ID immediately so consumers don't have to wait for onAuthStateChange
         setSupabaseUserId(authUser.id);
 
-        // Hydrate profile right away so UI sees a fully formed user after a single login
+        // Hydrate profile synchronously for the *first* login so the
+        // account + header + tabs all see a real user on first navigation.
         try {
+          console.log(
+            "[UserContext] login: hydrate profile for",
+            authUser.id
+          );
           await hydrateProfileFromSupabase(authUser.id, authUser);
         } catch (e) {
           console.warn("[UserContext] login hydrate error:", e);
         }
+      } else {
+        setSupabaseUserId(null);
+        setProfile(null);
       }
+
+      // We know auth is valid now; ensure ready is true so layout can move on.
+      // Callers that `await loginWithEmailPassword` can safely navigate after this.
+      setReady(true);
 
       console.log("[UserContext] loginWithEmailPassword done");
     } catch (e) {
       console.warn("[UserContext] loginWithEmailPassword threw:", e);
+      // Even if login fails, don't leave the app permanently in "not ready".
+      setReady(true);
       throw e;
     }
   };
@@ -772,6 +851,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
       await AsyncStorage.removeItem(SUPABASE_JWT_KEY);
       await AsyncStorage.removeItem(PROFILE_KEY);
       await AsyncStorage.removeItem(SUPABASE_AUTH_TOKEN_KEY);
+      // Also clear per-user game state so next login starts clean
+      await hardClearLocalGameState();
+      setReady(true);
     }
   };
 

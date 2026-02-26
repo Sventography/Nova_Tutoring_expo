@@ -3,6 +3,14 @@ import { ImageSourcePropType } from "react-native";
 import { canonId } from "./canonId";
 
 /**
+ * Companion roles describe how many can be equipped together.
+ * - "power"   → primary multipliers (only 1 active at a time)
+ * - "support" → helpers like streak shields / timers (only 1 active)
+ * - "cosmetic"→ visual-only buddies
+ */
+export type CompanionRole = "power" | "support" | "cosmetic";
+
+/**
  * Ability types for companions.
  * These describe *what* the companion is meant to do.
  * Different parts of the app (quiz, streaks, achievements, etc.)
@@ -77,6 +85,8 @@ export type CompanionItem = {
   priceUSD?: number;
   /** Optional ability; present for legendary companions */
   ability?: CompanionAbility;
+  /** Role used for equip rules (power/support/cosmetic) */
+  role: CompanionRole;
 };
 
 export const COMPANIONS: CompanionItem[] = [
@@ -93,6 +103,7 @@ export const COMPANIONS: CompanionItem[] = [
     category: "companions",
     coinPrice: 0, // cash-only
     priceUSD: 12.99,
+    role: "power",
     ability: {
       type: "achievement_reward_bonus",
       bonusPercent: 0.1,
@@ -109,6 +120,7 @@ export const COMPANIONS: CompanionItem[] = [
     category: "companions",
     coinPrice: 0, // cash-only
     priceUSD: 12.99,
+    role: "support",
     ability: {
       type: "quiz_time_bonus",
       extraMinutes: 2,
@@ -125,6 +137,7 @@ export const COMPANIONS: CompanionItem[] = [
     category: "companions",
     coinPrice: 0, // cash-only
     priceUSD: 12.99,
+    role: "power",
     ability: {
       type: "streak_milestone_bonus",
       bonusPercent: 0.25,
@@ -141,6 +154,7 @@ export const COMPANIONS: CompanionItem[] = [
     category: "companions",
     coinPrice: 0, // cash-only
     priceUSD: 12.99,
+    role: "support",
     ability: {
       type: "streak_shield",
       cooldownDays: 7,
@@ -157,6 +171,7 @@ export const COMPANIONS: CompanionItem[] = [
     category: "companions",
     coinPrice: 0, // cash-only
     priceUSD: 12.99,
+    role: "power",
     ability: {
       type: "quiz_certificate_bonus",
       bonusCoinsFlat: 500,
@@ -173,6 +188,7 @@ export const COMPANIONS: CompanionItem[] = [
     category: "companions",
     coinPrice: 0, // cash-only
     priceUSD: 12.99,
+    role: "power",
     ability: {
       type: "global_coin_multiplier",
       bonusPercent: 0.2,
@@ -192,6 +208,7 @@ export const COMPANIONS: CompanionItem[] = [
     image: require("../assets/companions/nova_bunny_coin.png"),
     category: "companions",
     coinPrice: 1000,
+    role: "cosmetic",
   },
   {
     id: "companion:balloons",
@@ -202,6 +219,7 @@ export const COMPANIONS: CompanionItem[] = [
     image: require("../assets/companions/balloons.png"),
     category: "companions",
     coinPrice: 1000,
+    role: "cosmetic",
   },
   {
     id: "companion:hearts",
@@ -212,6 +230,7 @@ export const COMPANIONS: CompanionItem[] = [
     image: require("../assets/companions/hearts.png"),
     category: "companions",
     coinPrice: 1000,
+    role: "cosmetic",
   },
   {
     id: "companion:sleepy_moon",
@@ -222,6 +241,7 @@ export const COMPANIONS: CompanionItem[] = [
     image: require("../assets/companions/sleepy_moon.png"),
     category: "companions",
     coinPrice: 1000,
+    role: "cosmetic",
   },
   {
     id: "companion:star_blow",
@@ -232,6 +252,7 @@ export const COMPANIONS: CompanionItem[] = [
     image: require("../assets/companions/star_blow.png"),
     category: "companions",
     coinPrice: 1000,
+    role: "cosmetic",
   },
   {
     id: "companion:star_explode",
@@ -242,6 +263,7 @@ export const COMPANIONS: CompanionItem[] = [
     image: require("../assets/companions/star_explode.png"),
     category: "companions",
     coinPrice: 1000,
+    role: "cosmetic",
   },
   {
     id: "companion:star_throw",
@@ -252,6 +274,7 @@ export const COMPANIONS: CompanionItem[] = [
     image: require("../assets/companions/star_throw.png"),
     category: "companions",
     coinPrice: 1000,
+    role: "cosmetic",
   },
   {
     id: "companion:party_3d",
@@ -262,6 +285,7 @@ export const COMPANIONS: CompanionItem[] = [
     image: require("../assets/companions/3d_party.png"),
     category: "companions",
     coinPrice: 1000,
+    role: "cosmetic",
   },
   {
     id: "companion:party_3d_2",
@@ -272,6 +296,7 @@ export const COMPANIONS: CompanionItem[] = [
     image: require("../assets/companions/3d_party2.png"),
     category: "companions",
     coinPrice: 1000,
+    role: "cosmetic",
   },
   {
     id: "companion:coins_rain",
@@ -282,6 +307,7 @@ export const COMPANIONS: CompanionItem[] = [
     image: require("../assets/companions/coins.png"),
     category: "companions",
     coinPrice: 1000,
+    role: "cosmetic",
   },
   {
     id: "companion:reading_buddy",
@@ -292,5 +318,6 @@ export const COMPANIONS: CompanionItem[] = [
     image: require("../assets/companions/read.png"),
     category: "companions",
     coinPrice: 1000,
+    role: "cosmetic",
   },
 ];

@@ -34,7 +34,7 @@ export async function safeLogQuiz(entry: {
 }) {
   try {
     await logQuizToHistory(entry);
-  } catch (_) {
+  } catch {
     // swallow intentionally for safety
   }
 }

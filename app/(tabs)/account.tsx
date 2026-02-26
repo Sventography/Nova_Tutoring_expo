@@ -29,6 +29,7 @@ export default function AccountScreen() {
   const {
     user,
     ready,
+    session,
     setAvatar,
     updateProfile,
     signOut,
@@ -46,11 +47,8 @@ export default function AccountScreen() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
 
-  // crude "logged in" flag based on having any user identity
-  const isLoggedIn = !!(
-    user &&
-    (user.id || user.username || user.contactEmail || user.email)
-  );
+  // "Logged in" = real Supabase session, not just a local profile.
+  const isLoggedIn = !!(session && session.user && session.user.id);
 
   const currentAvatar = useMemo(() => {
     return (
@@ -72,7 +70,8 @@ export default function AccountScreen() {
   useEffect(() => {
     if (!ready) return;
 
-    if (!isLoggedIn) {
+    // Hydrate fields from the current profile, even in guest mode.
+    if (!user) {
       setName("");
       setContactEmail("");
       setAvatarLocal(null);
@@ -82,15 +81,7 @@ export default function AccountScreen() {
     setName(user?.username || user?.name || "");
     setContactEmail(user?.contactEmail || user?.email || "");
     setAvatarLocal(currentAvatar);
-  }, [
-    ready,
-    isLoggedIn,
-    user?.username,
-    user?.name,
-    user?.contactEmail,
-    user?.email,
-    currentAvatar,
-  ]);
+  }, [ready, user, currentAvatar]);
 
   const pickAvatarWeb = async () => {
     return new Promise<string | null>((resolve) => {
@@ -286,7 +277,12 @@ export default function AccountScreen() {
     }
   }
 
-  const loginEmail = user?.email || user?.contactEmail || contactEmail || "";
+  const loginEmail =
+    (session?.user?.email as string | undefined) ||
+    user?.contactEmail ||
+    user?.email ||
+    contactEmail ||
+    "";
   const loginUsername = user?.username || user?.name || name || "";
 
   async function onForgotPassword() {

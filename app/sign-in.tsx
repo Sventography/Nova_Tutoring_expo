@@ -22,8 +22,7 @@ import { showToast } from "./utils/toast";
 export default function SignInScreen() {
   const router = useRouter();
   const { tokens } = useTheme();
-  const { signUpWithEmailPassword, loginWithEmailPassword } =
-    useUser() as any;
+  const { signUpWithEmailPassword, loginWithEmailPassword } = useUser();
 
   const [mode, setMode] = useState<"signup" | "login">("signup");
 
@@ -90,7 +89,8 @@ export default function SignInScreen() {
       await new Promise((resolve) => setTimeout(resolve, 150));
 
       showToast("Account created! You’re signed in.");
-      router.replace("/(tabs)/account");
+      // Go to the Account tab (file is in (tabs), path is just "/account")
+      router.replace("/account");
     } catch (e: any) {
       console.log("signUp error:", e);
       const code = e?.code || "";
@@ -139,11 +139,11 @@ export default function SignInScreen() {
     try {
       await loginWithEmailPassword(email, password);
 
-      // tiny delay so auth listeners + contexts can settle
+      // tiny buffer for downstream listeners
       await new Promise((resolve) => setTimeout(resolve, 150));
 
       showToast("Welcome back! You’re signed in.");
-      router.replace("/(tabs)/account");
+      router.replace("/account");
     } catch (e: any) {
       console.log("login error:", e);
       const msg = e?.message ? String(e.message) : String(e ?? "");

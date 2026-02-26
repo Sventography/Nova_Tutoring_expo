@@ -87,6 +87,8 @@ type CompanionEffectType =
   | "moons"
   | "books"
   | "fire"
+  | "party_confetti"
+  | "party_streamers"
   | "shield"
   | "legend_fire"
   | "legend_lightning"
@@ -103,6 +105,9 @@ const REQUIRES_SHIPPING = new Set<Category>([
   "clothing",
   "tangibles",
 ]);
+
+// Shared neon border for companion bubbles
+const NEON_BORDER = "#00E5FF";
 
 /* ------------------------------- Utilities -------------------------------- */
 
@@ -210,6 +215,75 @@ async function saveOrders(list: Order[]) {
 }
 
 /**
+ * Short ability blurb for each legendary companion.
+ */
+function getCompanionAbilityShort(
+  id: string | null | undefined
+): string | null {
+  const v = (id ?? "").toLowerCase();
+
+  if (
+    v === "companion:mecha_owl" ||
+    v === "legend:mecha_owl" ||
+    v === "mecha_owl" ||
+    v === "mecha-owl" ||
+    v === "companion_mecha_owl"
+  ) {
+    return "+10% achievement coins";
+  }
+
+  if (
+    v === "companion:chrono_fox" ||
+    v === "legend:chrono_fox" ||
+    v === "chrono_fox" ||
+    v === "chrono-fox" ||
+    v === "companion_chrono_fox"
+  ) {
+    return "+2 min quiz timer";
+  }
+
+  if (
+    v === "companion:celestra" ||
+    v === "legend:celestra" ||
+    v === "celestra" ||
+    v === "companion_celestra"
+  ) {
+    return "+25% streak coins";
+  }
+
+  if (
+    v === "companion:axolotl_oracle" ||
+    v === "legend:axolotl_oracle" ||
+    v === "axolotl_oracle" ||
+    v === "axolotl-oracle" ||
+    v === "companion_axolotl_oracle"
+  ) {
+    return "Streak shield (1x / 7 days)";
+  }
+
+  if (
+    v === "companion:astral_nova" ||
+    v === "legend:astral_nova" ||
+    v === "astral_nova" ||
+    v === "astral-nova" ||
+    v === "companion_astral_nova"
+  ) {
+    return "+500 coins per certificate";
+  }
+
+  if (
+    v === "companion:aetherwyrm" ||
+    v === "legend:aetherwyrm" ||
+    v === "aetherwyrm" ||
+    v === "companion_aetherwyrm"
+  ) {
+    return "+20% coins from all rewards";
+  }
+
+  return null;
+}
+
+/**
  * Build a stable, per-companion effect map so each one
  * gets a distinct animated effect and we don't spam stars.
  */
@@ -227,6 +301,7 @@ function buildCompanionEffectMap(): Record<string, CompanionEffectType> {
   ];
 
   let seqIdx = 0;
+  let firstPartyAssigned = false;
 
   (COMPANIONS as any[]).forEach((comp) => {
     const id = ((comp?.id ?? "") as string).toLowerCase();
@@ -238,19 +313,41 @@ function buildCompanionEffectMap(): Record<string, CompanionEffectType> {
       type = "legend_fire"; // Chrono Fox – fire FX
     } else if (id.includes("mecha") || text.includes("mecha owl")) {
       type = "legend_lightning"; // Mecha Owl – lightning FX
-    } else if (id.includes("axolotl") || text.includes("axolotl") || text.includes("oracle")) {
+    } else if (
+      id.includes("axolotl") ||
+      text.includes("axolotl") ||
+      text.includes("oracle")
+    ) {
       type = "shield"; // Axolotl Oracle – shield rings that spill out
     } else if (id.includes("celestra") || text.includes("celestra")) {
       type = "legend_bubbles"; // Celestra – bubble aura
-    } else if (id.includes("astral") || text.includes("astral nova") || text.includes("astral")) {
+    } else if (
+      id.includes("astral") ||
+      text.includes("astral nova") ||
+      text.includes("astral")
+    ) {
       type = "legend_sparkles"; // Astral Nova – gold spark diamonds
-    } else if (id.includes("aetherwyrm") || text.includes("aetherwyrm") || text.includes("wyrm")) {
+    } else if (
+      id.includes("aetherwyrm") ||
+      text.includes("aetherwyrm") ||
+      text.includes("wyrm")
+    ) {
       type = "legend_spiral"; // Aetherwyrm – spiral rings
     }
 
     // 🌙📚✨ Thematic matches for common companions (only if not set above)
     if (!type) {
-      if (text.includes("balloon")) {
+      const isParty = text.includes("party");
+
+      // 🥳 Party companions
+      if (isParty) {
+        if (!firstPartyAssigned) {
+          type = "party_confetti";
+          firstPartyAssigned = true;
+        } else {
+          type = "party_streamers";
+        }
+      } else if (text.includes("balloon")) {
         type = "balloons";
       } else if (text.includes("moon") || text.includes("luna")) {
         type = "moons";
@@ -264,7 +361,11 @@ function buildCompanionEffectMap(): Record<string, CompanionEffectType> {
         text.includes("glitter")
       ) {
         type = "sparkles";
-      } else if (text.includes("orb") || text.includes("nova") || text.includes("star")) {
+      } else if (
+        text.includes("orb") ||
+        text.includes("nova") ||
+        text.includes("star")
+      ) {
         type = "stars";
       } else if (
         text.includes("book") ||
@@ -282,7 +383,7 @@ function buildCompanionEffectMap(): Record<string, CompanionEffectType> {
       }
     }
 
-    // Fallback sequence so everything gets *something*
+    // Fallback sequence
     if (!type) {
       type = EFFECT_SEQUENCE[seqIdx % EFFECT_SEQUENCE.length];
       seqIdx += 1;
@@ -298,6 +399,16 @@ const COMPANION_EFFECT_MAP = buildCompanionEffectMap();
 
 function getCompanionEffect(id: string): CompanionEffectType {
   return COMPANION_EFFECT_MAP[id] ?? "stars";
+}
+
+/** Helpers for the “white background” legendary PNGs */
+function isWhiteLegendId(raw: string | null | undefined): boolean {
+  const v = (raw ?? "").toLowerCase();
+  return (
+    v.includes("mecha_owl") ||
+    v.includes("celestra") ||
+    v.includes("axolotl_oracle")
+  );
 }
 
 /* --------------------------------- UI bits ------------------------------- */
@@ -542,10 +653,14 @@ function ItemDetailModal({
   visible,
   item,
   onClose,
+  onPrimaryAction,
+  primaryLabel,
 }: {
   visible: boolean;
   item: any | null;
   onClose: () => void;
+  onPrimaryAction?: () => void;
+  primaryLabel?: string;
 }) {
   const { tokens } = useTheme();
   const [showAlt, setShowAlt] = useState(false);
@@ -565,7 +680,13 @@ function ItemDetailModal({
 
   const priceCoins = item.priceCoins ?? item.coinPrice ?? null;
   const priceUSD = item.priceUSD ?? null;
-  const abilityNote = item.ability?.note ?? null;
+
+  // Ability line for companions (fallback if catalog doesn't store a note)
+  const abilityShort = getCompanionAbilityShort(item.id);
+  const abilityNote = item.ability?.note ?? abilityShort ?? null;
+
+  const isWhiteLegendDetail =
+    item.category === "companions" && isWhiteLegendId(item.id);
 
   return (
     <Modal visible={visible} transparent animationType="fade">
@@ -610,6 +731,11 @@ function ItemDetailModal({
                     borderWidth: 1,
                     borderColor: tokens.border as any,
                     marginBottom: 12,
+                    backgroundColor: isWhiteLegendDetail
+                      ? "#000"
+                      : tokens.isDark
+                      ? "rgba(15,23,42,0.98)"
+                      : "rgba(255,255,255,0.98)",
                   }}
                 >
                   <Image
@@ -692,7 +818,7 @@ function ItemDetailModal({
                 </Text>
               ) : null}
 
-              {(priceCoins || priceUSD) && (
+              {(priceCoins || priceUSD) && item.category !== "companions" && (
                 <View
                   style={{
                     marginTop: 8,
@@ -747,35 +873,72 @@ function ItemDetailModal({
                 </View>
               )}
 
-              <Pressable
-                onPress={onClose}
-                style={({ pressed }) => ({
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "center",
                   marginTop: 8,
-                  alignSelf: "center",
-                  paddingHorizontal: 18,
-                  paddingVertical: 10,
-                  borderRadius: 999,
-                  borderWidth: 1,
-                  borderColor: tokens.border as any,
-                  backgroundColor: pressed
-                    ? tokens.isDark
-                      ? "rgba(148,163,184,0.25)"
-                      : "rgba(148,163,184,0.16)"
-                    : tokens.isDark
-                    ? "rgba(15,23,42,0.9)"
-                    : "rgba(255,255,255,0.9)",
-                })}
+                  columnGap: 10,
+                }}
               >
-                <Text
-                  style={{
-                    color: tokens.text as any,
-                    fontWeight: "800",
-                    fontSize: 14,
-                  }}
+                {onPrimaryAction && primaryLabel ? (
+                  <Pressable
+                    onPress={onPrimaryAction}
+                    style={({ pressed }) => ({
+                      paddingHorizontal: 18,
+                      paddingVertical: 10,
+                      borderRadius: 999,
+                      borderWidth: 1,
+                      borderColor: tokens.border as any,
+                      backgroundColor: pressed
+                        ? tokens.isDark
+                          ? "rgba(56,189,248,0.35)"
+                          : "rgba(59,130,246,0.25)"
+                        : tokens.isDark
+                        ? "rgba(56,189,248,0.25)"
+                        : "rgba(59,130,246,0.18)",
+                    })}
+                  >
+                    <Text
+                      style={{
+                        color: tokens.text as any,
+                        fontWeight: "800",
+                        fontSize: 14,
+                      }}
+                    >
+                      {primaryLabel}
+                    </Text>
+                  </Pressable>
+                ) : null}
+
+                <Pressable
+                  onPress={onClose}
+                  style={({ pressed }) => ({
+                    paddingHorizontal: 18,
+                    paddingVertical: 10,
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    borderColor: tokens.border as any,
+                    backgroundColor: pressed
+                      ? tokens.isDark
+                        ? "rgba(148,163,184,0.25)"
+                        : "rgba(148,163,184,0.16)"
+                      : tokens.isDark
+                      ? "rgba(15,23,42,0.9)"
+                      : "rgba(255,255,255,0.9)",
+                  })}
                 >
-                  Close
-                </Text>
-              </Pressable>
+                  <Text
+                    style={{
+                      color: tokens.text as any,
+                      fontWeight: "800",
+                      fontSize: 14,
+                    }}
+                  >
+                    Close
+                  </Text>
+                </Pressable>
+              </View>
             </ScrollView>
           </LinearGradient>
         </View>
@@ -807,7 +970,7 @@ function CompanionEffectOverlay({
 
   if (!type) return null;
 
-  // 🛡 Axolotl Oracle-style aura: expanding rings that spill out of the bubble
+  // 🛡 Axolotl Oracle shield rings
   if (type === "shield") {
     const rings = [0, 1, 2];
     return (
@@ -855,67 +1018,39 @@ function CompanionEffectOverlay({
     type === "legend_sparkles" ||
     type === "legend_spiral"
   ) {
-    // 🔥 Chrono Fox — more realistic fire plume + embers
+    // 🔥 Chrono Fox
     if (type === "legend_fire") {
-      const tongues = [0, 1, 2, 3, 4];
-      const embers = [0, 1, 2, 3, 4, 5];
+      const tongues = [0, 1, 2, 3, 4, 5, 6];
+      const embers = [0, 1, 2, 3];
 
       return (
         <>
-          {/* soft base glow under the fox */}
-          <Animated.View
-            style={{
-              position: "absolute",
-              left: "50%",
-              bottom: -4,
-              width: 120,
-              height: 70,
-              marginLeft: -60,
-              borderRadius: 60,
-              backgroundColor: "rgba(248,113,113,0.35)", // soft orange-red
-              opacity: anim.interpolate({
-                inputRange: [0, 0.4, 0.8, 1],
-                outputRange: [0, 0.9, 0.5, 0],
-              }),
-              transform: [
-                {
-                  scale: anim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0.8, 1.15],
-                  }),
-                },
-              ],
-            }}
-          />
-
-          {/* main flame tongues */}
           {tongues.map((idx) => {
-            const baseHeight = 60 + idx * 8;
-            const baseWidth = 16 + (idx % 2) * 2;
-            const offsetX = (idx - (tongues.length - 1) / 2) * 8;
+            const baseHeight = 50 + idx * 4;
+            const baseWidth = 12 + (idx % 3) * 2;
+            const offsetX = (idx - tongues.length / 2) * 6;
 
-            // keep the base near the bubble and just let the top dance
             const translateY = anim.interpolate({
               inputRange: [0, 1],
-              outputRange: [8, -24],
+              outputRange: [8, -baseHeight - 16],
             });
 
             const scaleY = anim.interpolate({
-              inputRange: [0, 0.4, 0.9, 1],
-              outputRange: [0.5, 1.3, 0.95, 0.6],
+              inputRange: [0, 0.4, 0.8, 1],
+              outputRange: [0.4, 1.2, 0.9, 0.5],
             });
 
             const opacity = anim.interpolate({
-              inputRange: [0, 0.3, 0.7, 1],
-              outputRange: [0, 1, 0.9, 0],
+              inputRange: [0, 0.3, 0.8, 1],
+              outputRange: [0, 1, 0.8, 0],
             });
 
             return (
               <Animated.View
-                key={`lf2-tongue-${idx}-${effectKey}`}
+                key={`lf-tongue-${idx}-${effectKey}`}
                 style={{
                   position: "absolute",
-                  bottom: 0,
+                  bottom: 2,
                   left: "50%",
                   width: baseWidth,
                   height: baseHeight,
@@ -923,43 +1058,29 @@ function CompanionEffectOverlay({
                   borderRadius: baseWidth,
                   opacity,
                   transform: [{ translateY }, { scaleY }],
-                  backgroundColor: "rgba(239,68,68,0.95)", // deep red/orange edge
+                  backgroundColor: "rgba(239,68,68,0.9)",
                   overflow: "hidden",
                 }}
               >
-                {/* hot bright core */}
                 <View
                   style={{
                     position: "absolute",
                     bottom: 0,
-                    left: 3,
-                    right: 3,
-                    top: baseHeight * 0.3,
+                    left: 2,
+                    right: 2,
+                    top: baseHeight * 0.25,
                     borderRadius: baseWidth,
-                    backgroundColor: "rgba(252,211,77,0.98)", // yellow core
-                  }}
-                />
-                {/* extra white-hot center near the base */}
-                <View
-                  style={{
-                    position: "absolute",
-                    bottom: 0,
-                    left: 5,
-                    right: 5,
-                    height: baseHeight * 0.35,
-                    borderRadius: baseWidth,
-                    backgroundColor: "rgba(254,249,195,0.95)", // almost white
+                    backgroundColor: "rgba(252,211,77,0.95)",
                   }}
                 />
               </Animated.View>
             );
           })}
 
-          {/* drifting embers around the fox */}
           {embers.map((idx) => {
-            const size = 5 + (idx % 3);
-            const baseRadius = 30 + idx * 10;
-            const angle = (idx / embers.length) * Math.PI + Math.PI / 6; // mainly above/around
+            const size = 6 + (idx % 2) * 2;
+            const baseRadius = 40 + idx * 8;
+            const angle = (idx / embers.length) * Math.PI * 2;
 
             const translateX = anim.interpolate({
               inputRange: [0, 1],
@@ -967,26 +1088,25 @@ function CompanionEffectOverlay({
             });
             const translateY = anim.interpolate({
               inputRange: [0, 1],
-              outputRange: [0, -Math.sin(angle) * baseRadius - 20],
+              outputRange: [0, -Math.sin(angle) * baseRadius - 30],
             });
-
             const opacity = anim.interpolate({
-              inputRange: [0, 0.2, 0.8, 1],
-              outputRange: [0, 1, 0.9, 0],
+              inputRange: [0, 0.2, 1],
+              outputRange: [0, 1, 0],
             });
 
             return (
               <Animated.View
-                key={`lf2-ember-${idx}-${effectKey}`}
+                key={`lf-ember-${idx}-${effectKey}`}
                 style={{
                   position: "absolute",
                   left: "50%",
-                  bottom: 30,
+                  bottom: 40,
                   width: size,
                   height: size,
                   marginLeft: -size / 2,
                   borderRadius: size / 2,
-                  backgroundColor: "rgba(252,211,77,0.98)",
+                  backgroundColor: "rgba(252,211,77,0.95)",
                   opacity,
                   transform: [{ translateX }, { translateY }],
                 }}
@@ -997,7 +1117,7 @@ function CompanionEffectOverlay({
       );
     }
 
-    // ⚡ Mecha Owl — jagged lightning with glow + flicker
+    // ⚡ Mecha Owl
     if (type === "legend_lightning") {
       const bolts = [0, 1];
 
@@ -1008,7 +1128,6 @@ function CompanionEffectOverlay({
 
       return (
         <>
-          {/* soft glow behind the bolts */}
           <Animated.View
             style={{
               position: "absolute",
@@ -1055,7 +1174,6 @@ function CompanionEffectOverlay({
                   transform: [{ translateY }],
                 }}
               >
-                {/* three jagged segments to fake a Z-bolt */}
                 <View
                   style={{
                     position: "absolute",
@@ -1099,7 +1217,7 @@ function CompanionEffectOverlay({
       );
     }
 
-    // 🫧 Celestra bubbles
+    // 🫧 Celestra
     if (type === "legend_bubbles") {
       const bubbles = [0, 1, 2, 3, 4, 5];
       return (
@@ -1140,7 +1258,7 @@ function CompanionEffectOverlay({
       );
     }
 
-    // ✨ Astral Nova sparkles
+    // ✨ Astral Nova
     if (type === "legend_sparkles") {
       const sparks = [0, 1, 2, 3, 4, 5];
       return (
@@ -1195,7 +1313,7 @@ function CompanionEffectOverlay({
       );
     }
 
-    // 🐉 Aetherwyrm spiral aura
+    // 🐉 Aetherwyrm
     if (type === "legend_spiral") {
       const rings = [0, 1, 2, 3];
       return (
@@ -1236,9 +1354,13 @@ function CompanionEffectOverlay({
     }
   }
 
-  // 💜 Default: emoji-based burst FX (KEEP for common companions)
+  // 💜 Default: emoji-based FX for non-legendaries
   const icons =
-    type === "hearts"
+    type === "party_confetti"
+      ? ["🎉", "🎊", "🎉", "🎊", "🎉", "🎊"]
+      : type === "party_streamers"
+      ? ["🎊", "🎉", "🎊", "🎉", "🎊", "🎉"]
+      : type === "hearts"
       ? ["💜", "🩷", "❤️", "💙", "💜", "🩵"]
       : type === "stardust"
       ? ["✨", "✧", "⋆", "✦", "✨", "⋆"]
@@ -1254,8 +1376,7 @@ function CompanionEffectOverlay({
       ? ["📚", "📖", "📘", "📙", "📗", "📕"]
       : type === "fire"
       ? ["🔥", "🔥", "🔥", "✨", "🔥", "🔥"]
-      : /* stars */
-        ["⭐", "🌟", "⭐", "✦", "✧", "⭐"];
+      : ["⭐", "🌟", "⭐", "✦", "✧", "⭐"];
 
   return (
     <>
@@ -1375,16 +1496,64 @@ export default function Shop() {
   const [activeEffect, setActiveEffect] = useState<CompanionEffectType>(null);
   const [effectKey, setEffectKey] = useState(0);
 
+  // 🔍 Pinch state for floating bubble
+  const pinchDistanceRef = useRef<number | null>(null);
+  const pinchBaseScaleRef = useRef<number>(1);
+  const pinchScaleRef = useRef<number>(1);
+  const MIN_FLOAT_SCALE = 0.7;
+  const MAX_FLOAT_SCALE = 1.6;
+
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
-      onPanResponderMove: (_evt, gesture) => {
-        const newX = floatBasePos.current.x + gesture.dx;
-        const newY = floatBasePos.current.y + gesture.dy;
-        setFloatPos({ x: newX, y: newY });
+      onPanResponderGrant: (evt) => {
+        const touches = (evt.nativeEvent as any).touches || [];
+        if (touches.length === 2) {
+          const [t1, t2] = touches;
+          const dx = t2.pageX - t1.pageX;
+          const dy = t2.pageY - t1.pageY;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          pinchDistanceRef.current = dist;
+          pinchBaseScaleRef.current = pinchScaleRef.current;
+        } else {
+          pinchDistanceRef.current = null;
+        }
+      },
+      onPanResponderMove: (evt, gesture) => {
+        const touches = (evt.nativeEvent as any).touches || [];
+
+        if (touches.length === 2) {
+          // Pinch to scale
+          const [t1, t2] = touches;
+          const dx = t2.pageX - t1.pageX;
+          const dy = t2.pageY - t1.pageY;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+
+          if (!pinchDistanceRef.current) {
+            pinchDistanceRef.current = dist;
+            pinchBaseScaleRef.current = pinchScaleRef.current;
+            return;
+          }
+
+          const rawRatio = dist / pinchDistanceRef.current;
+          let nextScale = pinchBaseScaleRef.current * rawRatio;
+          nextScale = Math.max(
+            MIN_FLOAT_SCALE,
+            Math.min(MAX_FLOAT_SCALE, nextScale)
+          );
+
+          pinchScaleRef.current = nextScale;
+          floatScale.setValue(nextScale);
+        } else if (touches.length === 1) {
+          // Single-finger drag
+          const newX = floatBasePos.current.x + gesture.dx;
+          const newY = floatBasePos.current.y + gesture.dy;
+          setFloatPos({ x: newX, y: newY });
+        }
       },
       onPanResponderRelease: (_evt, gesture) => {
+        // Clamp position after drag
         const minX = 8;
         const maxX = windowDims.width - FLOAT_SIZE - 8;
         const minY = 60;
@@ -1771,6 +1940,22 @@ export default function Shop() {
     () =>
       COMPANIONS.filter((c: any) => {
         const cid = c.canonId || canonId(c.id);
+
+        const effectType = getCompanionEffect(c.id);
+        const isLegendary =
+          effectType === "legend_fire" ||
+          effectType === "legend_lightning" ||
+          effectType === "legend_bubbles" ||
+          effectType === "legend_sparkles" ||
+          effectType === "legend_spiral" ||
+          effectType === "shield";
+
+        // v1: legendary companions are preview-only, so they never appear
+        // in "My Companions" and can't be equipped yet.
+        if (isLegendary) {
+          return false;
+        }
+
         const fromContext = (ownedCompanionIds || []).some(
           (ownedId: string) =>
             ownedId === cid ||
@@ -2143,7 +2328,7 @@ export default function Shop() {
     }
   }
 
-  // ✅ NEW: call startCheckout with a proper amount in dollars
+  // ✅ call startCheckout with a proper amount in dollars
   async function moneyBuy(it: any, meta?: { size?: string }) {
     try {
       const amount =
@@ -2194,25 +2379,25 @@ export default function Shop() {
   /* ------------------------- Companion trigger logic ---------------------- */
 
   function wiggleAction() {
-    floatScale.setValue(1);
+    floatScale.setValue(pinchScaleRef.current);
     Animated.sequence([
       Animated.timing(floatScale, {
-        toValue: 1.18,
+        toValue: pinchScaleRef.current * 1.18,
         duration: 120,
         useNativeDriver: true,
       }),
       Animated.timing(floatScale, {
-        toValue: 0.95,
+        toValue: pinchScaleRef.current * 0.95,
         duration: 110,
         useNativeDriver: true,
       }),
       Animated.timing(floatScale, {
-        toValue: 1.05,
+        toValue: pinchScaleRef.current * 1.05,
         duration: 110,
         useNativeDriver: true,
       }),
       Animated.timing(floatScale, {
-        toValue: 1,
+        toValue: pinchScaleRef.current,
         duration: 110,
         useNativeDriver: true,
       }),
@@ -2278,22 +2463,22 @@ export default function Shop() {
   }
 
   function swirlAction() {
-    floatScale.setValue(1);
+    floatScale.setValue(pinchScaleRef.current);
     floatRotate.setValue(0);
     Animated.parallel([
       Animated.sequence([
         Animated.timing(floatScale, {
-          toValue: 1.2,
+          toValue: pinchScaleRef.current * 1.2,
           duration: 160,
           useNativeDriver: true,
         }),
         Animated.timing(floatScale, {
-          toValue: 0.95,
+          toValue: pinchScaleRef.current * 0.95,
           duration: 140,
           useNativeDriver: true,
         }),
         Animated.timing(floatScale, {
-          toValue: 1,
+          toValue: pinchScaleRef.current,
           duration: 140,
           useNativeDriver: true,
         }),
@@ -2356,6 +2541,11 @@ export default function Shop() {
       floatBasePos.current = { x: startX, y: startY };
       setFloatPos({ x: startX, y: startY });
 
+      // reset pinch scale when a new companion is summoned
+      pinchScaleRef.current = 1;
+      pinchBaseScaleRef.current = 1;
+      floatScale.setValue(1);
+
       wiggleAction();
     }
 
@@ -2417,6 +2607,8 @@ export default function Shop() {
         : equipable === "cursor"
         ? eqCursor === cid
         : false;
+
+    const { tokens } = useTheme();
 
     return (
       <Card key={it.id} color={color}>
@@ -2542,7 +2734,7 @@ export default function Shop() {
             <View
               style={{
                 flexDirection: "row",
-                justifyContent: "space_between",
+                justifyContent: "space-between",
                 columnGap: 8,
               }}
             >
@@ -2571,10 +2763,10 @@ export default function Shop() {
                   alignItems: "center",
                   paddingVertical: 10,
                   borderRadius: 10,
+                  borderWidth: 1,
                   borderColor: color,
                   backgroundColor: "transparent",
                   opacity: pressed ? 0.9 : 1,
-                  borderWidth: 1,
                 })}
               >
                 <Text style={{ color: color, fontWeight: "800" }}>
@@ -2730,7 +2922,21 @@ export default function Shop() {
     );
   };
 
+  // Decide square-vs-round for the floating companion bubble
+  const isFloatingSquareLegend =
+    !!floatingCompanion &&
+    isWhiteLegendId(
+      (floatingCompanion.canonId || floatingCompanion.id) as string
+    );
+  const FLOAT_BORDER_RADIUS = isFloatingSquareLegend ? 16 : FLOAT_SIZE / 2;
+  const FLOAT_BG_COLOR = isFloatingSquareLegend
+    ? "#000"
+    : tokens.isDark
+    ? "rgba(15,23,42,0.95)"
+    : "rgba(255,255,255,0.95)";
+
   /* ---------------------------------- UI --------------------------------- */
+
   return (
     <LinearGradient
       colors={tokens.gradient as any}
@@ -2819,8 +3025,30 @@ export default function Shop() {
             </Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {ownedCompanions.map((it: any) => {
-                const isActive = stripActiveId === it.id;
-                const scale = isActive ? companionScale : 1;
+                const cid = it.canonId || canonId(it.id);
+                const isActive =
+                  equippedCompanionId &&
+                  canonId(equippedCompanionId) === cid;
+                const scale =
+                  isActive || stripActiveId === it.id
+                    ? companionScale
+                    : 1;
+
+                const abilityShort = getCompanionAbilityShort(it.id);
+
+                // Neon cyan base border; gold only for the selected/equipped one
+                const baseBorderColor = NEON_BORDER;
+                const borderColor = isActive ? "#FACC15" : baseBorderColor;
+
+                // White legendary companions: treat as square-ish with black bg
+                const isWhiteLegend = isWhiteLegendId(cid);
+                const bubbleRadius = isWhiteLegend ? 12 : 36;
+
+                const bubbleBg = isWhiteLegend
+                  ? "#000"
+                  : tokens.isDark
+                  ? "rgba(15,23,42,0.9)"
+                  : "rgba(255,255,255,0.9)";
 
                 return (
                   <Animated.View
@@ -2831,21 +3059,23 @@ export default function Shop() {
                     }}
                   >
                     <Pressable
-                      onPress={() => triggerCompanion(it.id)}
+                      onPress={() => setDetailItem(it)}
+                      onLongPress={() => triggerCompanion(it.id)}
+                      delayLongPress={180}
                       style={({ pressed }) => ({
                         width: 72,
                         height: 72,
-                        borderRadius: 16,
-                        borderWidth: 1,
-                        borderColor: CATEGORY_BORDER.tangibles,
+                        borderRadius: bubbleRadius,
+                        borderWidth: 4, // thick neon/gold border
+                        borderColor,
                         overflow: "hidden",
                         alignItems: "center",
                         justifyContent: "center",
                         backgroundColor: pressed
-                          ? "rgba(96,165,250,0.24)"
-                          : tokens.isDark
-                          ? "rgba(15,23,42,0.9)"
-                          : "rgba(255,255,255,0.9)",
+                          ? isWhiteLegend
+                            ? "rgba(0,0,0,0.9)"
+                            : "rgba(96,165,250,0.24)"
+                          : bubbleBg,
                       })}
                     >
                       {it.image ? (
@@ -2855,18 +3085,26 @@ export default function Shop() {
                           resizeMode="contain"
                         />
                       ) : (
-                        <Text
+                        <View
                           style={{
-                            color: tokens.text as any,
-                            fontSize: 11,
-                            fontWeight: "700",
-                            textAlign: "center",
+                            flex: 1,
+                            alignItems: "center",
+                            justifyContent: "center",
                             paddingHorizontal: 4,
                           }}
-                          numberOfLines={2}
                         >
-                          {it.title}
-                        </Text>
+                          <Text
+                            style={{
+                              color: tokens.text as any,
+                              fontSize: 11,
+                              fontWeight: "700",
+                              textAlign: "center",
+                            }}
+                            numberOfLines={2}
+                          >
+                            {it.title}
+                          </Text>
+                        </View>
                       )}
                     </Pressable>
                     <Text
@@ -2881,6 +3119,33 @@ export default function Shop() {
                     >
                       {it.shortLabel || it.title}
                     </Text>
+                    {abilityShort && (
+                      <Text
+                        style={{
+                          color: "#FDE68A",
+                          fontSize: 9,
+                          fontWeight: "700",
+                          marginTop: 2,
+                          maxWidth: 90,
+                        }}
+                        numberOfLines={2}
+                      >
+                        {abilityShort}
+                      </Text>
+                    )}
+                    {isActive && (
+                      <Text
+                        style={{
+                          color: "#FACC15",
+                          fontSize: 10,
+                          fontWeight: "800",
+                          marginTop: 2,
+                          textAlign: "center",
+                        }}
+                      >
+                        Equipped
+                      </Text>
+                    )}
                   </Animated.View>
                 );
               })}
@@ -2924,20 +3189,60 @@ export default function Shop() {
         {/* Companions */}
         <Section title="Companions">
           {COMPANIONS.map((it: any) => {
+            const cid = it.canonId || canonId(it.id);
+
             const owned =
               isOwned(it.id) ||
               isOwned(it.canonId) ||
               (ownedCompanionIds || []).some(
                 (ownedId: string) =>
-                  ownedId === it.canonId ||
+                  ownedId === cid ||
                   ownedId === it.id ||
                   ownedId === canonId(it.id)
               );
+
+            const isEquipped =
+              equippedCompanionId &&
+              canonId(equippedCompanionId) === cid;
+
             const src = it.image;
             const priceCoins = it.coinPrice ?? 25000;
 
+            const effectType = getCompanionEffect(it.id);
+            const isLegendary =
+              effectType === "legend_fire" ||
+              effectType === "legend_lightning" ||
+              effectType === "legend_bubbles" ||
+              effectType === "legend_sparkles" ||
+              effectType === "legend_spiral" ||
+              effectType === "shield";
+
+            const isWhiteLegend = isWhiteLegendId(cid);
+
+            const abilityShort = getCompanionAbilityShort(it.id);
+
+            const { tokens } = useTheme();
+
+            // Neon cyan for legendaries, gold when equipped, normal border for others
+            const baseBorderColor = isLegendary
+              ? "#22E5FF"
+              : CATEGORY_BORDER.tangibles;
+            const equippedBorderColor = "#FACC15";
+            const borderColor = isEquipped ? equippedBorderColor : baseBorderColor;
+
+            const legendImageOpacity = isLegendary ? 0.5 : 1;
+            const legendTextColor = isLegendary
+              ? "rgba(148,163,184,0.95)"
+              : (tokens.text as any);
+
+            // ❌ Avoid double bubbles for non-legendaries (owned ones move to My Companions).
+            // Legendary companions always stay visible here as "coming soon".
+            if (owned && !isLegendary) {
+              return null;
+            }
+
             return (
-              <Card key={it.id} color={CATEGORY_BORDER.tangibles}>
+              <Card key={it.id} color={borderColor}>
                 {src ? (
                   <Pressable
                     onPress={() => setDetailItem(it)}
@@ -2948,9 +3253,16 @@ export default function Shop() {
                       height: 110,
                       borderRadius: 10,
                       overflow: "hidden",
-                      borderWidth: 1,
-                      borderColor: CATEGORY_BORDER.tangibles,
+                      borderWidth: isLegendary ? 2 : 1,
+                      borderColor,
                       marginBottom: 8,
+                      backgroundColor:
+                        isLegendary && isWhiteLegend
+                          ? "#000"
+                          : tokens.isDark
+                          ? "rgba(15,23,42,0.95)"
+                          : "rgba(255,255,255,0.95)",
+                      opacity: legendImageOpacity,
                     }}
                   >
                     <Image
@@ -2963,7 +3275,7 @@ export default function Shop() {
 
                 <Text
                   style={{
-                    color: tokens.text as any,
+                    color: legendTextColor,
                     fontSize: 14,
                     fontWeight: "700",
                     textAlign: "center",
@@ -2972,10 +3284,25 @@ export default function Shop() {
                   {it.title}
                 </Text>
 
+                {isLegendary && abilityShort && (
+                  <Text
+                    style={{
+                      color: isEquipped ? "#FACC15" : "#FDE68A",
+                      fontSize: 11,
+                      fontWeight: "700",
+                      textAlign: "center",
+                      marginTop: 4,
+                    }}
+                    numberOfLines={2}
+                  >
+                    {abilityShort}
+                  </Text>
+                )}
+
                 {it.desc ? (
                   <Text
                     style={{
-                      color: tokens.text as any,
+                      color: legendTextColor,
                       fontSize: 12,
                       lineHeight: 16,
                       textAlign: "center",
@@ -2988,9 +3315,47 @@ export default function Shop() {
                   </Text>
                 ) : null}
 
+                {isEquipped && !isLegendary && (
+                  <Text
+                    style={{
+                      color: "#FACC15",
+                      fontSize: 11,
+                      fontWeight: "800",
+                      textAlign: "center",
+                      marginTop: 4,
+                    }}
+                  >
+                    Equipped
+                  </Text>
+                )}
+
                 <View style={{ height: 8 }} />
 
-                {owned ? (
+                {isLegendary ? (
+                  <View
+                    style={{
+                      alignItems: "center",
+                      paddingVertical: 10,
+                      borderRadius: 10,
+                      borderWidth: 1,
+                      borderColor,
+                      backgroundColor: tokens.isDark
+                        ? "rgba(15,23,42,0.8)"
+                        : "rgba(229,231,235,0.9)",
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: legendTextColor,
+                        fontWeight: "800",
+                        fontSize: 12,
+                        textAlign: "center",
+                      }}
+                    >
+                      Coming soon in the next update!
+                    </Text>
+                  </View>
+                ) : owned ? (
                   <Pressable
                     onPress={() => triggerCompanion(it.id)}
                     style={({ pressed }) => ({
@@ -2998,7 +3363,7 @@ export default function Shop() {
                       paddingVertical: 10,
                       borderRadius: 10,
                       borderWidth: 1,
-                      borderColor: tokens.border as any,
+                      borderColor: borderColor,
                       backgroundColor: pressed
                         ? "rgba(96,165,250,0.18)"
                         : tokens.isDark
@@ -3008,24 +3373,28 @@ export default function Shop() {
                   >
                     <Text
                       style={{
-                        color: tokens.text as any,
+                        color: borderColor,
                         fontWeight: "800",
                       }}
                     >
-                      Summon ✓
+                      {isEquipped ? "Summon ✓" : "Summon"}
                     </Text>
                   </Pressable>
                 ) : (
                   <Pressable
                     onPress={() =>
-                      buyWithCoins({ ...it, priceCoins, category: "companions" })
+                      buyWithCoins({
+                        ...it,
+                        priceCoins,
+                        category: "companions",
+                      })
                     }
                     style={({ pressed }) => ({
                       alignItems: "center",
                       paddingVertical: 10,
                       borderRadius: 10,
                       borderWidth: 1,
-                      borderColor: CATEGORY_BORDER.tangibles,
+                      borderColor,
                       backgroundColor: pressed
                         ? "rgba(96,165,250,0.15)"
                         : "rgba(96,165,250,0.08)",
@@ -3033,7 +3402,7 @@ export default function Shop() {
                   >
                     <Text
                       style={{
-                        color: CATEGORY_BORDER.tangibles,
+                        color: borderColor,
                         fontWeight: "800",
                       }}
                     >
@@ -3168,14 +3537,11 @@ export default function Shop() {
               },
               { rotate: floatRotation },
             ],
-            borderRadius: 24,
-            // ✨ allow effects to flow outside the box
+            borderRadius: FLOAT_BORDER_RADIUS,
             overflow: "visible",
-            borderWidth: 1,
-            borderColor: CATEGORY_BORDER.tangibles,
-            backgroundColor: tokens.isDark
-              ? "rgba(15,23,42,0.95)"
-              : "rgba(255,255,255,0.95)",
+            borderWidth: 4,
+            borderColor: NEON_BORDER,
+            backgroundColor: FLOAT_BG_COLOR,
             alignItems: "center",
             justifyContent: "center",
             shadowColor: "#000",
@@ -3255,11 +3621,82 @@ export default function Shop() {
       />
 
       {/* Zoomed item detail modal */}
-      <ItemDetailModal
-        visible={!!detailItem}
-        item={detailItem}
-        onClose={() => setDetailItem(null)}
-      />
+      {(() => {
+        const isDetailCompanion =
+          detailItem && detailItem.category === "companions";
+
+        const isDetailLegendary =
+          isDetailCompanion &&
+          (() => {
+            const eff = getCompanionEffect(detailItem.id);
+            return (
+              eff === "legend_fire" ||
+              eff === "legend_lightning" ||
+              eff === "legend_bubbles" ||
+              eff === "legend_sparkles" ||
+              eff === "legend_spiral" ||
+              eff === "shield"
+            );
+          })();
+
+        const isDetailCompanionOwned =
+          isDetailCompanion && !isDetailLegendary
+            ? (() => {
+                const cid =
+                  detailItem.canonId || canonId(detailItem.id);
+                const fromContext = (ownedCompanionIds || []).some(
+                  (ownedId: string) =>
+                    ownedId === cid ||
+                    ownedId === detailItem.id ||
+                    ownedId === canonId(detailItem.id)
+                );
+                const fromPurchases =
+                  isOwned(detailItem.id) ||
+                  isOwned(cid) ||
+                  isOwned(canonId(detailItem.id));
+                return fromContext || fromPurchases;
+              })()
+            : false;
+
+        const primaryLabel =
+          isDetailCompanion && isDetailLegendary
+            ? "Coming soon in the next update!"
+            : isDetailCompanion
+            ? isDetailCompanionOwned
+              ? "Summon ✓"
+              : `${(
+                  detailItem.coinPrice ?? 25000
+                ).toLocaleString()} coins`
+            : undefined;
+
+        const onPrimaryAction =
+          isDetailCompanion && !isDetailLegendary
+            ? () => {
+                if (!detailItem) return;
+                if (isDetailCompanionOwned) {
+                  triggerCompanion(detailItem.id);
+                  setDetailItem(null);
+                } else {
+                  const priceCoins = detailItem.coinPrice ?? 25000;
+                  buyWithCoins({
+                    ...detailItem,
+                    priceCoins,
+                    category: "companions",
+                  });
+                }
+              }
+            : undefined;
+
+        return (
+          <ItemDetailModal
+            visible={!!detailItem}
+            item={detailItem}
+            onClose={() => setDetailItem(null)}
+            onPrimaryAction={onPrimaryAction}
+            primaryLabel={primaryLabel}
+          />
+        );
+      })()}
     </LinearGradient>
   );
 }

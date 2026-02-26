@@ -1,6 +1,12 @@
 // app/AppProviders.tsx
 import React, { useEffect } from "react";
 import * as Linking from "expo-linking";
+import {
+  ActivityIndicator,
+  StyleSheet,
+  View,
+  Text,
+} from "react-native";
 
 import { ThemeProvider, useTheme } from "./context/ThemeContext";
 import { CoinsProvider, useCoins } from "./context/CoinsContext";
@@ -10,7 +16,7 @@ import { CollectionsProvider } from "./context/CollectionsContext";
 import { AchievementsProvider } from "./context/AchievementsContext";
 import { ToastProvider } from "./context/ToastContext";
 import { CertificatesProvider } from "./context/CertificatesContext";
-import { UserProvider } from "./context/UserContext";
+import { UserProvider, useUser } from "./context/UserContext";
 import { CompanionProvider } from "./context/CompanionContext";
 import { StreakProvider } from "./context/StreakContext";
 import AchievementConfettiOverlay from "./components/AchievementConfettiOverlay";
@@ -117,41 +123,77 @@ function DevGrantListener() {
   return null;
 }
 
+/**
+ * UserGate:
+ * Holds the entire app until UserContext.ready is true,
+ * so you don't get stuck on "Loading your profile..." after tapping Let's Learn.
+ */
+function UserGate({ children }: { children: React.ReactNode }) {
+  const { ready } = useUser();
+
+  if (!ready) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" />
+        <Text style={styles.loadingText}>Loading your profile...</Text>
+      </View>
+    );
+  }
+
+  return <>{children}</>;
+}
+
 export function AppProviders(props: any) {
   const { children } = props;
 
   return (
     <UserProvider>
-      <CoinsProvider>
-        <PurchasesProvider>
-          <CompanionProvider>
-            <StreakProvider>
-              <ThemeProvider>
-                <ThemeGate>
-                  <CursorProvider>
-                    <CollectionsProvider>
-                      <CertificatesProvider>
-                        <ToastProvider>
-                          <AchievementsProvider>
-                            <DevCoinsListener />
-                            <DevThemeListener />
-                            <DevGrantListener />
-                            {/* Global overlay that watches unlocked achievements */}
-                            <AchievementConfettiOverlay />
-                            {children}
-                          </AchievementsProvider>
-                        </ToastProvider>
-                      </CertificatesProvider>
-                    </CollectionsProvider>
-                  </CursorProvider>
-                </ThemeGate>
-              </ThemeProvider>
-            </StreakProvider>
-          </CompanionProvider>
-        </PurchasesProvider>
-      </CoinsProvider>
+      <UserGate>
+        <CoinsProvider>
+          <PurchasesProvider>
+            <CompanionProvider>
+              <StreakProvider>
+                <ThemeProvider>
+                  <ThemeGate>
+                    <CursorProvider>
+                      <CollectionsProvider>
+                        <CertificatesProvider>
+                          <ToastProvider>
+                            <AchievementsProvider>
+                              <DevCoinsListener />
+                              <DevThemeListener />
+                              <DevGrantListener />
+                              {/* Global overlay that watches unlocked achievements */}
+                              <AchievementConfettiOverlay />
+                              {children}
+                            </AchievementsProvider>
+                          </ToastProvider>
+                        </CertificatesProvider>
+                      </CollectionsProvider>
+                    </CursorProvider>
+                  </ThemeGate>
+                </ThemeProvider>
+              </StreakProvider>
+            </CompanionProvider>
+          </PurchasesProvider>
+        </CoinsProvider>
+      </UserGate>
     </UserProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#020617", // dark navy-ish fallback
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: "white",
+  },
+});
 
 export default AppProviders;
