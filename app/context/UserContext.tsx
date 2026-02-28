@@ -29,6 +29,9 @@ type UserContextValue = {
   supabaseUserId: string | null;
   user: LocalUserProfile | null;
 
+  /** Convenience boolean for Home / header */
+  isLoggedIn: boolean;
+
   username: string | null;
   name: string | null;
   contactEmail: string | null;
@@ -442,13 +445,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
           }
 
           // If we just signed in or refreshed, we know auth state is valid:
-          // make sure ready is true so UI can move past splash immediately.
           if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
             setReady(true);
           }
 
           if (event === "SIGNED_OUT") {
-            // Nothing extra here; signOut() already clears local state.
             setReady(true);
           }
         } catch (e) {
@@ -727,8 +728,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
           console.warn("[UserContext] signUp hydrate error:", e);
         }
       }
+
+      setReady(true);
     } catch (e) {
       console.warn("[UserContext] signUpWithEmailPassword threw:", e);
+      setReady(true);
       throw e;
     }
   };
@@ -736,10 +740,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const loginWithEmailPassword = async (email: string, password: string) => {
     console.log("[UserContext] loginWithEmailPassword start");
     try {
-      // We briefly mark not-ready so any UI that listens to this can show a
-      // clean transition, and so we don't render stale "guest" state.
-      setReady(false);
-
       console.log("[UserContext] login: calling signInWithPassword");
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -770,11 +770,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
       }
 
       if (authUser) {
-        // Set the ID immediately so consumers don't have to wait for onAuthStateChange
         setSupabaseUserId(authUser.id);
 
-        // Hydrate profile synchronously for the *first* login so the
-        // account + header + tabs all see a real user on first navigation.
         try {
           console.log(
             "[UserContext] login: hydrate profile for",
@@ -789,15 +786,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
         setProfile(null);
       }
 
-      // We know auth is valid now; ensure ready is true so layout can move on.
-      // Callers that `await loginWithEmailPassword` can safely navigate after this.
-      setReady(true);
-
       console.log("[UserContext] loginWithEmailPassword done");
     } catch (e) {
       console.warn("[UserContext] loginWithEmailPassword threw:", e);
-      // Even if login fails, don't leave the app permanently in "not ready".
-      setReady(true);
       throw e;
     }
   };
@@ -841,17 +832,17 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     try {
+      // Safe even if there's no active session (guest mode)
       await supabase.auth.signOut();
     } catch (e) {
       console.warn("[UserContext] signOut error:", e);
     } finally {
+      // Always clear local auth + profile so guests reset too
       setSession(null);
       setSupabaseUserId(null);
       setProfile(null);
-      await AsyncStorage.removeItem(SUPABASE_JWT_KEY);
-      await AsyncStorage.removeItem(PROFILE_KEY);
-      await AsyncStorage.removeItem(SUPABASE_AUTH_TOKEN_KEY);
-      // Also clear per-user game state so next login starts clean
+
+      await clearSupabaseAuthStorage("signOut");
       await hardClearLocalGameState();
       setReady(true);
     }
@@ -877,11 +868,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
     profile?.imageUrl ??
     null;
 
+  const isLoggedIn = !!(session && session.user && session.user.id);
+
   const value: UserContextValue = {
     ready,
     session,
     supabaseUserId,
     user: profile,
+
+    isLoggedIn,
 
     username: flatUsername,
     name: flatName,

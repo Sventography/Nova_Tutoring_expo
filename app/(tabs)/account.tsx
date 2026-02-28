@@ -226,7 +226,12 @@ export default function AccountScreen() {
   }
 
   async function onSignOut() {
-    await signOut?.();
+    try {
+      // Always clear via context helper (works for guests + logged-in)
+      await signOut?.();
+    } catch (e) {
+      console.log("[Account] signOut error", e);
+    }
 
     // also clear coins + streak locally so HeaderBar updates instantly
     setCoins?.(0);
@@ -235,13 +240,14 @@ export default function AccountScreen() {
     setName("");
     setContactEmail("");
     setAvatarLocal(null);
-    showToast("Signed out");
 
-    // go straight to full sign-in / sign-up screen
+    showToast(isLoggedIn ? "Signed out" : "Session cleared");
+
+    // go back to the landing screen (works for both guest + logged-in)
     try {
-      router.replace("/sign-in");
-    } catch {
-      // ignore navigation errors
+      router.replace("/");
+    } catch (e) {
+      console.log("[Account] Failed to navigate to / from Account", e);
     }
   }
 
@@ -451,18 +457,10 @@ export default function AccountScreen() {
                   : "rgba(255,107,107,0.12)",
               },
             ]}
-            onPress={
-              isLoggedIn
-                ? onSignOut
-                : () => {
-                    try {
-                      router.push("/sign-in");
-                    } catch {}
-                  }
-            }
+            onPress={onSignOut}
           >
             <Text style={[S.btnt, { color: tokens.text }]}>
-              {isLoggedIn ? "Sign Out" : "Sign In"}
+              {isLoggedIn ? "Sign Out" : "Back to Start"}
             </Text>
           </Pressable>
         </View>

@@ -1,4 +1,3 @@
-// app/(tabs)/quiz.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
@@ -8,6 +7,7 @@ import {
   StyleSheet,
   ScrollView,
   Modal,
+  Alert,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -21,9 +21,7 @@ import { logQuizResult } from "../utils/quiz-history-bridge";
 import { useCoins } from "../context/CoinsContext";
 import { useCompanion } from "../context/CompanionContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
-// 🔧 Toggle this to false before App Store release if you want to hide cheats
-const DEV_ENABLE_QUIZ_CHEATS = true;
+import * as Linking from "expo-linking";
 
 type QA = { question: string; answer: string };
 type QItem = { question: string; answer: string; choices: string[] };
@@ -34,6 +32,10 @@ const ADVANCE_DELAY = 650;
 
 // Astral Nova legendary bonus for certificates
 const ASTRAL_NOVA_CERT_BONUS = 500;
+
+// Discord invite link + preference key
+const DISCORD_INVITE_URL = "https://discord.gg/NR9PAjtrg";
+const DISCORD_PROMPT_KEY = "discord:quizInvitePrompt:v1";
 
 /**
  * BIG fake distractor bank.
@@ -299,6 +301,9 @@ export default function QuizScreen() {
   const [done, setDone] = useState(false);
   const [showCert, setShowCert] = useState(false);
 
+  // Discord prompt visibility
+  const [showDiscordPrompt, setShowDiscordPrompt] = useState<boolean>(true);
+
   const loggedRef = useRef(false);
   const autoRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const totalTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -311,6 +316,51 @@ export default function QuizScreen() {
     () => (title ? String(title) : "Quiz"),
     [title]
   );
+
+  // Load Discord prompt preference once
+  useEffect(() => {
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem(DISCORD_PROMPT_KEY);
+        if (raw === "disabled") {
+          setShowDiscordPrompt(false);
+        } else {
+          setShowDiscordPrompt(true);
+        }
+      } catch {
+        setShowDiscordPrompt(true);
+      }
+    })();
+  }, []);
+
+  // open Discord
+  const handleOpenDiscord = () => {
+    if (!DISCORD_INVITE_URL) {
+      Alert.alert(
+        "Discord link not set",
+        "Please update the Discord invite link in the app."
+      );
+      return;
+    }
+
+    try {
+      Linking.openURL(DISCORD_INVITE_URL);
+    } catch (e) {
+      Alert.alert(
+        "Could not open Discord",
+        "Please check your internet connection and try again."
+      );
+    }
+  };
+
+  const handleDisableDiscordPrompt = async () => {
+    setShowDiscordPrompt(false);
+    try {
+      await AsyncStorage.setItem(DISCORD_PROMPT_KEY, "disabled");
+    } catch {
+      // ignore
+    }
+  };
 
   // timer
   useEffect(() => {
@@ -480,35 +530,6 @@ export default function QuizScreen() {
     void logResultIfNeeded("finish");
   }
 
-  // 🔧 Dev helper: instantly finish a quiz with a target percentage
-  function devFinish(targetPct: number) {
-    if (!DEV_ENABLE_QUIZ_CHEATS) return;
-    if (!total) return;
-
-    const rawCorrect = Math.round((targetPct / 100) * total);
-    const clamped = Math.min(total, Math.max(0, rawCorrect));
-
-    // stop the timer
-    if (totalTimerRef.current) {
-      clearInterval(totalTimerRef.current);
-      totalTimerRef.current = null;
-    }
-
-    // set the score + state
-    setCorrect(clamped);
-    setIdx(total - 1);
-    setSelected(null);
-    setLocked(true);
-    setTotalLeft(0);
-
-    // make sure the finish pipeline runs fresh
-    setShowCert(false);
-    certBonusGivenRef.current = false;
-    loggedRef.current = false;
-
-    setDone(true);
-  }
-
   const mm = Math.floor(totalLeft / 60);
   const ss = String(totalLeft % 60).padStart(2, "0");
 
@@ -665,6 +686,35 @@ export default function QuizScreen() {
           </Pressable>
         </View>
 
+        {/* Discord invite after quiz finishes, until user disables it */}
+        {showDiscordPrompt && (
+          <View style={S.discordContainer}>
+            <Pressable onPress={handleOpenDiscord}>
+              <Text
+                style={[
+                  S.discordLinkText,
+                  { color: accent },
+                ]}
+              >
+                💬 Join the Nova Tutoring Discord
+              </Text>
+            </Pressable>
+            <Pressable
+              style={S.discordDisableBtn}
+              onPress={handleDisableDiscordPrompt}
+            >
+              <Text
+                style={[
+                  S.discordDisableText,
+                  { color: metaColor },
+                ]}
+              >
+                Don’t show this again
+              </Text>
+            </Pressable>
+          </View>
+        )}
+
         {/* 80%+ certificate modal */}
         <Modal
           visible={showCert}
@@ -746,78 +796,6 @@ export default function QuizScreen() {
 
   return renderShell(
     <>
-      {/* 🔧 Dev cheats panel (visible while quiz running) */}
-      {DEV_ENABLE_QUIZ_CHEATS ? (
-        <View
-          style={[
-            S.devRow,
-            {
-              borderColor,
-              backgroundColor: tokens.isDark
-                ? "rgba(0,0,0,0.55)"
-                : "rgba(255,255,255,0.8)",
-            },
-          ]}
-        >
-          <Text
-            style={[
-              S.devLabel,
-              { color: headerTextColor },
-            ]}
-          >
-            Dev Cheats — Finish As:
-          </Text>
-          <View style={S.devButtonsRow}>
-            <Pressable
-              onPress={() => devFinish(50)}
-              style={[
-                S.devBtn,
-                { borderColor, backgroundColor: cardBg },
-              ]}
-              disabled={!total}
-            >
-              <Text style={[S.devBtnText, { color: headerTextColor }]}>
-                {"50%"}
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={() => devFinish(80)}
-              style={[
-                S.devBtn,
-                { borderColor, backgroundColor: cardBg },
-              ]}
-              disabled={!total}
-            >
-              <Text style={[S.devBtnText, { color: headerTextColor }]}>
-                {"80%"}
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={() => devFinish(100)}
-              style={[
-                S.devBtn,
-                { borderColor, backgroundColor: cardBg },
-              ]}
-              disabled={!total}
-            >
-              <Text style={[S.devBtnText, { color: headerTextColor }]}>
-                {"100%"}
-              </Text>
-            </Pressable>
-          </View>
-          {!total ? (
-            <Text
-              style={[
-                S.devHint,
-                { color: metaColor },
-              ]}
-            >
-              Cheats will work once questions finish loading.
-            </Text>
-          ) : null}
-        </View>
-      ) : null}
-
       <View style={S.row}>
         <Text style={[S.title, { color: headerTextColor }]}>
           {headerTitle}
@@ -1085,7 +1063,7 @@ export const S = StyleSheet.create({
   modalTitle: { fontSize: 20, fontWeight: "800" },
   modalBody: { marginTop: 8 },
 
-  // 🔧 Dev cheats styling
+  // 🔧 Dev cheats styling (unused now, safe but can be pruned later)
   devRow: {
     borderRadius: 12,
     borderWidth: 1,
@@ -1121,6 +1099,27 @@ export const S = StyleSheet.create({
   devHint: {
     fontSize: 11,
     marginTop: 4,
+  },
+
+  // Discord styles
+  discordContainer: {
+    marginTop: 18,
+    alignItems: "center",
+  },
+  discordLinkText: {
+    fontSize: 13,
+    fontWeight: "600",
+    textDecorationLine: "underline",
+  },
+  discordDisableBtn: {
+    marginTop: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  discordDisableText: {
+    fontSize: 11,
+    opacity: 0.8,
+    textDecorationLine: "underline",
   },
 });
 

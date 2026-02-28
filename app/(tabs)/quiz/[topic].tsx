@@ -1,4 +1,3 @@
-// app/(tabs)/quiz/[topic].tsx
 import { reportQuizFinished } from "../../utils/report-quiz-finish";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -34,9 +33,6 @@ const CYAN = "#00E5FF";
 const BLUE = "#0B2239";
 const BLACK = "#000000";
 const NEON = "#39FF14"; // neon green
-
-// 🔧 Turn this off before shipping if you want to hide cheats
-const DEV_ENABLE_QUIZ_CHEATS = true;
 
 export default function TopicQuiz() {
   const { id = "", title = "" } =
@@ -210,31 +206,6 @@ export default function TopicQuiz() {
     loggedRef.current = false;
     notifiedRef.current = false;
     setShowCongrats(false);
-  }
-
-  // 🔧 Dev helper: instantly finish a quiz with a target percentage
-  function devFinish(targetPct: number) {
-    if (!DEV_ENABLE_QUIZ_CHEATS) return;
-    if (!total) return;
-
-    const rawCorrect = Math.round((targetPct / 100) * total);
-    const clamped = Math.min(total, Math.max(0, rawCorrect));
-
-    // stop timer
-    if (totalTimerRef.current) {
-      clearInterval(totalTimerRef.current);
-      totalTimerRef.current = null;
-    }
-
-    setCorrect(clamped);
-    setIdx(total - 1);
-    setSelected(null);
-    setLocked(true);
-    setTotalLeft(0);
-
-    // make sure logging uses this final score
-    loggedRef.current = false;
-    setDone(true);
   }
 
   const mm = Math.floor(totalLeft / 60);
@@ -429,41 +400,6 @@ export default function TopicQuiz() {
   // 🔹 Active quiz state
   return (
     <Shell>
-      {/* 🔧 Dev Cheats bar */}
-      {DEV_ENABLE_QUIZ_CHEATS && (
-        <View style={S.devRow}>
-          <Text style={S.devLabel}>Dev Cheats — Finish As:</Text>
-          <View style={S.devButtonsRow}>
-            <Pressable
-              style={S.devBtn}
-              onPress={() => devFinish(50)}
-              disabled={!total}
-            >
-              <Text style={S.devBtnText}>50%</Text>
-            </Pressable>
-            <Pressable
-              style={S.devBtn}
-              onPress={() => devFinish(80)}
-              disabled={!total}
-            >
-              <Text style={S.devBtnText}>80%</Text>
-            </Pressable>
-            <Pressable
-              style={S.devBtn}
-              onPress={() => devFinish(100)}
-              disabled={!total}
-            >
-              <Text style={S.devBtnText}>100%</Text>
-            </Pressable>
-          </View>
-          {!total ? (
-            <Text style={S.devHint}>
-              Cheats will work once questions finish loading.
-            </Text>
-          ) : null}
-        </View>
-      )}
-
       <View style={S.headerRow}>
         <Text style={S.title}>{headerTitle}</Text>
         <Text style={[S.meta, totalLeft <= 20 ? S.danger : undefined]}>
@@ -664,7 +600,7 @@ export const S = StyleSheet.create({
     justifyContent: "space-between",
   },
 
-  // 🔧 Dev cheats styling
+  // 🔧 Dev styles kept but unused (harmless)
   devRow: {
     borderRadius: 12,
     borderWidth: 1,

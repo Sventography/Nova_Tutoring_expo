@@ -9,52 +9,65 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  ScrollView,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
+import * as Linking from "expo-linking";
 
 import { useTheme } from "./context/ThemeContext";
 import { useUser } from "./context/UserContext";
 import { showToast } from "./utils/toast";
 
+const DISCORD_INVITE_URL = "https://discord.gg/NR9PAjtrg";
+
 export default function SignInScreen() {
   const router = useRouter();
   const { tokens } = useTheme();
-  const { signUpWithEmailPassword, loginWithEmailPassword } = useUser();
+  const { signUpWithEmailPassword, loginWithEmailPassword } =
+    (useUser() || {}) as any;
 
   const [mode, setMode] = useState<"signup" | "login">("signup");
 
-  // Sign Up fields
+  // sign up fields
   const [suUsername, setSuUsername] = useState("");
   const [suEmail, setSuEmail] = useState("");
   const [suPassword, setSuPassword] = useState("");
   const [suConfirmPassword, setSuConfirmPassword] = useState("");
 
-  // Login fields
+  // login fields
   const [liEmail, setLiEmail] = useState("");
   const [liPassword, setLiPassword] = useState("");
 
   const [loading, setLoading] = useState(false);
 
+  const isSignup = mode === "signup";
+
   const hapticTap = async () => {
     if (Platform.OS !== "web") {
       try {
         await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      } catch {
-        // ignore
-      }
+      } catch {}
     }
   };
 
-  const switchMode = async (next: "signup" | "login") => {
-    if (mode === next || loading) return;
+  const goToMainTabs = () => {
+    try {
+      router.replace("/(tabs)/ask");
+    } catch {
+      router.replace("/");
+    }
+  };
+
+  const handleSwitchMode = async (next: "signup" | "login") => {
+    if (next === mode || loading) return;
     await hapticTap();
     setMode(next);
   };
 
   const handleSignUp = async () => {
+    if (loading) return;
+
     const username = suUsername.trim();
     const email = suEmail.trim().toLowerCase();
     const password = suPassword;
@@ -62,6 +75,14 @@ export default function SignInScreen() {
 
     if (!username || !email || !password || !confirmPassword) {
       Alert.alert("Missing info", "Please fill out all fields.");
+      return;
+    }
+
+    if (username.length > 8) {
+      Alert.alert(
+        "Username too long",
+        "Usernames can be up to 8 characters long."
+      );
       return;
     }
 
@@ -83,20 +104,17 @@ export default function SignInScreen() {
 
     setLoading(true);
     try {
+      await hapticTap();
       await signUpWithEmailPassword(username, email, password);
-
-      // tiny delay so auth listeners + contexts can settle
       await new Promise((resolve) => setTimeout(resolve, 150));
 
       showToast("Account created! You’re signed in.");
-      // Go to the Account tab (file is in (tabs), path is just "/account")
-      router.replace("/account");
+      goToMainTabs();
     } catch (e: any) {
       console.log("signUp error:", e);
       const code = e?.code || "";
       const msg = e?.message ? String(e.message) : String(e ?? "");
 
-      // Username already taken (from UserContext)
       if (
         code === "USERNAME_TAKEN" ||
         msg.toLowerCase().includes("already taken")
@@ -105,9 +123,7 @@ export default function SignInScreen() {
           "Username already taken",
           "That username is already taken. Please choose another."
         );
-      }
-      // Supabase email rate-limiting (too many signups / reset emails)
-      else if (
+      } else if (
         code === "over_email_send_rate_limit" ||
         msg.toLowerCase().includes("rate limit") ||
         msg.toLowerCase().includes("rate-limit") ||
@@ -127,6 +143,8 @@ export default function SignInScreen() {
   };
 
   const handleLogin = async () => {
+    if (loading) return;
+
     const email = liEmail.trim().toLowerCase();
     const password = liPassword;
 
@@ -137,13 +155,12 @@ export default function SignInScreen() {
 
     setLoading(true);
     try {
+      await hapticTap();
       await loginWithEmailPassword(email, password);
-
-      // tiny buffer for downstream listeners
       await new Promise((resolve) => setTimeout(resolve, 150));
 
       showToast("Welcome back! You’re signed in.");
-      router.replace("/account");
+      goToMainTabs();
     } catch (e: any) {
       console.log("login error:", e);
       const msg = e?.message ? String(e.message) : String(e ?? "");
@@ -153,25 +170,28 @@ export default function SignInScreen() {
     }
   };
 
-  const subtitle =
-    mode === "signup"
-      ? "Create an account to save your progress!"
-      : "Log in to see your saved progress!";
-
-  const isSignup = mode === "signup";
+  const handleOpenDiscord = () => {
+    if (!DISCORD_INVITE_URL) {
+      Alert.alert(
+        "Discord link not set",
+        "Please update the Discord invite link before opening."
+      );
+      return;
+    }
+    try {
+      Linking.openURL(DISCORD_INVITE_URL);
+    } catch {
+      Alert.alert(
+        "Could not open Discord",
+        "Please check your internet connection or open the link from the App Store page."
+      );
+    }
+  };
 
   const inputBaseStyle = {
     borderColor: tokens.border,
     backgroundColor: tokens.card,
     color: tokens.text,
-  } as const;
-
-  const labelColor = { color: tokens.cardText } as const;
-  const subtitleColor = { color: tokens.cardText } as const;
-  const headerCardBg = {
-    backgroundColor: tokens.isDark
-      ? "rgba(0, 8, 16, 0.9)"
-      : "rgba(255,255,255,0.9)",
   } as const;
 
   return (
@@ -180,34 +200,26 @@ export default function SignInScreen() {
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-        >
+        <View style={styles.outer}>
           <View
             style={[
               styles.card,
-              headerCardBg,
-              { borderColor: tokens.border },
+              {
+                borderColor: tokens.border,
+                backgroundColor: tokens.isDark
+                  ? "rgba(0, 8, 16, 0.92)"
+                  : "rgba(255,255,255,0.92)",
+              },
             ]}
           >
             {/* Toggle header */}
-            <View
-              style={[
-                styles.headerRow,
-                { borderColor: tokens.border, backgroundColor: "transparent" },
-              ]}
-            >
+            <View style={styles.headerRow}>
               <Pressable
                 style={[
                   styles.headerTab,
-                  isSignup && {
-                    backgroundColor: tokens.isDark
-                      ? "rgba(0,229,255,0.18)"
-                      : "rgba(0,120,200,0.18)",
-                  },
+                  isSignup && styles.headerTabActive,
                 ]}
-                onPress={() => switchMode("signup")}
+                onPress={() => handleSwitchMode("signup")}
                 disabled={loading}
               >
                 <Text
@@ -222,13 +234,9 @@ export default function SignInScreen() {
               <Pressable
                 style={[
                   styles.headerTab,
-                  !isSignup && {
-                    backgroundColor: tokens.isDark
-                      ? "rgba(0,229,255,0.18)"
-                      : "rgba(0,120,200,0.18)",
-                  },
+                  !isSignup && styles.headerTabActive,
                 ]}
-                onPress={() => switchMode("login")}
+                onPress={() => handleSwitchMode("login")}
                 disabled={loading}
               >
                 <Text
@@ -242,12 +250,19 @@ export default function SignInScreen() {
               </Pressable>
             </View>
 
-            <Text style={[styles.subtitle, subtitleColor]}>{subtitle}</Text>
+            <Text style={[styles.subtitle, { color: tokens.cardText }]}>
+              {isSignup
+                ? "Create an account to save your progress!"
+                : "Log in to see your saved progress!"}
+            </Text>
 
-            {/* SIGN UP FORM */}
             {isSignup ? (
               <View style={styles.form}>
-                <Text style={[styles.label, labelColor]}>Username</Text>
+                <Text
+                  style={[styles.label, { color: tokens.cardText }]}
+                >
+                  Username
+                </Text>
                 <TextInput
                   value={suUsername}
                   onChangeText={setSuUsername}
@@ -258,9 +273,15 @@ export default function SignInScreen() {
                   style={[styles.input, inputBaseStyle]}
                   autoCapitalize="none"
                   autoCorrect={false}
+                  maxLength={16}
+                  editable={!loading}
                 />
 
-                <Text style={[styles.label, labelColor]}>Email</Text>
+                <Text
+                  style={[styles.label, { color: tokens.cardText }]}
+                >
+                  Email
+                </Text>
                 <TextInput
                   value={suEmail}
                   onChangeText={setSuEmail}
@@ -274,9 +295,14 @@ export default function SignInScreen() {
                   }
                   style={[styles.input, inputBaseStyle]}
                   autoCorrect={false}
+                  editable={!loading}
                 />
 
-                <Text style={[styles.label, labelColor]}>Password</Text>
+                <Text
+                  style={[styles.label, { color: tokens.cardText }]}
+                >
+                  Password
+                </Text>
                 <TextInput
                   value={suPassword}
                   onChangeText={setSuPassword}
@@ -287,9 +313,12 @@ export default function SignInScreen() {
                   }
                   style={[styles.input, inputBaseStyle]}
                   autoCorrect={false}
+                  editable={!loading}
                 />
 
-                <Text style={[styles.label, labelColor]}>
+                <Text
+                  style={[styles.label, { color: tokens.cardText }]}
+                >
                   Confirm Password
                 </Text>
                 <TextInput
@@ -302,36 +331,31 @@ export default function SignInScreen() {
                   }
                   style={[styles.input, inputBaseStyle]}
                   autoCorrect={false}
+                  editable={!loading}
                 />
 
                 <Pressable
                   onPress={handleSignUp}
                   style={({ pressed }) => [
                     styles.primaryBtn,
-                    {
-                      backgroundColor: tokens.accent,
-                    },
-                    pressed && { opacity: 0.8 },
+                    { backgroundColor: tokens.accent },
+                    pressed && { opacity: 0.85 },
                     loading && { opacity: 0.7 },
                   ]}
                   disabled={loading}
                 >
-                  <Text
-                    style={[
-                      styles.primaryBtnText,
-                      {
-                        color: tokens.isDark ? "#001018" : "#001018",
-                      },
-                    ]}
-                  >
+                  <Text style={styles.primaryBtnText}>
                     {loading ? "Creating account..." : "Create Account"}
                   </Text>
                 </Pressable>
               </View>
             ) : (
-              /* LOGIN FORM */
               <View style={styles.form}>
-                <Text style={[styles.label, labelColor]}>Email</Text>
+                <Text
+                  style={[styles.label, { color: tokens.cardText }]}
+                >
+                  Email
+                </Text>
                 <TextInput
                   value={liEmail}
                   onChangeText={setLiEmail}
@@ -345,9 +369,14 @@ export default function SignInScreen() {
                   }
                   style={[styles.input, inputBaseStyle]}
                   autoCorrect={false}
+                  editable={!loading}
                 />
 
-                <Text style={[styles.label, labelColor]}>Password</Text>
+                <Text
+                  style={[styles.label, { color: tokens.cardText }]}
+                >
+                  Password
+                </Text>
                 <TextInput
                   value={liPassword}
                   onChangeText={setLiPassword}
@@ -358,35 +387,35 @@ export default function SignInScreen() {
                   }
                   style={[styles.input, inputBaseStyle]}
                   autoCorrect={false}
+                  editable={!loading}
                 />
 
                 <Pressable
                   onPress={handleLogin}
                   style={({ pressed }) => [
                     styles.primaryBtn,
-                    {
-                      backgroundColor: tokens.accent,
-                    },
-                    pressed && { opacity: 0.8 },
+                    { backgroundColor: tokens.accent },
+                    pressed && { opacity: 0.85 },
                     loading && { opacity: 0.7 },
                   ]}
                   disabled={loading}
                 >
-                  <Text
-                    style={[
-                      styles.primaryBtnText,
-                      {
-                        color: tokens.isDark ? "#001018" : "#001018",
-                      },
-                    ]}
-                  >
+                  <Text style={styles.primaryBtnText}>
                     {loading ? "Logging in..." : "Log In"}
                   </Text>
                 </Pressable>
               </View>
             )}
 
-            {/* Back to home */}
+            {/* Discord + back */}
+            <View style={{ marginTop: 16, alignItems: "center" }}>
+              <Pressable onPress={handleOpenDiscord} disabled={loading}>
+                <Text style={styles.discordLinkText}>
+                  💬 Join the Nova Tutoring Discord
+                </Text>
+              </Pressable>
+            </View>
+
             <Pressable
               style={styles.backRow}
               onPress={() => router.replace("/")}
@@ -395,15 +424,15 @@ export default function SignInScreen() {
               <Text style={styles.backText}>← Back to Home</Text>
             </Pressable>
           </View>
-        </ScrollView>
+        </View>
       </KeyboardAvoidingView>
     </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  scrollContent: {
-    flexGrow: 1,
+  outer: {
+    flex: 1,
     paddingHorizontal: 16,
     paddingVertical: 40,
     justifyContent: "center",
@@ -419,12 +448,16 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     overflow: "hidden",
     borderWidth: 1,
+    borderColor: "rgba(148,163,184,0.5)",
   },
   headerTab: {
     flex: 1,
     paddingVertical: 10,
     alignItems: "center",
     backgroundColor: "transparent",
+  },
+  headerTabActive: {
+    backgroundColor: "rgba(0,229,255,0.18)",
   },
   headerTabText: {
     color: "#7ea3b8",
@@ -462,6 +495,7 @@ const styles = StyleSheet.create({
   primaryBtnText: {
     fontWeight: "800",
     fontSize: 16,
+    color: "#001018",
   },
   backRow: {
     marginTop: 16,
@@ -470,6 +504,12 @@ const styles = StyleSheet.create({
   backText: {
     color: "#9ad8ff",
     fontSize: 13,
+    textDecorationLine: "underline",
+  },
+  discordLinkText: {
+    color: "#9ad8ff",
+    fontSize: 13,
+    fontWeight: "600",
     textDecorationLine: "underline",
   },
 });

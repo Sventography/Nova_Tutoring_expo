@@ -32,6 +32,7 @@ import GlobalTextDefaults from "../components/GlobalTextDefaults";
 import { useUser } from "../context/UserContext";
 import { useCompanion } from "../context/CompanionContext";
 import { COMPANIONS } from "../_lib/companionsCatalog";
+import AchievementConfettiOverlay from "../components/AchievementConfettiOverlay";
 
 // --------------------
 // DEV-ONLY imports
@@ -1311,6 +1312,8 @@ function InnerTabsLayout() {
         <FxOverlay />
         {Platform.OS === "web" ? <StarTrailOverlay /> : null}
         {Platform.OS !== "web" ? <TouchCursorOverlay p={p} down={down} /> : null}
+        {/* 🎉 Achievement confetti now lives only on the tabs screens */}
+        <AchievementConfettiOverlay />
         {/* 🌟 Global floating companion bubble with shop-style FX */}
         <FloatingCompanionOverlay />
       </View>

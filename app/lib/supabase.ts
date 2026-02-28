@@ -21,10 +21,6 @@ if (!SUPABASE_ANON_KEY) {
 }
 
 // ✅ For the Expo app we DO persist sessions here using AsyncStorage.
-// Supabase will:
-// - Store session + refresh token in AsyncStorage
-// - Auto-refresh tokens when they expire
-// - Let us hydrate with auth.getSession() on app start
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     storage: AsyncStorage,

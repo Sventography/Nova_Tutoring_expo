@@ -1,5 +1,6 @@
+// app/components/AchievementConfettiOverlay.tsx
 import React, { useEffect, useRef, useState } from "react";
-import { View, Platform, Text } from "react-native";
+import { View, Text } from "react-native";
 import { useAchievements } from "../context/AchievementsContext";
 
 export default function AchievementConfettiOverlay() {
@@ -31,6 +32,7 @@ export default function AchievementConfettiOverlay() {
 
   return (
     <View
+      pointerEvents="none"
       style={{
         position: "absolute",
         top: 0,
@@ -38,11 +40,11 @@ export default function AchievementConfettiOverlay() {
         right: 0,
         bottom: 0,
         zIndex: 9999,
-        pointerEvents: "none",
       }}
     >
       {visible && (
         <View
+          pointerEvents="none"
           style={{
             position: "absolute",
             top: 0,

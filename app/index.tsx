@@ -10,7 +10,7 @@ import {
   Platform,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
+import { useRouter, Link } from "expo-router";
 import * as Haptics from "expo-haptics";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -130,6 +130,22 @@ export default function HomeScreen() {
         </Animated.View>
       </Pressable>
 
+      {/* Debug Input button (for the cursed email bug) */}
+      <Link href="/debug-input" asChild>
+        <Pressable>
+          <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+            <LinearGradient
+              colors={["#6366f1", "#22d3ee", "#000000"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={[styles.button, styles.debugButton]}
+            >
+              <Text style={styles.buttonText}>Open Debug Input</Text>
+            </LinearGradient>
+          </Animated.View>
+        </Pressable>
+      </Link>
+
       {/* Subtitle (only when logged out) */}
       {!isLoggedIn && (
         <Text style={styles.subtitle}>Log in to save your progress!</Text>
@@ -161,6 +177,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 60,
     borderRadius: 12,
     alignItems: "center",
+  },
+  debugButton: {
+    // Slightly smaller so it feels like a utility button
+    paddingHorizontal: 40,
   },
   buttonText: {
     color: "white",

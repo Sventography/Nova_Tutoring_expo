@@ -19,7 +19,6 @@ import { CertificatesProvider } from "./context/CertificatesContext";
 import { UserProvider, useUser } from "./context/UserContext";
 import { CompanionProvider } from "./context/CompanionContext";
 import { StreakProvider } from "./context/StreakContext";
-import AchievementConfettiOverlay from "./components/AchievementConfettiOverlay";
 
 function ThemeGate({ children }: { children: React.ReactNode }) {
   const { themeId } = useTheme();
@@ -163,8 +162,11 @@ export function AppProviders(props: any) {
                               <DevCoinsListener />
                               <DevThemeListener />
                               <DevGrantListener />
-                              {/* Global overlay that watches unlocked achievements */}
-                              <AchievementConfettiOverlay />
+                              {/* NOTE:
+                                  AchievementConfettiOverlay is now mounted
+                                  inside the tabs layout only, so it can never
+                                  interfere with sign-in or other stack screens.
+                              */}
                               {children}
                             </AchievementsProvider>
                           </ToastProvider>
