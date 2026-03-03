@@ -16,12 +16,12 @@ export default function Companion({ companion }: { companion: CompanionType }) {
         Animated.timing(bob, {
           toValue: -6,
           duration: 1200,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
         Animated.timing(bob, {
           toValue: 0,
           duration: 1200,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
       ])
     ).start();
@@ -40,12 +40,12 @@ export default function Companion({ companion }: { companion: CompanionType }) {
       Animated.timing(jump, {
         toValue: -28,
         duration: 180,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
       Animated.spring(jump, {
         toValue: 0,
         friction: 4,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
     ]).start();
   };
@@ -65,7 +65,7 @@ export default function Companion({ companion }: { companion: CompanionType }) {
     Animated.timing(burst, {
       toValue: 1,
       duration: 700,
-      useNativeDriver: true,
+      useNativeDriver: false,
     }).start(() => setBurstType(null));
   };
 

@@ -163,7 +163,7 @@ export default function TouchCursorOverlay({ p, down }: Props) {
       duration:
         style.kind === "orb" ? 900 : 650 + Math.floor(Math.random() * 250),
       easing: Easing.out(Easing.quad),
-      useNativeDriver: true,
+      useNativeDriver: false,
     }).start();
 
     return {
@@ -193,20 +193,20 @@ export default function TouchCursorOverlay({ p, down }: Props) {
           toValue: upScale,
           duration: 130,
           easing: Easing.out(Easing.quad),
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
         Animated.timing(sp.s, {
           toValue: downScale,
           duration: 520,
           easing: Easing.inOut(Easing.quad),
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
       ]),
       Animated.timing(sp.a, {
         toValue: 0,
         duration: fadeMs,
         easing: Easing.out(Easing.quad),
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
     ]).start(({ finished }) => {
       if (!finished) return;

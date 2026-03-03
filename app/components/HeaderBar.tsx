@@ -143,12 +143,12 @@ export default function HeaderBar() {
         Animated.timing(pulse, {
           toValue: 1.06,
           duration: 1200,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
         Animated.timing(pulse, {
           toValue: 1.0,
           duration: 1200,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
       ])
     ).start();

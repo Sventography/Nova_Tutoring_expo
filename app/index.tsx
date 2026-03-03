@@ -44,12 +44,12 @@ export default function HomeScreen() {
         Animated.timing(pulseAnim, {
           toValue: 1.05,
           duration: 1200,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
         Animated.timing(pulseAnim, {
           toValue: 1,
           duration: 1200,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
       ])
     ).start();

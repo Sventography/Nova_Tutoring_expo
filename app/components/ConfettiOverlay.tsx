@@ -17,7 +17,7 @@ export default function ConfettiOverlay({ trigger }: { trigger: boolean }) {
         Animated.timing(val, {
           toValue: 1,
           duration: 3000 + Math.random() * 2000,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }).start();
       });
     } else {

@@ -9,8 +9,8 @@ export default function CoinFloat({ amount, tier, onDone }: Props) {
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(y, { toValue: -40, duration: 1000, useNativeDriver: true }),
-      Animated.timing(opacity, { toValue: 0, duration: 1000, useNativeDriver: true }),
+      Animated.timing(y, { toValue: -40, duration: 1000, useNativeDriver: false }),
+      Animated.timing(opacity, { toValue: 0, duration: 1000, useNativeDriver: false }),
     ]).start(() => onDone?.());
   }, []);
 

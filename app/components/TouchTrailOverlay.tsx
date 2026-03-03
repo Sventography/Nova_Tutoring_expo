@@ -75,9 +75,9 @@ export default function TouchTrailOverlay() {
     p.r.setValue(rand(-0.8, 0.8));
 
     Animated.parallel([
-      Animated.timing(p.o, { toValue: 0, duration: 450, easing: Easing.out(Easing.quad), useNativeDriver: true }),
-      Animated.timing(p.s, { toValue: 0.1, duration: 450, easing: Easing.out(Easing.quad), useNativeDriver: true }),
-      Animated.timing(p.r, { toValue: rand(-2.0, 2.0), duration: 450, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+      Animated.timing(p.o, { toValue: 0, duration: 450, easing: Easing.out(Easing.quad), useNativeDriver: false }),
+      Animated.timing(p.s, { toValue: 0.1, duration: 450, easing: Easing.out(Easing.quad), useNativeDriver: false }),
+      Animated.timing(p.r, { toValue: rand(-2.0, 2.0), duration: 450, easing: Easing.out(Easing.quad), useNativeDriver: false }),
     ]).start();
   }
 

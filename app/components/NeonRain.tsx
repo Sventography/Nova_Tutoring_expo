@@ -20,12 +20,12 @@ export default function NeonRain() {
             Animated.timing(y, {
               toValue: height,
               duration: 4000 + Math.random() * 2000, // slower drizzle
-              useNativeDriver: true,
+              useNativeDriver: false,
             }),
             Animated.timing(y, {
               toValue: -50,
               duration: 0,
-              useNativeDriver: true,
+              useNativeDriver: false,
             }),
           ])
         ).start();

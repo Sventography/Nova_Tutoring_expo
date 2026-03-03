@@ -964,7 +964,7 @@ function CompanionEffectOverlay({
     Animated.timing(anim, {
       toValue: 1,
       duration: 1400,
-      useNativeDriver: true,
+      useNativeDriver: false,
     }).start();
   }, [type, effectKey, anim]);
 
@@ -2384,22 +2384,22 @@ export default function Shop() {
       Animated.timing(floatScale, {
         toValue: pinchScaleRef.current * 1.18,
         duration: 120,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
       Animated.timing(floatScale, {
         toValue: pinchScaleRef.current * 0.95,
         duration: 110,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
       Animated.timing(floatScale, {
         toValue: pinchScaleRef.current * 1.05,
         duration: 110,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
       Animated.timing(floatScale, {
         toValue: pinchScaleRef.current,
         duration: 110,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
     ]).start();
   }
@@ -2410,12 +2410,12 @@ export default function Shop() {
       Animated.timing(floatHop, {
         toValue: -14,
         duration: 120,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
       Animated.timing(floatHop, {
         toValue: 0,
         duration: 160,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
     ]).start();
   }
@@ -2426,12 +2426,12 @@ export default function Shop() {
       Animated.timing(floatRotate, {
         toValue: 1,
         duration: 260,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
       Animated.timing(floatRotate, {
         toValue: 0,
         duration: 0,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
     ]).start();
   }
@@ -2442,22 +2442,22 @@ export default function Shop() {
       Animated.timing(floatShake, {
         toValue: 1,
         duration: 70,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
       Animated.timing(floatShake, {
         toValue: -1,
         duration: 70,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
       Animated.timing(floatShake, {
         toValue: 0.5,
         duration: 60,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
       Animated.timing(floatShake, {
         toValue: 0,
         duration: 60,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
     ]).start();
   }
@@ -2470,29 +2470,29 @@ export default function Shop() {
         Animated.timing(floatScale, {
           toValue: pinchScaleRef.current * 1.2,
           duration: 160,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
         Animated.timing(floatScale, {
           toValue: pinchScaleRef.current * 0.95,
           duration: 140,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
         Animated.timing(floatScale, {
           toValue: pinchScaleRef.current,
           duration: 140,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
       ]),
       Animated.sequence([
         Animated.timing(floatRotate, {
           toValue: 1,
           duration: 400,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
         Animated.timing(floatRotate, {
           toValue: 0,
           duration: 0,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
       ]),
     ]).start();
@@ -2559,12 +2559,12 @@ export default function Shop() {
       Animated.timing(companionAnim, {
         toValue: 1,
         duration: 160,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
       Animated.timing(companionAnim, {
         toValue: 0,
         duration: 220,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
     ]).start(() => {
       setStripActiveId(null);

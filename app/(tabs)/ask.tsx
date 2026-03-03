@@ -15,6 +15,8 @@ import {
   FlatList,
   Animated,
   StyleSheet,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -31,13 +33,10 @@ import { supabase } from "../lib/supabase";
 /* ────────────────────────────────────────── */
 function NovaThinking() {
   const shimmer = useRef(new Animated.Value(0)).current;
-
-  // per-letter bounce anims
   const letters = "Nova is thinking…".split("");
   const bounces = useRef(letters.map(() => new Animated.Value(0))).current;
 
   useEffect(() => {
-    // shimmer loop
     const shimmerLoop = Animated.loop(
       Animated.timing(shimmer, {
         toValue: 1,
@@ -46,7 +45,6 @@ function NovaThinking() {
       })
     );
 
-    // staggered bounce loop
     const bounceLoop = Animated.loop(
       Animated.stagger(
         90,
@@ -55,12 +53,12 @@ function NovaThinking() {
             Animated.timing(v, {
               toValue: -4,
               duration: 260,
-              useNativeDriver: true,
+              useNativeDriver: false,
             }),
             Animated.timing(v, {
               toValue: 0,
               duration: 260,
-              useNativeDriver: true,
+              useNativeDriver: false,
             }),
           ])
         )
@@ -97,10 +95,8 @@ function NovaThinking() {
         ))}
       </View>
 
-      {/* dark neutral underlay */}
       <View style={S.contrastUnderlay} pointerEvents="none" />
 
-      {/* shimmer sweep */}
       <Animated.View
         pointerEvents="none"
         style={[
@@ -130,10 +126,9 @@ type Msg = { id: string; role: "user" | "assistant" | "system"; text: string };
 
 const todayKey = () => {
   const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `@ask/count/${y}-${m}-${day}`;
+  return `@ask/count/${d.getFullYear()}-${String(
+    d.getMonth() + 1
+  ).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
 
 async function loadCount(): Promise<number> {
@@ -151,17 +146,6 @@ export default function Ask() {
   const { onAskQuestion } = useAchievements();
   const { supabaseUserId } = useUser();
 
-  const gradient = tokens.gradient;
-  const headerTextColor = tokens.text;
-  const counterTextColor = tokens.cardText;
-  const inputBg = tokens.isDark
-    ? "rgba(255,255,255,0.04)"
-    : "rgba(0,0,0,0.03)";
-  const inputBorder = tokens.border;
-  const placeholderColor = tokens.isDark ? "#678a94" : "#6b7685";
-  const sendEnabledColor = tokens.accent;
-  const sendDisabledColor = tokens.isDark ? "#294b55" : "#a0a8b2";
-
   const [messages, setMessages] = useState<Msg[]>([
     {
       id: "sys1",
@@ -173,18 +157,34 @@ export default function Ask() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [count, setCount] = useState<number>(0);
+
   const listRef = useRef<FlatList<Msg>>(null);
 
   useEffect(() => {
     loadCount().then(setCount).catch(() => {});
   }, []);
 
+  useEffect(() => {
+    const showSub = Keyboard.addListener("keyboardDidShow", () => {
+      setTimeout(() => {
+        listRef.current?.scrollToEnd({ animated: true });
+      }, 50);
+    });
+    return () => showSub.remove();
+  }, []);
+
+  useEffect(() => {
+    setTimeout(() => {
+      listRef.current?.scrollToEnd({ animated: true });
+    }, 50);
+  }, [messages]);
+
   const send = useCallback(async () => {
     const trimmed = input.trim();
     if (!trimmed || loading) return;
 
-    setError(null);
     setLoading(true);
+    setError(null);
 
     const userMsg: Msg = {
       id: `${Date.now()}`,
@@ -199,56 +199,22 @@ export default function Ask() {
       const res: AskResponse = await askNova(trimmed, supabaseUserId);
 
       if (!res.ok || !res.answer) {
-        const msg = res.error || "Something went wrong.";
-        setError(msg);
+        setError(res.error || "Something went wrong.");
+      } else {
         setMessages((m) => [
           ...m,
           {
             id: `${Date.now() + 1}`,
-            role: "system",
-            text: `⚠️ ${msg}`,
+            role: "assistant",
+            text: res.answer!,
           },
         ]);
-      } else {
-        const assistantMsg: Msg = {
-          id: `${Date.now() + 1}`,
-          role: "assistant",
-          text: res.answer,
-        };
-        setMessages((m) => [...m, assistantMsg]);
 
-        // 💾 Persist Ask conversation to Supabase when logged in
         if (supabaseUserId) {
-          try {
-            const { error: insertError } = await supabase
-              .from("ask_messages")
-              .insert([
-                {
-                  user_id: supabaseUserId,
-                  role: "user",
-                  content: trimmed,
-                },
-                {
-                  user_id: supabaseUserId,
-                  role: "assistant",
-                  content: res.answer,
-                },
-              ]);
-
-            if (insertError) {
-              console.log(
-                "[Ask] ask_messages insert error:",
-                insertError
-              );
-            } else {
-              console.log(
-                "[Ask] ask_messages inserted for user",
-                supabaseUserId
-              );
-            }
-          } catch (e) {
-            console.log("[Ask] ask_messages insert threw:", e);
-          }
+          await supabase.from("ask_messages").insert([
+            { user_id: supabaseUserId, role: "user", content: trimmed },
+            { user_id: supabaseUserId, role: "assistant", content: res.answer },
+          ]);
         }
 
         const newCount = await bumpCount();
@@ -256,37 +222,14 @@ export default function Ask() {
         onAskQuestion?.();
       }
     } catch (e: any) {
-      const msg = e?.message || "Something went wrong.";
-      setError(msg);
-      setMessages((m) => [
-        ...m,
-        {
-          id: `${Date.now() + 2}`,
-          role: "system",
-          text: `⚠️ ${msg}`,
-        },
-      ]);
+      setError(e?.message || "Something went wrong.");
     } finally {
       setLoading(false);
-      setTimeout(
-        () => listRef.current?.scrollToEnd({ animated: true }),
-        20
-      );
     }
   }, [input, loading, onAskQuestion, supabaseUserId]);
 
   const renderItem = ({ item }: { item: Msg }) => {
     const isUser = item.role === "user";
-    const isSys = item.role === "system";
-
-    const bg = isSys
-      ? "rgba(255,235,59,0.12)"
-      : isUser
-      ? "rgba(0,0,0,0.08)"
-      : "rgba(0,0,0,0.06)";
-
-    const border = isSys ? "#ffeb3b" : tokens.border;
-    const color = isSys ? "#c09300" : tokens.text;
     const align = isUser ? "flex-end" : "flex-start";
 
     return (
@@ -303,12 +246,14 @@ export default function Ask() {
             maxWidth: "88%",
             borderRadius: 12,
             borderWidth: 1,
-            borderColor: border,
-            backgroundColor: bg,
+            borderColor: tokens.border,
+            backgroundColor: isUser
+              ? "rgba(0,0,0,0.08)"
+              : "rgba(0,0,0,0.06)",
             padding: 12,
           }}
         >
-          <Text style={{ color, fontSize: 15, lineHeight: 20 }}>
+          <Text style={{ color: tokens.text, fontSize: 15 }}>
             {item.text}
           </Text>
         </View>
@@ -317,83 +262,106 @@ export default function Ask() {
   };
 
   return (
-    <LinearGradient colors={gradient} style={{ flex: 1 }}>
-      <View
-        style={{
-          padding: 12,
-          flexDirection: "row",
-          justifyContent: "space-between",
-        }}
-      >
-        <Text
-          style={{
-            color: headerTextColor,
-            fontWeight: "800",
-            fontSize: 20,
-          }}
-        >
-          Ask Nova
-        </Text>
-        <Text
-          style={{
-            color: counterTextColor,
-            fontWeight: "700",
-            fontSize: 13,
-          }}
-        >
-          Questions today: {count}
-        </Text>
-      </View>
-
-      <FlatList
-        ref={listRef}
-        data={messages}
-        keyExtractor={(m) => m.id}
-        renderItem={renderItem}
-        contentContainerStyle={{ paddingBottom: 120 }}
-        ListFooterComponent={loading ? <NovaThinking /> : null}
-      />
-
+    <LinearGradient colors={tokens.gradient} style={{ flex: 1 }}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={80}
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={115}   // 👈 Raised slightly higher
       >
-        <View style={{ padding: 10 }}>
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              borderRadius: 12,
-              borderWidth: 1,
-              borderColor: inputBorder,
-              backgroundColor: inputBg,
-              paddingHorizontal: 8,
-            }}
-          >
-            <TextInput
-              placeholder="Ask me anything…"
-              placeholderTextColor={placeholderColor}
-              value={input}
-              onChangeText={setInput}
-              onSubmitEditing={send}
-              style={{ flex: 1, color: tokens.text, paddingVertical: 10 }}
-              editable={!loading}
-            />
-            <Pressable
-              onPress={send}
-              disabled={loading || !input.trim()}
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View style={{ flex: 1 }}>
+            <View
+              style={{
+                padding: 12,
+                flexDirection: "row",
+                justifyContent: "space-between",
+              }}
             >
-              <Ionicons
-                name="arrow-up-circle"
-                size={28}
-                color={input.trim() ? sendEnabledColor : sendDisabledColor}
-              />
-            </Pressable>
+              <Text
+                style={{
+                  color: tokens.text,
+                  fontWeight: "800",
+                  fontSize: 20,
+                }}
+              >
+                Ask Nova
+              </Text>
+              <Text
+                style={{
+                  color: tokens.cardText,
+                  fontWeight: "700",
+                  fontSize: 13,
+                }}
+              >
+                Questions today: {count}
+              </Text>
+            </View>
+
+            <FlatList
+              ref={listRef}
+              data={messages}
+              keyExtractor={(m) => m.id}
+              renderItem={renderItem}
+              contentContainerStyle={{ paddingBottom: 120 }}
+              ListFooterComponent={loading ? <NovaThinking /> : null}
+              keyboardShouldPersistTaps="handled"
+            />
+
+            <View style={{ padding: 10 }}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: tokens.border,
+                  backgroundColor: tokens.isDark
+                    ? "rgba(255,255,255,0.04)"
+                    : "rgba(0,0,0,0.03)",
+                  paddingHorizontal: 8,
+                }}
+              >
+                <TextInput
+                  placeholder="Ask me anything…"
+                  placeholderTextColor={
+                    tokens.isDark ? "#678a94" : "#6b7685"
+                  }
+                  value={input}
+                  onChangeText={setInput}
+                  onSubmitEditing={send}
+                  style={{
+                    flex: 1,
+                    color: tokens.text,
+                    paddingVertical: 10,
+                  }}
+                  editable={!loading}
+                />
+                <Pressable
+                  onPress={send}
+                  disabled={loading || !input.trim()}
+                >
+                  <Ionicons
+                    name="arrow-up-circle"
+                    size={28}
+                    color={
+                      input.trim()
+                        ? tokens.accent
+                        : tokens.isDark
+                        ? "#294b55"
+                        : "#a0a8b2"
+                    }
+                  />
+                </Pressable>
+              </View>
+
+              {error ? (
+                <Text style={{ color: "#ffa7a7", marginTop: 6 }}>
+                  {error}
+                </Text>
+              ) : null}
+            </View>
           </View>
-          {error ? (
-            <Text style={{ color: "#ffa7a7", marginTop: 6 }}>{error}</Text>
-          ) : null}
-        </View>
+        </TouchableWithoutFeedback>
       </KeyboardAvoidingView>
     </LinearGradient>
   );

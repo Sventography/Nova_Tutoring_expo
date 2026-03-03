@@ -52,7 +52,7 @@ function ThemeOverlayInner() {
       toValue: 1,
       duration: 450,
       easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
+      useNativeDriver: false,
     }).start();
   }, [themeId, currId, fade]);
 

@@ -21,13 +21,13 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     translate.setValue(10);
     Animated.sequence([
       Animated.parallel([
-        Animated.timing(opacity, { toValue: 1, duration: 180, useNativeDriver: true }),
-        Animated.timing(translate, { toValue: 0, duration: 180, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 1, duration: 180, useNativeDriver: false }),
+        Animated.timing(translate, { toValue: 0, duration: 180, useNativeDriver: false }),
       ]),
       Animated.delay(1600),
       Animated.parallel([
-        Animated.timing(opacity, { toValue: 0, duration: 220, useNativeDriver: true }),
-        Animated.timing(translate, { toValue: -10, duration: 220, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0, duration: 220, useNativeDriver: false }),
+        Animated.timing(translate, { toValue: -10, duration: 220, useNativeDriver: false }),
       ]),
     ]).start(() => setMsg(null));
   };

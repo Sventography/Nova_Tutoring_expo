@@ -44,9 +44,9 @@ export default function RelaxScreen() {
 
   function animateForPhase(next: Phase, durMs: number) {
     if (next === "inhale") {
-      Animated.timing(scale, { toValue: 1.25, duration: durMs, easing: Easing.inOut(Easing.quad), useNativeDriver: true }).start();
+      Animated.timing(scale, { toValue: 1.25, duration: durMs, easing: Easing.inOut(Easing.quad), useNativeDriver: false }).start();
     } else if (next === "exhale") {
-      Animated.timing(scale, { toValue: 0.7, duration: durMs, easing: Easing.inOut(Easing.quad), useNativeDriver: true }).start();
+      Animated.timing(scale, { toValue: 0.7, duration: durMs, easing: Easing.inOut(Easing.quad), useNativeDriver: false }).start();
     } else {
       scale.stopAnimation(); // holds: bubble pauses
     }

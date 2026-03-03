@@ -31,8 +31,8 @@ function ShimmerTitle({ text }: { text: string }) {
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
-        Animated.timing(slide, { toValue: 1, duration: 2400, useNativeDriver: true, easing: Easing.inOut(Easing.quad) }),
-        Animated.timing(slide, { toValue: -1, duration: 0, useNativeDriver: true })
+        Animated.timing(slide, { toValue: 1, duration: 2400, useNativeDriver: false, easing: Easing.inOut(Easing.quad) }),
+        Animated.timing(slide, { toValue: -1, duration: 0, useNativeDriver: false })
       ])
     ).start();
   }, [slide]);
@@ -56,14 +56,14 @@ function FlashyCard({ card, onFlip }: { card: Card; onFlip?: ()=>void }) {
 
   const pressIn = () => {
     Animated.parallel([
-      Animated.spring(tiltX, { toValue: 3, useNativeDriver: true }),
-      Animated.spring(tiltY, { toValue: -3, useNativeDriver: true }),
+      Animated.spring(tiltX, { toValue: 3, useNativeDriver: false }),
+      Animated.spring(tiltY, { toValue: -3, useNativeDriver: false }),
     ]).start();
   };
   const pressOut = () => {
     Animated.parallel([
-      Animated.spring(tiltX, { toValue: 0, useNativeDriver: true }),
-      Animated.spring(tiltY, { toValue: 0, useNativeDriver: true }),
+      Animated.spring(tiltX, { toValue: 0, useNativeDriver: false }),
+      Animated.spring(tiltY, { toValue: 0, useNativeDriver: false }),
     ]).start();
   };
 
@@ -74,7 +74,7 @@ function FlashyCard({ card, onFlip }: { card: Card; onFlip?: ()=>void }) {
       toValue: isBack.current ? 1 : 0,
       duration: 380,
       easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
+      useNativeDriver: false,
     }).start(() => onFlip && onFlip());
   };
 
@@ -156,7 +156,7 @@ export default function FlashcardsScreen() {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         setIdx(i => i - 1);
       }
-      Animated.spring(pan, { toValue: 0, useNativeDriver: true }).start();
+      Animated.spring(pan, { toValue: 0, useNativeDriver: false }).start();
     }
   }), [idx, cards.length]);
 

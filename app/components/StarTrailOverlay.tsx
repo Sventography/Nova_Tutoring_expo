@@ -27,8 +27,8 @@ export default function StarTrailOverlay() {
     p.o.setValue(1);
     p.s.setValue(0.6);
     Animated.parallel([
-      Animated.timing(p.o, { toValue: 0, duration: LIFE_MS, easing: Easing.out(Easing.quad), useNativeDriver: true }),
-      Animated.timing(p.s, { toValue: 1.15, duration: LIFE_MS, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+      Animated.timing(p.o, { toValue: 0, duration: LIFE_MS, easing: Easing.out(Easing.quad), useNativeDriver: false }),
+      Animated.timing(p.s, { toValue: 1.15, duration: LIFE_MS, easing: Easing.out(Easing.quad), useNativeDriver: false }),
     ]).start();
   };
 

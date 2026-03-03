@@ -68,7 +68,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       toValue: 0,
       duration: 180,
       easing: Easing.out(Easing.quad),
-      useNativeDriver: true,
+      useNativeDriver: false,
     }).start(() => {
       setVisible(false);
       setToast(null);
@@ -96,7 +96,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         toValue: 1,
         duration: 200,
         easing: Easing.out(Easing.quad),
-        useNativeDriver: true,
+        useNativeDriver: false,
       }).start();
 
       const timeout = opts.durationMs ?? 2800;

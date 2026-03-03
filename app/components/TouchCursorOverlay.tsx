@@ -110,7 +110,7 @@ export default function TouchCursorOverlay({ p, down }: Props) {
       toValue: 1,
       duration: style.kind === "orb" ? 900 : 650 + Math.floor(Math.random() * 250),
       easing: Easing.out(Easing.quad),
-      useNativeDriver: true,
+      useNativeDriver: false,
     }).start();
 
     return {
@@ -135,20 +135,20 @@ export default function TouchCursorOverlay({ p, down }: Props) {
           toValue: sp.kind === "orb" ? 1.45 : 1.25,
           duration: 120,
           easing: Easing.out(Easing.quad),
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
         Animated.timing(sp.s, {
           toValue: sp.kind === "orb" ? 0.85 : 0.75,
           duration: 520,
           easing: Easing.inOut(Easing.quad),
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
       ]),
       Animated.timing(sp.a, {
         toValue: 0,
         duration: fadeMs,
         easing: Easing.out(Easing.quad),
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
     ]).start(() => {
       setSparks((prev) => prev.filter((x) => x.id !== sp.id));

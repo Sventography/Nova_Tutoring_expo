@@ -94,7 +94,7 @@ function CompanionEffectOverlay({
     Animated.timing(anim, {
       toValue: 1,
       duration: 1400,
-      useNativeDriver: true,
+      useNativeDriver: false,
     }).start();
   }, [type, effectKey, anim]);
 
@@ -648,13 +648,13 @@ export default function FloatingCompanionOverlay(
         Animated.timing(floatHop, {
           toValue: -18,
           duration: 130,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
         Animated.spring(floatHop, {
           toValue: 0,
           friction: 4,
           tension: 60,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
       ]).start();
     } else if (mode === 1) {
@@ -664,12 +664,12 @@ export default function FloatingCompanionOverlay(
         Animated.timing(floatShake, {
           toValue: 1,
           duration: 220,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
         Animated.timing(floatShake, {
           toValue: 0,
           duration: 220,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
       ]).start();
     } else if (mode === 2) {
@@ -678,7 +678,7 @@ export default function FloatingCompanionOverlay(
       Animated.timing(floatRotate, {
         toValue: 1,
         duration: 700,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }).start(() => {
         floatRotate.setValue(0);
       });
@@ -689,13 +689,13 @@ export default function FloatingCompanionOverlay(
         Animated.timing(floatScale, {
           toValue: 1.12,
           duration: 150,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
         Animated.spring(floatScale, {
           toValue: 1,
           friction: 4,
           tension: 60,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
       ]).start();
     }

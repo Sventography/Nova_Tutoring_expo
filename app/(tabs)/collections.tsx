@@ -28,14 +28,14 @@ function useScreenToast(tokens: any) {
       toValue: 0,
       duration: 240,
       easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
+      useNativeDriver: false,
     }).start(() => {
       setTimeout(() => {
         Animated.timing(y, {
           toValue: 80,
           duration: 200,
           easing: Easing.in(Easing.cubic),
-          useNativeDriver: true,
+          useNativeDriver: false,
         }).start(() => setMsg(null));
       }, 1200);
     });
@@ -95,7 +95,7 @@ function CardRow({
       toValue: flipped ? 0 : 1,
       duration: 300,
       easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
+      useNativeDriver: false,
     }).start();
     setFlipped((v) => !v);
   };

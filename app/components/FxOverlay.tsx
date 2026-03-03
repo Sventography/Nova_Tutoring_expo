@@ -93,7 +93,7 @@ function Faller({ cfg, h, color, mode, fadeSoft }: { cfg: Drop; h: number; color
         toValue: 1,
         duration: Math.max(200, firstDur),
         easing: Easing.linear,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }).start(({ finished }) => {
         if (!mounted) return;
         // full cycles thereafter
@@ -103,7 +103,7 @@ function Faller({ cfg, h, color, mode, fadeSoft }: { cfg: Drop; h: number; color
             toValue: 1,
             duration: cfg.dur,
             easing: Easing.linear,
-            useNativeDriver: true,
+            useNativeDriver: false,
           }).start(({ finished }) => { if (mounted) loop(); });
         };
         if (finished) loop();
@@ -118,7 +118,7 @@ function Faller({ cfg, h, color, mode, fadeSoft }: { cfg: Drop; h: number; color
           toValue: 1,
           duration: 1800 + Math.random() * 1600,
           easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
+          useNativeDriver: false,
         }).start(({ finished }) => { if (mounted && finished) loopSway(); });
       };
       // jump to random phase on first frame for desync

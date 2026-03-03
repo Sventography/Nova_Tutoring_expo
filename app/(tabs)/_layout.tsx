@@ -218,7 +218,7 @@ function CompanionEffectOverlay({
     Animated.timing(anim, {
       toValue: 1,
       duration: 1400,
-      useNativeDriver: true,
+      useNativeDriver: false,
     }).start();
   }, [type, effectKey, anim]);
 
@@ -721,7 +721,7 @@ function FloatingCompanionOverlay() {
           toValue: -6,
           duration: 800,
           easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
         Animated.timing(bob, {
           toValue: 0,
@@ -758,22 +758,22 @@ function FloatingCompanionOverlay() {
       Animated.timing(floatScale, {
         toValue: 1.18,
         duration: 120,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
       Animated.timing(floatScale, {
         toValue: 0.95,
         duration: 110,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
       Animated.timing(floatScale, {
         toValue: 1.05,
         duration: 110,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
       Animated.timing(floatScale, {
         toValue: 1,
         duration: 110,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
     ]).start();
   }
@@ -784,12 +784,12 @@ function FloatingCompanionOverlay() {
       Animated.timing(floatHop, {
         toValue: -14,
         duration: 120,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
       Animated.timing(floatHop, {
         toValue: 0,
         duration: 160,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
     ]).start();
   }
@@ -800,12 +800,12 @@ function FloatingCompanionOverlay() {
       Animated.timing(floatRotate, {
         toValue: 1,
         duration: 260,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
       Animated.timing(floatRotate, {
         toValue: 0,
         duration: 0,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
     ]).start();
   }
@@ -816,22 +816,22 @@ function FloatingCompanionOverlay() {
       Animated.timing(floatShake, {
         toValue: 1,
         duration: 70,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
       Animated.timing(floatShake, {
         toValue: -1,
         duration: 70,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
       Animated.timing(floatShake, {
         toValue: 0.5,
         duration: 60,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
       Animated.timing(floatShake, {
         toValue: 0,
         duration: 60,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
     ]).start();
   }
@@ -844,29 +844,29 @@ function FloatingCompanionOverlay() {
         Animated.timing(floatScale, {
           toValue: 1.2,
           duration: 160,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
         Animated.timing(floatScale, {
           toValue: 0.95,
           duration: 140,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
         Animated.timing(floatScale, {
           toValue: 1,
           duration: 140,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
       ]),
       Animated.sequence([
         Animated.timing(floatRotate, {
           toValue: 1,
           duration: 400,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
         Animated.timing(floatRotate, {
           toValue: 0,
           duration: 0,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
       ]),
     ]).start();
@@ -1130,7 +1130,7 @@ function InnerTabsLayout() {
         Platform.OS === "web" ? undefined : () => setDown(false)
       }
     >
-      {/* 🔔 Achievement banner overlay at the very top */}
+      {/* 🔔 Achievement banner overlay now at the bottom */}
       <AchievementCelebrationOverlay />
 
       {/* Header fixed at the top */}
@@ -1325,9 +1325,10 @@ function InnerTabsLayout() {
 export const S = StyleSheet.create({
   overlay: {
     position: "absolute",
-    top: 16,
     left: 0,
     right: 0,
+    // 🔥 anchor near bottom, above tab bar
+    bottom: Platform.OS === "ios" ? 96 : 88,
     zIndex: 9999,
     alignItems: "center",
   },

@@ -101,13 +101,13 @@ function ToastBubble({
         toValue: 0,
         duration: 220,
         easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
       Animated.timing(op, {
         toValue: 1,
         duration: 220,
         easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
     ]).start();
   }, [op, y]);
