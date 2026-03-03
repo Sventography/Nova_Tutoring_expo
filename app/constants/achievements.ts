@@ -1,3 +1,5 @@
+// app/constants/achievements.ts
+
 export type Achievement = {
   id: string;
   title: string;
@@ -92,11 +94,11 @@ export function buildAchievements() {
   for (const sub of SUBJECTS) {
     for (let pct of [80, 85, 90, 95, 100]) {
       let coins: number;
-      if (pct === 80) coins = 70;    // slight premium over global
+      if (pct === 80) coins = 70; // slight premium over global
       else if (pct === 85) coins = 90;
       else if (pct === 90) coins = 120;
       else if (pct === 95) coins = 160;
-      else coins = 275;             // 100% subject = premium
+      else coins = 275; // 100% subject = premium
       const id = `quiz_${sub}_${pct}`;
       const title = `${titleCase(sub)} Master ${pct}%`;
       list.push(

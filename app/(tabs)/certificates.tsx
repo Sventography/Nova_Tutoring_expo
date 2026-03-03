@@ -19,7 +19,11 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import CertificateView from "../components/CertificateView";
-import { listCertificates, createCertificate } from "../utils/certificates";
+import {
+  listCertificates,
+  createCertificate,
+  CertificateRecord,
+} from "../utils/certificates";
 import Constants from "expo-constants";
 import { useUser } from "../context/UserContext";
 import { useFocusEffect } from "expo-router";
@@ -27,14 +31,8 @@ import { captureRef } from "react-native-view-shot";
 
 type SavedImage = { title: string; image: string; fileUri: string };
 
-// Allow both name and username; data may have either
-type CertificateMeta = {
-  name?: string;
-  username?: string;
-  quizTitle: string;
-  scorePct: number;
-  dateISO?: string;
-};
+// For UI, we can alias CertificateRecord to CertificateMeta
+type CertificateMeta = CertificateRecord;
 
 // hard off (no matter what __DEV__ is)
 const SHOW_DEV_CERT_BUTTON = false;
@@ -64,28 +62,21 @@ export default function CertificatesScreen() {
   } | null>(null);
 
   // Helper: get the name we should actually show/use on the cert
-  // 🔧 CHANGED: now always prefers current user first, THEN record
+  // 🔧 Prefers current user, then record
   const getDisplayName = useCallback(
     (rec: CertificateMeta | null): string => {
-      // 1) Prefer current logged-in user
       const fromUser =
-        (user?.username && user.username.trim()) ||
-        (user?.name && user.name.trim());
-      if (fromUser) {
-        return fromUser;
-      }
+        (user?.username && String(user.username).trim()) ||
+        (user?.name && String(user.name).trim());
+      if (fromUser) return fromUser;
 
-      // 2) Fall back to whatever is stored on the record
       if (rec) {
         const fromRec =
-          (rec.name && rec.name.trim()) ||
-          (rec.username && rec.username.trim());
-        if (fromRec) {
-          return fromRec;
-        }
+          (rec.name && String(rec.name).trim()) ||
+          (rec.username && String(rec.username).trim());
+        if (fromRec) return fromRec;
       }
 
-      // 3) Final fallback
       return "Nova Student";
     },
     [user]
@@ -94,7 +85,7 @@ export default function CertificatesScreen() {
   const refreshUnlocked = useCallback(async () => {
     try {
       const list = await listCertificates();
-      setUnlocked(Array.isArray(list) ? (list as CertificateMeta[]) : []);
+      setUnlocked(Array.isArray(list) ? list : []);
     } catch (e) {
       console.warn("refreshUnlocked failed", e);
     }
@@ -103,7 +94,10 @@ export default function CertificatesScreen() {
   async function devAward() {
     if (!SHOW_DEV_CERT_BUTTON) return;
     try {
-      const name = user?.username || user?.name || "Nova Student";
+      const name =
+        (user?.username && String(user.username).trim()) ||
+        (user?.name && String(user.name).trim()) ||
+        "Nova Student";
       const quizTitle = "DEV — Algebra I";
       const scorePct = 95;
       await createCertificate({ name, quizTitle, scorePct });
@@ -115,6 +109,7 @@ export default function CertificatesScreen() {
     }
   }
 
+  // Legacy image-based certs (older version)
   useEffect(() => {
     (async () => {
       try {
@@ -259,7 +254,9 @@ export default function CertificatesScreen() {
 
     const run = async () => {
       const { rec, mode } = pendingExport;
-      const filename = `certificate-${slugify(rec.quizTitle)}-${Date.now()}.png`;
+      const filename = `certificate-${slugify(
+        rec.quizTitle
+      )}-${Date.now()}.png`;
 
       try {
         setRendering(rec);
@@ -311,9 +308,11 @@ export default function CertificatesScreen() {
 
   // Called by buttons
   function exportRealCert(rec: CertificateMeta, mode: "share" | "print") {
-    // Make sure the record we pass along has a solid name
     const displayName = getDisplayName(rec);
-    setPendingExport({ rec: { ...rec, name: displayName }, mode });
+    setPendingExport({
+      rec: { ...rec, name: displayName },
+      mode,
+    });
   }
 
   // PDF: don't fetch/download on native; just open the URL
@@ -439,7 +438,7 @@ export default function CertificatesScreen() {
           const displayName = getDisplayName(rec);
           return (
             <View
-              key={`${rec.quizTitle}-${rec.dateISO ?? i}`}
+              key={rec.id || `${rec.quizTitle}-${rec.dateISO ?? i}`}
               style={s.card}
             >
               <View style={{ flex: 1 }}>
@@ -634,20 +633,6 @@ const s = StyleSheet.create({
   },
   btnOutlineTxt: {
     color: "#00e5ff",
-    fontWeight: "900",
-    textAlign: "center",
-  },
-
-  btnOutline2: {
-    borderWidth: 2,
-    borderColor: "#5df2ff",
-    paddingVertical: 9,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  btnOutline2Txt: {
-    color: "#5df2ff",
     fontWeight: "900",
     textAlign: "center",
   },

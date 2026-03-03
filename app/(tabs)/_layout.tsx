@@ -23,7 +23,6 @@ import TouchCursorOverlay from "../overlays/TouchCursorOverlay";
 import ScrollableTabBar from "../components/ScrollableTabBar";
 import HeaderBar from "../components/HeaderBar";
 import StarTrailOverlay from "../components/StarTrailOverlay";
-import { AchieveEmitter } from "../context/AchievementsContext";
 import ToastHost from "../components/ToastHost";
 import AchievementsAutoTracker from "../context/AchievementsAutoTracker";
 import AchievementsCoinsBridge from "../context/AchievementsCoinsBridge";
@@ -32,7 +31,7 @@ import GlobalTextDefaults from "../components/GlobalTextDefaults";
 import { useUser } from "../context/UserContext";
 import { useCompanion } from "../context/CompanionContext";
 import { COMPANIONS } from "../_lib/companionsCatalog";
-import AchievementConfettiOverlay from "../components/AchievementConfettiOverlay";
+import { AchieveEmitter } from "../context/AchievementsContext"; // 🌟 listen for celebrate events
 
 // --------------------
 // DEV-ONLY imports
@@ -681,33 +680,6 @@ function CompanionEffectOverlay({
 }
 
 /**
- * CelebrateToast
- */
-function CelebrateToast({
-  message,
-  onClose,
-}: {
-  message: string;
-  onClose: () => void;
-}) {
-  return (
-    <View pointerEvents="box-none" style={S.overlay}>
-      <LinearGradient
-        colors={["#00e5ff", "#66a6ff", "#000000"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={S.toast}
-      >
-        <Text style={S.toastText}>{message}</Text>
-        <Pressable onPress={onClose} hitSlop={12} style={S.closeBtn}>
-          <Text style={S.closeText}>×</Text>
-        </Pressable>
-      </LinearGradient>
-    </View>
-  );
-}
-
-/**
  * Global floating companion bubble that:
  * - Uses the currently equipped companion
  * - Is visible on every tab (shop can show its own if desired)
@@ -755,7 +727,6 @@ function FloatingCompanionOverlay() {
           toValue: 0,
           duration: 800,
           easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
         }),
       ])
     );
@@ -992,14 +963,8 @@ function FloatingCompanionOverlay() {
     >
       <View style={S.companionBadge}>
         {/* FX burst overlay (same as shop tab) */}
-        <View
-          pointerEvents="none"
-          style={StyleSheet.absoluteFillObject}
-        >
-          <CompanionEffectOverlay
-            type={effectType}
-            effectKey={effectKey}
-          />
+        <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
+          <CompanionEffectOverlay type={effectType} effectKey={effectKey} />
         </View>
 
         <Image
@@ -1008,8 +973,65 @@ function FloatingCompanionOverlay() {
           resizeMode="contain"
         />
       </View>
-      {/* label removed – just the bubble */}
     </Animated.View>
+  );
+}
+
+/* ----------------- Achievement celebration overlay (banner) ---------------- */
+
+function AchievementCelebrationOverlay() {
+  const [visible, setVisible] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!AchieveEmitter) return;
+
+    const handler = (payload: any) => {
+      // We logged: "emit celebrate: Cards Saved: 10 — +15 coins"
+      // so the payload might just be a string.
+      let msg: string;
+
+      if (typeof payload === "string") {
+        msg = payload;
+      } else if (payload?.message) {
+        msg = String(payload.message);
+      } else if (payload?.title && payload?.coins != null) {
+        msg = `${payload.title} — +${payload.coins} coins`;
+      } else if (payload?.title) {
+        msg = String(payload.title);
+      } else {
+        msg = "Achievement unlocked!";
+      }
+
+      setMessage(msg);
+      setVisible(true);
+
+      // auto-hide after a few seconds
+      const timeout = setTimeout(() => {
+        setVisible(false);
+      }, 2600);
+
+      return () => clearTimeout(timeout);
+    };
+
+    // mitt-style or EventEmitter-style guards
+    (AchieveEmitter as any).on?.("celebrate", handler);
+    (AchieveEmitter as any).addListener?.("celebrate", handler);
+
+    return () => {
+      (AchieveEmitter as any).off?.("celebrate", handler);
+      (AchieveEmitter as any).removeListener?.("celebrate", handler);
+    };
+  }, []);
+
+  if (!visible || !message) return null;
+
+  return (
+    <View pointerEvents="none" style={S.overlay}>
+      <View style={S.toast}>
+        <Text style={S.toastText}>{message}</Text>
+      </View>
+    </View>
   );
 }
 
@@ -1039,32 +1061,12 @@ function InnerTabsLayout() {
   const insets = useSafeAreaInsets();
   const HEADER_HEIGHT = (Platform.OS === "web" ? 64 : 56) + (insets?.top ?? 0);
 
-  const [celebrate, setCelebrate] = useState<string | null>(null);
-
   // global touch tracking for mobile cursor trail
   const [p, setP] = useState<Pt>({ x: -1, y: -1 });
   const [down, setDown] = useState(false);
 
   const { ready } = useUser();
   // (we keep `ready` so the context is used, but we don't gate on it anymore)
-
-  // listen for achievement celebration events
-  useEffect(() => {
-    const handler = (msg: string) => {
-      setCelebrate(msg || "🎉 Achievement unlocked!");
-      const t = setTimeout(() => setCelebrate(null), 6000);
-      return () => clearTimeout(t);
-    };
-
-    const listener = AchieveEmitter?.addListener?.("celebrate", handler);
-    return () => {
-      try {
-        listener?.remove?.();
-      } catch {
-        // ignore
-      }
-    };
-  }, []);
 
   // ensure mobile has a default cursor trail (star) if none is set yet
   useEffect(() => {
@@ -1097,10 +1099,6 @@ function InnerTabsLayout() {
     };
   }, []);
 
-  // NOTE: we intentionally do NOT do:
-  // if (!ready) return <Loading ... />
-  // so that TestFlight can't get stuck on that screen.
-
   return (
     <View
       style={{ flex: 1, position: "relative" }}
@@ -1132,6 +1130,9 @@ function InnerTabsLayout() {
         Platform.OS === "web" ? undefined : () => setDown(false)
       }
     >
+      {/* 🔔 Achievement banner overlay at the very top */}
+      <AchievementCelebrationOverlay />
+
       {/* Header fixed at the top */}
       <View
         style={{
@@ -1311,19 +1312,12 @@ function InnerTabsLayout() {
       <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
         <FxOverlay />
         {Platform.OS === "web" ? <StarTrailOverlay /> : null}
-        {Platform.OS !== "web" ? <TouchCursorOverlay p={p} down={down} /> : null}
-        {/* 🎉 Achievement confetti now lives only on the tabs screens */}
-        <AchievementConfettiOverlay />
+        {Platform.OS !== "web" ? (
+          <TouchCursorOverlay p={p} down={down} />
+        ) : null}
         {/* 🌟 Global floating companion bubble with shop-style FX */}
         <FloatingCompanionOverlay />
       </View>
-
-      {celebrate ? (
-        <CelebrateToast
-          message={celebrate}
-          onClose={() => setCelebrate(null)}
-        />
-      ) : null}
     </View>
   );
 }

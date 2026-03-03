@@ -13,6 +13,7 @@ import { useUser } from "./UserContext";
 import { supabase } from "../lib/supabase";
 import { useCompanion } from "./CompanionContext";
 import { canonId } from "../_lib/canonId";
+import { AchieveEmitter, ACHIEVEMENT_EVENT } from "./AchievementsContext";
 
 // All streak logic is anchored to Eastern Time (America/New_York)
 const EASTERN_TZ = "America/New_York";
@@ -416,6 +417,25 @@ export function StreakProvider({ children }: { children: ReactNode }) {
     const nextLogsArr = Array.from(existingLogs).sort(); // keeps ordering nice
 
     await persistAll(nextMeta, nextLogsArr);
+
+    // 🔥 Fire streak achievements via AchievementsContext bridge
+    try {
+      const thresholds = [
+        2, 3, 5, 7, 10, 14, 21, 30, 50, 75, 100, 150, 200, 250, 300, 365,
+      ];
+      for (const d of thresholds) {
+        if (nextCount >= d) {
+          AchieveEmitter.emit(ACHIEVEMENT_EVENT, {
+            id: `streak_${d}`,
+          });
+        }
+      }
+    } catch (err) {
+      console.warn(
+        "[StreakContext] emit streak achievements error:",
+        err
+      );
+    }
   }, [meta, logs, persistAll, hasAxolotl, axolotlKey]);
 
   const resetStreak = useCallback(async () => {

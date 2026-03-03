@@ -6,6 +6,7 @@ import React, {
   useMemo,
   useRef,
   useState,
+  useEffect,
 } from "react";
 import {
   View,
@@ -17,6 +18,7 @@ import {
   Platform,
 } from "react-native";
 import { useTheme } from "./ThemeContext";
+import { registerToast, ToastBridgeInput } from "../utils/toast";
 
 type ToastType = "success" | "error" | "info";
 
@@ -28,8 +30,11 @@ export type ToastOptions = {
   icon?: string; // e.g. "🎉"
 };
 
+// Allow both full options OR a simple string for backwards compatibility
+type ToastInput = ToastOptions | string;
+
 type ToastContextValue = {
-  show: (opts: ToastOptions) => void;
+  show: (opts: ToastInput) => void;
   hide: () => void;
 };
 
@@ -71,8 +76,19 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   }, [anim, clearHideTimeout]);
 
   const show = useCallback(
-    (opts: ToastOptions) => {
+    (input: ToastInput) => {
       clearHideTimeout();
+
+      console.log("[ToastContext] show() input =", input);
+
+      // Normalize input: string → { message }
+      const opts: ToastOptions =
+        typeof input === "string"
+          ? { message: input, type: "info" }
+          : input || {};
+
+      console.log("[ToastContext] normalized opts =", opts);
+
       setToast(opts);
       setVisible(true);
 
@@ -90,6 +106,14 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     },
     [anim, clearHideTimeout, hide]
   );
+
+  // Bridge: let legacy utils/showToast() send into this provider
+  useEffect(() => {
+    const handler = (input: ToastBridgeInput) => {
+      show(input as ToastInput);
+    };
+    registerToast(handler);
+  }, [show]);
 
   const value = useMemo(
     () => ({
@@ -117,6 +141,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       ? "#ffffff"
       : tokens.text || "#f4f8ff";
 
+  const iconColor = textColor;
+
   return (
     <ToastCtx.Provider value={value}>
       {children}
@@ -136,10 +162,11 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             >
               <View style={S.row}>
                 {toast.icon ? (
-                  <Text style={[S.icon, { color: textColor }]}>
+                  <Text style={[S.icon, { color: iconColor }]}>
                     {toast.icon}
                   </Text>
                 ) : null}
+
                 <View style={{ flex: 1 }}>
                   {!!toast.title && (
                     <Text
@@ -149,12 +176,23 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                       {toast.title}
                     </Text>
                   )}
+
                   {!!toast.message && (
                     <Text
                       style={[S.message, { color: textColor }]}
                       numberOfLines={Platform.OS === "web" ? 3 : 2}
                     >
                       {toast.message}
+                    </Text>
+                  )}
+
+                  {/* If dev forgets to pass message but passes title, at least show title */}
+                  {!toast.message && toast.title && (
+                    <Text
+                      style={[S.message, { color: textColor, opacity: 0.9 }]}
+                      numberOfLines={Platform.OS === "web" ? 3 : 2}
+                    >
+                      {toast.title}
                     </Text>
                   )}
                 </View>
@@ -166,6 +204,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     </ToastCtx.Provider>
   );
 }
+
+// Also export default so both `import { ToastProvider }`
+// and `import ToastProvider` keep working.
+export default ToastProvider;
 
 const S = StyleSheet.create({
   rootOverlay: {
@@ -185,6 +227,8 @@ const S = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 14,
+    borderWidth: 1.2,
+    borderColor: "rgba(255,255,255,0.25)",
     shadowOpacity: 0.4,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },

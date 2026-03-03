@@ -25,6 +25,8 @@ import { useStreak } from "../context/StreakContext";
 import { showToast } from "../utils/toast";
 import { supabase } from "../lib/supabase";
 
+const DISCORD_INVITE_URL = "https://discord.gg/NR9PAjtrg";
+
 export default function AccountScreen() {
   const {
     user,
@@ -322,7 +324,7 @@ export default function AccountScreen() {
     }
   }
 
-  function onContactUs() {
+  async function onContactUs() {
     const email = "contact.novatutoring@gmail.com";
     const subject = encodeURIComponent("Nova Tutoring Support");
     const body = encodeURIComponent(
@@ -331,11 +333,22 @@ export default function AccountScreen() {
     const url = `mailto:${email}?subject=${subject}&body=${body}`;
 
     try {
-      Linking.openURL(url);
+      await Linking.openURL(url);
     } catch (e) {
       Alert.alert(
         "Email not available",
         "You can email us at contact.novatutoring@gmail.com."
+      );
+    }
+  }
+
+  async function onJoinDiscord() {
+    try {
+      await Linking.openURL(DISCORD_INVITE_URL);
+    } catch (e) {
+      Alert.alert(
+        "Unable to open Discord",
+        "If the link doesn’t open, you can paste this in your browser or Discord:\n\nhttps://discord.gg/NR9PAjtrg"
       );
     }
   }
@@ -584,9 +597,32 @@ export default function AccountScreen() {
           </Pressable>
         </View>
 
-        {/* Contact + Privacy links */}
+        {/* Contact + Community + Privacy links */}
         <View style={S.privacyRow}>
-          <Pressable onPress={onContactUs}>
+          {/* Highlighted Discord pill – TOP */}
+          <Pressable
+            onPress={onJoinDiscord}
+            style={[
+              S.discordBtn,
+              {
+                borderColor: tokens.accent,
+                backgroundColor: tokens.isDark
+                  ? "rgba(0,255,200,0.22)"
+                  : "rgba(0,160,220,0.14)",
+              },
+            ]}
+          >
+            <Text style={S.discordIcon}>🗯️</Text>
+            <Text style={[S.privacyLink, { color: tokens.text }]}>
+              Join our Discord
+            </Text>
+          </Pressable>
+
+          {/* Contact + Privacy under it */}
+          <Pressable
+            onPress={onContactUs}
+            style={{ marginTop: 10 }}
+          >
             <Text style={S.privacyLink}>Contact Us</Text>
           </Pressable>
 
@@ -824,6 +860,21 @@ export const S = StyleSheet.create({
     fontWeight: "600",
     color: "#9ad8ff",
     textDecorationLine: "underline",
+  },
+
+  // pill-style Discord button
+  discordBtn: {
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 999,
+    borderWidth: 1.5,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  discordIcon: {
+    fontSize: 18,
+    marginRight: 6,
   },
 
   modalBackdrop: {

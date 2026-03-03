@@ -1,7 +1,14 @@
+// (optional) app/components/AchievementCelebration.tsx
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 
-export default function AchievementCelebration({ trigger, title }: { trigger: boolean; title: string }) {
+export default function AchievementCelebration({
+  trigger,
+  title,
+}: {
+  trigger: boolean;
+  title: string;
+}) {
   if (!trigger) return null;
 
   return (

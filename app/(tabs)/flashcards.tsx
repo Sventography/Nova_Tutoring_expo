@@ -91,10 +91,7 @@ function CardRow({
   };
 
   return (
-    <Pressable
-      onPress={handleFlip}
-      style={styles.cardRowOuter}
-    >
+    <Pressable onPress={handleFlip} style={styles.cardRowOuter}>
       <View style={styles.cardRowInner}>
         <View style={{ flex: 1 }}>
           <Text style={styles.cardSideLabel}>
@@ -126,7 +123,7 @@ export default function Flashcards() {
   const placeholderColor = tokens.isDark ? "#678a94" : "#6b7685";
 
   const coll = useCollections();
-  const { addCard } = coll;
+  const { addCard, removeCardByContent } = coll as any;
   const collectionTopics = (coll.topics as any) ?? [];
 
   const { onFlashcardSaved } = useAchievements();
@@ -232,11 +229,6 @@ export default function Flashcards() {
     async (card: Card) => {
       try {
         const key = makeCardKey(card as any);
-        if (key && savedCardKeys.has(key)) {
-          // Already saved: still show the "Saved" modal for reassurance
-          setShowSavedModal(true);
-          return;
-        }
 
         const topic =
           activeId != null
@@ -245,6 +237,17 @@ export default function Flashcards() {
         const topicId = topic?.id ?? activeId ?? "flashcards";
         const topicTitle = topic?.title ?? activeTitle;
 
+        if (key && savedCardKeys.has(key)) {
+          // 🔁 Already saved → UNSAVE it
+          try {
+            await removeCardByContent(topicId, card.front, card.back);
+          } catch (err) {
+            console.warn("[flashcards] removeCardByContent failed", err);
+          }
+          return;
+        }
+
+        // ⭐ Not saved yet → SAVE it
         // @ts-ignore CollectionsContext supports (card, topicId, topicTitle)
         await addCard(card, topicId, topicTitle);
 
@@ -254,7 +257,15 @@ export default function Flashcards() {
         console.warn("[flashcards] addCard failed", e);
       }
     },
-    [addCard, onFlashcardSaved, savedCardKeys, activeId, allTopics, activeTitle]
+    [
+      addCard,
+      onFlashcardSaved,
+      savedCardKeys,
+      activeId,
+      allTopics,
+      activeTitle,
+      removeCardByContent,
+    ]
   );
 
   // Friendly text about saved sets/cards
@@ -284,7 +295,8 @@ export default function Flashcards() {
               color: tokens.cardText,
             }}
           >
-            Tap a card to flip. Tap the bookmark to save it to Collections.
+            Tap a card to flip. Tap the bookmark to save or unsave it to
+            Collections.
           </Text>
           <Text
             style={{
@@ -399,20 +411,10 @@ export default function Flashcards() {
               },
             ]}
           >
-            <Text
-              style={[
-                styles.modalTitle,
-                { color: tokens.text },
-              ]}
-            >
+            <Text style={[styles.modalTitle, { color: tokens.text }]}>
               Flashcard Saved
             </Text>
-            <Text
-              style={[
-                styles.modalBody,
-                { color: tokens.cardText },
-              ]}
-            >
+            <Text style={[styles.modalBody, { color: tokens.cardText }]}>
               This flashcard has been saved to the Collections tab.
             </Text>
             <View
@@ -433,12 +435,7 @@ export default function Flashcards() {
                 ]}
                 onPress={() => setShowSavedModal(false)}
               >
-                <Text
-                  style={[
-                    styles.modalBtnTxt,
-                    { color: tokens.text },
-                  ]}
-                >
+                <Text style={[styles.modalBtnTxt, { color: tokens.text }]}>
                   Close
                 </Text>
               </Pressable>
@@ -458,12 +455,7 @@ export default function Flashcards() {
                   router.push("/collections");
                 }}
               >
-                <Text
-                  style={[
-                    styles.modalBtnTxt,
-                    { color: tokens.text },
-                  ]}
-                >
+                <Text style={[styles.modalBtnTxt, { color: tokens.text }]}>
                   Go to Collections
                 </Text>
               </Pressable>

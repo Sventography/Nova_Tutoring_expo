@@ -13,7 +13,6 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { ACHIEVEMENT_LIST } from "../constants/achievements";
 import { useCoins } from "./CoinsContext";
-import { useToast } from "./ToastContext";
 import { useUser } from "./UserContext";
 import { useCompanion } from "./CompanionContext";
 import { canonId } from "../_lib/canonId";
@@ -145,7 +144,6 @@ export function AchievementsProvider({
   const [hydrated, setHydrated] = useState(false);
 
   const { addCoins } = useCoins();
-  const { show: showToast } = useToast();
 
   // Active companion & legendary flags
   const activeCompanionCid = useMemo(
@@ -353,20 +351,32 @@ export function AchievementsProvider({
         }
 
         if (!opts?.silent) {
-          try {
-            const hasCoins = coinsAwarded > 0;
-            const message = hasCoins
-              ? `${ach.title} • +${coinsAwarded.toLocaleString()} coins`
-              : ach.title;
+          const hasCoins = coinsAwarded > 0;
+          const label = ach.title;
 
-            showToast({
-              title: "Achievement unlocked!",
-              message,
-              type: "success",
-              icon: "🎉",
+          // 🔔 Notify the detailed overlay with title + coins
+          try {
+            AchieveEmitter.emit("achievement_unlocked_detail", {
+              id,
+              title: label,
+              coins: coinsAwarded,
             });
           } catch (e) {
-            console.warn("[Achievements] toast failed", e);
+            console.warn(
+              "[Achievements] achievement_unlocked_detail emit failed",
+              e
+            );
+          }
+
+          // 🎉 Also emit a simple celebrate banner message
+          try {
+            const bannerMessage = hasCoins
+              ? `${label} — +${coinsAwarded.toLocaleString()} coins`
+              : label || "Achievement unlocked!";
+            console.log("[Achievements] emit celebrate:", bannerMessage);
+            AchieveEmitter.emit("celebrate", bannerMessage);
+          } catch (e) {
+            console.warn("[Achievements] celebrate emit failed", e);
           }
         }
       }
@@ -382,7 +392,7 @@ export function AchievementsProvider({
         console.warn("[Achievements] DeviceEventEmitter emit failed", e);
       }
     },
-    [addCoins, showToast, persistUnlocked, computeAchievementCoins]
+    [addCoins, persistUnlocked, computeAchievementCoins]
   );
 
   // ─────────────── QUIZ ───────────────
@@ -403,8 +413,8 @@ export function AchievementsProvider({
 
       const quizTakenThresholds = [1, 5, 10, 25, 50, 100, 200];
       for (const n of quizTakenThresholds) {
-        const id = `quiz_taken_${n}`;
-        if (total >= n && !unlockedRef.current[id]) unlock(id);
+        const tid = `quiz_taken_${n}`;
+        if (total >= n && !unlockedRef.current[tid]) unlock(tid);
       }
     },
     [unlock, persistQuizCount]

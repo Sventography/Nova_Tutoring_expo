@@ -28,6 +28,12 @@ type CollectionsContextValue = {
     title?: string
   ) => Promise<void>;
   removeCard: (topicId: string, cardId: string) => Promise<void>;
+  /** New: remove by front/back text (used by Flashcards toggle) */
+  removeCardByContent: (
+    topicId: string,
+    front: string,
+    back: string
+  ) => Promise<void>;
   clearAll: () => Promise<void>;
 };
 
@@ -130,6 +136,31 @@ export function CollectionsProvider({ children }: { children: React.ReactNode })
     });
   }, []);
 
+  const removeCardByContent = useCallback<
+    CollectionsContextValue["removeCardByContent"]
+  >(async (topicId, front, back) => {
+    const norm = (s: string) => s.trim().toLowerCase();
+
+    setTopics((prev) => {
+      const next = prev
+        .map((t) => {
+          if (t.id !== topicId) return t;
+          const filtered = t.cards.filter(
+            (c) =>
+              !(
+                norm(c.front || "") === norm(front || "") &&
+                norm(c.back || "") === norm(back || "")
+              )
+          );
+          return { ...t, cards: filtered };
+        })
+        .filter((t) => (t.cards?.length ?? 0) > 0);
+
+      saveToStorage(next);
+      return next;
+    });
+  }, []);
+
   const clearAll = useCallback(async () => {
     setTopics([]);
     try {
@@ -143,6 +174,7 @@ export function CollectionsProvider({ children }: { children: React.ReactNode })
     topics,
     addCard,
     removeCard,
+    removeCardByContent,
     clearAll,
   };
 

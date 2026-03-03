@@ -47,8 +47,47 @@ function getUserCoinsKey(userId: string | null): string {
   return `${USER_COINS_PREFIX}${userId}`;
 }
 
+/**
+ * Best-effort helper to derive a **non-null** username for profile upserts.
+ * We try, in order:
+ *  - profile.username / profile.name
+ *  - supabaseUser.user_metadata.username / email prefix
+ *  - fallback: student_<first-8-chars-of-user-id>
+ */
+function getSafeUsername(
+  profile: any,
+  supabaseUser: any,
+  supabaseUserId: string | null
+): string | null {
+  const fromProfile =
+    (profile?.username && String(profile.username).trim()) ||
+    (profile?.name && String(profile.name).trim());
+
+  const fromMeta =
+    (supabaseUser?.user_metadata?.username &&
+      String(supabaseUser.user_metadata.username).trim()) ||
+    (supabaseUser?.email &&
+      String(supabaseUser.email).split("@")[0]?.trim());
+
+  const fallback = supabaseUserId
+    ? `student_${String(supabaseUserId).slice(0, 8)}`
+    : null;
+
+  const raw = fromProfile || fromMeta || fallback;
+  if (!raw) return null;
+
+  const trimmed = String(raw).trim();
+  return trimmed || fallback;
+}
+
 export function CoinsProvider({ children }: { children: ReactNode }) {
-  const { supabaseUserId, ready: userReady } = useUser() as any;
+  // We also grab profile + supabaseUser (if exposed) so we can build a safe username
+  const {
+    supabaseUserId,
+    ready: userReady,
+    profile,
+    user: supabaseUser,
+  } = useUser() as any;
 
   const [coins, setCoinsState] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
@@ -67,15 +106,25 @@ export function CoinsProvider({ children }: { children: ReactNode }) {
 
       // If we have a Supabase user, sync to profiles table as source of truth
       if (supabaseUserId) {
+        const safeUsername = getSafeUsername(
+          profile,
+          supabaseUser,
+          supabaseUserId
+        );
+
+        const payload: any = {
+          id: supabaseUserId,
+          coins: value,
+        };
+
+        // Only send username if we actually have something non-empty
+        if (safeUsername) {
+          payload.username = safeUsername;
+        }
+
         const { error } = await supabase
           .from("profiles")
-          .upsert(
-            {
-              id: supabaseUserId,
-              coins: value,
-            },
-            { onConflict: "id" }
-          );
+          .upsert(payload, { onConflict: "id" });
 
         if (error) {
           console.warn("[CoinsContext] Supabase upsert error:", error);
@@ -89,21 +138,24 @@ export function CoinsProvider({ children }: { children: ReactNode }) {
   const logTransaction = async (
     delta: number,
     reason?: string,
-    meta?: Record<string, any>
+    _meta?: Record<string, any>
   ) => {
     if (!supabaseUserId) return;
     if (!delta) return;
+
     try {
+      // Match the *current* transactions table:
+      // user_id (uuid, not null)
+      // amount (numeric/bigint, not null)
+      // kind   (text, not null)
       const payload: {
         user_id: string;
         amount: number;
-        type: string;
-        reference?: string | null;
+        kind: string;
       } = {
         user_id: supabaseUserId,
         amount: delta,
-        type: reason || "coins_change",
-        reference: meta ? JSON.stringify(meta).slice(0, 1000) : null,
+        kind: reason || "coins_change",
       };
 
       const { error } = await supabase.from("transactions").insert(payload);
@@ -151,15 +203,24 @@ export function CoinsProvider({ children }: { children: ReactNode }) {
         const localSeed = await loadFromStorageOnly();
         nextCoins = localSeed;
 
+        const safeUsername = getSafeUsername(
+          profile,
+          supabaseUser,
+          supabaseUserId
+        );
+
+        const payload: any = {
+          id: supabaseUserId,
+          coins: nextCoins,
+        };
+
+        if (safeUsername) {
+          payload.username = safeUsername;
+        }
+
         const { error: upsertError } = await supabase
           .from("profiles")
-          .upsert(
-            {
-              id: supabaseUserId,
-              coins: nextCoins,
-            },
-            { onConflict: "id" }
-          );
+          .upsert(payload, { onConflict: "id" });
 
         if (upsertError) {
           console.warn(

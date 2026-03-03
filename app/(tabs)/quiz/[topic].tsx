@@ -1,5 +1,6 @@
+// app/(tabs)/quiz/[topic].tsx
 import { reportQuizFinished } from "../../utils/report-quiz-finish";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -22,6 +23,10 @@ import {
   useAchievements,
   AchieveEmitter,
 } from "../../context/AchievementsContext"; // ✅ achievements context / emitter
+import { useCoins } from "../../context/CoinsContext";
+import { useToast } from "../../context/ToastContext";
+import { useUser } from "../../context/UserContext";
+import { createCertificate } from "../../utils/certificates";
 
 type QItem = { question: string; choices: string[]; answer: string };
 
@@ -34,11 +39,17 @@ const BLUE = "#0B2239";
 const BLACK = "#000000";
 const NEON = "#39FF14"; // neon green
 
+// 🔧 Turn this to false before App Store submission if you don't want visible cheats
+const SHOW_DEV_QUIZ_CHEAT = true;
+
 export default function TopicQuiz() {
   const { id = "", title = "" } =
     useLocalSearchParams<{ id?: string; title?: string }>();
   const router = useRouter();
   const ach = useAchievements();
+  const { addCoins } = useCoins();
+  const { show: showToast } = useToast();
+  const { user } = useUser() as any;
 
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<QItem[]>([]);
@@ -53,11 +64,9 @@ export default function TopicQuiz() {
   const autoRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const totalTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // ✅ guards so history + achievements + modal only fire once per run
   const loggedRef = useRef(false);
   const notifiedRef = useRef(false);
 
-  // ✅ for in-screen modal overlay
   const [showCongrats, setShowCongrats] = useState(false);
 
   const current = items[idx];
@@ -68,7 +77,14 @@ export default function TopicQuiz() {
     [title]
   );
 
-  // ✅ Android back button protection: confirm before quitting mid-quiz
+  const getDisplayName = useCallback(() => {
+    const fromUser =
+      (user?.username && String(user.username).trim()) ||
+      (user?.name && String(user.name).trim());
+    return fromUser || "Nova Student";
+  }, [user]);
+
+  // Android hardware back handler
   useFocusEffect(
     React.useCallback(() => {
       const onBack = () => {
@@ -91,7 +107,7 @@ export default function TopicQuiz() {
     }, [done, loading, noData, router])
   );
 
-  // 🔹 Load questions for this topic
+  // Load questions
   useEffect(() => {
     let mounted = true;
 
@@ -141,7 +157,7 @@ export default function TopicQuiz() {
     };
   }, [id]);
 
-  // 🔹 Total 5-min timer
+  // Total timer
   useEffect(() => {
     if (loading || done || noData) return;
 
@@ -174,14 +190,58 @@ export default function TopicQuiz() {
     setLocked(false);
   }
 
-  function onPick(i: number) {
+  // DEV helper: force quiz to finish with target %
+  function devForceFinish(targetPct: number) {
+    if (!total || done) return;
+    const clamped = Math.max(0, Math.min(100, targetPct));
+    const neededCorrect = Math.round((clamped / 100) * total);
+
+    console.log("[DEV] Forcing quiz finish", {
+      total,
+      targetPct: clamped,
+      neededCorrect,
+    });
+
+    setCorrect(neededCorrect);
+    setIdx(total - 1);
+    setSelected(null);
+    setLocked(true);
+    setDone(true);
+  }
+
+  async function onPick(i: number) {
     if (locked || !current) return;
 
     setSelected(i);
     setLocked(true);
 
-    if (current.choices[i] === current.answer) {
+    const chosen = current.choices[i];
+    const isCorrect = chosen === current.answer;
+
+    if (isCorrect) {
       setCorrect((c) => c + 1);
+
+      // Per-question coins
+      try {
+        void addCoins(5, "quiz_correct", {
+          topicId: String(id),
+          questionIndex: idx,
+          question: current.question,
+        });
+      } catch (e) {
+        console.warn("[Quiz] addCoins failed", e);
+      }
+
+      try {
+        showToast({
+          title: "+5 coins",
+          message: "Correct answer!",
+          type: "success",
+          icon: "🪙",
+        });
+      } catch (e) {
+        console.warn("[Quiz] showToast failed", e);
+      }
     }
 
     if (autoRef.current) clearTimeout(autoRef.current);
@@ -217,7 +277,7 @@ export default function TopicQuiz() {
     </LinearGradient>
   );
 
-  // ✅ When quiz is finished, log to History + fire achievements + show modal (ONCE)
+  // When quiz is finished: history, achievements, and certificate
   useEffect(() => {
     if (!done) return;
     if (!total) return;
@@ -225,7 +285,6 @@ export default function TopicQuiz() {
 
     const pct = total ? Math.round((correct / total) * 100) : 0;
 
-    // ✅ Shared funnel for history + certificates
     reportQuizFinished(pct, headerTitle || "Quiz").catch(() => {});
     loggedRef.current = true;
 
@@ -234,7 +293,6 @@ export default function TopicQuiz() {
 
     const topicId = String(id);
 
-    // 🔹 1) Bridge logger (whatever the History tab is already wired to)
     void safeLogQuiz({
       topicId,
       title: headerTitle,
@@ -243,7 +301,6 @@ export default function TopicQuiz() {
       percent: pct,
     }).catch(() => {});
 
-    // 🔹 2) Direct logger into quizHistory (belt + suspenders)
     void addQuizHistory({
       topicId,
       title: headerTitle,
@@ -252,7 +309,6 @@ export default function TopicQuiz() {
       percent: pct,
     }).catch(() => {});
 
-    // 🔹 Direct Achievements API (sync now; defensive about promises)
     if (ach && typeof (ach as any).onQuizFinished === "function") {
       try {
         const maybePromise = (ach as any).onQuizFinished(pct, headerTitle);
@@ -262,12 +318,10 @@ export default function TopicQuiz() {
       } catch {}
     }
 
-    // 🔹 Global bridge — expects correct answers + duration + total
     try {
       quizFinished(correct, durationSec, total);
     } catch {}
 
-    // 🔹 Emitter fallback
     try {
       AchieveEmitter.emit("ACHIEVEMENT_EVENT", {
         type: "quizFinished",
@@ -276,14 +330,44 @@ export default function TopicQuiz() {
       });
     } catch {}
 
-    // ✅ Modal only (no extra Alert spam)
+    // 🔹 Local certificate: always attempt for ≥ 80%
+    if (pct >= 80) {
+      (async () => {
+        try {
+          const name = getDisplayName();
+          await createCertificate({
+            name,
+            quizTitle: headerTitle,
+            scorePct: pct,
+          });
+          console.log(
+            "[Quiz] Local certificate created from quiz finish",
+            headerTitle,
+            pct,
+            name
+          );
+        } catch (e) {
+          console.warn("[Quiz] createCertificate failed", e);
+        }
+      })();
+    }
+
     if (!notifiedRef.current) {
       notifiedRef.current = true;
       setShowCongrats(true);
     }
-  }, [done, total, correct, totalLeft, id, headerTitle, ach]);
+  }, [
+    done,
+    total,
+    correct,
+    totalLeft,
+    id,
+    headerTitle,
+    ach,
+    getDisplayName,
+  ]);
 
-  // ───────────────── RENDER STATES ─────────────────
+  // Render states
 
   if (loading) {
     return (
@@ -341,7 +425,6 @@ export default function TopicQuiz() {
           </Pressable>
         </View>
 
-        {/* 🔹 In-screen modal overlay */}
         {showCongrats && (
           <View style={S.modalBackdrop}>
             <View style={S.modalCard}>
@@ -397,7 +480,7 @@ export default function TopicQuiz() {
     );
   }
 
-  // 🔹 Active quiz state
+  // Active quiz view
   return (
     <Shell>
       <View style={S.headerRow}>
@@ -458,6 +541,30 @@ export default function TopicQuiz() {
           <Text style={S.btnTxt}>Finish</Text>
         </Pressable>
       </View>
+
+      {SHOW_DEV_QUIZ_CHEAT && (
+        <View style={[S.devRow, { marginTop: 16 }]}>
+          <Text style={S.devLabel}>DEV • Quiz Cheats</Text>
+          <View style={S.devButtonsRow}>
+            <Pressable
+              style={S.devBtn}
+              onPress={() => devForceFinish(80)}
+            >
+              <Text style={S.devBtnText}>Force 80% (cert)</Text>
+            </Pressable>
+            <Pressable
+              style={S.devBtn}
+              onPress={() => devForceFinish(100)}
+            >
+              <Text style={S.devBtnText}>Force 100%</Text>
+            </Pressable>
+          </View>
+          <Text style={S.devHint}>
+            Use in TestFlight to unlock certificates fast and check bleed across
+            accounts.
+          </Text>
+        </View>
+      )}
     </Shell>
   );
 }
@@ -491,7 +598,6 @@ export const S = StyleSheet.create({
   meta: { fontSize: 14, color: CYAN, opacity: 0.9, fontWeight: "700" },
   danger: { color: "#ff6b6b", fontWeight: "900" },
 
-  // ✅ Mobile-friendly answer buttons
   choice: {
     minHeight: 56,
     justifyContent: "center",
@@ -506,8 +612,6 @@ export const S = StyleSheet.create({
   choicePicked: {
     backgroundColor: "rgba(0, 229, 255, 0.14)",
   },
-
-  // ✅ NEON GREEN for correct answers
   choiceRight: {
     backgroundColor: "rgba(57, 255, 20, 0.22)",
     borderColor: NEON,
@@ -518,13 +622,10 @@ export const S = StyleSheet.create({
     elevation: 6,
   },
   choiceTxtRight: { color: NEON, fontWeight: "900" },
-
-  // Wrong = red
   choiceWrong: {
     backgroundColor: "rgba(255, 107, 107, 0.18)",
     borderColor: "#ff6b6b",
   },
-
   choiceTxt: {
     fontSize: 16,
     color: CYAN,
@@ -562,7 +663,6 @@ export const S = StyleSheet.create({
 
   result: { fontSize: 18, color: CYAN, marginTop: 6, fontWeight: "800" },
 
-  // 🔹 Modal styles
   modalBackdrop: {
     position: "absolute",
     left: 0,
@@ -600,7 +700,6 @@ export const S = StyleSheet.create({
     justifyContent: "space-between",
   },
 
-  // 🔧 Dev styles kept but unused (harmless)
   devRow: {
     borderRadius: 12,
     borderWidth: 1,
