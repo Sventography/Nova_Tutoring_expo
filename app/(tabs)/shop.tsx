@@ -403,11 +403,17 @@ function getCompanionEffect(id: string): CompanionEffectType {
 
 /** Helpers for the “white background” legendary PNGs */
 function isWhiteLegendId(raw: string | null | undefined): boolean {
-  const v = (raw ?? "").toLowerCase();
+  // Normalize so we catch "mecha_owl", "mecha-owl", "MECHA OWL", etc.
+  let v = (raw ?? "")
+    .toString()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_");
+
   return (
     v.includes("mecha_owl") ||
     v.includes("celestra") ||
-    v.includes("axolotl_oracle")
+    v.includes("axolotl_oracle") ||
+    v.includes("axolotl") // safety for any variant of axolotl oracle
   );
 }
 

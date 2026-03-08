@@ -1266,6 +1266,20 @@ function InnerTabsLayout() {
             ),
           }}
         />
+        {/* 🌞 NOVA ISLAND TAB (COMING SOON) */}
+        <Tabs.Screen
+          name="island"
+          options={{
+            title: "ISLAND",
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons
+                name="sunny-outline"
+                color={color}
+                size={size}
+              />
+            ),
+          }}
+        />
         <Tabs.Screen
           name="account"
           options={{

@@ -19,6 +19,7 @@ import { CertificatesProvider } from "./context/CertificatesContext";
 import { UserProvider, useUser } from "./context/UserContext";
 import { CompanionProvider } from "./context/CompanionContext";
 import { StreakProvider } from "./context/StreakContext";
+import { IslandProvider } from "./context/IslandContext";
 
 function ThemeGate({ children }: { children: React.ReactNode }) {
   const { themeId } = useTheme();
@@ -148,37 +149,39 @@ export function AppProviders(props: any) {
   return (
     <UserProvider>
       <UserGate>
-        <CoinsProvider>
-          <PurchasesProvider>
-            <CompanionProvider>
-              <StreakProvider>
-                <ThemeProvider>
-                  <ThemeGate>
-                    <CursorProvider>
-                      <CollectionsProvider>
-                        <CertificatesProvider>
-                          <ToastProvider>
-                            <AchievementsProvider>
-                              <DevCoinsListener />
-                              <DevThemeListener />
-                              <DevGrantListener />
-                              {/* NOTE:
-                                  AchievementConfettiOverlay is now mounted
-                                  inside the tabs layout only, so it can never
-                                  interfere with sign-in or other stack screens.
-                              */}
-                              {children}
-                            </AchievementsProvider>
-                          </ToastProvider>
-                        </CertificatesProvider>
-                      </CollectionsProvider>
-                    </CursorProvider>
-                  </ThemeGate>
-                </ThemeProvider>
-              </StreakProvider>
-            </CompanionProvider>
-          </PurchasesProvider>
-        </CoinsProvider>
+        <IslandProvider>
+          <CoinsProvider>
+            <PurchasesProvider>
+              <CompanionProvider>
+                <StreakProvider>
+                  <ThemeProvider>
+                    <ThemeGate>
+                      <CursorProvider>
+                        <CollectionsProvider>
+                          <CertificatesProvider>
+                            <ToastProvider>
+                              <AchievementsProvider>
+                                <DevCoinsListener />
+                                <DevThemeListener />
+                                <DevGrantListener />
+                                {/* NOTE:
+                                    AchievementConfettiOverlay is now mounted
+                                    inside the tabs layout only, so it can never
+                                    interfere with sign-in or other stack screens.
+                                */}
+                                {children}
+                              </AchievementsProvider>
+                            </ToastProvider>
+                          </CertificatesProvider>
+                        </CollectionsProvider>
+                      </CursorProvider>
+                    </ThemeGate>
+                  </ThemeProvider>
+                </StreakProvider>
+              </CompanionProvider>
+            </PurchasesProvider>
+          </CoinsProvider>
+        </IslandProvider>
       </UserGate>
     </UserProvider>
   );

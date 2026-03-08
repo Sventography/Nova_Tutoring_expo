@@ -39,8 +39,8 @@ const BLUE = "#0B2239";
 const BLACK = "#000000";
 const NEON = "#39FF14"; // neon green
 
-// 🔧 Turn this to false before App Store submission if you don't want visible cheats
-const SHOW_DEV_QUIZ_CHEAT = true;
+// 🔧 Dev-only UI. MUST stay false for TestFlight / App Store builds.
+const SHOW_DEV_QUIZ_CHEAT = false;
 
 export default function TopicQuiz() {
   const { id = "", title = "" } =
@@ -191,6 +191,7 @@ export default function TopicQuiz() {
   }
 
   // DEV helper: force quiz to finish with target %
+  // (Hidden in production: SHOW_DEV_QUIZ_CHEAT = false)
   function devForceFinish(targetPct: number) {
     if (!total || done) return;
     const clamped = Math.max(0, Math.min(100, targetPct));
@@ -221,7 +222,7 @@ export default function TopicQuiz() {
     if (isCorrect) {
       setCorrect((c) => c + 1);
 
-      // Per-question coins
+      // Per-question coins (legit reward)
       try {
         void addCoins(5, "quiz_correct", {
           topicId: String(id),
