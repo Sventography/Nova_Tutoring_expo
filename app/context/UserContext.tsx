@@ -21,6 +21,13 @@ type LocalUserProfile = {
   avatarUri?: string | null;
   photoURL?: string | null;
   imageUrl?: string | null;
+
+  // 🔹 Ask tab personalization
+  askPersonality?: string | null;
+
+  // 🔹 Ask memory tiering
+  askMemoryTier?: string | null;
+  askMemoryLimit?: number | null;
 };
 
 type UserContextValue = {
@@ -41,6 +48,14 @@ type UserContextValue = {
   avatarUri: string | null;
   photoURL: string | null;
   imageUrl: string | null;
+
+  // 🔹 Ask personalization
+  askPersonality: string | null;
+  setAskPersonality: (p: string) => Promise<void> | void;
+
+  // 🔹 Ask memory
+  askMemoryTier: string | null;
+  askMemoryLimit: number | null;
 
   setUsername: (name: string) => Promise<void> | void;
   setAvatar: (uri: string | null) => Promise<void> | void;
@@ -169,6 +184,9 @@ async function hardResetServerProfileForNewUser(
         daily_streak_best: 0,
         // mirror purchases JSON as "empty" for backwards compatibility
         purchases: { owned: {}, version: 1 },
+        // Ask memory defaults: free tier, limit 0 => use backend defaults
+        ask_memory_tier: "free",
+        ask_memory_limit: 0,
         updated_at: new Date().toISOString(),
       },
       { onConflict: "id" }
@@ -232,10 +250,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
         typeof meta.username === "string" ? meta.username : null;
       const authEmail = authUser?.email ?? null;
 
-      // Only request columns that definitely exist
+      // Only request columns that definitely exist (+ ask_personality + memory)
       const { data: row, error } = await supabase
         .from("profiles")
-        .select("id, username, contact_email, avatar_url")
+        .select(
+          "id, username, contact_email, avatar_url, ask_personality, ask_memory_tier, ask_memory_limit"
+        )
         .eq("id", userId)
         .maybeSingle();
 
@@ -258,6 +278,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
           daily_streak_current: 0,
           daily_streak_last_utc: null,
           daily_streak_best: 0,
+          ask_memory_tier: "free",
+          ask_memory_limit: 0,
         };
 
         console.log(
@@ -267,7 +289,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
         const { data: inserted, error: insertErr } = await supabase
           .from("profiles")
           .upsert(seedRow)
-          .select("id, username, contact_email, avatar_url")
+          .select(
+            "id, username, contact_email, avatar_url, ask_personality, ask_memory_tier, ask_memory_limit"
+          )
           .maybeSingle();
 
         if (insertErr) {
@@ -288,6 +312,22 @@ export function UserProvider({ children }: { children: ReactNode }) {
         (rowData && rowData.contact_email) ?? authEmail ?? null;
       let avatarRaw: string | null =
         (rowData && rowData.avatar_url) ?? null;
+      let askPersonalityRaw: string | null =
+        (rowData && rowData.ask_personality) ?? null;
+
+      let askMemoryTierRaw: string | null =
+        (rowData && rowData.ask_memory_tier) ?? null;
+
+      let askMemoryLimitRaw: number | null = null;
+      if (rowData && rowData.ask_memory_limit != null) {
+        const raw = rowData.ask_memory_limit;
+        if (typeof raw === "number") {
+          askMemoryLimitRaw = raw;
+        } else if (typeof raw === "string") {
+          const parsed = parseInt(raw, 10);
+          askMemoryLimitRaw = Number.isFinite(parsed) ? parsed : null;
+        }
+      }
 
       const normalizedUsername = normalizeUsername(usernameRaw);
 
@@ -302,6 +342,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
         avatarUri: avatarRaw,
         photoURL: avatarRaw,
         imageUrl: avatarRaw,
+        askPersonality: askPersonalityRaw,
+        askMemoryTier: askMemoryTierRaw,
+        askMemoryLimit: askMemoryLimitRaw,
       };
 
       console.log("[UserContext] hydrateProfile final:", next);
@@ -595,6 +638,42 @@ export function UserProvider({ children }: { children: ReactNode }) {
       row.avatar_url = candidateAvatar;
     }
 
+    // 🔹 Ask personality: prefer any explicit patch, then existing
+    const candidateAskPersonality =
+      (patch as any).askPersonality ??
+      (patch as any).ask_personality ??
+      profile?.askPersonality ??
+      null;
+
+    if (typeof candidateAskPersonality === "string" && candidateAskPersonality) {
+      row.ask_personality = candidateAskPersonality;
+    }
+
+    // 🔹 Ask memory tier
+    const candidateAskMemoryTier =
+      (patch as any).askMemoryTier ??
+      (patch as any).ask_memory_tier ??
+      profile?.askMemoryTier ??
+      null;
+
+    if (typeof candidateAskMemoryTier === "string" && candidateAskMemoryTier) {
+      row.ask_memory_tier = candidateAskMemoryTier;
+    }
+
+    // 🔹 Ask memory limit
+    const candidateAskMemoryLimit =
+      (patch as any).askMemoryLimit ??
+      (patch as any).ask_memory_limit ??
+      profile?.askMemoryLimit ??
+      null;
+
+    if (
+      typeof candidateAskMemoryLimit === "number" &&
+      Number.isFinite(candidateAskMemoryLimit)
+    ) {
+      row.ask_memory_limit = candidateAskMemoryLimit;
+    }
+
     console.log("[UserContext] updateProfile Supabase upsert row:", row);
 
     try {
@@ -657,6 +736,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const setAskPersonality = (p: string) => {
+    return updateProfile({
+      askPersonality: p,
+    });
+  };
+
   // -------------------- auth helpers (signup/login/etc.) --------------------
 
   const signUpWithEmailPassword = async (
@@ -716,6 +801,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
           avatarUri: null,
           photoURL: null,
           imageUrl: null,
+          askPersonality: null,
+          askMemoryTier: "free",
+          askMemoryLimit: 0,
         };
 
         setProfile(next);
@@ -869,6 +957,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
     null;
 
   const isLoggedIn = !!(session && session.user && session.user.id);
+  const flatAskPersonality = profile?.askPersonality ?? null;
+  const flatAskMemoryTier = profile?.askMemoryTier ?? null;
+  const flatAskMemoryLimit =
+    typeof profile?.askMemoryLimit === "number"
+      ? profile!.askMemoryLimit
+      : null;
 
   const value: UserContextValue = {
     ready,
@@ -887,6 +981,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
     avatarUri: profile?.avatarUri ?? null,
     photoURL: profile?.photoURL ?? null,
     imageUrl: profile?.imageUrl ?? null,
+
+    askPersonality: flatAskPersonality,
+    setAskPersonality,
+
+    askMemoryTier: flatAskMemoryTier,
+    askMemoryLimit: flatAskMemoryLimit,
 
     setUsername,
     setAvatar,

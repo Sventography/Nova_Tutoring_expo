@@ -15,12 +15,14 @@ import * as Haptics from "expo-haptics";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { useUser } from "./context/UserContext";
+import { useIsland } from "./context/IslandContext";
 
 const TUTORIAL_KEY = "onboarding.tutorial.done.v1";
 
 export default function HomeScreen() {
   const router = useRouter();
   const { isLoggedIn } = (useUser() || {}) as any;
+  const { grantDailyLoginXpIfNeeded } = useIsland();
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   // One-time tutorial gate (shows only once ever)
@@ -36,6 +38,11 @@ export default function HomeScreen() {
       }
     })();
   }, [router]);
+
+  // Daily login XP: +5 island XP once per calendar day
+  useEffect(() => {
+    grantDailyLoginXpIfNeeded().catch(() => {});
+  }, [grantDailyLoginXpIfNeeded]);
 
   // Subtle pulsing animation
   useEffect(() => {

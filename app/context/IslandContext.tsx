@@ -7,190 +7,220 @@ import React, {
   ReactNode,
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+
 import { supabase } from "../lib/supabase";
 import { useUser } from "./UserContext";
 
 type IslandContextValue = {
-  islandLevel: number;
-  islandXp: number;
+  xp: number;
+  level: number;
+  xpToNext: number;
+  collapsed: boolean;
+  positionY: number;
   loading: boolean;
-  ready: boolean;
   addIslandXp: (
     delta: number,
-    opts?: { reason?: string; meta?: Record<string, any> }
+    reason?: string,
+    meta?: Record<string, any>
   ) => Promise<void>;
+  setCollapsed: (next: boolean) => Promise<void>;
+  setPositionY: (y: number) => Promise<void>;
   refreshIsland: () => Promise<void>;
 };
 
-const IslandContext = createContext<IslandContextValue | undefined>(undefined);
+const IslandContext = createContext<IslandContextValue | undefined>(
+  undefined
+);
 
-const GUEST_LEVEL_KEY = "@nova/island.level.v1";
-const GUEST_XP_KEY = "@nova/island.xp.v1";
+const STATE_KEY = "@island/state.v1";
+const POS_KEY = "@island/xpbar/posY.v1";
+const COLLAPSED_KEY = "@island/xpbar/collapsed.v1";
 
-/**
- * Simple XP curve.
- * You can tweak base/step later to make leveling faster/slower.
- */
-function xpForNextLevel(level: number): number {
-  const base = 150; // XP for Level 1 -> 2
-  const step = 50;  // each level adds +50 XP requirement
-  const lvl = Math.max(1, level);
-  return base + (lvl - 1) * step;
+// Simple leveling curve: each level needs a bit more XP
+function xpNeededForLevel(level: number): number {
+  if (level <= 1) return 40;
+  return 40 + (level - 1) * 20;
 }
 
+type PersistedState = {
+  xp: number;
+  level: number;
+};
+
 export function IslandProvider({ children }: { children: ReactNode }) {
-  const { user } = useUser() as any;
-  const userId = user?.id as string | undefined;
+  const { supabaseUserId } = (useUser() || {}) as any;
 
-  const [islandLevel, setIslandLevel] = useState<number>(1);
-  const [islandXp, setIslandXp] = useState<number>(0);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [ready, setReady] = useState<boolean>(false);
+  const [xp, setXp] = useState(0);
+  const [level, setLevel] = useState(1);
+  const [collapsed, setCollapsedState] = useState(false);
+  const [positionY, setPositionYState] = useState(140); // distance from top
+  const [loading, setLoading] = useState(true);
 
+  const xpToNext = xpNeededForLevel(level);
+
+  // ----------------------------------------
+  // Load UI-only bits (position + collapsed)
+  // ----------------------------------------
   useEffect(() => {
-    loadIsland().catch((err) => {
-      if (__DEV__) {
-        // eslint-disable-next-line no-console
-        console.warn("[Island] initial load error", err);
+    (async () => {
+      try {
+        const [posStr, colStr] = await Promise.all([
+          AsyncStorage.getItem(POS_KEY),
+          AsyncStorage.getItem(COLLAPSED_KEY),
+        ]);
+        if (posStr) {
+          const y = parseFloat(posStr);
+          if (!Number.isNaN(y)) setPositionYState(y);
+        }
+        if (colStr === "true") setCollapsedState(true);
+      } catch {
+        // ignore
       }
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId]);
+    })();
+  }, []);
 
-  async function loadIsland() {
+  // ----------------------------------------
+  // Load XP + level from Supabase or local
+  // ----------------------------------------
+  const refreshIsland = async () => {
     setLoading(true);
     try {
-      if (!userId) {
-        // Guest mode: read from AsyncStorage
-        const [lvlRaw, xpRaw] = await Promise.all([
-          AsyncStorage.getItem(GUEST_LEVEL_KEY),
-          AsyncStorage.getItem(GUEST_XP_KEY),
-        ]);
-
-        const lvl = lvlRaw ? parseInt(lvlRaw, 10) || 1 : 1;
-        const xp = xpRaw ? parseInt(xpRaw, 10) || 0 : 0;
-
-        setIslandLevel(lvl);
-        setIslandXp(xp);
-      } else {
-        // Logged-in: read from Supabase profiles
+      if (supabaseUserId) {
         const { data, error } = await supabase
           .from("profiles")
-          .select("island_level,island_xp")
-          .eq("id", userId)
+          .select("island_xp,island_level")
+          .eq("id", supabaseUserId)
           .maybeSingle();
 
-        if (error) {
-          if (__DEV__) {
-            // eslint-disable-next-line no-console
-            console.warn("[Island] supabase load error", error);
-          }
-          setIslandLevel(1);
-          setIslandXp(0);
-        } else if (data) {
-          const lvl = (data as any).island_level ?? 1;
-          const xpRaw = (data as any).island_xp ?? 0;
-          const xp = Number.isFinite(Number(xpRaw)) ? Number(xpRaw) : 0;
-
-          setIslandLevel(lvl || 1);
-          setIslandXp(xp);
-        } else {
-          // No row found: safe defaults
-          setIslandLevel(1);
-          setIslandXp(0);
+        if (!error && data) {
+          setXp(data.island_xp ?? 0);
+          setLevel(data.island_level ?? 1);
+          setLoading(false);
+          return;
         }
       }
+
+      // Guest / fallback: read from AsyncStorage
+      const raw = await AsyncStorage.getItem(STATE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as PersistedState;
+        setXp(typeof parsed.xp === "number" ? parsed.xp : 0);
+        setLevel(typeof parsed.level === "number" ? parsed.level : 1);
+      } else {
+        setXp(0);
+        setLevel(1);
+      }
+    } catch (e) {
+      console.warn("[IslandContext] refreshIsland error", e);
     } finally {
       setLoading(false);
-      setReady(true);
     }
-  }
+  };
 
-  async function persistGuest(level: number, xp: number) {
-    await Promise.all([
-      AsyncStorage.setItem(GUEST_LEVEL_KEY, String(level)),
-      AsyncStorage.setItem(GUEST_XP_KEY, String(xp)),
-    ]);
-  }
+  useEffect(() => {
+    refreshIsland();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supabaseUserId]);
 
-  async function persistUser(level: number, xp: number) {
-    if (!userId) return;
-    const { error } = await supabase
-      .from("profiles")
-      .update({
-        island_level: level,
-        island_xp: xp,
-      })
-      .eq("id", userId);
-
-    if (error && __DEV__) {
-      // eslint-disable-next-line no-console
-      console.warn("[Island] supabase update error", error);
-    }
-  }
-
-  /**
-   * Add XP and handle level ups.
-   * This uses the current in-memory level/xp snapshot,
-   * which is totally fine for our single-device v1 flow.
-   */
-  async function addIslandXp(
-    delta: number,
-    _opts?: { reason?: string; meta?: Record<string, any> }
-  ) {
-    if (delta <= 0) return;
-
-    let newLevel = islandLevel;
-    let newXp = islandXp + delta;
-
-    let needed = xpForNextLevel(newLevel);
-    while (newXp >= needed) {
-      newXp -= needed;
-      newLevel += 1;
-      needed = xpForNextLevel(newLevel);
-    }
-
-    setIslandLevel(newLevel);
-    setIslandXp(newXp);
-
+  // ----------------------------------------
+  // Persistence helpers
+  // ----------------------------------------
+  const persistLocalState = async (nextXp: number, nextLevel: number) => {
     try {
-      if (!userId) {
-        await persistGuest(newLevel, newXp);
-      } else {
-        await persistUser(newLevel, newXp);
-      }
-    } catch (err) {
-      if (__DEV__) {
-        // eslint-disable-next-line no-console
-        console.warn("[Island] addIslandXp persist error", err);
-      }
-    }
-  }
+      const payload: PersistedState = { xp: nextXp, level: nextLevel };
+      await AsyncStorage.setItem(STATE_KEY, JSON.stringify(payload));
+    } catch {}
+  };
 
-  async function refreshIsland() {
-    await loadIsland();
-  }
+  const persistSupabaseState = async (nextXp: number, nextLevel: number) => {
+    if (!supabaseUserId) return;
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          island_xp: nextXp,
+          island_level: nextLevel,
+        })
+        .eq("id", supabaseUserId);
+      if (error) {
+        console.warn("[IslandContext] Supabase island update error", error);
+      }
+    } catch (e) {
+      console.warn("[IslandContext] Supabase island update exception", e);
+    }
+  };
+
+  // ----------------------------------------
+  // Public actions
+  // ----------------------------------------
+  const addIslandXp: IslandContextValue["addIslandXp"] = async (
+    delta,
+    _reason,
+    _meta
+  ) => {
+    if (!delta || delta <= 0) return;
+
+    setXp((prevXp) => {
+      let nextXp = prevXp + delta;
+      let nextLevel = level;
+
+      // Level up while XP spills over
+      let needed = xpNeededForLevel(nextLevel);
+      while (nextXp >= needed) {
+        nextXp -= needed;
+        nextLevel += 1;
+        needed = xpNeededForLevel(nextLevel);
+      }
+
+      setLevel(nextLevel);
+
+      // Persist
+      if (supabaseUserId) {
+        void persistSupabaseState(nextXp, nextLevel);
+      } else {
+        void persistLocalState(nextXp, nextLevel);
+      }
+
+      return nextXp;
+    });
+  };
+
+  const setCollapsed = async (next: boolean) => {
+    setCollapsedState(next);
+    try {
+      await AsyncStorage.setItem(COLLAPSED_KEY, next ? "true" : "false");
+    } catch {}
+  };
+
+  const setPositionY = async (y: number) => {
+    setPositionYState(y);
+    try {
+      await AsyncStorage.setItem(POS_KEY, String(y));
+    } catch {}
+  };
 
   const value: IslandContextValue = {
-    islandLevel,
-    islandXp,
+    xp,
+    level,
+    xpToNext,
+    collapsed,
+    positionY,
     loading,
-    ready,
     addIslandXp,
+    setCollapsed,
+    setPositionY,
     refreshIsland,
   };
 
   return (
-    <IslandContext.Provider value={value}>
-      {children}
-    </IslandContext.Provider>
+    <IslandContext.Provider value={value}>{children}</IslandContext.Provider>
   );
 }
 
 export function useIsland(): IslandContextValue {
   const ctx = useContext(IslandContext);
   if (!ctx) {
-    throw new Error("useIsland() must be used inside <IslandProvider>");
+    throw new Error("useIsland must be used within an IslandProvider");
   }
   return ctx;
 }

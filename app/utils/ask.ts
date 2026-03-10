@@ -1,11 +1,21 @@
 // app/utils/ask.ts
 import Constants from "expo-constants";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export type AskResponse = {
   ok: boolean;
   answer?: string;
   error?: string;
   model?: string;
+  coins_awarded?: number;
+  // memory meta from backend
+  ask_memory_tier?: string | null;
+  ask_memory_limit?: number | null;
+};
+
+type AskHistoryItem = {
+  role: "user" | "assistant" | "system";
+  content: string;
 };
 
 type ExtraConfig = {
@@ -34,8 +44,14 @@ export const BACKEND_URL = stripTrailingSlashes(
 );
 
 console.log("[ask] extra.backendBase:", extra.backendBase);
-console.log("[ask] extra.EXPO_PUBLIC_BACKEND_URL:", extra.EXPO_PUBLIC_BACKEND_URL);
-console.log("[ask] process.env.EXPO_PUBLIC_BACKEND_URL:", process.env.EXPO_PUBLIC_BACKEND_URL);
+console.log(
+  "[ask] extra.EXPO_PUBLIC_BACKEND_URL:",
+  extra.EXPO_PUBLIC_BACKEND_URL
+);
+console.log(
+  "[ask] process.env.EXPO_PUBLIC_BACKEND_URL:",
+  process.env.EXPO_PUBLIC_BACKEND_URL
+);
 console.log("[ask] Using BACKEND_URL:", BACKEND_URL);
 
 if (!BACKEND_URL) {
@@ -46,10 +62,16 @@ if (!BACKEND_URL) {
 
 /**
  * Call Nova Ask backend. The OpenAI key lives ONLY on the server.
+ *
+ * - `userId` is optional; when present we send it as `user_id` in the body.
+ * - `history` is optional; when present we send it as [{role, content}, ...].
  */
 export async function askNova(
   question: string,
-  userId?: string | null
+  opts?: {
+    userId?: string | null;
+    history?: AskHistoryItem[] | null;
+  }
 ): Promise<AskResponse> {
   if (!BACKEND_URL) {
     return {
@@ -65,17 +87,48 @@ export async function askNova(
   }
 
   const url = `${BACKEND_URL}/api/ask`;
-  const payload = {
+
+  const payload: any = {
     question: trimmed,
-    user_id: userId ?? null, // match backend expectation
   };
 
+  if (opts?.userId) {
+    payload.user_id = opts.userId;
+  }
+
+  if (opts?.history && Array.isArray(opts.history) && opts.history.length > 0) {
+    payload.history = opts.history.map((h) => ({
+      role: h.role,
+      content: h.content,
+    }));
+  }
+
   console.log("[ask] POST", url, JSON.stringify(payload));
+
+  // Build headers and, if available, attach Supabase JWT for the server
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+
+  try {
+    const jwt = await AsyncStorage.getItem("auth.supabase.jwt");
+    if (jwt) {
+      headers["Authorization"] = `Bearer ${jwt}`;
+      console.log("[ask] attached Supabase JWT to Authorization header");
+    } else {
+      console.log("[ask] no Supabase JWT found in AsyncStorage");
+    }
+  } catch (e) {
+    console.warn(
+      "[ask] failed to read Supabase JWT from AsyncStorage:",
+      e
+    );
+  }
 
   try {
     const res = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify(payload),
     });
 
@@ -92,18 +145,51 @@ export async function askNova(
       };
     }
 
-    const data = (await res.json()) as AskResponse;
+    const raw = (await res.json()) as any;
+    console.log("[ask] raw response:", raw);
 
-    // Normalize a little in case backend shape changes
-    if (!data.ok && !data.error) {
-      return { ok: false, error: "Unknown Ask backend error." };
-    }
-    if (data.ok && !data.answer && data.error) {
-      // weird state, treat as error
-      return { ok: false, error: data.error };
+    const error =
+      typeof raw?.error === "string" ? (raw.error as string) : undefined;
+    const answer =
+      typeof raw?.answer === "string" ? (raw.answer as string) : undefined;
+    const model =
+      typeof raw?.model === "string" ? (raw.model as string) : undefined;
+
+    const coins_awarded =
+      typeof raw?.coins_awarded === "number"
+        ? (raw.coins_awarded as number)
+        : undefined;
+
+    const ask_memory_tier =
+      (raw?.ask_memory_tier as string | null | undefined) ?? null;
+    const ask_memory_limit =
+      typeof raw?.ask_memory_limit === "number"
+        ? (raw.ask_memory_limit as number)
+        : null;
+
+    const ok = !!answer && !error;
+
+    if (!ok && !error) {
+      return {
+        ok: false,
+        error: "Unknown Ask backend error.",
+        answer,
+        model,
+        coins_awarded,
+        ask_memory_tier,
+        ask_memory_limit,
+      };
     }
 
-    return data;
+    return {
+      ok,
+      answer,
+      error,
+      model,
+      coins_awarded,
+      ask_memory_tier,
+      ask_memory_limit,
+    };
   } catch (e: any) {
     console.warn("[ask] network/other error:", e);
     return {

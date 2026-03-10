@@ -1,7 +1,7 @@
-# 🔥🔥 RUNNING FIXED SERVER VERSION v10-COIN-ORDER-ROWS
+# 🔥🔥 RUNNING FIXED SERVER VERSION v11-ASK-MEMORY-PERSONALITY
 # (CHECKOUT + ASK MEMORY + COIN ORDER EMAILS via RESEND HTTP ONLY) 🔥🔥
 print(
-  "🔥🔥 RUNNING FIXED SERVER VERSION v10-COIN-ORDER-ROWS "
+  "🔥🔥 RUNNING FIXED SERVER VERSION v11-ASK-MEMORY-PERSONALITY "
   "(CHECKOUT + ASK MEMORY + COIN ORDER EMAILS via RESEND HTTP ONLY) 🔥🔥"
 )
 
@@ -39,7 +39,7 @@ except Exception:
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
-print("🔥🔥 FLASK APP INITIALIZED (v10-COIN-ORDER-ROWS) 🔥🔥")
+print("🔥🔥 FLASK APP INITIALIZED (v11-ASK-MEMORY-PERSONALITY) 🔥🔥")
 
 # -------------------------------------------------
 # Load environment (prefers server/env/.env.server, else server/.env)
@@ -152,23 +152,32 @@ SKU_TO_PRODUCT_ID: dict[str, str] = {
 }
 
 # -------------------------------------------------
-# OpenAI setup
+# Ask monetization config (memory tiers + personalities)
 # -------------------------------------------------
 
-if OpenAI and OPENAI_API_KEY:
-  openai_client = OpenAI(api_key=OPENAI_API_KEY)
-  print("[server] OpenAI configured: True, model:", OPENAI_MODEL)
-else:
-  openai_client = None
-  if not OpenAI:
-    print("[server] OpenAI configured: False (openai library not installed)")
-  elif not OPENAI_API_KEY:
-    print("[server] OpenAI configured: False (missing OPENAI_API_KEY)")
-  else:
-    print("[server] OpenAI configured: False (unknown reason)")
+# Memory tiers by SKU → memory_limit
+ASK_MEMORY_TIERS: dict[str, int] = {
+  "ask_memory_tier1": 20,
+  "ask_memory_tier2": 60,
+  "ask_memory_tier3": 150,
+  # If/when we add tier4, we can extend here, e.g. "ask_memory_tier4": 400,
+}
+
+# Personalities unlocked by owning these SKUs
+# Values here are *internal codes* that we map to human tone text later.
+# Updated to match Nova Tutoring Ask personality SKUs.
+ASK_PERSONALITY_SKU_MAP: dict[str, str] = {
+  "ask_personality_calm_focus":   "calm_focus",
+  "ask_personality_coach":        "coach",
+  "ask_personality_playful":      "playful",
+  "ask_personality_storyteller":  "storyteller",
+}
+
+# The free baseline personality everyone gets
+ASK_PERSONALITY_FREE = "encouraging"
 
 # -------------------------------------------------
-# Small helpers (NEW)
+# Small helpers
 # -------------------------------------------------
 
 def norm(v):
@@ -327,7 +336,6 @@ def record_purchase_row(
     payload["meta"] = meta
 
   # Also store shipping in dedicated columns for easy reading.
-  # NOTE: include field whenever it's *not None* (after earlier normalization).
   if shipping_name is not None:
     payload["shipping_name"] = shipping_name
   if shipping_phone is not None:
@@ -403,7 +411,6 @@ def send_email(to_address: str, subject: str, body_text: str, body_html: str | N
       timeout=10,
     )
 
-    # 🔍 Extra debug logging so we see exactly what Resend says
     print("[mail] Resend status_code:", resp.status_code)
     print("[mail] Resend response text:", repr(resp.text))
 
@@ -577,7 +584,6 @@ def send_coin_order_emails(
         pretty_json = str(raw_payload)
       owner_body_text += "\nRaw payload:\n" + pretty_json + "\n"
 
-    # HTML body for owner (with logo + item + shipping + raw payload)
     owner_html = (
       "<html><body style='font-family:system-ui,-apple-system,BlinkMacSystemFont,sans-serif;"
       "font-size:14px;color:#222;background:#f7f7f7;padding:16px;'>"
@@ -649,7 +655,6 @@ def send_coin_order_emails(
 
     user_body_text += "If you did not make this purchase, please contact support.\n"
 
-    # HTML body for user (with logo + item + shipping)
     user_html = (
       "<html><body style='font-family:system-ui,-apple-system,BlinkMacSystemFont,sans-serif;"
       "font-size:14px;color:#222;background:#f7f7f7;padding:16px;'>"
@@ -688,21 +693,53 @@ def send_coin_order_emails(
     print("[mail] no user_email for coin order; only owner was notified (if configured).")
 
 # -------------------------------------------------
-# Supabase REST for Ask Memory
+# Supabase REST for Ask Memory + Personalities
 # -------------------------------------------------
 
-def fetch_profile_memory_settings(user_id: str):
+def _extract_owned_from_purchases(purchases: object) -> dict:
   """
-  Returns (memory_limit, personality) for this user_id, or (0, 'encouraging') if anything fails.
+  Given the 'purchases' jsonb column (which might be shaped like
+  { "owned": { "sku": true, ... }, "version": 1 } or in some other
+  form), try to return a simple { sku: bool } dict.
+  """
+  if not isinstance(purchases, dict):
+    return {}
+
+  # Preferred schema: { owned: { "sku": true }, version: 1 }
+  owned = purchases.get("owned")
+  if isinstance(owned, dict):
+    return owned
+
+  # Fallback: maybe the whole object is already a flat { sku: bool }
+  flat = {}
+  for k, v in purchases.items():
+    if isinstance(v, bool):
+      flat[k] = v
+  return flat
+
+
+def fetch_profile_ask_settings(user_id: str):
+  """
+  Returns (memory_limit, personality_code) for this user_id.
+
+  memory_limit is derived from *purchased* ask memory tiers:
+    - tier3 (if owned) → 150
+    - tier2 (if owned) → 60
+    - tier1 (if owned) → 20
+    - otherwise        → 0  (no paid memory)
+
+  personality_code is derived from:
+    - row.ask_personality (string),
+    - clamped to {encouraging} + any purchased personalities.
   """
   if not (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY and user_id):
-    print("[ask] fetch_profile_memory_settings skipped (missing config or user_id)")
-    return 0, "encouraging"
+    print("[ask] fetch_profile_ask_settings skipped (missing config or user_id)")
+    return 0, ASK_PERSONALITY_FREE
 
   url = supabase_rest_url("profiles")
   params = {
     "id": f"eq.{user_id}",
-    "select": "ask_memory_limit,ask_personality",
+    "select": "ask_memory_limit,ask_personality,purchases",
     "limit": 1,
   }
   headers = supabase_headers()
@@ -711,21 +748,80 @@ def fetch_profile_memory_settings(user_id: str):
     resp = requests.get(url, headers=headers, params=params, timeout=10)
     if resp.status_code >= 400:
       print("[ask] profile fetch error:", resp.status_code, resp.text)
-      return 0, "encouraging"
+      return 0, ASK_PERSONALITY_FREE
 
     rows = resp.json()
     if not rows:
       print("[ask] profile fetch: no profile row for user", user_id)
-      return 0, "encouraging"
+      return 0, ASK_PERSONALITY_FREE
 
     row = rows[0]
-    memory_limit = row.get("ask_memory_limit") or 0
-    personality = row.get("ask_personality") or "encouraging"
-    print(f"[ask] profile settings for {user_id}: memory_limit={memory_limit}, personality={personality!r}")
-    return memory_limit, personality
+
+    # --- owned SKUs from purchases jsonb ---
+    purchases = row.get("purchases") or {}
+    owned = _extract_owned_from_purchases(purchases)
+    print(f"[ask] profile purchases owned keys for {user_id}:", list(owned.keys()))
+
+    # --- memory_limit from SKUs (highest tier wins) ---
+    memory_limit = 0
+    for sku, limit in sorted(
+      ASK_MEMORY_TIERS.items(), key=lambda kv: kv[1], reverse=True
+    ):
+      if owned.get(sku):
+        memory_limit = limit
+        break
+
+    # Optionally respect legacy ask_memory_limit but never exceed
+    legacy_limit = int(row.get("ask_memory_limit") or 0)
+    if legacy_limit > memory_limit:
+      print(
+        "[ask] legacy ask_memory_limit higher than purchased tiers; "
+        "using legacy for now:",
+        legacy_limit,
+      )
+      memory_limit = legacy_limit
+
+    # --- personalities ---
+    raw_personality = (row.get("ask_personality") or ASK_PERSONALITY_FREE).strip().lower()
+    raw_personality = raw_personality.replace("-", "_")
+
+    # Backwards-compatible alias map (older codes → new ones)
+    personality_aliases = {
+      "focused": "calm_focus",
+      "focus": "calm_focus",
+      "chill": "playful",       # old "chill" → playful/creative
+      "hype_coach": "coach",
+    }
+    if raw_personality in personality_aliases:
+      print(f"[ask] mapping legacy personality {raw_personality!r} → {personality_aliases[raw_personality]!r}")
+      raw_personality = personality_aliases[raw_personality]
+
+    # Everyone always has at least the free baseline
+    allowed_personalities = {ASK_PERSONALITY_FREE}
+
+    # Add any purchased personalities based on SKUs
+    for sku, code in ASK_PERSONALITY_SKU_MAP.items():
+      if owned.get(sku):
+        allowed_personalities.add(code)
+
+    if raw_personality not in allowed_personalities:
+      print(
+        f"[ask] personality {raw_personality!r} not owned; "
+        f"falling back to {ASK_PERSONALITY_FREE!r}"
+      )
+      personality_code = ASK_PERSONALITY_FREE
+    else:
+      personality_code = raw_personality
+
+    print(
+      f"[ask] profile ask settings for {user_id}: "
+      f"memory_limit={memory_limit}, personality={personality_code!r}, "
+      f"allowed={allowed_personalities}"
+    )
+    return memory_limit, personality_code
   except Exception as e:
     print("[ask] profile fetch exception:", e)
-    return 0, "encouraging"
+    return 0, ASK_PERSONALITY_FREE
 
 
 def fetch_memory_messages(user_id: str, memory_limit: int):
@@ -822,7 +918,6 @@ def trim_memory_non_pinned(user_id: str, memory_limit: int):
     if not ids_to_delete:
       return
 
-    # Supabase REST "in" filter: id=in.(uuid1,uuid2,...)
     in_clause = ",".join(ids_to_delete)
     delete_params = {
       "user_id": f"eq.{user_id}",
@@ -890,7 +985,6 @@ def _checkout_logic():
   if not (stripe and STRIPE_SECRET_KEY):
     return jsonify(ok=False, error="stripe not configured"), 500
 
-  # Try to attach to an existing Stripe Product for known SKUs
   product_id = SKU_TO_PRODUCT_ID.get(str(sku))
 
   if product_id:
@@ -939,6 +1033,31 @@ def _checkout_logic():
     return jsonify(ok=False, error=str(e)), 500
 
 # -------------------------------------------------
+# OpenAI setup
+# -------------------------------------------------
+
+if OpenAI and OPENAI_API_KEY:
+  openai_client = OpenAI(api_key=OPENAI_API_KEY)
+  print("[server] OpenAI configured: True, model:", OPENAI_MODEL)
+else:
+  openai_client = None
+  if not OpenAI:
+    print("[server] OpenAI configured: False (openai library not installed)")
+  elif not OPENAI_API_KEY:
+    print("[server] OpenAI configured: False (missing OPENAI_API_KEY)")
+  else:
+    print("[server] OpenAI configured: False (unknown reason)")
+
+# Tone strings for personalities
+ASK_TONE_LABELS: dict[str, str] = {
+  "encouraging":  "warm, encouraging, and gently motivational",
+  "calm_focus":   "calm, focused, and very structured, helping the student stay in study mode",
+  "coach":        "firm but kind coach energy, direct and motivating without being harsh",
+  "playful":      "light, playful, and creative, using fun examples while still being clear",
+  "storyteller":  "narrative and example-heavy, weaving short stories into explanations",
+}
+
+# -------------------------------------------------
 # Ask core (OpenAI + Supabase-backed memory via HTTP)
 # -------------------------------------------------
 
@@ -960,23 +1079,26 @@ def _ask_logic():
   if not question:
     return jsonify(ok=False, error="missing question"), 400
 
-  # Defaults if no profile or Supabase
   memory_limit = 0
-  personality = "encouraging"
+  personality_code = ASK_PERSONALITY_FREE
   memory_messages: list[dict] = []
 
-  # Fetch profile + memory if possible
   if SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY and user_id:
-    memory_limit, personality = fetch_profile_memory_settings(user_id)
+    memory_limit, personality_code = fetch_profile_ask_settings(user_id)
     if memory_limit > 0:
       memory_messages = fetch_memory_messages(user_id, memory_limit)
 
-  # Build messages for OpenAI
+  tone_text = ASK_TONE_LABELS.get(
+    personality_code,
+    ASK_TONE_LABELS[ASK_PERSONALITY_FREE],
+  )
+
   system_prompt = (
-    f"You are Nova, a kind, encouraging tutor for the Nova Tutoring app.\n"
-    f"Tone: {personality}.\n"
+    "You are Nova, a kind tutor for the Nova Tutoring app.\n"
+    f"Tone: {tone_text}.\n"
     "Explain things clearly, step by step, and keep answers concise but helpful. "
-    "Focus on teaching and encouragement."
+    "Focus on teaching, clarity, and encouragement for students of all ages.\n"
+    "Avoid making promises about grades or guarantees; focus on skills and understanding."
   )
 
   messages = [{"role": "system", "content": system_prompt}]
@@ -998,7 +1120,6 @@ def _ask_logic():
     choice = completion.choices[0]
     answer = (choice.message.content or "").strip()
 
-    # Store memory + trim
     if SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY and user_id and memory_limit > 0:
       insert_memory_messages(user_id, question, answer)
       trim_memory_non_pinned(user_id, memory_limit)
@@ -1009,6 +1130,8 @@ def _ask_logic():
       ok=True,
       answer=answer,
       model=OPENAI_MODEL,
+      personality=personality_code,
+      memory_limit=memory_limit,
     )
 
   except Exception as e:
@@ -1089,7 +1212,6 @@ def api_fulfill():
   if not sku:
     return jsonify(ok=False, error="missing sku"), 400
 
-  # Optional hint from client: type / kind / purchase_type
   hinted_type = (
     body.get("type")
     or body.get("kind")
@@ -1101,13 +1223,11 @@ def api_fulfill():
   is_coin_pack = False
 
   if hinted_type == "coins":
-    # If client already knows it's coins, trust that, and use explicit coins if provided
     coins = int(body.get("coins") or 0)
     if coins <= 0:
       coins = _infer_coin_pack_from_sku(str(sku))
     is_coin_pack = coins > 0
   else:
-    # Try to infer from SKU itself (coins_1000, coins:2500, etc.)
     coins = _infer_coin_pack_from_sku(str(sku))
     is_coin_pack = coins > 0
 
@@ -1121,7 +1241,6 @@ def api_fulfill():
       coins=coins,
     )
 
-  # Default: treat as an ownable item (theme/cursor/plushie/etc.)
   print(f"[fulfill] treating sku={sku!r} as ownable (non-coin) item")
   return jsonify(
     ok=True,
@@ -1209,7 +1328,6 @@ def api_coin_order():
     user.get("phone"),
   )
 
-  # Strong alias handling for address1 / address2 / city / state / postal / country
   address1 = pick(
     data.get("address1"),
     data.get("address_1"),
@@ -1326,7 +1444,6 @@ def api_coin_order():
   )
 
   try:
-    # 1) Send emails (owner + user) with full shipping + raw payload
     send_coin_order_emails(
       user_email=user_email,
       coins_amount=coins,
@@ -1348,7 +1465,6 @@ def api_coin_order():
       raw_payload=data,
     )
 
-    # 2) Record row in purchases table as a log (with shipping columns)
     record_purchase_row(
       user_id=user_id,
       coins=coins,
@@ -1379,29 +1495,16 @@ def api_coin_order():
 
 @app.post("/debug/send-test-email")
 def debug_send_test_email():
-  """
-  Simple debug endpoint to verify email sending from Render via Resend HTTP.
-
-  You can optionally pass in:
-    - code: your ADMIN_SUPER_SUPER_SECRET_CODE
-    - to: override target inbox (e.g. your Gmail)
-  """
   body = request.get_json(silent=True) or {}
   code = body.get("code") or ""
   override_to = (body.get("to") or body.get("email") or "").strip()
 
-  # If an admin code is set, enforce it. If not, just log and continue.
   if ADMIN_SUPER_SECRET_CODE:
     if code != ADMIN_SUPER_SECRET_CODE:
       return jsonify(ok=False, error="invalid code"), 403
   else:
-    print("[debug] ADMIN_SUPER_SUPER_SECRET_CODE not set; skipping code check")
+    print("[debug] ADMIN_SUPER_SECRET_CODE not set; skipping code check")
 
-  # Target priority:
-  #   1) explicit "to" in request body
-  #   2) DEBUG_TEST_EMAIL env var
-  #   3) SHOP_OWNER_EMAIL
-  #   4) RESEND_FROM_EMAIL
   target = (
     override_to
     or (os.getenv("DEBUG_TEST_EMAIL") or "").strip()

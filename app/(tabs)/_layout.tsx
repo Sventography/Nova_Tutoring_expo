@@ -32,6 +32,7 @@ import { useUser } from "../context/UserContext";
 import { useCompanion } from "../context/CompanionContext";
 import { COMPANIONS } from "../_lib/companionsCatalog";
 import { AchieveEmitter } from "../context/AchievementsContext"; // 🌟 listen for celebrate events
+import IslandMeterOverlay from "../components/IslandMeterOverlay";
 
 // --------------------
 // DEV-ONLY imports
@@ -1272,11 +1273,7 @@ function InnerTabsLayout() {
           options={{
             title: "ISLAND",
             tabBarIcon: ({ color, size }) => (
-              <Ionicons
-                name="sunny-outline"
-                color={color}
-                size={size}
-              />
+              <Ionicons name="sunny-outline" color={color} size={size} />
             ),
           }}
         />
@@ -1331,6 +1328,8 @@ function InnerTabsLayout() {
         ) : null}
         {/* 🌟 Global floating companion bubble with shop-style FX */}
         <FloatingCompanionOverlay />
+        {/* 🌴 Nova Island vertical meter on the left */}
+        <IslandMeterOverlay />
       </View>
     </View>
   );

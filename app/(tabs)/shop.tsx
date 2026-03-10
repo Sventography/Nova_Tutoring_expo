@@ -34,6 +34,7 @@ import {
   dollarsToCoins,
   altImages,
   type Category,
+  type CatalogItem,
 } from "../_lib/catalog";
 
 import { getSizesFor } from "../constants/sizes";
@@ -58,6 +59,7 @@ import { startCoinCheckout } from "../utils/coinCheckout";
 import { notifyCoinOrder } from "../utils/coin-order";
 
 import AddressSheet, { AddressPayload } from "../components/AddressSheet";
+import { supabase } from "../lib/supabase";
 
 /* ----------------------------- Local typings ------------------------------ */
 type QuickItem = {
@@ -97,7 +99,12 @@ type CompanionEffectType =
   | "legend_spiral"
   | null;
 
-// Local orders list (purely client-side for now)
+// Ask memory config
+type AskMemoryConfig = {
+  tier: string;
+  limit: number;
+};
+
 const ORDERS_KEY = "@nova/orders";
 
 const REQUIRES_SHIPPING = new Set<Category>([
@@ -215,6 +222,99 @@ async function saveOrders(list: Order[]) {
 }
 
 /**
+ * Resolve ask memory config from a catalog item.
+ * Expect your ask_memory items in catalog to define:
+ *   meta: { askMemoryTier: string; askMemoryLimit: number }
+ */
+function resolveAskMemoryConfigFromItem(
+  it: CatalogItem
+): AskMemoryConfig | null {
+  const meta = (it as any).meta ?? (it as any).askMemory ?? null;
+  if (meta && typeof meta === "object") {
+    const tier =
+      (meta as any).askMemoryTier ?? (meta as any).tier ?? (meta as any).id;
+    const limit =
+      (meta as any).askMemoryLimit ?? (meta as any).limit ?? undefined;
+    if (tier && typeof limit === "number") {
+      return { tier: String(tier), limit };
+    }
+  }
+  return null;
+}
+
+/**
+ * Resolve ask personality id from a catalog item.
+ * Expect your ask_personality items in catalog to define:
+ *   meta: { personalityId: string }
+ */
+function resolveAskPersonalityFromItem(it: CatalogItem): string | null {
+  const meta = (it as any).meta ?? null;
+  if (meta && typeof meta === "object") {
+    const pid =
+      (meta as any).personalityId ??
+      (meta as any).askPersonality ??
+      (meta as any).id;
+    return pid ? String(pid) : null;
+  }
+  return null;
+}
+
+async function updateAskMemoryProfile(
+  userId: string | null | undefined,
+  cfg: AskMemoryConfig | null
+) {
+  if (!userId || !cfg) return;
+  try {
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        ask_memory_tier: cfg.tier,
+        ask_memory_limit: cfg.limit,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", userId)
+      .single();
+    if (error) {
+      console.warn("[shop] ask_memory update error", error);
+    } else {
+      console.log(
+        "[shop] ask_memory updated",
+        cfg.tier,
+        cfg.limit,
+        "for",
+        userId
+      );
+    }
+  } catch (e) {
+    console.warn("[shop] ask_memory update exception", e);
+  }
+}
+
+async function updateAskPersonalityProfile(
+  userId: string | null | undefined,
+  personalityId: string | null
+) {
+  if (!userId || !personalityId) return;
+  try {
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        ask_personality: personalityId,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", userId)
+      .single();
+    if (error) {
+      console.warn("[shop] ask_personality update error", error);
+    } else {
+      console.log("[shop] ask_personality updated", personalityId, "for", userId);
+    }
+  } catch (e) {
+    console.warn("[shop] ask_personality update exception", e);
+  }
+}
+
+/**
  * Short ability blurb for each legendary companion.
  */
 function getCompanionAbilityShort(
@@ -308,7 +408,7 @@ function buildCompanionEffectMap(): Record<string, CompanionEffectType> {
     const text = `${comp?.title ?? ""} ${comp?.desc ?? ""}`.toLowerCase();
     let type: CompanionEffectType = null;
 
-    // 🔱 Legendary explicit matches
+    // Legendary explicit matches
     if (id.includes("chrono") || text.includes("chrono fox")) {
       type = "legend_fire"; // Chrono Fox – fire FX
     } else if (id.includes("mecha") || text.includes("mecha owl")) {
@@ -318,7 +418,7 @@ function buildCompanionEffectMap(): Record<string, CompanionEffectType> {
       text.includes("axolotl") ||
       text.includes("oracle")
     ) {
-      type = "shield"; // Axolotl Oracle – shield rings that spill out
+      type = "shield"; // Axolotl Oracle – shield rings
     } else if (id.includes("celestra") || text.includes("celestra")) {
       type = "legend_bubbles"; // Celestra – bubble aura
     } else if (
@@ -326,7 +426,7 @@ function buildCompanionEffectMap(): Record<string, CompanionEffectType> {
       text.includes("astral nova") ||
       text.includes("astral")
     ) {
-      type = "legend_sparkles"; // Astral Nova – gold spark diamonds
+      type = "legend_sparkles"; // Astral Nova – sparkles
     } else if (
       id.includes("aetherwyrm") ||
       text.includes("aetherwyrm") ||
@@ -335,11 +435,10 @@ function buildCompanionEffectMap(): Record<string, CompanionEffectType> {
       type = "legend_spiral"; // Aetherwyrm – spiral rings
     }
 
-    // 🌙📚✨ Thematic matches for common companions (only if not set above)
+    // Common companions
     if (!type) {
       const isParty = text.includes("party");
 
-      // 🥳 Party companions
       if (isParty) {
         if (!firstPartyAssigned) {
           type = "party_confetti";
@@ -403,7 +502,6 @@ function getCompanionEffect(id: string): CompanionEffectType {
 
 /** Helpers for the “white background” legendary PNGs */
 function isWhiteLegendId(raw: string | null | undefined): boolean {
-  // Normalize so we catch "mecha_owl", "mecha-owl", "MECHA OWL", etc.
   let v = (raw ?? "")
     .toString()
     .toLowerCase()
@@ -413,7 +511,7 @@ function isWhiteLegendId(raw: string | null | undefined): boolean {
     v.includes("mecha_owl") ||
     v.includes("celestra") ||
     v.includes("axolotl_oracle") ||
-    v.includes("axolotl") // safety for any variant of axolotl oracle
+    v.includes("axolotl")
   );
 }
 
@@ -672,7 +770,6 @@ function ItemDetailModal({
   const [showAlt, setShowAlt] = useState(false);
 
   useEffect(() => {
-    // reset flip when switching items
     setShowAlt(false);
   }, [item?.id]);
 
@@ -687,7 +784,6 @@ function ItemDetailModal({
   const priceCoins = item.priceCoins ?? item.coinPrice ?? null;
   const priceUSD = item.priceUSD ?? null;
 
-  // Ability line for companions (fallback if catalog doesn't store a note)
   const abilityShort = getCompanionAbilityShort(item.id);
   const abilityNote = item.ability?.note ?? abilityShort ?? null;
 
@@ -976,7 +1072,7 @@ function CompanionEffectOverlay({
 
   if (!type) return null;
 
-  // 🛡 Axolotl Oracle shield rings
+  // Shield rings
   if (type === "shield") {
     const rings = [0, 1, 2];
     return (
@@ -1016,7 +1112,7 @@ function CompanionEffectOverlay({
     );
   }
 
-  // 🌋 Legendary special FX (non-emoji)
+  // Legendary special FX
   if (
     type === "legend_fire" ||
     type === "legend_lightning" ||
@@ -1024,7 +1120,7 @@ function CompanionEffectOverlay({
     type === "legend_sparkles" ||
     type === "legend_spiral"
   ) {
-    // 🔥 Chrono Fox
+    // Chrono Fox
     if (type === "legend_fire") {
       const tongues = [0, 1, 2, 3, 4, 5, 6];
       const embers = [0, 1, 2, 3];
@@ -1123,7 +1219,7 @@ function CompanionEffectOverlay({
       );
     }
 
-    // ⚡ Mecha Owl
+    // Mecha Owl lightning
     if (type === "legend_lightning") {
       const bolts = [0, 1];
 
@@ -1223,7 +1319,7 @@ function CompanionEffectOverlay({
       );
     }
 
-    // 🫧 Celestra
+    // Celestra bubbles
     if (type === "legend_bubbles") {
       const bubbles = [0, 1, 2, 3, 4, 5];
       return (
@@ -1244,12 +1340,12 @@ function CompanionEffectOverlay({
               <Animated.View
                 key={`lb-${idx}-${effectKey}`}
                 style={{
-                  position: "absolute",
                   bottom: 10,
                   left: "50%",
                   width: size,
                   height: size,
                   marginLeft: offsetX - size / 2,
+                  position: "absolute",
                   borderRadius: size / 2,
                   borderWidth: 1,
                   borderColor: "rgba(191,219,254,0.9)",
@@ -1264,7 +1360,7 @@ function CompanionEffectOverlay({
       );
     }
 
-    // ✨ Astral Nova
+    // Astral Nova spark diamonds
     if (type === "legend_sparkles") {
       const sparks = [0, 1, 2, 3, 4, 5];
       return (
@@ -1319,7 +1415,7 @@ function CompanionEffectOverlay({
       );
     }
 
-    // 🐉 Aetherwyrm
+    // Aetherwyrm spiral rings
     if (type === "legend_spiral") {
       const rings = [0, 1, 2, 3];
       return (
@@ -1360,7 +1456,7 @@ function CompanionEffectOverlay({
     }
   }
 
-  // 💜 Default: emoji-based FX for non-legendaries
+  // Emoji-based defaults for common companions
   const icons =
     type === "party_confetti"
       ? ["🎉", "🎊", "🎉", "🎊", "🎉", "🎊"]
@@ -1430,7 +1526,7 @@ export default function Shop() {
   const { coins, setCoins } = useCoins();
   const { tokens, setThemeById, themeId } = useTheme();
   const { cursorId, setCursorById } = useCursor();
-  const { user: currentUser } = useUser();
+  const { user: currentUser } = useUser() as any;
   const { purchases, isOwned, grant } = usePurchases();
   const {
     activeCompanionId: equippedCompanionId,
@@ -1497,12 +1593,17 @@ export default function Shop() {
     outputRange: ["0deg", "360deg"],
   });
 
+  const shakeX = floatShake.interpolate({
+    inputRange: [-1, 1],
+    outputRange: [-6, 6],
+  });
+
   const clickModeRef = useRef(0);
 
   const [activeEffect, setActiveEffect] = useState<CompanionEffectType>(null);
   const [effectKey, setEffectKey] = useState(0);
 
-  // 🔍 Pinch state for floating bubble
+  // Pinch state
   const pinchDistanceRef = useRef<number | null>(null);
   const pinchBaseScaleRef = useRef<number>(1);
   const pinchScaleRef = useRef<number>(1);
@@ -1559,7 +1660,6 @@ export default function Shop() {
         }
       },
       onPanResponderRelease: (_evt, gesture) => {
-        // Clamp position after drag
         const minX = 8;
         const maxX = windowDims.width - FLOAT_SIZE - 8;
         const minY = 60;
@@ -1744,6 +1844,59 @@ export default function Shop() {
         return;
       }
 
+      // Ask memory upgrade
+      if (it.category === "ask_memory") {
+        const grantId = cid || it.id;
+        void grant(grantId);
+
+        const cfg = resolveAskMemoryConfigFromItem(it);
+        await updateAskMemoryProfile(
+          (currentUser as any)?.id ?? null,
+          cfg
+        );
+
+        track("shop_purchase_complete", {
+          sku: grantId,
+          category: it.category,
+          mode: "stripe",
+        });
+
+        if (!cfg) {
+          console.warn(
+            "[shop] ask_memory item purchased but no config found in catalog.meta"
+          );
+        }
+
+        return;
+      }
+
+      // Ask personality purchase
+      if (it.category === "ask_personality") {
+        const grantId = cid || it.id;
+        void grant(grantId);
+
+        const personalityId = resolveAskPersonalityFromItem(it);
+        await updateAskPersonalityProfile(
+          (currentUser as any)?.id ?? null,
+          personalityId
+        );
+
+        track("shop_purchase_complete", {
+          sku: grantId,
+          category: it.category,
+          mode: "stripe",
+        });
+
+        if (!personalityId) {
+          console.warn(
+            "[shop] ask_personality item purchased but no personalityId found in catalog.meta"
+          );
+        }
+
+        return;
+      }
+
+      // Tangible orders (plushies, clothing, tangibles, bundles that ship)
       const order: Order = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         sku: it.id,
@@ -1765,7 +1918,7 @@ export default function Shop() {
     const sub = RNLinking.addEventListener("url", onUrl);
     Linking.getInitialURL().then((url) => url && onUrl({ url }));
     return () => sub.remove();
-  }, [setCoins, coins, grant]);
+  }, [setCoins, coins, grant, currentUser]);
 
   function markOwned(id: string) {
     const cid = canonId(id);
@@ -1793,7 +1946,10 @@ export default function Shop() {
 
   function unequipThemeImmediate(meta?: Record<string, any>) {
     const prev = themeId;
-    if (typeof setThemeById === "function") setThemeById("theme:neon");
+    if (typeof setThemeById === "function") {
+      const def = toThemeCtxId("theme:neon") ?? "theme:neon";
+      setThemeById(def as any);
+    }
     track("shop_unequip", {
       kind: "theme",
       id: prev,
@@ -1956,8 +2112,7 @@ export default function Shop() {
           effectType === "legend_spiral" ||
           effectType === "shield";
 
-        // v1: legendary companions are preview-only, so they never appear
-        // in "My Companions" and can't be equipped yet.
+        // v1: legendary companions preview-only
         if (isLegendary) {
           return false;
         }
@@ -1972,7 +2127,7 @@ export default function Shop() {
           isOwned(c.id) || isOwned(cid) || isOwned(canonId(c.id));
         return fromContext || fromPurchases;
       }),
-    [ownedCompanionIds, purchases]
+    [ownedCompanionIds, purchases, isOwned]
   );
 
   function quickEquip(id: string, kind: "theme" | "cursor") {
@@ -2040,7 +2195,7 @@ export default function Shop() {
   }
 
   const groups = useMemo(() => {
-    const byCat: Record<Category, typeof catalog> = {
+    const byCat: Record<Category, CatalogItem[]> = {
       plushies: [],
       clothing: [],
       tangibles: [],
@@ -2048,17 +2203,21 @@ export default function Shop() {
       theme: [],
       bundle: [],
       coin_pack: [],
+      ask_memory: [],
+      ask_personality: [],
     };
 
     for (const it of catalog) {
+      // optional: skip some bundles if desired
       if (it.category === "bundle") {
         const idLc = (it.id ?? "").toLowerCase();
         const titleLc =
           typeof it.title === "string" ? it.title.toLowerCase() : "";
-        if (idLc.includes("neon") || titleLc.includes("neon")) {
-          continue;
+        if (idLc.includes("neon") || titleLc.includes("neon starter")) {
+          // currently we *do* want the Neon bundle, so we don't continue here.
         }
       }
+
       byCat[it.category].push(it);
     }
     return byCat;
@@ -2068,7 +2227,12 @@ export default function Shop() {
     const price = it.priceCoins ?? 0;
     if (!price) return;
 
-    if (REQUIRES_SHIPPING.has(it.category)) {
+    // ask_* are USD-only (no coin purchases)
+    if (it.category === "ask_memory" || it.category === "ask_personality") {
+      return;
+    }
+
+    if (REQUIRES_SHIPPING.has(it.category as Category)) {
       const curCoins = coinsRef.current ?? coins ?? 0;
       if (curCoins < price) {
         setNeed(price - curCoins);
@@ -2334,9 +2498,21 @@ export default function Shop() {
     }
   }
 
-  // ✅ call startCheckout with a proper amount in dollars
+  // call startCheckout with a proper amount in dollars
   async function moneyBuy(it: any, meta?: { size?: string }) {
     try {
+      // For ask_* items, require login so the profile can store the tier/personality
+      if (
+        (it.category === "ask_memory" || it.category === "ask_personality") &&
+        !(currentUser && (currentUser as any).id)
+      ) {
+        Alert.alert(
+          "Sign in required",
+          "Please sign in or create an account before purchasing Ask upgrades."
+        );
+        return;
+      }
+
       const amount =
         typeof it.priceUSD === "number" && isFinite(it.priceUSD)
           ? it.priceUSD
@@ -2547,7 +2723,6 @@ export default function Shop() {
       floatBasePos.current = { x: startX, y: startY };
       setFloatPos({ x: startX, y: startY });
 
-      // reset pinch scale when a new companion is summoned
       pinchScaleRef.current = 1;
       pinchBaseScaleRef.current = 1;
       floatScale.setValue(1);
@@ -2580,22 +2755,22 @@ export default function Shop() {
   /* ----------------------------- Render helpers --------------------------- */
 
   const renderItem = (
-    it: any,
+    it: CatalogItem,
     color: string,
-    equipable?: "theme" | "cursor",
-    onOpenDetail?: (item: any) => void
+    equipable: "theme" | "cursor" | undefined,
+    onOpenDetail: ((item: any) => void) | undefined,
+    tokensArg: any
   ) => {
     const owned = isOwned(it.id);
-
     const src =
       it.image ||
       (it.altImageKey && altImages[it.altImageKey]) ||
       null;
 
     const sizeKey =
-      it.stripeProductId ||
-      it.productId ||
-      (it.stripe && it.stripe.productId) ||
+      (it as any).stripeProductId ||
+      (it as any).productId ||
+      ((it as any).stripe && (it as any).stripe.productId) ||
       it.id;
 
     let sizes = getSizesFor(sizeKey);
@@ -2614,7 +2789,11 @@ export default function Shop() {
         ? eqCursor === cid
         : false;
 
-    const { tokens } = useTheme();
+    const tokensLocal = tokensArg;
+    const category = it.category;
+
+    const isAskMemory = category === "ask_memory";
+    const isAskPersonality = category === "ask_personality";
 
     return (
       <Card key={it.id} color={color}>
@@ -2635,7 +2814,7 @@ export default function Shop() {
               borderWidth: 1,
               borderColor: color,
               marginBottom: 8,
-              backgroundColor: tokens.isDark
+              backgroundColor: tokensLocal.isDark
                 ? "rgba(255,255,255,0.02)"
                 : "rgba(255,255,255,0.55)",
             }}
@@ -2650,7 +2829,7 @@ export default function Shop() {
 
         <Text
           style={{
-            color: tokens.text as any,
+            color: tokensLocal.text as any,
             fontSize: 14,
             fontWeight: "700",
             textAlign: "center",
@@ -2662,7 +2841,7 @@ export default function Shop() {
         {it.desc ? (
           <Text
             style={{
-              color: tokens.text as any,
+              color: tokensLocal.text as any,
               fontSize: 12,
               lineHeight: 16,
               textAlign: "center",
@@ -2679,7 +2858,7 @@ export default function Shop() {
           <View style={{ marginTop: 10 }}>
             <Text
               style={{
-                color: tokens.text as any,
+                color: tokensLocal.text as any,
                 fontSize: 12,
                 marginBottom: 6,
               }}
@@ -2709,6 +2888,7 @@ export default function Shop() {
 
         <View style={{ height: 8 }} />
 
+        {/* Equipable themes */}
         {equipable === "theme" ? (
           owned ? (
             <Pressable
@@ -2722,17 +2902,17 @@ export default function Shop() {
                 paddingVertical: 10,
                 borderRadius: 10,
                 borderWidth: 1,
-                borderColor: tokens.border as any,
+                borderColor: tokensLocal.border as any,
                 backgroundColor: pressed
-                  ? tokens.isDark
+                  ? tokensLocal.isDark
                     ? "rgba(92,252,200,0.15)"
                     : "rgba(62,211,162,0.15)"
-                  : tokens.isDark
+                  : tokensLocal.isDark
                   ? "rgba(92,252,200,0.08)"
                   : "rgba(62,211,162,0.08)",
               })}
             >
-              <Text style={{ color: tokens.text as any, fontWeight: "800" }}>
+              <Text style={{ color: tokensLocal.text as any, fontWeight: "800" }}>
                 {equipped ? "Equipped ✓" : "Equip"}
               </Text>
             </Pressable>
@@ -2782,6 +2962,7 @@ export default function Shop() {
             </View>
           )
         ) : equipable === "cursor" ? (
+          /* Equipable cursors */
           owned ? (
             <Pressable
               onPress={() =>
@@ -2794,17 +2975,17 @@ export default function Shop() {
                 paddingVertical: 10,
                 borderRadius: 10,
                 borderWidth: 1,
-                borderColor: tokens.border as any,
+                borderColor: tokensLocal.border as any,
                 backgroundColor: pressed
-                  ? tokens.isDark
+                  ? tokensLocal.isDark
                     ? "rgba(92,252,200,0.15)"
                     : "rgba(62,211,162,0.15)"
-                  : tokens.isDark
+                  : tokensLocal.isDark
                   ? "rgba(92,252,200,0.08)"
                   : "rgba(62,211,162,0.08)",
               })}
             >
-              <Text style={{ color: tokens.text as any, fontWeight: "800" }}>
+              <Text style={{ color: tokensLocal.text as any, fontWeight: "800" }}>
                 {equipped ? "Equipped ✓" : "Equip"}
               </Text>
             </Pressable>
@@ -2853,7 +3034,8 @@ export default function Shop() {
               </Pressable>
             </View>
           )
-        ) : it.category === "coin_pack" ? (
+        ) : category === "coin_pack" ? (
+          /* Coin packs: USD-only */
           <Pressable
             onPress={() => moneyBuy(it)}
             style={({ pressed }) => ({
@@ -2871,7 +3053,50 @@ export default function Shop() {
               ${it.priceUSD?.toFixed(0)}
             </Text>
           </Pressable>
+        ) : isAskMemory || isAskPersonality ? (
+          /* Ask memory & personalities: USD-only and show Owned if purchased */
+          owned ? (
+            <View
+              style={{
+                alignItems: "center",
+                paddingVertical: 10,
+                borderRadius: 10,
+                borderWidth: 1,
+                borderColor: "rgba(34,197,94,0.9)",
+                backgroundColor: "rgba(22,163,74,0.16)",
+              }}
+            >
+              <Text
+                style={{
+                  color: "rgba(22,163,74,0.95)",
+                  fontWeight: "800",
+                  fontSize: 13,
+                }}
+              >
+                Owned ✓
+              </Text>
+            </View>
+          ) : (
+            <Pressable
+              onPress={() => moneyBuy(it)}
+              style={({ pressed }) => ({
+                alignItems: "center",
+                paddingVertical: 10,
+                borderRadius: 10,
+                borderWidth: 1,
+                borderColor: color,
+                backgroundColor: pressed
+                  ? "rgba(56,189,248,0.20)"
+                  : "rgba(56,189,248,0.10)",
+              })}
+            >
+              <Text style={{ color: color, fontWeight: "800" }}>
+                ${it.priceUSD?.toFixed(0)} (USD)
+              </Text>
+            </Pressable>
+          )
         ) : (
+          /* Default: plushies, clothing, tangibles, bundles */
           <View
             style={{
               flexDirection: "row",
@@ -2928,7 +3153,7 @@ export default function Shop() {
     );
   };
 
-  // Decide square-vs-round for the floating companion bubble
+  // Floating companion bubble look
   const isFloatingSquareLegend =
     !!floatingCompanion &&
     isWhiteLegendId(
@@ -2955,7 +3180,7 @@ export default function Shop() {
         style={{ flex: 1, backgroundColor: "transparent" }}
         contentContainerStyle={{
           paddingHorizontal: 16,
-          paddingBottom: 16,
+          paddingBottom: 32,
           paddingTop: 0,
           marginTop: 16,
         }}
@@ -3042,11 +3267,9 @@ export default function Shop() {
 
                 const abilityShort = getCompanionAbilityShort(it.id);
 
-                // Neon cyan base border; gold only for the selected/equipped one
                 const baseBorderColor = NEON_BORDER;
                 const borderColor = isActive ? "#FACC15" : baseBorderColor;
 
-                // White legendary companions: treat as square-ish with black bg
                 const isWhiteLegend = isWhiteLegendId(cid);
                 const bubbleRadius = isWhiteLegend ? 12 : 36;
 
@@ -3072,7 +3295,7 @@ export default function Shop() {
                         width: 72,
                         height: 72,
                         borderRadius: bubbleRadius,
-                        borderWidth: 4, // thick neon/gold border
+                        borderWidth: 4,
                         borderColor,
                         overflow: "hidden",
                         alignItems: "center",
@@ -3159,6 +3382,7 @@ export default function Shop() {
           </View>
         )}
 
+        {/* Quick rows */}
         <View data-quick-rows style={{ marginVertical: 16 }}>
           <QuickRow
             title="Themes"
@@ -3174,25 +3398,46 @@ export default function Shop() {
           />
         </View>
 
+        {/* Plushies */}
         <Section title="Plushies">
           {groups.plushies.map((it) =>
-            renderItem(it, CATEGORY_BORDER.plushies, undefined, setDetailItem)
+            renderItem(
+              it,
+              CATEGORY_BORDER.plushies,
+              undefined,
+              setDetailItem,
+              tokens
+            )
           )}
         </Section>
 
+        {/* Clothing */}
         <Section title="Clothing">
           {groups.clothing.map((it) =>
-            renderItem(it, CATEGORY_BORDER.clothing, undefined, setDetailItem)
+            renderItem(
+              it,
+              CATEGORY_BORDER.clothing,
+              undefined,
+              setDetailItem,
+              tokens
+            )
           )}
         </Section>
 
+        {/* Tangibles */}
         <Section title="Tangibles">
           {groups.tangibles.map((it) =>
-            renderItem(it, CATEGORY_BORDER.tangibles, undefined, setDetailItem)
+            renderItem(
+              it,
+              CATEGORY_BORDER.tangibles,
+              undefined,
+              setDetailItem,
+              tokens
+            )
           )}
         </Section>
 
-        {/* Companions */}
+        {/* Companions (store view) */}
         <Section title="Companions">
           {COMPANIONS.map((it: any) => {
             const cid = it.canonId || canonId(it.id);
@@ -3224,12 +3469,9 @@ export default function Shop() {
               effectType === "shield";
 
             const isWhiteLegend = isWhiteLegendId(cid);
-
             const abilityShort = getCompanionAbilityShort(it.id);
 
-            const { tokens } = useTheme();
-
-            // Neon cyan for legendaries, gold when equipped, normal border for others
+            // Neon for legendaries, gold if equipped, teal otherwise
             const baseBorderColor = isLegendary
               ? "#22E5FF"
               : CATEGORY_BORDER.tangibles;
@@ -3241,8 +3483,7 @@ export default function Shop() {
               ? "rgba(148,163,184,0.95)"
               : (tokens.text as any);
 
-            // ❌ Avoid double bubbles for non-legendaries (owned ones move to My Companions).
-            // Legendary companions always stay visible here as "coming soon".
+            // Non-legendary companions: hide in store if owned (they live in My Companions)
             if (owned && !isLegendary) {
               return null;
             }
@@ -3266,14 +3507,17 @@ export default function Shop() {
                         isLegendary && isWhiteLegend
                           ? "#000"
                           : tokens.isDark
-                          ? "rgba(15,23,42,0.95)"
+                          ? "rgba(15,23,42,0.98)"
                           : "rgba(255,255,255,0.95)",
-                      opacity: legendImageOpacity,
                     }}
                   >
                     <Image
                       source={src}
-                      style={{ width: "100%", height: "100%" }}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        opacity: legendImageOpacity,
+                      }}
                       resizeMode="contain"
                     />
                   </Pressable>
@@ -3290,21 +3534,6 @@ export default function Shop() {
                   {it.title}
                 </Text>
 
-                {isLegendary && abilityShort && (
-                  <Text
-                    style={{
-                      color: isEquipped ? "#FACC15" : "#FDE68A",
-                      fontSize: 11,
-                      fontWeight: "700",
-                      textAlign: "center",
-                      marginTop: 4,
-                    }}
-                    numberOfLines={2}
-                  >
-                    {abilityShort}
-                  </Text>
-                )}
-
                 {it.desc ? (
                   <Text
                     style={{
@@ -3312,8 +3541,8 @@ export default function Shop() {
                       fontSize: 12,
                       lineHeight: 16,
                       textAlign: "center",
-                      marginTop: 16,
-                      paddingHorizontal: 8,
+                      marginTop: 8,
+                      paddingHorizontal: 6,
                     }}
                     numberOfLines={3}
                   >
@@ -3321,17 +3550,18 @@ export default function Shop() {
                   </Text>
                 ) : null}
 
-                {isEquipped && !isLegendary && (
+                {abilityShort && (
                   <Text
                     style={{
-                      color: "#FACC15",
+                      color: isLegendary ? "#FDE68A" : legendTextColor,
                       fontSize: 11,
-                      fontWeight: "800",
+                      fontWeight: "700",
+                      marginTop: 6,
                       textAlign: "center",
-                      marginTop: 4,
                     }}
+                    numberOfLines={2}
                   >
-                    Equipped
+                    Ability: {abilityShort}
                   </Text>
                 )}
 
@@ -3340,189 +3570,214 @@ export default function Shop() {
                 {isLegendary ? (
                   <View
                     style={{
-                      alignItems: "center",
-                      paddingVertical: 10,
-                      borderRadius: 10,
+                      paddingVertical: 8,
+                      paddingHorizontal: 10,
+                      borderRadius: 999,
                       borderWidth: 1,
-                      borderColor,
-                      backgroundColor: tokens.isDark
-                        ? "rgba(15,23,42,0.8)"
-                        : "rgba(229,231,235,0.9)",
+                      borderColor: "rgba(148,163,184,0.5)",
+                      backgroundColor: "rgba(15,23,42,0.65)",
+                      alignItems: "center",
                     }}
                   >
                     <Text
                       style={{
-                        color: legendTextColor,
+                        color: "rgba(148,163,184,0.95)",
+                        fontSize: 11,
                         fontWeight: "800",
-                        fontSize: 12,
-                        textAlign: "center",
                       }}
                     >
-                      Coming soon in the next update!
+                      Coming in the next update!
                     </Text>
                   </View>
-                ) : owned ? (
-                  <Pressable
-                    onPress={() => triggerCompanion(it.id)}
-                    style={({ pressed }) => ({
-                      alignItems: "center",
-                      paddingVertical: 10,
-                      borderRadius: 10,
-                      borderWidth: 1,
-                      borderColor: borderColor,
-                      backgroundColor: pressed
-                        ? "rgba(96,165,250,0.18)"
-                        : tokens.isDark
-                        ? "rgba(148,163,184,0.16)"
-                        : "rgba(148,163,184,0.12)",
-                    })}
-                  >
-                    <Text
-                      style={{
-                        color: borderColor,
-                        fontWeight: "800",
-                      }}
-                    >
-                      {isEquipped ? "Summon ✓" : "Summon"}
-                    </Text>
-                  </Pressable>
                 ) : (
-                  <Pressable
-                    onPress={() =>
-                      buyWithCoins({
-                        ...it,
-                        priceCoins,
-                        category: "companions",
-                      })
-                    }
-                    style={({ pressed }) => ({
-                      alignItems: "center",
-                      paddingVertical: 10,
-                      borderRadius: 10,
-                      borderWidth: 1,
-                      borderColor,
-                      backgroundColor: pressed
-                        ? "rgba(96,165,250,0.15)"
-                        : "rgba(96,165,250,0.08)",
-                    })}
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                      columnGap: 8,
+                    }}
                   >
-                    <Text
-                      style={{
-                        color: borderColor,
-                        fontWeight: "800",
-                      }}
+                    <Pressable
+                      onPress={() =>
+                        buyWithCoins(
+                          { ...it, category: "companions", priceCoins },
+                          {}
+                        )
+                      }
+                      style={({ pressed }) => ({
+                        flex: 1,
+                        alignItems: "center",
+                        paddingVertical: 10,
+                        borderRadius: 10,
+                        borderWidth: 1,
+                        borderColor: borderColor,
+                        backgroundColor: pressed
+                          ? "rgba(56,189,248,0.20)"
+                          : "rgba(56,189,248,0.10)",
+                      })}
                     >
-                      {priceCoins.toLocaleString()} coins
-                    </Text>
-                  </Pressable>
+                      <Text
+                        style={{
+                          color: borderColor,
+                          fontWeight: "800",
+                          fontSize: 12,
+                        }}
+                      >
+                        {priceCoins.toLocaleString()} coins
+                      </Text>
+                    </Pressable>
+
+                    <Pressable
+                      onPress={() =>
+                        moneyBuy(
+                          { ...it, category: "companions", priceUSD: 12.99 },
+                          {}
+                        )
+                      }
+                      style={({ pressed }) => ({
+                        flex: 1,
+                        alignItems: "center",
+                        paddingVertical: 10,
+                        borderRadius: 10,
+                        borderWidth: 1,
+                        borderColor: borderColor,
+                        backgroundColor: pressed
+                          ? "rgba(56,189,248,0.16)"
+                          : "transparent",
+                      })}
+                    >
+                      <Text
+                        style={{
+                          color: borderColor,
+                          fontWeight: "800",
+                          fontSize: 12,
+                        }}
+                      >
+                        $12.99
+                      </Text>
+                    </Pressable>
+                  </View>
                 )}
               </Card>
             );
           })}
         </Section>
 
+        {/* Themes */}
         <View
-          onLayout={(e) =>
-            (cursorSectionY.current = e.nativeEvent.layout.y)
-          }
-        />
-        <Section title="Cursors" pulseAnim={cursorPulse}>
-          {groups.cursor.map((it) =>
-            renderItem(it, CATEGORY_BORDER.cursor, "cursor", setDetailItem)
-          )}
-        </Section>
-
-        <View
-          onLayout={(e) =>
-            (themeSectionY.current = e.nativeEvent.layout.y)
-          }
-        />
-        <Section title="Themes" pulseAnim={themePulse}>
-          {groups.theme.map((it) =>
-            renderItem(it, CATEGORY_BORDER.theme, "theme", setDetailItem)
-          )}
-        </Section>
-
-        {groups.bundle.length > 0 && (
-          <Section title="Bundles">
-            {groups.bundle.map((it) =>
-              renderItem(it, CATEGORY_BORDER.bundle, undefined, setDetailItem)
+          onLayout={(e) => {
+            themeSectionY.current = e.nativeEvent.layout.y;
+          }}
+        >
+          <Section title="Themes" pulseAnim={themePulse}>
+            {groups.theme.map((it) =>
+              renderItem(
+                it,
+                CATEGORY_BORDER.theme,
+                "theme",
+                setDetailItem,
+                tokens
+              )
             )}
           </Section>
-        )}
+        </View>
 
-        <Section title="Coin Packs">
-          {groups.coin_pack.map((it) =>
-            renderItem(it, CATEGORY_BORDER.coin_pack, undefined, setDetailItem)
+        {/* Cursors */}
+        <View
+          onLayout={(e) => {
+            cursorSectionY.current = e.nativeEvent.layout.y;
+          }}
+        >
+          <Section title="Cursors" pulseAnim={cursorPulse}>
+            {groups.cursor.map((it) =>
+              renderItem(
+                it,
+                CATEGORY_BORDER.cursor,
+                "cursor",
+                setDetailItem,
+                tokens
+              )
+            )}
+          </Section>
+        </View>
+
+        {/* Ask memory tiers */}
+        <Section title="Ask Memory Upgrades">
+          {groups.ask_memory.map((it) =>
+            renderItem(
+              it,
+              CATEGORY_BORDER.ask_memory,
+              undefined,
+              setDetailItem,
+              tokens
+            )
           )}
         </Section>
 
-        {orders.length > 0 && (
-          <View style={{ marginTop: 24 }}>
-            <Text
-              style={{
-                color: tokens.titleText as any,
-                fontSize: 16,
-                fontWeight: "800",
-                marginBottom: 10,
-              }}
-            >
-              Orders
-            </Text>
+        {/* Ask personalities */}
+        <Section title="Ask Personalities">
+          {groups.ask_personality.map((it) =>
+            renderItem(
+              it,
+              CATEGORY_BORDER.ask_personality,
+              undefined,
+              setDetailItem,
+              tokens
+            )
+          )}
+        </Section>
 
-            {orders.map((o) => (
-              <View
-                key={o.id}
-                style={{
-                  borderWidth: 1,
-                  borderColor: tokens.border as any,
-                  borderRadius: 12,
-                  padding: 12,
-                  marginBottom: 8,
-                  backgroundColor: tokens.isDark
-                    ? "rgba(255,255,255,0.03)"
-                    : "rgba(255,255,255,0.60)",
-                }}
-              >
-                <Text
-                  style={{
-                    color: tokens.text as any,
-                    fontWeight: "700",
-                  }}
-                >
-                  {o.title}
-                </Text>
-                <Text
-                  style={{
-                    color: tokens.text as any,
-                    fontSize: 12,
-                    marginTop: 16,
-                  }}
-                >
-                  {new Date(o.createdAt).toLocaleString()} ·{" "}
-                  {o.status.toUpperCase()}
-                </Text>
-              </View>
-            ))}
-          </View>
-        )}
+        {/* Coin packs */}
+        <Section title="Coin Packs">
+          {groups.coin_pack.map((it) =>
+            renderItem(
+              it,
+              CATEGORY_BORDER.coin_pack,
+              undefined,
+              setDetailItem,
+              tokens
+            )
+          )}
+        </Section>
       </ScrollView>
+
+      {/* Modals + overlays */}
+      <ItemDetailModal
+        visible={!!detailItem}
+        item={detailItem}
+        onClose={() => setDetailItem(null)}
+      />
+
+      <InsufficientCoinsModal
+        visible={showInsufficient}
+        needed={need}
+        onClose={() => setShowInsufficient(false)}
+        onGotoCoins={() => {
+          setShowInsufficient(false);
+          scrollRef.current?.scrollToEnd({ animated: true });
+        }}
+      />
+
+      <OrderSuccessModal
+        visible={showOrderSuccess}
+        title={lastOrderTitle}
+        onClose={() => setShowOrderSuccess(false)}
+      />
 
       <AddressSheet
         visible={addressVisible}
+        loading={addressSubmitting}
+        initialValues={initialAddressValues}
+        coinBalance={coinsRef.current ?? coins ?? 0}
         onClose={() => {
           if (addressSubmitting) return;
           setAddressVisible(false);
           setPendingItem(null);
           setPendingSize(null);
         }}
-        onConfirm={handleAddressConfirm}
-        submitting={addressSubmitting}
-        primaryLabel={pendingItem ? "Place order" : "Place order"}
-        initialValues={initialAddressValues}
+        onSubmit={handleAddressConfirm}
       />
 
-      {/* Floating companion */}
       {floatingCompanion && (
         <Animated.View
           {...panResponder.panHandlers}
@@ -3532,177 +3787,60 @@ export default function Shop() {
             top: floatPos.y,
             width: FLOAT_SIZE,
             height: FLOAT_SIZE,
-            transform: [
-              { scale: floatScale },
-              { translateY: floatHop },
-              {
-                translateX: floatShake.interpolate({
-                  inputRange: [-1, 0, 1],
-                  outputRange: [-5, 0, 5],
-                }),
-              },
-              { rotate: floatRotation },
-            ],
             borderRadius: FLOAT_BORDER_RADIUS,
-            overflow: "visible",
-            borderWidth: 4,
+            borderWidth: 2,
             borderColor: NEON_BORDER,
             backgroundColor: FLOAT_BG_COLOR,
+            overflow: "hidden",
             alignItems: "center",
             justifyContent: "center",
-            shadowColor: "#000",
-            shadowOpacity: 0.25,
-            shadowRadius: 10,
-            shadowOffset: { width: 0, height: 4 },
-            elevation: 6,
+            zIndex: 9998,
+            transform: [
+              { translateY: floatHop },
+              { translateX: shakeX },
+              { scale: floatScale },
+              { rotate: floatRotation },
+            ],
           }}
         >
           <Pressable
+            style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
             onPress={handleFloatingPress}
-            style={{ flex: 1, width: "100%", height: "100%" }}
           >
             {floatingCompanion.image ? (
               <Image
                 source={floatingCompanion.image}
-                style={{ width: "100%", height: "100%" }}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  opacity: isWhiteLegendId(
+                    floatingCompanion.canonId || floatingCompanion.id
+                  )
+                    ? 0.9
+                    : 1,
+                }}
                 resizeMode="contain"
               />
             ) : (
-              <View
+              <Text
                 style={{
-                  flex: 1,
-                  alignItems: "center",
-                  justifyContent: "center",
+                  color: tokens.text as any,
+                  fontSize: 12,
+                  fontWeight: "700",
+                  textAlign: "center",
                   paddingHorizontal: 4,
                 }}
               >
-                <Text
-                  style={{
-                    color: tokens.text as any,
-                    fontSize: 11,
-                    fontWeight: "700",
-                    textAlign: "center",
-                  }}
-                  numberOfLines={2}
-                >
-                  {floatingCompanion.title}
-                </Text>
-              </View>
+                {floatingCompanion.title}
+              </Text>
             )}
+            <CompanionEffectOverlay
+              type={activeEffect}
+              effectKey={effectKey}
+            />
           </Pressable>
-
-          <CompanionEffectOverlay type={activeEffect} effectKey={effectKey} />
         </Animated.View>
       )}
-
-      <InsufficientCoinsModal
-        visible={showInsufficient}
-        needed={need}
-        onClose={() => {
-          setShowInsufficient(false);
-          track("shop_modal_insufficient_closed");
-        }}
-        onBuyCoins={() => {
-          setShowInsufficient(false);
-          track("shop_modal_insufficient_buy_coins");
-          setTimeout(
-            () => scrollRef.current?.scrollToEnd({ animated: true }),
-            50
-          );
-        }}
-      />
-
-      <OrderSuccessModal
-        visible={showOrderSuccess}
-        title={lastOrderTitle}
-        onClose={() => {
-          setShowOrderSuccess(false);
-          try {
-            router.replace("/(tabs)/shop");
-          } catch {}
-          requestAnimationFrame(() =>
-            scrollRef.current?.scrollTo({ y: 0, animated: true })
-          );
-        }}
-      />
-
-      {/* Zoomed item detail modal */}
-      {(() => {
-        const isDetailCompanion =
-          detailItem && detailItem.category === "companions";
-
-        const isDetailLegendary =
-          isDetailCompanion &&
-          (() => {
-            const eff = getCompanionEffect(detailItem.id);
-            return (
-              eff === "legend_fire" ||
-              eff === "legend_lightning" ||
-              eff === "legend_bubbles" ||
-              eff === "legend_sparkles" ||
-              eff === "legend_spiral" ||
-              eff === "shield"
-            );
-          })();
-
-        const isDetailCompanionOwned =
-          isDetailCompanion && !isDetailLegendary
-            ? (() => {
-                const cid =
-                  detailItem.canonId || canonId(detailItem.id);
-                const fromContext = (ownedCompanionIds || []).some(
-                  (ownedId: string) =>
-                    ownedId === cid ||
-                    ownedId === detailItem.id ||
-                    ownedId === canonId(detailItem.id)
-                );
-                const fromPurchases =
-                  isOwned(detailItem.id) ||
-                  isOwned(cid) ||
-                  isOwned(canonId(detailItem.id));
-                return fromContext || fromPurchases;
-              })()
-            : false;
-
-        const primaryLabel =
-          isDetailCompanion && isDetailLegendary
-            ? "Coming soon in the next update!"
-            : isDetailCompanion
-            ? isDetailCompanionOwned
-              ? "Summon ✓"
-              : `${(
-                  detailItem.coinPrice ?? 25000
-                ).toLocaleString()} coins`
-            : undefined;
-
-        const onPrimaryAction =
-          isDetailCompanion && !isDetailLegendary
-            ? () => {
-                if (!detailItem) return;
-                if (isDetailCompanionOwned) {
-                  triggerCompanion(detailItem.id);
-                  setDetailItem(null);
-                } else {
-                  const priceCoins = detailItem.coinPrice ?? 25000;
-                  buyWithCoins({
-                    ...detailItem,
-                    priceCoins,
-                    category: "companions",
-                  });
-                }
-              }
-            : undefined;
-
-        return (
-          <ItemDetailModal
-            visible={!!detailItem}
-            item={detailItem}
-            onClose={() => setDetailItem(null)}
-            onPrimaryAction={onPrimaryAction}
-            primaryLabel={primaryLabel}
-          />
-        );
-      })()}
     </LinearGradient>
   );
 }

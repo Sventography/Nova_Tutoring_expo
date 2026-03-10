@@ -27,6 +27,7 @@ import { useCoins } from "../../context/CoinsContext";
 import { useToast } from "../../context/ToastContext";
 import { useUser } from "../../context/UserContext";
 import { createCertificate } from "../../utils/certificates";
+import { useIsland } from "../../context/IslandContext";
 
 type QItem = { question: string; choices: string[]; answer: string };
 
@@ -50,6 +51,7 @@ export default function TopicQuiz() {
   const { addCoins } = useCoins();
   const { show: showToast } = useToast();
   const { user } = useUser() as any;
+  const { addIslandXp } = useIsland();
 
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<QItem[]>([]);
@@ -68,6 +70,7 @@ export default function TopicQuiz() {
   const notifiedRef = useRef(false);
 
   const [showCongrats, setShowCongrats] = useState(false);
+  const [lastXp, setLastXp] = useState<number | null>(null); // 🌴 store last quiz XP for UI
 
   const current = items[idx];
   const total = items.length;
@@ -142,6 +145,7 @@ export default function TopicQuiz() {
           loggedRef.current = false;
           notifiedRef.current = false;
           setShowCongrats(false);
+          setLastXp(null); // reset XP display for a fresh run
         }
       } finally {
         mounted && setLoading(false);
@@ -233,6 +237,22 @@ export default function TopicQuiz() {
         console.warn("[Quiz] addCoins failed", e);
       }
 
+      // 🌴 Per-question Island XP (small drip, hard to farm)
+      try {
+        if (addIslandXp) {
+          addIslandXp(2, {
+            reason: "quiz_correct",
+            meta: {
+              topicId: String(id),
+              questionIndex: idx,
+              question: current.question,
+            },
+          }).catch(() => {});
+        }
+      } catch {
+        // ignore island XP errors
+      }
+
       try {
         showToast({
           title: "+5 coins",
@@ -267,6 +287,7 @@ export default function TopicQuiz() {
     loggedRef.current = false;
     notifiedRef.current = false;
     setShowCongrats(false);
+    setLastXp(null);
   }
 
   const mm = Math.floor(totalLeft / 60);
@@ -278,21 +299,20 @@ export default function TopicQuiz() {
     </LinearGradient>
   );
 
-  // When quiz is finished: history, achievements, and certificate
+  // When quiz is finished: history, achievements, certificate, island XP
   useEffect(() => {
     if (!done) return;
     if (!total) return;
     if (loggedRef.current) return;
 
     const pct = total ? Math.round((correct / total) * 100) : 0;
+    const topicId = String(id);
 
     reportQuizFinished(pct, headerTitle || "Quiz").catch(() => {});
     loggedRef.current = true;
 
     const durationSecRaw = TOTAL_TIME - totalLeft;
     const durationSec = durationSecRaw < 0 ? 0 : durationSecRaw;
-
-    const topicId = String(id);
 
     void safeLogQuiz({
       topicId,
@@ -331,6 +351,53 @@ export default function TopicQuiz() {
       });
     } catch {}
 
+    // 🌴 Island XP: gentle, non-abusable scaling from quizzes
+    try {
+      if (addIslandXp) {
+        const xpPerCorrect = 2; // matches the small drip from per-question events
+        const baseXp = correct * xpPerCorrect;
+
+        // Modest bonus XP based on performance
+        let bonusXp = 0;
+
+        if (pct >= 80 && pct < 90) {
+          bonusXp += 4;
+        } else if (pct >= 90 && pct < 100) {
+          bonusXp += 6;
+        } else if (pct === 100) {
+          bonusXp += 10;
+        }
+
+        const totalXp = baseXp + bonusXp;
+
+        setLastXp(totalXp > 0 ? totalXp : 0); // store for UI
+
+        if (totalXp > 0) {
+          addIslandXp(totalXp, {
+            reason: "quiz",
+            meta: {
+              topicId,
+              title: headerTitle,
+              totalQuestions: total,
+              correct,
+              percent: pct,
+            },
+          }).catch(() => {});
+        } else if (__DEV__) {
+          // eslint-disable-next-line no-console
+          console.log("[Island] No XP from quiz (totalXp=0)", {
+            pct,
+            correct,
+            total,
+          });
+        }
+      } else {
+        setLastXp(0);
+      }
+    } catch {
+      // ignore island XP errors, but keep whatever lastXp we computed
+    }
+
     // 🔹 Local certificate: always attempt for ≥ 80%
     if (pct >= 80) {
       (async () => {
@@ -366,6 +433,7 @@ export default function TopicQuiz() {
     headerTitle,
     ach,
     getDisplayName,
+    addIslandXp,
   ]);
 
   // Render states
@@ -411,6 +479,10 @@ export default function TopicQuiz() {
         <Text style={S.result}>
           Score: {correct} / {total} ({pct}%).
         </Text>
+
+        {typeof lastXp === "number" && lastXp > 0 && (
+          <Text style={S.xpText}>Island XP gained: +{lastXp}</Text>
+        )}
 
         <View style={{ height: 12 }} />
         <View style={S.row}>
@@ -663,6 +735,13 @@ export const S = StyleSheet.create({
   },
 
   result: { fontSize: 18, color: CYAN, marginTop: 6, fontWeight: "800" },
+
+  xpText: {
+    marginTop: 6,
+    fontSize: 15,
+    fontWeight: "800",
+    color: NEON,
+  },
 
   modalBackdrop: {
     position: "absolute",

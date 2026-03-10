@@ -5,7 +5,7 @@ import time
 import hashlib
 import random
 from datetime import datetime, timezone
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 import requests
 from flask import Flask, request, jsonify
@@ -92,6 +92,48 @@ def norm(s: str) -> str:
     return (s or "").strip().lower()
 
 
+# Ask memory tiers: free + 4 paid levels.
+# Tiers can be stored in Supabase as strings like: free, tier1, tier2, tier3, tier4.
+ASK_MEMORY_DEFAULT_LIMITS: Dict[str, int] = {
+    "free": 4,      # tiny history
+    "tier1": 10,    # small
+    "tier_1": 10,
+    "tier2": 25,    # medium
+    "tier_2": 25,
+    "tier3": 50,    # large
+    "tier_3": 50,
+    "tier4": 100,   # max
+    "tier_4": 100,
+}
+
+
+def resolve_ask_memory_limit(profile: Optional[Dict[str, Any]]) -> int:
+    """
+    Decide how many past messages we allow into /api/ask based on the user's
+    ask_memory_tier and/or ask_memory_limit from Supabase.
+
+    - If ask_memory_limit is a positive integer, that wins.
+    - Otherwise, we map ask_memory_tier (free, tier1..tier4) to a default.
+    - If no profile or unknown tier, we fall back to 'free'.
+    """
+    if profile:
+        explicit = profile.get("ask_memory_limit")
+        try:
+            if explicit is not None:
+                limit_int = int(explicit)
+                if limit_int > 0:
+                    return limit_int
+        except Exception:
+            pass
+
+        tier_raw = profile.get("ask_memory_tier")
+        key = norm(tier_raw) if tier_raw else "free"
+    else:
+        key = "free"
+
+    return ASK_MEMORY_DEFAULT_LIMITS.get(key, ASK_MEMORY_DEFAULT_LIMITS["free"])
+
+
 # Very small offline judge for sample teasers
 def offline_teaser_check(teaser: str, answer: str) -> Dict[str, Any]:
     t = norm(teaser)
@@ -165,7 +207,7 @@ def pick_five_teasers() -> List[str]:
                     model=OPENAI_MODEL,
                     input=prompt,
                 )
-                text = (resp.output_text or "").strip()
+                text = (getattr(resp, "output_text", None) or "").strip()
             except Exception:
                 chat = client.chat.completions.create(
                     model=OPENAI_MODEL,
@@ -238,6 +280,171 @@ def get_supabase_user_from_request():
     return user, None, 200
 
 
+def get_supabase_profile(user_id: str) -> Optional[Dict[str, Any]]:
+    """
+    Fetch the minimal profile data we need for Ask memory:
+    id, ask_memory_tier, ask_memory_limit
+
+    Uses the service role (or anon if that's all we have) to talk to
+    Supabase /rest/v1/profiles.
+    """
+    if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY or not user_id:
+        return None
+
+    try:
+        resp = requests.get(
+            f"{SUPABASE_URL}/rest/v1/profiles",
+            headers={
+                "apikey": SUPABASE_SERVICE_ROLE_KEY,
+                "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+                "Accept": "application/json",
+            },
+            params={
+                "id": f"eq.{user_id}",
+                "select": "id,ask_memory_tier,ask_memory_limit",
+                "limit": 1,
+            },
+            timeout=5,
+        )
+    except Exception:
+        return None
+
+    if resp.status_code != 200:
+        return None
+
+    try:
+        rows = resp.json()
+    except Exception:
+        return None
+
+    if isinstance(rows, list) and rows:
+        return rows[0]
+    return None
+
+
+def get_profile_for_request() -> Optional[Dict[str, Any]]:
+    """
+    Best-effort: if there's a valid Supabase bearer token, get the user and
+    then their profile. If anything fails, we just return None and treat
+    them as 'free' tier on /api/ask.
+    """
+    try:
+        user, err, status = get_supabase_user_from_request()
+    except Exception:
+        return None
+
+    if err or not user:
+        return None
+
+    user_id = user.get("id")
+    if not user_id:
+        return None
+
+    return get_supabase_profile(user_id)
+
+
+def get_ask_history_for_user(user_id: str, limit: int) -> List[Dict[str, Any]]:
+    """
+    Load up to `limit` recent ask_messages for this user, oldest first,
+    to feed into the Ask conversation context.
+    """
+    if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY:
+        return []
+    user_id = (user_id or "").strip()
+    if not user_id or limit <= 0:
+        return []
+
+    try:
+        resp = requests.get(
+            f"{SUPABASE_URL}/rest/v1/ask_messages",
+            headers={
+                "apikey": SUPABASE_SERVICE_ROLE_KEY,
+                "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+                "Accept": "application/json",
+            },
+            params={
+                "user_id": f"eq.{user_id}",
+                "order": "created_at.asc",
+                "limit": limit,
+            },
+            timeout=5,
+        )
+    except Exception as e:
+        print(f"[ask_messages] history error: {e}")
+        return []
+
+    if resp.status_code != 200:
+        print(
+            f"[ask_messages] history status {resp.status_code}: {resp.text}"
+        )
+        return []
+
+    try:
+        rows = resp.json()
+    except Exception as e:
+        print(f"[ask_messages] history parse error: {e}")
+        return []
+
+    if isinstance(rows, list):
+        return rows
+    return []
+
+
+def append_ask_exchange(user_id: str, question: str, answer: str) -> None:
+    """
+    Append the latest user question + assistant answer to ask_messages
+    for this user. Best-effort; errors are logged but do not break /api/ask.
+    """
+    if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY:
+        return
+    user_id = (user_id or "").strip()
+    if not user_id:
+        return
+
+    q_text = (question or "").strip()
+    a_text = (answer or "").strip()
+    rows = []
+    if q_text:
+        rows.append(
+            {
+                "user_id": user_id,
+                "role": "user",
+                "content": q_text,
+                "pinned": False,
+            }
+        )
+    if a_text:
+        rows.append(
+            {
+                "user_id": user_id,
+                "role": "assistant",
+                "content": a_text,
+                "pinned": False,
+            }
+        )
+    if not rows:
+        return
+
+    try:
+        resp = requests.post(
+            f"{SUPABASE_URL}/rest/v1/ask_messages",
+            headers={
+                "apikey": SUPABASE_SERVICE_ROLE_KEY,
+                "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+                "Content-Type": "application/json",
+                "Prefer": "return=minimal",
+            },
+            json=rows,
+            timeout=5,
+        )
+        if resp.status_code not in (200, 201, 204):
+            print(
+                f"[ask_messages] insert status {resp.status_code}: {resp.text}"
+            )
+    except Exception as e:
+        print(f"[ask_messages] insert error: {e}")
+
+
 # --------------------------- Routes ---------------------------
 
 
@@ -279,24 +486,118 @@ def api_ask():
     if not q:
         return jerr("Missing 'question'", 400)
 
+    # ---------------- Identify user + profile ----------------
+    raw_user_id = (data.get("user_id") or "").strip()
+    user_id: Optional[str] = raw_user_id or None
+
+    profile: Optional[Dict[str, Any]] = None
+
+    # If we have a user_id from the body, try to get profile by ID first.
+    if user_id:
+        profile = get_supabase_profile(user_id)
+
+    # Fallback: try to infer from Authorization bearer token.
+    if profile is None:
+        maybe_profile = get_profile_for_request()
+        if maybe_profile:
+            profile = maybe_profile
+            if not user_id:
+                user_id = maybe_profile.get("id")
+
+    max_history = resolve_ask_memory_limit(profile)
+    tier_value = (profile or {}).get("ask_memory_tier") or "free"
+
+    # ---------------- Memory tier + history handling ----------------
+    history_messages: List[Dict[str, str]] = []
+
+    # Preferred: use stored ask_messages for logged-in users.
+    db_history: List[Dict[str, Any]] = []
+    if user_id and max_history > 0:
+        db_history = get_ask_history_for_user(user_id, max_history)
+
+    if db_history:
+        for row in db_history:
+            role = norm(row.get("role", "user"))
+            if role not in ("user", "assistant"):
+                role = "user"
+            content = str(row.get("content") or "").strip()
+            if not content:
+                continue
+            history_messages.append({"role": role, "content": content})
+    else:
+        # Fallback: optional conversation history from frontend, shape:
+        #   history: [{ role: "user" | "assistant" | "system", content: string }, ...]
+        history_raw = data.get("history") or []
+        if isinstance(history_raw, list):
+            for item in history_raw:
+                if not isinstance(item, dict):
+                    continue
+                role = str(item.get("role") or "user").lower()
+                if role not in ("user", "assistant", "system"):
+                    role = "user"
+                content = str(item.get("content") or "").strip()
+                if not content:
+                    continue
+                history_messages.append({"role": role, "content": content})
+
+        # Trim to the allowed Ask memory limit (free + 4 paid tiers)
+        if max_history > 0 and len(history_messages) > max_history:
+            history_messages = history_messages[-max_history:]
+
+    # Build a simple conversation-style prompt
+    conversation_lines: List[str] = []
+    for m in history_messages:
+        role = m["role"]
+        if role == "user":
+            prefix = "User"
+        elif role == "assistant":
+            prefix = "Assistant"
+        else:
+            prefix = "System"
+        conversation_lines.append(f"{prefix}: {m['content']}")
+
+    # Always end with the new question as the latest user turn
+    conversation_lines.append(f"User: {q}")
+    conversation_text = "\n".join(conversation_lines)
+
+    if history_messages:
+        prompt = (
+            "You are a helpful, encouraging tutor. Continue the conversation below and answer the "
+            "latest user question concisely and clearly, using the prior messages as context.\n\n"
+            f"{conversation_text}\n\nAssistant:"
+        )
+    else:
+        prompt = f"Answer concisely and helpfully as a tutor:\n\n{q}"
+
     client = get_openai_client()
     if client:
         try:
             try:
                 resp = client.responses.create(
                     model=OPENAI_MODEL,
-                    input=f"Answer concisely and helpfully:\n\n{q}",
+                    input=prompt,
                 )
-                answer = (resp.output_text or "").strip()
+                answer = (getattr(resp, "output_text", None) or "").strip()
             except Exception:
                 chat = client.chat.completions.create(
                     model=OPENAI_MODEL,
-                    messages=[{"role": "user", "content": q}],
+                    messages=[{"role": "user", "content": prompt}],
                     temperature=0.5,
                 )
                 answer = (chat.choices[0].message.content or "").strip()
-            # Optional small reward
-            return jsonify({"answer": answer, "coins_awarded": 1})
+
+            # Persist the new Q&A to ask_messages if we know the user.
+            if user_id:
+                append_ask_exchange(user_id, q, answer)
+
+            return jsonify(
+                {
+                    "answer": answer,
+                    "coins_awarded": 1,
+                    "ask_memory_tier": tier_value,
+                    "ask_memory_limit": max_history,
+                }
+            )
         except Exception as e:
             return jerr(f"OpenAI error: {e}", 500)
 
@@ -304,7 +605,18 @@ def api_ask():
     fake = (
         "I can’t reach the AI model right now, but here’s a tip: break the problem into smaller steps."
     )
-    return jsonify({"answer": fake, "coins_awarded": 0})
+
+    if user_id:
+        append_ask_exchange(user_id, q, fake)
+
+    return jsonify(
+        {
+            "answer": fake,
+            "coins_awarded": 0,
+            "ask_memory_tier": tier_value,
+            "ask_memory_limit": max_history,
+        }
+    )
 
 
 @app.get("/api/teasers/today")
@@ -344,7 +656,7 @@ def api_teasers_check():
                 resp = client.responses.create(
                     model=OPENAI_MODEL, input=judge_prompt
                 )
-                txt = (resp.output_text or "").strip()
+                txt = (getattr(resp, "output_text", None) or "").strip()
             except Exception:
                 chat = client.chat.completions.create(
                     model=OPENAI_MODEL,

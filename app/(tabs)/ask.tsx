@@ -17,6 +17,7 @@ import {
   StyleSheet,
   Keyboard,
   TouchableWithoutFeedback,
+  ScrollView,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -25,8 +26,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "../context/ThemeContext";
 import { useAchievements } from "../context/AchievementsContext";
 import { useUser } from "../context/UserContext";
-import { askNova, AskResponse } from "../utils/ask";
-import { supabase } from "../lib/supabase";
+import { useIsland } from "../context/IslandContext"; // 🌴 Nova Island XP hook
+import { usePurchases } from "../context/PurchasesContext";
 
 /* ────────────────────────────────────────── */
 /* ✨ Nova Thinking — Bounce + Dark Shimmer   */
@@ -124,6 +125,231 @@ function NovaThinking() {
 
 type Msg = { id: string; role: "user" | "assistant" | "system"; text: string };
 
+type AskHistoryItem = {
+  role: "user" | "assistant" | "system";
+  content: string;
+};
+
+type AskApiResponse = {
+  answer?: string;
+  error?: string;
+  coins_awarded?: number;
+  ask_memory_tier?: string | null;
+  ask_memory_limit?: number | null;
+};
+
+const BACKEND_BASE =
+  (process.env.EXPO_PUBLIC_BACKEND_URL || "").replace(/\/$/, "") ||
+  "http://127.0.0.1:5055";
+
+async function callAskApi(
+  question: string,
+  history: AskHistoryItem[],
+  personality: PersonalityKey,
+  userId: string | null
+): Promise<{ ok: boolean; data?: AskApiResponse; error?: string }> {
+  try {
+    const jwt = await AsyncStorage.getItem("auth.supabase.jwt");
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (jwt) {
+      headers["Authorization"] = `Bearer ${jwt}`;
+    }
+
+    const body: any = {
+      question,
+      history,
+      personality, // 🔹 Ask personality (frontend-selected)
+    };
+    if (userId) {
+      body.user_id = userId; // 🔹 Explicit user_id for stable logging
+    }
+
+    const res = await fetch(`${BACKEND_BASE}/api/ask`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+    });
+
+    const json = (await res.json()) as any;
+
+    if (!res.ok || json.error) {
+      return {
+        ok: false,
+        error: json.error || `Request failed (status ${res.status})`,
+      };
+    }
+
+    return {
+      ok: true,
+      data: {
+        answer: json.answer,
+        error: json.error,
+        coins_awarded: json.coins_awarded,
+        ask_memory_tier: json.ask_memory_tier ?? null,
+        ask_memory_limit:
+          typeof json.ask_memory_limit === "number"
+            ? json.ask_memory_limit
+            : null,
+      },
+    };
+  } catch (e: any) {
+    return {
+      ok: false,
+      error: e?.message || "Network error while calling /api/ask",
+    };
+  }
+}
+
+/* ────────────────────────────────────────── */
+/* 🧠 Ask personalities (gated by purchases) */
+/* ────────────────────────────────────────── */
+
+// Match your PNGs / SKUs:
+//   ask_personality_encouraging.png          (free default)
+//   ask_personality_calm_focus.png
+//   ask_personality_coach.png
+//   ask_personality_playful.png
+//   ask_personality_storyteller.png
+type PersonalityKey =
+  | "encouraging"
+  | "calm_focus"
+  | "coach"
+  | "playful"
+  | "storyteller";
+
+type PersonalityOption = {
+  key: PersonalityKey;
+  label: string;
+  subtitle?: string;
+  sku?: string | null; // null => always free
+};
+
+const PERSONALITY_OPTIONS: PersonalityOption[] = [
+  {
+    key: "encouraging",
+    label: "Encouraging",
+    subtitle: "Default Nova vibe",
+    sku: null, // free baseline
+  },
+  {
+    key: "calm_focus",
+    label: "Calm Focus",
+    subtitle: "Steady, clear explanations",
+    sku: "ask_personality_calm_focus",
+  },
+  {
+    key: "coach",
+    label: "Coach",
+    subtitle: "Direct, motivating guidance",
+    sku: "ask_personality_coach",
+  },
+  {
+    key: "playful",
+    label: "Playful",
+    subtitle: "Light, fun & supportive",
+    sku: "ask_personality_playful",
+  },
+  {
+    key: "storyteller",
+    label: "Storyteller",
+    subtitle: "Analogy-rich explanations",
+    sku: "ask_personality_storyteller",
+  },
+];
+
+const AskPersonalitySelector = ({
+  value,
+  onChange,
+}: {
+  value: PersonalityKey;
+  onChange: (key: PersonalityKey) => void;
+}) => {
+  const { tokens } = useTheme() as any;
+  const purchases = (usePurchases() || {}) as any;
+  const { isOwned, owned } = purchases;
+
+  const hasSku = (sku?: string | null) => {
+    if (!sku) return true; // free mode is always available
+    if (typeof isOwned === "function") return !!isOwned(sku);
+    if (owned && typeof owned === "object") return !!owned[sku];
+    return false;
+  };
+
+  const unlocked = PERSONALITY_OPTIONS.filter((opt) => hasSku(opt.sku));
+
+  // If only the default is unlocked, keep the UI clean and hide the selector
+  if (!unlocked || unlocked.length <= 1) return null;
+
+  const accent = tokens?.accent || "#22d3ee";
+  const text = tokens?.text || "#e5e7eb";
+  const textDim = tokens?.cardText || "#9ca3af";
+  const chipBgInactive = tokens?.isDark
+    ? "rgba(0,0,0,0.40)"
+    : "rgba(255,255,255,0.14)";
+  const chipBgActive = tokens?.isDark
+    ? "rgba(0,0,0,0.70)"
+    : "rgba(255,255,255,0.92)";
+  const chipTextActive = tokens?.isDark ? accent : "#0f172a";
+
+  return (
+    <View style={S.personalityRow}>
+      <Text style={[S.personalityLabel, { color: textDim }]}>
+        Nova mode
+      </Text>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={S.personalityChips}
+      >
+        {unlocked.map((opt) => {
+          const active = opt.key === value;
+          return (
+            <Pressable
+              key={opt.key}
+              onPress={() => onChange(opt.key)}
+              style={[
+                S.personalityChip,
+                {
+                  borderColor: active
+                    ? accent
+                    : "rgba(148,163,184,0.50)",
+                  backgroundColor: active
+                    ? chipBgActive
+                    : chipBgInactive,
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  S.personalityChipText,
+                  { color: active ? chipTextActive : text },
+                ]}
+              >
+                {opt.label}
+              </Text>
+              {opt.subtitle ? (
+                <Text
+                  style={{
+                    fontSize: 10,
+                    marginTop: 2,
+                    color: active ? chipTextActive : textDim,
+                  }}
+                >
+                  {opt.subtitle}
+                </Text>
+              ) : null}
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
+};
+
+/* ────────────────────────────────────────── */
+
 const todayKey = () => {
   const d = new Date();
   return `@ask/count/${d.getFullYear()}-${String(
@@ -141,10 +367,55 @@ async function bumpCount() {
   return c + 1;
 }
 
+function buildHistoryFromMessages(msgs: Msg[]): AskHistoryItem[] {
+  // Only include real conversation turns (user + assistant)
+  const relevant = msgs.filter(
+    (m) => m.role === "user" || m.role === "assistant"
+  );
+  // You can keep all; backend will trim based on tier
+  return relevant.map((m) => ({
+    role: m.role,
+    content: m.text,
+  }));
+}
+
+// Match your tier art:
+//   Tier 1 → Nova Notes
+//   Tier 2 → Nova Journal
+//   Tier 3 → Nova Vault
+//   Tier 4 → Nova Galaxy Archive
+function prettyMemoryTier(
+  tier: string | null,
+  limit: number | null
+): string {
+  const t = (tier || "free").toLowerCase();
+  let label = "Free memory";
+
+  if (t === "tier1" || t === "tier_1") label = "Tier 1 • Nova Notes";
+  else if (t === "tier2" || t === "tier_2")
+    label = "Tier 2 • Nova Journal";
+  else if (t === "tier3" || t === "tier_3")
+    label = "Tier 3 • Nova Vault";
+  else if (t === "tier4" || t === "tier_4")
+    label = "Tier 4 • Nova Galaxy Archive";
+
+  if (limit != null && Number.isFinite(limit) && limit > 0) {
+    return `${label} • remembers ~${limit} msgs`;
+  }
+  return label;
+}
+
 export default function Ask() {
   const { tokens } = useTheme();
   const { onAskQuestion } = useAchievements();
-  const { supabaseUserId } = useUser();
+  const {
+    supabaseUserId,
+    askPersonality,
+    setAskPersonality,
+    askMemoryTier,
+    askMemoryLimit,
+  } = useUser();
+  const { addIslandXp } = useIsland(); // 🌴 hook in Nova Island XP
 
   const [messages, setMessages] = useState<Msg[]>([
     {
@@ -158,11 +429,29 @@ export default function Ask() {
   const [error, setError] = useState<string | null>(null);
   const [count, setCount] = useState<number>(0);
 
+  const [memoryTier, setMemoryTier] = useState<string | null>(null);
+  const [memoryLimit, setMemoryLimit] = useState<number | null>(null);
+
   const listRef = useRef<FlatList<Msg>>(null);
+
+  // Clamp whatever is in askPersonality to our known keys
+  const validKeys = PERSONALITY_OPTIONS.map((o) => o.key);
+  const activePersonality: PersonalityKey =
+    validKeys.includes(askPersonality as PersonalityKey)
+      ? (askPersonality as PersonalityKey)
+      : "encouraging";
 
   useEffect(() => {
     loadCount().then(setCount).catch(() => {});
   }, []);
+
+  // Initialize memory display from profile if present
+  useEffect(() => {
+    setMemoryTier(askMemoryTier || "free");
+    setMemoryLimit(
+      typeof askMemoryLimit === "number" ? askMemoryLimit : null
+    );
+  }, [askMemoryTier, askMemoryLimit]);
 
   useEffect(() => {
     const showSub = Keyboard.addListener("keyboardDidShow", () => {
@@ -179,54 +468,86 @@ export default function Ask() {
     }, 50);
   }, [messages]);
 
-  const send = useCallback(async () => {
-    const trimmed = input.trim();
-    if (!trimmed || loading) return;
+  const send = useCallback(
+    async () => {
+      const trimmed = input.trim();
+      if (!trimmed || loading) return;
 
-    setLoading(true);
-    setError(null);
+      setLoading(true);
+      setError(null);
 
-    const userMsg: Msg = {
-      id: `${Date.now()}`,
-      role: "user",
-      text: trimmed,
-    };
+      // Build history from current messages BEFORE adding this new one
+      const historyPayload = buildHistoryFromMessages(messages);
 
-    setMessages((m) => [...m, userMsg]);
-    setInput("");
+      const userMsg: Msg = {
+        id: `${Date.now()}`,
+        role: "user",
+        text: trimmed,
+      };
 
-    try {
-      const res: AskResponse = await askNova(trimmed, supabaseUserId);
+      setMessages((m) => [...m, userMsg]);
+      setInput("");
 
-      if (!res.ok || !res.answer) {
-        setError(res.error || "Something went wrong.");
-      } else {
-        setMessages((m) => [
-          ...m,
-          {
-            id: `${Date.now() + 1}`,
-            role: "assistant",
-            text: res.answer!,
-          },
-        ]);
+      try {
+        const apiRes = await callAskApi(
+          trimmed,
+          historyPayload,
+          activePersonality,
+          supabaseUserId
+        );
 
-        if (supabaseUserId) {
-          await supabase.from("ask_messages").insert([
-            { user_id: supabaseUserId, role: "user", content: trimmed },
-            { user_id: supabaseUserId, role: "assistant", content: res.answer },
+        if (!apiRes.ok || !apiRes.data || !apiRes.data.answer) {
+          setError(apiRes.error || "Something went wrong.");
+        } else {
+          const answer = apiRes.data.answer;
+
+          setMessages((m) => [
+            ...m,
+            {
+              id: `${Date.now() + 1}`,
+              role: "assistant",
+              text: answer,
+            },
           ]);
-        }
 
-        const newCount = await bumpCount();
-        setCount(newCount);
-        onAskQuestion?.();
+          // Update memory tier info from backend if present
+          if (apiRes.data.ask_memory_tier != null) {
+            setMemoryTier(apiRes.data.ask_memory_tier);
+          }
+          if (apiRes.data.ask_memory_limit != null) {
+            setMemoryLimit(apiRes.data.ask_memory_limit);
+          }
+
+          const newCount = await bumpCount();
+          setCount(newCount);
+          onAskQuestion?.();
+
+          // 🌴 Nova Island: small drip of XP per successful Ask
+          try {
+            await addIslandXp(2, "ask_answer", {
+              source: "ask",
+              length: answer.length,
+            });
+          } catch (e) {
+            console.warn("[Island] addIslandXp from Ask failed", e);
+          }
+        }
+      } catch (e: any) {
+        setError(e?.message || "Something went wrong.");
+      } finally {
+        setLoading(false);
       }
-    } catch (e: any) {
-      setError(e?.message || "Something went wrong.");
-    } finally {
-      setLoading(false);
-    }
-  }, [input, loading, onAskQuestion, supabaseUserId]);
+    },
+    [
+      input,
+      loading,
+      messages,
+      onAskQuestion,
+      addIslandXp,
+      activePersonality,
+      supabaseUserId,
+    ]
+  );
 
   const renderItem = ({ item }: { item: Msg }) => {
     const isUser = item.role === "user";
@@ -261,12 +582,21 @@ export default function Ask() {
     );
   };
 
+  const memoryText = prettyMemoryTier(
+    memoryTier ?? askMemoryTier ?? "free",
+    memoryLimit ?? askMemoryLimit ?? null
+  );
+
+  const currentPersonaLabel =
+    PERSONALITY_OPTIONS.find((o) => o.key === activePersonality)?.label ??
+    "Encouraging";
+
   return (
     <LinearGradient colors={tokens.gradient} style={{ flex: 1 }}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={115}   // 👈 Raised slightly higher
+        keyboardVerticalOffset={115} // 👈 Raised slightly higher
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={{ flex: 1 }}>
@@ -275,17 +605,40 @@ export default function Ask() {
                 padding: 12,
                 flexDirection: "row",
                 justifyContent: "space-between",
+                alignItems: "flex-end",
               }}
             >
-              <Text
-                style={{
-                  color: tokens.text,
-                  fontWeight: "800",
-                  fontSize: 20,
-                }}
-              >
-                Ask Nova
-              </Text>
+              <View>
+                <Text
+                  style={{
+                    color: tokens.text,
+                    fontWeight: "800",
+                    fontSize: 20,
+                  }}
+                >
+                  Ask Nova
+                </Text>
+                <Text
+                  style={{
+                    color: tokens.cardText,
+                    fontWeight: "600",
+                    fontSize: 11,
+                    marginTop: 2,
+                  }}
+                >
+                  {memoryText}
+                </Text>
+                <Text
+                  style={{
+                    color: tokens.cardText,
+                    fontWeight: "500",
+                    fontSize: 11,
+                    marginTop: 2,
+                  }}
+                >
+                  Nova mode: {currentPersonaLabel}
+                </Text>
+              </View>
               <Text
                 style={{
                   color: tokens.cardText,
@@ -296,6 +649,15 @@ export default function Ask() {
                 Questions today: {count}
               </Text>
             </View>
+
+            {/* 🌟 Personality selector (only shows if >1 mode unlocked) */}
+            <AskPersonalitySelector
+              value={activePersonality}
+              onChange={(next) => {
+                if (next === activePersonality) return;
+                setAskPersonality(next);
+              }}
+            />
 
             <FlatList
               ref={listRef}
@@ -397,5 +759,33 @@ const S = StyleSheet.create({
   shimmerGradient: {
     width: 220,
     height: "100%",
+  },
+  personalityRow: {
+    paddingHorizontal: 12,
+    paddingBottom: 4,
+  },
+  personalityLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    opacity: 0.9,
+    marginBottom: 6,
+  },
+  personalityChips: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingRight: 8,
+  },
+  personalityChip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginRight: 8,
+    marginBottom: 4,
+    backgroundColor: "rgba(0,0,0,0.18)",
+  },
+  personalityChipText: {
+    fontSize: 12,
+    fontWeight: "600",
   },
 });

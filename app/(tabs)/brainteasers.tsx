@@ -1,4 +1,4 @@
-// app/(tabs)/brainteasers.tsx (adjust path if yours is different)
+// app/(tabs)/brainteasers.tsx
 import React, {
   useCallback,
   useEffect,
@@ -20,6 +20,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "../context/ThemeContext";
 import { useCompanion } from "../context/CompanionContext";
 import { canonId } from "../_lib/canonId";
+import { useIsland } from "../context/IslandContext";
 
 function norm(s: string) {
   return (s ?? "")
@@ -275,6 +276,7 @@ export default function BrainteasersTab() {
   const toast = useToastSafe();
   const { tokens } = useTheme();
   const { activeCompanionId } = useCompanion();
+  const { addIslandXp } = useIsland();
 
   const activeCid = useMemo(
     () => (activeCompanionId ? canonId(activeCompanionId) : null),
@@ -364,6 +366,12 @@ export default function BrainteasersTab() {
       const label = `Correct! +${reward} coins`;
       toast.success(label);
       show(label);
+
+      // 🌴 Nova Island XP: +5 XP per correct riddle
+      if (addIslandXp) {
+        addIslandXp(5, "brainteaser_correct");
+      }
+
       const nextMap = { ...correctMap, [cur.q]: true };
 
       try {
@@ -412,6 +420,11 @@ export default function BrainteasersTab() {
           const label = `Perfect! +${bonus} bonus`;
           toast.success(label);
           show(`${label} ✨`, 1800);
+
+          // 🌴 Extra Nova Island XP: +5 XP for solving both
+          if (addIslandXp) {
+            addIslandXp(5, "brainteaser_pair_bonus");
+          }
         } else {
           show("Nice try! See you tomorrow ✨", 1800);
         }

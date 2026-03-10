@@ -100,6 +100,44 @@ function canonId(raw: string | null | undefined): string {
   return v;
 }
 
+/* ---------------------- Ask Memory tier configuration ---------------------- */
+
+/**
+ * Memory tiers:
+ * - "free" → no purchase required
+ * - "tier1"–"tier4" → unlocked via shop SKUs
+ *
+ * Make sure your Shop items use SKUs that canonicalize to these values
+ * (e.g. "ask_memory_tier1" will stay "ask_memory_tier1" after canonId()).
+ */
+type AskMemoryTierId = "free" | "tier1" | "tier2" | "tier3" | "tier4";
+
+const MEMORY_TIER_SKUS: Record<Exclude<AskMemoryTierId, "free">, string> = {
+  tier1: canonId("ask_memory_tier1"),
+  tier2: canonId("ask_memory_tier2"),
+  tier3: canonId("ask_memory_tier3"),
+  tier4: canonId("ask_memory_tier4"),
+};
+
+// How many messages (or roughly how much history) each tier grants.
+// You can freely tweak these numbers later as you tune the product.
+const MEMORY_TIER_LIMITS: Record<AskMemoryTierId, number> = {
+  free: 4,   // small taste
+  tier1: 12, // starter
+  tier2: 24, // solid
+  tier3: 48, // big
+  tier4: 96, // max
+};
+
+function computeHighestMemoryTier(purchases: PurchaseMap): AskMemoryTierId {
+  // Always prefer the highest tier the user owns.
+  if (purchases[MEMORY_TIER_SKUS.tier4]) return "tier4";
+  if (purchases[MEMORY_TIER_SKUS.tier3]) return "tier3";
+  if (purchases[MEMORY_TIER_SKUS.tier2]) return "tier2";
+  if (purchases[MEMORY_TIER_SKUS.tier1]) return "tier1";
+  return "free";
+}
+
 /* ------------------------- normalize + (de)serialize ------------------------ */
 
 function normalizePurchases(obj: any): PurchaseMap {
@@ -465,6 +503,51 @@ export function PurchasesProvider({
         }
       } catch (e) {
         console.warn("[PurchasesContext] sync purchases threw:", e);
+      }
+    })();
+  }, [purchases, supabaseUserId, hydrated]);
+
+  /* ------------------ sync Ask memory tier on purchases change --------------- */
+
+  useEffect(() => {
+    if (!hydrated) return;
+    if (!supabaseUserId) return;
+
+    const highestTier = computeHighestMemoryTier(purchases);
+    const limit = MEMORY_TIER_LIMITS[highestTier];
+
+    (async () => {
+      try {
+        console.log(
+          "[PurchasesContext] updating ask memory tier in profiles:",
+          { highestTier, limit }
+        );
+        const { error } = await supabase
+          .from("profiles")
+          .update({
+            ask_memory_tier: highestTier,
+            ask_memory_limit: limit,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", supabaseUserId);
+
+        if (error) {
+          console.warn(
+            "[PurchasesContext] profiles.ask_memory_* update error:",
+            error
+          );
+        } else {
+          console.log(
+            "[PurchasesContext] profiles.ask_memory_* updated OK:",
+            highestTier,
+            limit
+          );
+        }
+      } catch (e) {
+        console.warn(
+          "[PurchasesContext] error updating ask memory tier:",
+          e
+        );
       }
     })();
   }, [purchases, supabaseUserId, hydrated]);
