@@ -1,15 +1,13 @@
 // app/components/HeaderBar.tsx
-import React, { useEffect, useRef } from "react";
+
+import React, { useEffect } from "react";
 import {
   View,
   Text,
   Image,
   StyleSheet,
   Pressable,
-  Share,
   Platform,
-  Animated,
-  Linking,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -35,13 +33,10 @@ export default function HeaderBar() {
   const { loaded, count, todayChecked, markToday } =
     (useStreak() || {}) as any;
 
-  // 👉 Read full user context so we can know if we're logged in
   const userCtx = useUser() as any;
   const { user, ready, supabaseUserId, session } = userCtx || {};
 
-  const isLoggedIn =
-    !!supabaseUserId || !!session || !!user;
-
+  const isLoggedIn = !!supabaseUserId || !!session || !!user;
   const displayCoins = isLoggedIn ? coins : 0;
 
   useEffect(() => {
@@ -57,7 +52,6 @@ export default function HeaderBar() {
     } catch {}
   }, [user, ready, isLoggedIn]);
 
-  // Simple helpers for name + avatar
   const pickString = (v: any) =>
     typeof v === "string" && v.trim().length > 0 ? v.trim() : null;
 
@@ -92,9 +86,13 @@ export default function HeaderBar() {
   const name: string = rawName || "Nova Student";
   const avatar: string | undefined = rawAvatar || undefined;
 
-  // Streak auto-mark (only when logged in)
   useEffect(() => {
-    if (loaded && isLoggedIn && !todayChecked && typeof markToday === "function") {
+    if (
+      loaded &&
+      isLoggedIn &&
+      !todayChecked &&
+      typeof markToday === "function"
+    ) {
       markToday();
     }
   }, [loaded, todayChecked, markToday, isLoggedIn]);
@@ -107,80 +105,13 @@ export default function HeaderBar() {
     }
   };
 
-  const openDonate = async () => {
-    const url = "https://buymeacoffee.com/sventography";
-    try {
-      await Linking.openURL(url);
-    } catch {}
-  };
-
-  const onShare = async () => {
-    const url =
-      "https://novatutoring-eoq65leh2-contactnovatutoring-8350s-projects.vercel.app";
-
-    try {
-      await Share.share({
-        title: "Nova Tutoring",
-        message: `Check out Nova Tutoring ✨ ${url}`,
-        url: Platform.select({
-          ios: url,
-          android: url,
-          default: url,
-        }) as string,
-      });
-    } catch {}
-  };
-
   const streakLabel = !loaded ? "…" : `${count}🔥`;
-
-  // Donate pulse + cyan glow
-  const pulse = useRef(new Animated.Value(1)).current;
-  const glow = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulse, {
-          toValue: 1.06,
-          duration: 1200,
-          useNativeDriver: false,
-        }),
-        Animated.timing(pulse, {
-          toValue: 1.0,
-          duration: 1200,
-          useNativeDriver: false,
-        }),
-      ])
-    ).start();
-
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(glow, {
-          toValue: 1,
-          duration: 1200,
-          useNativeDriver: false,
-        }),
-        Animated.timing(glow, {
-          toValue: 0,
-          duration: 1200,
-          useNativeDriver: false,
-        }),
-      ])
-    ).start();
-  }, [pulse, glow]);
-
-  const glowOpacity = glow.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.15, 0.35],
-  });
 
   const hit = 8;
   const iconSize = 18;
-  const heartSize = 16;
 
   return (
     <View style={[S.wrap, { paddingTop: topPad, paddingBottom: 8 }]}>
-      {/* Left: avatar + name + coins + streak */}
       <Pressable
         onPress={goAccount}
         hitSlop={hit}
@@ -216,7 +147,6 @@ export default function HeaderBar() {
         )}
       </Pressable>
 
-      {/* Right: FX + tiny heart donate button */}
       <View style={S.right}>
         <Pressable
           onPress={() => {
@@ -234,29 +164,8 @@ export default function HeaderBar() {
             color={fxOn ? "#5cfcc8" : "#8ecae6"}
           />
         </Pressable>
-
-        <Animated.View style={{ transform: [{ scale: pulse }] }}>
-          <Pressable
-            onPress={openDonate}
-            accessibilityRole="button"
-            accessibilityLabel="Donate"
-          >
-            <View style={{ position: "relative" }}>
-              <Animated.View style={[S.donateGlow, { opacity: glowOpacity }]} />
-              <LinearGradient
-                colors={["#000000", "#001a33"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={S.donateGrad}
-              >
-                <Ionicons name="heart" size={heartSize} color="#ff9abf" />
-              </LinearGradient>
-            </View>
-          </Pressable>
-        </Animated.View>
       </View>
 
-      {/* Bottom neon cyan glow bar */}
       <LinearGradient
         colors={[
           "rgba(0,229,255,0)",
@@ -293,23 +202,29 @@ const S = StyleSheet.create({
     alignItems: "center",
     gap: 10,
   },
-
-  avatarWrap: { marginRight: 8 },
-  avatar: { width: 28, height: 28, borderRadius: 20 },
+  avatarWrap: {
+    marginRight: 8,
+  },
+  avatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 20,
+  },
   avatarFallback: {
     backgroundColor: "#0b2030",
     alignItems: "center",
     justifyContent: "center",
   },
-  initial: { color: "#e8fbff", fontWeight: "800" },
-
+  initial: {
+    color: "#e8fbff",
+    fontWeight: "800",
+  },
   name: {
     color: "#e8fbff",
     fontWeight: "800",
     marginRight: 6,
     maxWidth: 160,
   },
-
   coinPill: {
     flexDirection: "row",
     alignItems: "center",
@@ -320,9 +235,15 @@ const S = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(0,229,255,0.3)",
   },
-  coinImg: { width: 16, height: 16, marginRight: 6 },
-  coinText: { color: "#cfeff6", fontWeight: "800" },
-
+  coinImg: {
+    width: 16,
+    height: 16,
+    marginRight: 6,
+  },
+  coinText: {
+    color: "#cfeff6",
+    fontWeight: "800",
+  },
   streakPill: {
     flexDirection: "row",
     alignItems: "center",
@@ -334,8 +255,10 @@ const S = StyleSheet.create({
     backgroundColor: "rgba(255,165,0,0.08)",
     marginLeft: 6,
   },
-  streakText: { color: "#ffa500", fontWeight: "800" },
-
+  streakText: {
+    color: "#ffa500",
+    fontWeight: "800",
+  },
   iconBtn: {
     paddingVertical: 6,
     paddingHorizontal: 8,
@@ -343,25 +266,6 @@ const S = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.25)",
     borderWidth: 1,
     borderColor: "rgba(0,229,255,0.2)",
-  },
-
-  donateGrad: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "rgba(0,229,255,0.35)",
-  },
-  donateGlow: {
-    position: "absolute",
-    left: -4,
-    right: -4,
-    top: -4,
-    bottom: -4,
-    borderRadius: 999,
-    backgroundColor: "rgba(0,229,255,0.35)",
   },
   bottomGlow: {
     position: "absolute",
