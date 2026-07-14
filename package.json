@@ -1,6 +1,7 @@
 {
   "name": "nova-tutoring-expo-3",
   "private": true,
+  "version": "1.0.0",
   "scripts": {
     "dev": "expo start --web",
     "dev:native": "expo start",
@@ -21,12 +22,13 @@
     "@supabase/supabase-js": "^2.81.0",
     "body-parser": "^2.2.2",
     "cors": "^2.8.6",
-    "expo": "~54.0.31",
     "expo-av": "~16.0.8",
     "expo-build-properties": "~1.0.10",
-    "expo-dev-client": "~6.0.20",
+    "expo-constants": "~18.0.13",
+    "expo-dev-client": "~6.0.21",
     "expo-file-system": "~19.0.21",
     "expo-haptics": "~15.0.8",
+    "expo-iap": "^4.5.0",
     "expo-image-picker": "~17.0.10",
     "expo-linear-gradient": "~15.0.8",
     "expo-linking": "~8.0.11",
@@ -70,6 +72,5 @@
   },
   "overrides": {
     "react-native-worklets": "0.5.1"
-  },
-  "version": "1.0.0"
+  }
 }

@@ -1,4 +1,3 @@
-// app/(tabs)/shop.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
@@ -13,13 +12,14 @@ import {
   PanResponder,
   Platform,
   Alert,
+  UIManager,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Linking from "expo-linking";
 import { Linking as RNLinking } from "react-native";
 import * as Haptics from "expo-haptics";
+import * as ExpoIAP from "expo-iap";
 
 import { useCoins } from "../context/CoinsContext";
 import { useTheme } from "../context/ThemeContext";
@@ -53,6 +53,7 @@ const InsufficientCoinsModal =
   (InsufficientCoinsModalNS as any).InsufficientCoinsModal;
 
 import { COMPANIONS } from "../_lib/companionsCatalog";
+import { canonId } from "../_lib/canonId";
 
 import { startCheckout } from "../utils/checkout";
 import { startCoinCheckout } from "../utils/coinCheckout";
@@ -61,7 +62,55 @@ import { notifyCoinOrder } from "../utils/coin-order";
 import AddressSheet, { AddressPayload } from "../components/AddressSheet";
 import { supabase } from "../lib/supabase";
 
-/* ----------------------------- Local typings ------------------------------ */
+
+
+const InAppPurchases: any = ExpoIAP;
+
+function showIapDebug(step: string, extra?: any) {
+  const detail =
+    typeof extra === "string"
+      ? extra
+      : extra
+      ? JSON.stringify(extra, null, 2)
+      : "";
+
+  console.log(`[IAP DEBUG] ${step}`, detail || "No extra details");
+}
+
+async function getInAppPurchasesSafe() {
+  if (Platform.OS === "web") {
+    console.log("[IAP DEBUG] web platform detected; IAP unavailable on web");
+    return null;
+  }
+
+  return ExpoIAP;
+}
+
+async function isIapAvailable() {
+  const mod = await getInAppPurchasesSafe();
+  const available = !!(
+    mod &&
+    typeof mod.initConnection === "function" &&
+    typeof mod.fetchProducts === "function" &&
+    typeof mod.requestPurchase === "function" &&
+    typeof mod.finishTransaction === "function" &&
+    typeof mod.purchaseUpdatedListener === "function" &&
+    typeof mod.purchaseErrorListener === "function"
+  );
+
+  console.log("[IAP DEBUG] expo-iap availability:", {
+    available,
+    initConnection: typeof mod?.initConnection,
+    fetchProducts: typeof mod?.fetchProducts,
+    requestPurchase: typeof mod?.requestPurchase,
+    finishTransaction: typeof mod?.finishTransaction,
+    purchaseUpdatedListener: typeof mod?.purchaseUpdatedListener,
+    purchaseErrorListener: typeof mod?.purchaseErrorListener,
+  });
+
+  return available;
+}
+
 type QuickItem = {
   id: string;
   name: string;
@@ -78,7 +127,6 @@ type Order = {
   createdAt: number;
 };
 
-// Extended companion effect types
 type CompanionEffectType =
   | "hearts"
   | "stars"
@@ -99,11 +147,12 @@ type CompanionEffectType =
   | "legend_spiral"
   | null;
 
-// Ask memory config
 type AskMemoryConfig = {
   tier: string;
   limit: number;
 };
+
+type IapUnavailableReason = "module_missing" | "connect_failed";
 
 const ORDERS_KEY = "@nova/orders";
 
@@ -113,74 +162,262 @@ const REQUIRES_SHIPPING = new Set<Category>([
   "tangibles",
 ]);
 
-// Shared neon border for companion bubbles
 const NEON_BORDER = "#00E5FF";
 
-/* ------------------------------- Utilities -------------------------------- */
+// Companion IAP lock is OFF so every digital item can use the same Apple IAP path.
+// Leave this false for the "make all digital items open IAP" build.
+const STRICT_TEST_COMPANION_IAP = false;
+const STRICT_TEST_COMPANION_PRODUCT_ID = "companion_nova_bunny_1";
+const STRICT_TEST_COMPANION_ITEM_IDS = new Set([
+  "companion_nova_bunny",
+  "companion_nova_bunny_1",
+  "nova_bunny",
+]);
 
-function canonId(raw: string | null | undefined): string {
-  if (!raw) return "";
-  let v = String(raw).trim().toLowerCase();
+function isStrictCompanionTestItem(it: any): boolean {
+  const raw = String(it?.id || "").trim();
+  if (!raw) return false;
+  const normalized = raw.toLowerCase().replace(/[:\-]/g, "_");
+  const canonical = String(canonId(raw) || "").toLowerCase().replace(/[:\-]/g, "_");
+  return (
+    STRICT_TEST_COMPANION_ITEM_IDS.has(raw) ||
+    STRICT_TEST_COMPANION_ITEM_IDS.has(normalized) ||
+    STRICT_TEST_COMPANION_ITEM_IDS.has(canonical)
+  );
+}
 
-  // normalize separators
-  v = v.replace(/-/g, "_");
+/**
+ * App Store Connect product ID aliases.
+ * These let the shop work even if local catalog IDs and ASC product IDs
+ * are not identical.
+ */
+const ASC_PRODUCT_ALIASES: Record<string, string> = {
+  // Coin packs
+  pack_1k: "coins_1000",
+  pack_5k: "coins_5000",
+  coins_1000: "coins_1000",
+  coins_5000: "coins_5000",
 
-  if (!v.includes(":")) {
-    // cursors
-    if (v === "glow" || v === "cursor_glow") {
-      v = "cursor:glow";
-    } else if (v === "orb" || v === "cursor_orb") {
-      v = "cursor:orb";
-    } else if (
-      v === "startrail" ||
-      v === "star_trail" ||
-      v === "cursor_startrail" ||
-      v === "cursor_star_trail"
-    ) {
-      v = "cursor:star_trail";
-    }
-    // themes
-    else if (
-      [
-        "neon",
-        "starry",
-        "pink",
-        "dark",
-        "mint",
-        "glitter",
-        "blackgold",
-        "black_gold",
-        "crimson",
-        "emerald",
-        "neonpurple",
-        "neon_purple",
-        "silver",
-        "crimson_dream",
-        "emerald_wave",
-        "silver_frost",
-      ].includes(v)
-    ) {
-      v = "theme:" + v;
-    }
-    // generic prefixes
-    else if (v.startsWith("cursor")) {
-      v = "cursor:" + v.replace(/^cursor[_:]?/, "");
-    } else if (v.startsWith("theme")) {
-      v = "theme:" + v.replace(/^theme[_:]?/, "");
+  // Themes
+  theme_neon: "theme_neon",
+  theme_starry: "theme_starry",
+  theme_pink: "theme_pink",
+  theme_dark: "theme_dark",
+  theme_mint: "theme_mint",
+  theme_glitter: "theme_glitter",
+  theme_black_gold: "theme_black_gold",
+  theme_blackgold: "theme_black_gold",
+  theme_crimson: "theme_crimson_dream",
+  theme_crimson_dream: "theme_crimson_dream",
+  theme_emerald: "theme_emerald_wave",
+  theme_emerald_wave: "theme_emerald_wave",
+  theme_neon_purple: "theme_neon_purple",
+  theme_neonpurple: "theme_neon_purple",
+  theme_silver: "theme_silver_frost",
+  theme_silver_frost: "theme_silver_frost",
+
+  // Cursors
+  cursor_glow: "cursor_glow",
+  cursor_orb: "cursor_orb",
+  cursor_star_trail: "cursor_star_trail",
+  cursor_startrail: "cursor_star_trail",
+
+  // Ask memory
+  ask_memory_tier1: "ask_memory_tier1",
+  ask_memory_tier2: "ask_memory_tier2",
+  ask_memory_tier3: "ask_memory_tier3",
+  ask_memory_tier4: "ask_memory_tier4",
+
+  // Ask personalities
+  ask_personality_calm_focus: "ask_personality_calm_focus",
+  ask_personality_coach: "ask_personality_coach",
+  ask_personality_encouraging: "ask_personality_encouraging",
+  ask_personality_playful: "ask_personality_playful",
+  ask_personality_storyteller: "ask_personality_storyteller",
+
+  // Companions
+  companion_balloons: "companion_balloons",
+  companion_coins_rain: "companion_coins_rain",
+  companion_hearts: "companion_hearts",
+  companion_nova_bunny: "companion_nova_bunny_1",
+  companion_nova_bunny_1: "companion_nova_bunny_1",
+  companion_party_3d: "companion_party_3d",
+  companion_party_3d_2: "companion_party_3d_2",
+  companion_reading_buddy: "companion_reading_buddy",
+  companion_sleepy_moon: "companion_sleepy_moon",
+  companion_star_blow: "companion_star_blow",
+  companion_star_explode: "companion_star_explode",
+  companion_star_throw: "companion_star_throw",
+};
+
+function toUnderscoreId(raw: string | null | undefined) {
+  return String(raw || "")
+    .trim()
+    .toLowerCase()
+    .replace(/:/g, "_")
+    .replace(/-/g, "_");
+}
+
+function resolveStoreProductId(it: any): string | null {
+  const explicit =
+    (it as any)?.iapProductId ||
+    (it as any)?.meta?.iapProductId ||
+    (it as any)?.meta?.iapId ||
+    null;
+
+  if (explicit) return String(explicit);
+
+  const rawId = String((it as any)?.id || "");
+  const canonical = canonId(rawId);
+  const rawUnder = toUnderscoreId(rawId);
+  const canonUnder = toUnderscoreId(canonical);
+
+  return (
+    ASC_PRODUCT_ALIASES[rawId] ||
+    ASC_PRODUCT_ALIASES[canonical] ||
+    ASC_PRODUCT_ALIASES[rawUnder] ||
+    ASC_PRODUCT_ALIASES[canonUnder] ||
+    rawUnder ||
+    null
+  );
+}
+
+function normalizeIapProductIdSet(values: Array<string | null | undefined>) {
+  const out = new Set<string>();
+
+  for (const value of values) {
+    const raw = String(value || "").trim();
+    if (!raw) continue;
+
+    const under = toUnderscoreId(raw);
+    const canon = canonId(raw);
+    const canonUnder = toUnderscoreId(canon);
+
+    const variants = [
+      raw,
+      under,
+      canon,
+      canonUnder,
+      ASC_PRODUCT_ALIASES[raw],
+      ASC_PRODUCT_ALIASES[under],
+      ASC_PRODUCT_ALIASES[canon],
+      ASC_PRODUCT_ALIASES[canonUnder],
+    ].filter(Boolean) as string[];
+
+    for (const variant of variants) {
+      const cleaned = String(variant).trim();
+      if (cleaned) out.add(cleaned);
     }
   }
 
-  // aliases
-  if (v === "cursor:startrail") v = "cursor:star_trail";
-  if (v === "theme:black_gold") v = "theme:blackgold";
-  if (v === "theme:neon_purple") v = "theme:neonpurple";
+  return Array.from(out);
+}
 
-  // long-name → base
-  if (v === "theme:crimson_dream") v = "theme:crimson";
-  if (v === "theme:emerald_wave") v = "theme:emerald";
-  if (v === "theme:silver_frost") v = "theme:silver";
+function resolveStoreProductIdCandidates(it: any): string[] {
+  return normalizeIapProductIdSet([
+    (it as any)?.iapProductId,
+    (it as any)?.meta?.iapProductId,
+    (it as any)?.meta?.iapId,
+    (it as any)?.meta?.grantId,
+    (it as any)?.id,
+    resolveStoreProductId(it),
+  ]);
+}
 
-  return v;
+function showIapUnavailableAlert(
+  reason: IapUnavailableReason = "module_missing"
+) {
+  const message =
+    reason === "connect_failed"
+      ? "This build found the in-app purchase module, but it could not connect to Apple’s in-app purchase service right now. If you're testing in TestFlight, make sure your in-app purchases are configured correctly in App Store Connect and try again."
+      : "This build could not access the native in-app purchase module. If you're in TestFlight, this usually means the archive was built without the IAP native module or the build is missing the required native setup.";
+
+  Alert.alert("In-app purchases unavailable", message);
+}
+
+const COMING_SOON_TEXT = "Coming in the next update!";
+
+function isComingSoon(it: any): boolean {
+  return !!(it && it.meta && it.meta.comingSoon);
+}
+
+function isLegendaryCompanion(it: any): boolean {
+  const coinPrice = (it as any)?.coinPrice ?? (it as any)?.priceCoins ?? 0;
+  const usd = (it as any)?.priceUSD ?? 0;
+  return it?.category === "companions" && coinPrice === 0 && usd > 0;
+}
+
+function getCompanionUsdPrice(it: any): number {
+  return (
+    (it as any)?.priceUSD ??
+    (it as any)?.usdPrice ??
+    (it as any)?.meta?.priceUSD ??
+    (it as any)?.meta?.usdPrice ??
+    3
+  );
+}
+
+function ComingSoonRibbon() {
+  return (
+    <View
+      pointerEvents="none"
+      style={{
+        position: "absolute",
+        top: 10,
+        right: -34,
+        transform: [{ rotate: "20deg" }],
+        backgroundColor: "rgba(148,163,184,0.92)",
+        paddingVertical: 6,
+        paddingHorizontal: 38,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: "rgba(15,23,42,0.35)",
+        shadowColor: "#000",
+        shadowOpacity: 0.18,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 3 },
+        elevation: 2,
+      }}
+    >
+      <Text
+        style={{
+          color: "rgba(15,23,42,0.95)",
+          fontWeight: "900",
+          fontSize: 10,
+          letterSpacing: 0.3,
+        }}
+      >
+        COMING SOON
+      </Text>
+    </View>
+  );
+}
+
+function ComingSoonPill({ text }: { text?: string }) {
+  return (
+    <View
+      style={{
+        paddingVertical: 8,
+        paddingHorizontal: 10,
+        borderRadius: 999,
+        borderWidth: 1,
+        borderColor: "rgba(148,163,184,0.55)",
+        backgroundColor: "rgba(15,23,42,0.65)",
+        alignItems: "center",
+      }}
+    >
+      <Text
+        style={{
+          color: "rgba(148,163,184,0.95)",
+          fontSize: 11,
+          fontWeight: "800",
+          textAlign: "center",
+        }}
+      >
+        {text ?? COMING_SOON_TEXT}
+      </Text>
+    </View>
+  );
 }
 
 function toThemeCtxId(id: string | null) {
@@ -221,11 +458,84 @@ async function saveOrders(list: Order[]) {
   await AsyncStorage.setItem(ORDERS_KEY, JSON.stringify(list));
 }
 
-/**
- * Resolve ask memory config from a catalog item.
- * Expect your ask_memory items in catalog to define:
- *   meta: { askMemoryTier: string; askMemoryLimit: number }
- */
+async function persistOwnedPurchaseLocally(rawId: string | null | undefined) {
+  if (!rawId) return;
+
+  const id = String(rawId);
+  const canon = canonId(id) || id;
+  const variants = Array.from(
+    new Set([
+      id,
+      canon,
+      id.replace(/_/g, "-"),
+      id.replace(/-/g, "_"),
+      canon.replace(/_/g, "-"),
+      canon.replace(/-/g, "_"),
+    ].filter(Boolean))
+  );
+
+  const arrayKeys = ["@nova/purchases", "@nova/purchases.v2"];
+
+  for (const key of arrayKeys) {
+    try {
+      const raw = await AsyncStorage.getItem(key);
+      const arr = Array.isArray(raw ? JSON.parse(raw) : null)
+        ? JSON.parse(raw as string)
+        : [];
+      let changed = false;
+      for (const v of variants) {
+        if (!arr.includes(v)) {
+          arr.push(v);
+          changed = true;
+        }
+      }
+      if (changed) await AsyncStorage.setItem(key, JSON.stringify(arr));
+    } catch {}
+  }
+}
+
+function makeIsOwnedAny(isOwnedFn: (id: string) => boolean) {
+  return (raw: string | null | undefined) => {
+    if (!raw) return false;
+    const a = String(raw);
+    const c = canonId(a);
+
+    const swapUnderscoreHyphen = (s: string) =>
+      s.includes("_") ? s.replace(/_/g, "-") : s.replace(/-/g, "_");
+
+    const v1 = a;
+    const v2 = c;
+    const v3 = swapUnderscoreHyphen(a);
+    const v4 = swapUnderscoreHyphen(c);
+
+    return isOwnedFn(v1) || isOwnedFn(v2) || isOwnedFn(v3) || isOwnedFn(v4);
+  };
+}
+
+function makeGrantAny(grantFn: (id: string) => Promise<any> | any) {
+  return async (raw: string | null | undefined) => {
+    if (!raw) return;
+    const a = String(raw);
+    const c = canonId(a);
+
+    const swapUnderscoreHyphen = (s: string) =>
+      s.includes("_") ? s.replace(/_/g, "-") : s.replace(/-/g, "_");
+
+    const v1 = a;
+    const v2 = c;
+    const v3 = swapUnderscoreHyphen(a);
+    const v4 = swapUnderscoreHyphen(c);
+
+    const seen = new Set<string>();
+    for (const v of [v2, v1, v4, v3]) {
+      if (!v) continue;
+      if (seen.has(v)) continue;
+      seen.add(v);
+      await grantFn(v);
+    }
+  };
+}
+
 function resolveAskMemoryConfigFromItem(
   it: CatalogItem
 ): AskMemoryConfig | null {
@@ -242,11 +552,6 @@ function resolveAskMemoryConfigFromItem(
   return null;
 }
 
-/**
- * Resolve ask personality id from a catalog item.
- * Expect your ask_personality items in catalog to define:
- *   meta: { personalityId: string }
- */
 function resolveAskPersonalityFromItem(it: CatalogItem): string | null {
   const meta = (it as any).meta ?? null;
   if (meta && typeof meta === "object") {
@@ -274,6 +579,7 @@ async function updateAskMemoryProfile(
       })
       .eq("id", userId)
       .single();
+
     if (error) {
       console.warn("[shop] ask_memory update error", error);
     } else {
@@ -304,6 +610,7 @@ async function updateAskPersonalityProfile(
       })
       .eq("id", userId)
       .single();
+
     if (error) {
       console.warn("[shop] ask_personality update error", error);
     } else {
@@ -314,79 +621,24 @@ async function updateAskPersonalityProfile(
   }
 }
 
-/**
- * Short ability blurb for each legendary companion.
- */
 function getCompanionAbilityShort(
   id: string | null | undefined
 ): string | null {
-  const v = (id ?? "").toLowerCase();
+  const v = canonId(id ?? "").replace(/-/g, "_");
 
-  if (
-    v === "companion:mecha_owl" ||
-    v === "legend:mecha_owl" ||
-    v === "mecha_owl" ||
-    v === "mecha-owl" ||
-    v === "companion_mecha_owl"
-  ) {
-    return "+10% achievement coins";
-  }
-
-  if (
-    v === "companion:chrono_fox" ||
-    v === "legend:chrono_fox" ||
-    v === "chrono_fox" ||
-    v === "chrono-fox" ||
-    v === "companion_chrono_fox"
-  ) {
-    return "+2 min quiz timer";
-  }
-
-  if (
-    v === "companion:celestra" ||
-    v === "legend:celestra" ||
-    v === "celestra" ||
-    v === "companion_celestra"
-  ) {
-    return "+25% streak coins";
-  }
-
-  if (
-    v === "companion:axolotl_oracle" ||
-    v === "legend:axolotl_oracle" ||
-    v === "axolotl_oracle" ||
-    v === "axolotl-oracle" ||
-    v === "companion_axolotl_oracle"
-  ) {
+  if (v.includes("mecha_owl")) return "+10% achievement coins";
+  if (v.includes("chrono_fox")) return "+2 min quiz timer";
+  if (v.includes("celestra")) return "+25% streak coins";
+  if (v.includes("axolotl_oracle") || v.includes("axolotl"))
     return "Streak shield (1x / 7 days)";
-  }
-
-  if (
-    v === "companion:astral_nova" ||
-    v === "legend:astral_nova" ||
-    v === "astral_nova" ||
-    v === "astral-nova" ||
-    v === "companion_astral_nova"
-  ) {
+  if (v.includes("astral_nova") || v.includes("astral"))
     return "+500 coins per certificate";
-  }
-
-  if (
-    v === "companion:aetherwyrm" ||
-    v === "legend:aetherwyrm" ||
-    v === "aetherwyrm" ||
-    v === "companion_aetherwyrm"
-  ) {
+  if (v.includes("aetherwyrm") || v.includes("wyrm"))
     return "+20% coins from all rewards";
-  }
 
   return null;
 }
 
-/**
- * Build a stable, per-companion effect map so each one
- * gets a distinct animated effect and we don't spam stars.
- */
 function buildCompanionEffectMap(): Record<string, CompanionEffectType> {
   const map: Record<string, CompanionEffectType> = {};
 
@@ -404,41 +656,34 @@ function buildCompanionEffectMap(): Record<string, CompanionEffectType> {
   let firstPartyAssigned = false;
 
   (COMPANIONS as any[]).forEach((comp) => {
-    const id = ((comp?.id ?? "") as string).toLowerCase();
+    const id = canonId(comp?.id ?? "").replace(/-/g, "_");
     const text = `${comp?.title ?? ""} ${comp?.desc ?? ""}`.toLowerCase();
     let type: CompanionEffectType = null;
 
-    // Legendary explicit matches
-    if (id.includes("chrono") || text.includes("chrono fox")) {
-      type = "legend_fire"; // Chrono Fox – fire FX
-    } else if (id.includes("mecha") || text.includes("mecha owl")) {
-      type = "legend_lightning"; // Mecha Owl – lightning FX
+    if (id.includes("chrono_fox") || text.includes("chrono fox")) {
+      type = "legend_fire";
+    } else if (id.includes("mecha_owl") || text.includes("mecha owl")) {
+      type = "legend_lightning";
     } else if (
       id.includes("axolotl") ||
       text.includes("axolotl") ||
       text.includes("oracle")
     ) {
-      type = "shield"; // Axolotl Oracle – shield rings
+      type = "shield";
     } else if (id.includes("celestra") || text.includes("celestra")) {
-      type = "legend_bubbles"; // Celestra – bubble aura
-    } else if (
-      id.includes("astral") ||
-      text.includes("astral nova") ||
-      text.includes("astral")
-    ) {
-      type = "legend_sparkles"; // Astral Nova – sparkles
+      type = "legend_bubbles";
+    } else if (id.includes("astral") || text.includes("astral")) {
+      type = "legend_sparkles";
     } else if (
       id.includes("aetherwyrm") ||
       text.includes("aetherwyrm") ||
       text.includes("wyrm")
     ) {
-      type = "legend_spiral"; // Aetherwyrm – spiral rings
+      type = "legend_spiral";
     }
 
-    // Common companions
     if (!type) {
       const isParty = text.includes("party");
-
       if (isParty) {
         if (!firstPartyAssigned) {
           type = "party_confetti";
@@ -446,49 +691,44 @@ function buildCompanionEffectMap(): Record<string, CompanionEffectType> {
         } else {
           type = "party_streamers";
         }
-      } else if (text.includes("balloon")) {
-        type = "balloons";
-      } else if (text.includes("moon") || text.includes("luna")) {
-        type = "moons";
-      } else if (text.includes("stardust") || text.includes("star dust")) {
+      } else if (text.includes("balloon")) type = "balloons";
+      else if (text.includes("moon") || text.includes("luna")) type = "moons";
+      else if (text.includes("stardust") || text.includes("star dust"))
         type = "stardust";
-      } else if (text.includes("heart") || text.includes("love")) {
-        type = "hearts";
-      } else if (
+      else if (text.includes("heart") || text.includes("love")) type = "hearts";
+      else if (
         text.includes("sparkle") ||
         text.includes("sparkly") ||
         text.includes("glitter")
-      ) {
+      )
         type = "sparkles";
-      } else if (
-        text.includes("orb") ||
-        text.includes("nova") ||
-        text.includes("star")
-      ) {
-        type = "stars";
-      } else if (
+      else if (
         text.includes("book") ||
         text.includes("study") ||
         text.includes("reading") ||
         text.includes("reader")
-      ) {
+      )
         type = "books";
-      } else if (
+      else if (
         text.includes("flame") ||
         text.includes("fire") ||
         text.includes("ember")
-      ) {
+      )
         type = "fire";
-      }
+      else if (
+        text.includes("orb") ||
+        text.includes("nova") ||
+        text.includes("star")
+      )
+        type = "stars";
     }
 
-    // Fallback sequence
     if (!type) {
       type = EFFECT_SEQUENCE[seqIdx % EFFECT_SEQUENCE.length];
       seqIdx += 1;
     }
 
-    map[comp.id] = type;
+    map[String(comp.id)] = type;
   });
 
   return map;
@@ -500,13 +740,8 @@ function getCompanionEffect(id: string): CompanionEffectType {
   return COMPANION_EFFECT_MAP[id] ?? "stars";
 }
 
-/** Helpers for the “white background” legendary PNGs */
 function isWhiteLegendId(raw: string | null | undefined): boolean {
-  let v = (raw ?? "")
-    .toString()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_");
-
+  const v = canonId(raw ?? "").replace(/[^a-z0-9]+/g, "_");
   return (
     v.includes("mecha_owl") ||
     v.includes("celestra") ||
@@ -514,8 +749,6 @@ function isWhiteLegendId(raw: string | null | undefined): boolean {
     v.includes("axolotl")
   );
 }
-
-/* --------------------------------- UI bits ------------------------------- */
 
 function Section({
   title,
@@ -592,9 +825,11 @@ function Section({
 function Card({
   children,
   color,
+  comingSoon,
 }: {
   children: React.ReactNode;
   color: string;
+  comingSoon?: boolean;
 }) {
   const { tokens } = useTheme();
   return (
@@ -608,14 +843,17 @@ function Card({
         backgroundColor: tokens.isDark
           ? "rgba(255,255,255,0.03)"
           : "rgba(255,255,255,0.60)",
+        opacity: comingSoon ? 0.62 : 1,
       }}
     >
-      {children}
+      <View style={{ position: "relative" }}>
+        {comingSoon ? <ComingSoonRibbon /> : null}
+        {children}
+      </View>
     </View>
   );
 }
 
-/* ------------------------ Neon Order Success Modal ------------------------ */
 function OrderSuccessModal({
   visible,
   title,
@@ -750,9 +988,6 @@ function OrderSuccessModal({
     </Modal>
   );
 }
-
-/* -------------------- Item Detail Modal (zoomed view) --------------------- */
-
 function ItemDetailModal({
   visible,
   item,
@@ -775,6 +1010,8 @@ function ItemDetailModal({
 
   if (!item) return null;
 
+  const locked = isComingSoon(item) || isLegendaryCompanion(item);
+
   const hasAlt = !!(item.altImageKey && altImages[item.altImageKey]);
   const imgSrc =
     showAlt && hasAlt
@@ -782,7 +1019,10 @@ function ItemDetailModal({
       : item.image || (hasAlt ? altImages[item.altImageKey] : null);
 
   const priceCoins = item.priceCoins ?? item.coinPrice ?? null;
-  const priceUSD = item.priceUSD ?? null;
+  const priceUSD =
+    item.category === "companions"
+      ? getCompanionUsdPrice(item)
+      : item.priceUSD ?? null;
 
   const abilityShort = getCompanionAbilityShort(item.id);
   const abilityNote = item.ability?.note ?? abilityShort ?? null;
@@ -812,6 +1052,7 @@ function ItemDetailModal({
             backgroundColor: tokens.isDark
               ? "rgba(15,23,42,0.98)"
               : "rgba(255,255,255,0.98)",
+            opacity: locked ? 0.92 : 1,
           }}
         >
           <LinearGradient
@@ -823,6 +1064,12 @@ function ItemDetailModal({
             style={{ padding: 16 }}
           >
             <ScrollView>
+              {locked ? (
+                <View style={{ marginBottom: 12 }}>
+                  <ComingSoonPill />
+                </View>
+              ) : null}
+
               {imgSrc ? (
                 <View
                   style={{
@@ -842,7 +1089,11 @@ function ItemDetailModal({
                 >
                   <Image
                     source={imgSrc}
-                    style={{ width: "100%", height: "100%" }}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      opacity: locked ? 0.72 : 1,
+                    }}
                     resizeMode="contain"
                   />
                 </View>
@@ -850,6 +1101,7 @@ function ItemDetailModal({
 
               {hasAlt && (
                 <Pressable
+                  disabled={locked}
                   onPress={() => setShowAlt((v) => !v)}
                   style={({ pressed }) => ({
                     alignSelf: "center",
@@ -859,6 +1111,7 @@ function ItemDetailModal({
                     borderRadius: 999,
                     borderWidth: 1,
                     borderColor: tokens.border as any,
+                    opacity: locked ? 0.5 : 1,
                     backgroundColor: pressed
                       ? tokens.isDark
                         ? "rgba(148,163,184,0.3)"
@@ -900,6 +1153,7 @@ function ItemDetailModal({
                     lineHeight: 20,
                     marginBottom: 10,
                     textAlign: "left",
+                    opacity: locked ? 0.85 : 1,
                   }}
                 >
                   {item.desc}
@@ -914,13 +1168,14 @@ function ItemDetailModal({
                     lineHeight: 18,
                     marginBottom: 10,
                     fontStyle: "italic",
+                    opacity: locked ? 0.85 : 1,
                   }}
                 >
                   Ability: {abilityNote}
                 </Text>
               ) : null}
 
-              {(priceCoins || priceUSD) && item.category !== "companions" && (
+              {(priceCoins || priceUSD) && !locked ? (
                 <View
                   style={{
                     marginTop: 8,
@@ -951,6 +1206,7 @@ function ItemDetailModal({
                       </Text>
                     </View>
                   ) : null}
+
                   {priceUSD ? (
                     <View
                       style={{
@@ -968,12 +1224,12 @@ function ItemDetailModal({
                           fontSize: 13,
                         }}
                       >
-                        ${priceUSD.toFixed(0)}
+                        ${priceUSD.toFixed(2)}
                       </Text>
                     </View>
                   ) : null}
                 </View>
-              )}
+              ) : null}
 
               <View
                 style={{
@@ -983,7 +1239,7 @@ function ItemDetailModal({
                   columnGap: 10,
                 }}
               >
-                {onPrimaryAction && primaryLabel ? (
+                {onPrimaryAction && primaryLabel && !locked ? (
                   <Pressable
                     onPress={onPrimaryAction}
                     style={({ pressed }) => ({
@@ -1049,8 +1305,6 @@ function ItemDetailModal({
   );
 }
 
-/* --------- Visual overlay for companion click effects (hearts/stars/etc) -- */
-
 function CompanionEffectOverlay({
   type,
   effectKey,
@@ -1072,7 +1326,6 @@ function CompanionEffectOverlay({
 
   if (!type) return null;
 
-  // Shield rings
   if (type === "shield") {
     const rings = [0, 1, 2];
     return (
@@ -1112,7 +1365,6 @@ function CompanionEffectOverlay({
     );
   }
 
-  // Legendary special FX
   if (
     type === "legend_fire" ||
     type === "legend_lightning" ||
@@ -1120,7 +1372,6 @@ function CompanionEffectOverlay({
     type === "legend_sparkles" ||
     type === "legend_spiral"
   ) {
-    // Chrono Fox
     if (type === "legend_fire") {
       const tongues = [0, 1, 2, 3, 4, 5, 6];
       const embers = [0, 1, 2, 3];
@@ -1219,7 +1470,6 @@ function CompanionEffectOverlay({
       );
     }
 
-    // Mecha Owl lightning
     if (type === "legend_lightning") {
       const bolts = [0, 1];
 
@@ -1319,7 +1569,6 @@ function CompanionEffectOverlay({
       );
     }
 
-    // Celestra bubbles
     if (type === "legend_bubbles") {
       const bubbles = [0, 1, 2, 3, 4, 5];
       return (
@@ -1360,7 +1609,6 @@ function CompanionEffectOverlay({
       );
     }
 
-    // Astral Nova spark diamonds
     if (type === "legend_sparkles") {
       const sparks = [0, 1, 2, 3, 4, 5];
       return (
@@ -1415,7 +1663,6 @@ function CompanionEffectOverlay({
       );
     }
 
-    // Aetherwyrm spiral rings
     if (type === "legend_spiral") {
       const rings = [0, 1, 2, 3];
       return (
@@ -1456,7 +1703,6 @@ function CompanionEffectOverlay({
     }
   }
 
-  // Emoji-based defaults for common companions
   const icons =
     type === "party_confetti"
       ? ["🎉", "🎊", "🎉", "🎊", "🎉", "🎊"]
@@ -1499,8 +1745,7 @@ function CompanionEffectOverlay({
           outputRange: [0, offsetX],
         });
 
-        const fontSize =
-          type === "books" ? 22 : type === "fire" ? 28 : 26;
+        const fontSize = type === "books" ? 22 : type === "fire" ? 28 : 26;
 
         return (
           <Animated.Text
@@ -1533,7 +1778,19 @@ export default function Shop() {
     ownedCompanions: ownedCompanionIds,
     equipCompanion,
   } = useCompanion();
-  const router = useRouter();
+
+  useEffect(() => {
+    if (Platform.OS === "android") {
+      try {
+        if ((UIManager as any)?.setLayoutAnimationEnabledExperimental) {
+          (UIManager as any).setLayoutAnimationEnabledExperimental(true);
+        }
+      } catch {}
+    }
+  }, []);
+
+  const isOwnedAny = useMemo(() => makeIsOwnedAny(isOwned), [isOwned, purchases]);
+  const grantAny = useMemo(() => makeGrantAny(grant), [grant]);
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [need, setNeed] = useState<number>(0);
@@ -1546,7 +1803,6 @@ export default function Shop() {
   const [pendingItem, setPendingItem] = useState<any | null>(null);
   const [pendingSize, setPendingSize] = useState<string | null>(null);
 
-  // Item detail modal
   const [detailItem, setDetailItem] = useState<any | null>(null);
 
   const scrollRef = useRef<ScrollView | null>(null);
@@ -1559,7 +1815,6 @@ export default function Shop() {
   const cursorPulse = useRef(new Animated.Value(0)).current;
 
   const coinsRef = useRef<number>(coins ?? 0);
-
   const devTapRef = useRef(0);
 
   const [stripActiveId, setStripActiveId] = useState<string | null>(null);
@@ -1603,12 +1858,25 @@ export default function Shop() {
   const [activeEffect, setActiveEffect] = useState<CompanionEffectType>(null);
   const [effectKey, setEffectKey] = useState(0);
 
-  // Pinch state
   const pinchDistanceRef = useRef<number | null>(null);
   const pinchBaseScaleRef = useRef<number>(1);
   const pinchScaleRef = useRef<number>(1);
   const MIN_FLOAT_SCALE = 0.7;
   const MAX_FLOAT_SCALE = 1.6;
+
+  const [iapReady, setIapReady] = useState(false);
+  const [availableIapProductIds, setAvailableIapProductIds] = useState<string[]>(
+    []
+  );
+  const processedPurchaseIdsRef = useRef<Set<string>>(new Set());
+  const pendingIapProductIdRef = useRef<string | null>(null);
+  const pendingIapItemRef = useRef<any | null>(null);
+  const iapConnectedRef = useRef(false);
+  const iapProductsPromiseRef = useRef<Promise<string[]> | null>(null);
+  const purchaseUpdatedSubscriptionRef = useRef<{ remove: () => void } | null>(null);
+  const purchaseErrorSubscriptionRef = useRef<{ remove: () => void } | null>(null);
+  const iapPurchaseInFlightRef = useRef(false);
+  const purchaseResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const panResponder = useRef(
     PanResponder.create({
@@ -1631,7 +1899,6 @@ export default function Shop() {
         const touches = (evt.nativeEvent as any).touches || [];
 
         if (touches.length === 2) {
-          // Pinch to scale
           const [t1, t2] = touches;
           const dx = t2.pageX - t1.pageX;
           const dy = t2.pageY - t1.pageY;
@@ -1653,7 +1920,6 @@ export default function Shop() {
           pinchScaleRef.current = nextScale;
           floatScale.setValue(nextScale);
         } else if (touches.length === 1) {
-          // Single-finger drag
           const newX = floatBasePos.current.x + gesture.dx;
           const newY = floatBasePos.current.y + gesture.dy;
           setFloatPos({ x: newX, y: newY });
@@ -1780,7 +2046,6 @@ export default function Shop() {
   useEffect(() => {
     (async () => {
       const ord = await loadOrders();
-
       setOrders(ord);
 
       track("shop_state_hydrated", {
@@ -1791,8 +2056,703 @@ export default function Shop() {
         orders: ord.length,
       });
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const iapByProductId = useMemo(() => {
+    const m: Record<string, any> = {};
+
+    for (const it of catalog) {
+      const pid = resolveStoreProductId(it);
+      if (pid) {
+        m[String(pid)] = {
+          ...it,
+          iapProductId: pid,
+        };
+      }
+    }
+
+    for (const c of COMPANIONS as any[]) {
+      const pid = resolveStoreProductId(c);
+      if (pid) {
+        m[String(pid)] = {
+          id: c.id,
+          title: c.title,
+          desc: c.desc,
+          category: "companions",
+          image: c.image,
+          priceUSD: getCompanionUsdPrice(c),
+          priceCoins: c.coinPrice ?? 25000,
+          meta: (c as any)?.meta ?? {},
+          iapProductId: pid,
+        };
+      }
+    }
+
+    return m;
+  }, []);
+
+  const allIapProductIds = useMemo(() => {
+    return Object.keys(iapByProductId).filter(Boolean);
+  }, [iapByProductId]);
+
+  const resolveIapCatalogItem = (rawProductId: string | null | undefined) => {
+    const pid = String(rawProductId || "").trim();
+    if (!pid) return null;
+
+    const exact = iapByProductId[pid];
+    if (exact) return exact;
+
+    const under = toUnderscoreId(pid);
+    const alias =
+      ASC_PRODUCT_ALIASES[pid] ||
+      ASC_PRODUCT_ALIASES[under] ||
+      ASC_PRODUCT_ALIASES[canonId(pid)] ||
+      ASC_PRODUCT_ALIASES[canonId(under)];
+
+    if (alias && iapByProductId[alias]) {
+      return iapByProductId[alias];
+    }
+
+    const entry = Object.entries(iapByProductId).find(([key, value]) => {
+      const keyUnder = toUnderscoreId(key);
+      const valuePid = resolveStoreProductId(value as any);
+      return (
+        key === pid ||
+        keyUnder === under ||
+        String(valuePid || "") === pid ||
+        toUnderscoreId(String(valuePid || "")) === under
+      );
+    });
+
+    if (entry?.[1]) return entry[1];
+
+    if (
+      pendingIapProductIdRef.current &&
+      toUnderscoreId(pendingIapProductIdRef.current) === under &&
+      pendingIapItemRef.current
+    ) {
+      return pendingIapItemRef.current;
+    }
+
+    if (pendingIapItemRef.current) {
+      const pendingResolved = resolveStoreProductId(pendingIapItemRef.current);
+      if (pendingResolved && toUnderscoreId(String(pendingResolved)) === under) {
+        return pendingIapItemRef.current;
+      }
+    }
+
+    return null;
+  };
+
+
+  const PROCESSED_IAP_TX_KEY = "@nova/iap-processed-transactions:v1";
+
+  const getPurchaseProductId = (purchase: any): string =>
+    String(purchase?.productId || purchase?.id || "").trim();
+
+  const getPurchaseTransactionId = (purchase: any): string =>
+    String(
+      purchase?.transactionId ||
+        purchase?.purchaseToken ||
+        purchase?.orderId ||
+        ""
+    ).trim();
+
+  const readProcessedIapTransactions = async (): Promise<Set<string>> => {
+    try {
+      const raw = await AsyncStorage.getItem(PROCESSED_IAP_TX_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return new Set(
+        Array.isArray(parsed) ? parsed.map((v) => String(v)).filter(Boolean) : []
+      );
+    } catch {
+      return new Set<string>();
+    }
+  };
+
+  const markIapTransactionProcessed = async (transactionId: string) => {
+    if (!transactionId) return;
+
+    const stored = await readProcessedIapTransactions();
+    stored.add(transactionId);
+
+    // Keep the newest bounded set so this cache cannot grow forever.
+    const values = Array.from(stored).slice(-500);
+    await AsyncStorage.setItem(PROCESSED_IAP_TX_KEY, JSON.stringify(values));
+  };
+
+  const clearIapPurchasePendingState = () => {
+    iapPurchaseInFlightRef.current = false;
+    pendingIapProductIdRef.current = null;
+    pendingIapItemRef.current = null;
+
+    if (purchaseResetTimerRef.current) {
+      clearTimeout(purchaseResetTimerRef.current);
+      purchaseResetTimerRef.current = null;
+    }
+  };
+
+  const ensureIapConnected = async () => {
+    const mod = await getInAppPurchasesSafe();
+
+    if (!mod || typeof mod.initConnection !== "function") {
+      console.warn("[IAP] expo-iap is unavailable in this runtime");
+      return false;
+    }
+
+    if (iapConnectedRef.current) return true;
+
+    try {
+      console.log("[IAP DEBUG] initConnection starting");
+      const connected = await mod.initConnection();
+      iapConnectedRef.current = connected !== false;
+      console.log("[IAP DEBUG] initConnection result", connected);
+      return iapConnectedRef.current;
+    } catch (e) {
+      console.warn("[IAP] initConnection failed", e);
+      iapConnectedRef.current = false;
+      return false;
+    }
+  };
+
+  const fetchIapProducts = async () => {
+    if (iapProductsPromiseRef.current) {
+      return iapProductsPromiseRef.current;
+    }
+
+    iapProductsPromiseRef.current = (async () => {
+      const available = await isIapAvailable();
+      if (!available) {
+        setIapReady(false);
+        setAvailableIapProductIds([]);
+        return [] as string[];
+      }
+
+      const connected = await ensureIapConnected();
+      if (!connected) {
+        setIapReady(false);
+        setAvailableIapProductIds([]);
+        return [] as string[];
+      }
+
+      try {
+        const ids = allIapProductIds;
+        if (!ids.length) {
+          setIapReady(true);
+          setAvailableIapProductIds([]);
+          return [] as string[];
+        }
+
+        const products = await ExpoIAP.fetchProducts({
+          skus: ids,
+          type: "in-app",
+        });
+
+        const returnedIds = (Array.isArray(products) ? products : [])
+          .map((product: any) => String(product?.id || product?.productId || ""))
+          .filter(Boolean);
+
+        console.log("[IAP DEBUG] expo-iap products loaded", {
+          requested: ids,
+          returned: returnedIds,
+        });
+
+        setAvailableIapProductIds(returnedIds);
+        setIapReady(true);
+
+        track("shop_iap_products_loaded", {
+          requested: ids.length,
+          returned: returnedIds.length,
+        });
+
+        return returnedIds;
+      } catch (e) {
+        console.warn("[IAP] fetchProducts failed", e);
+        setIapReady(false);
+        setAvailableIapProductIds([]);
+        return [] as string[];
+      } finally {
+        iapProductsPromiseRef.current = null;
+      }
+    })();
+
+    return iapProductsPromiseRef.current;
+  };
+
+  const fulfillDigitalItem = async (
+      it: any,
+      productId?: string,
+      options?: { autoEquip?: boolean; source?: string }
+    ) => {
+    const autoEquip = options?.autoEquip !== false;
+    const equipSource = options?.source || "iap_purchase";
+    if (isComingSoon(it)) {
+      track("shop_blocked_fulfill_coming_soon", {
+        sku: it?.id,
+        category: it?.category,
+      });
+      return;
+    }
+
+    if (it.category === "coin_pack") {
+      const meta = (it as any)?.meta ?? {};
+      const amt =
+        meta.coinAmount ??
+        (it as any).coinAmount ??
+        dollarsToCoins(it.priceUSD ?? 0);
+
+      const cur = coinsRef.current ?? coins ?? 0;
+      const nextCoins = cur + (amt || 0);
+      coinsRef.current = nextCoins;
+      await setCoins(nextCoins);
+
+      showIapDebug("fulfill_success", {
+        productId,
+        itemId: it.id,
+        category: it.category,
+      });
+
+      track("shop_coins_added", {
+        amount: amt,
+        via: "iap",
+        sku: it.id,
+      });
+      return;
+    }
+
+    if (it.category === "bundle") {
+      const grants: string[] =
+        (it as any)?.meta?.bundleGrants ||
+        (it as any)?.bundleGrants ||
+        [];
+
+      if (Array.isArray(grants) && grants.length) {
+        const normalized = grants.map((x) => canonId(x) || x);
+
+        for (const gid of normalized) {
+          await grantAny(gid);
+          await persistOwnedPurchaseLocally(gid);
+        }
+
+        showIapDebug("fulfill_success", {
+          productId,
+          itemId: it.id,
+          category: it.category,
+        });
+
+        track("shop_purchase_complete", {
+          sku: it.id,
+          category: "bundle",
+          mode: "iap",
+          grants: normalized,
+        });
+
+        const firstTheme = normalized.find((x) =>
+          String(x).startsWith("theme:")
+        );
+        const firstCursor = normalized.find((x) =>
+          String(x).startsWith("cursor:")
+        );
+
+        if (autoEquip && firstTheme)
+          equipThemeImmediate(firstTheme, { source: equipSource });
+        if (autoEquip && firstCursor)
+          await equipCursorImmediate(firstCursor, { source: equipSource });
+
+        return;
+      }
+
+      const fallbackId = canonId(it.id) || it.id;
+      await grantAny(fallbackId);
+      await persistOwnedPurchaseLocally(fallbackId);
+
+      showIapDebug("fulfill_success", {
+        productId,
+        itemId: it.id,
+        category: it.category,
+      });
+
+      track("shop_purchase_complete", {
+        sku: fallbackId,
+        category: "bundle",
+        mode: "iap",
+        note: "bundleGrants missing",
+      });
+      return;
+    }
+
+    const grantIdRaw = (it as any)?.meta?.grantId || it.id;
+    const grantId = canonId(grantIdRaw) || grantIdRaw;
+
+    await grantAny(grantId);
+    await persistOwnedPurchaseLocally(grantId);
+    await persistOwnedPurchaseLocally((it as any)?.id || null);
+    await persistOwnedPurchaseLocally(resolveStoreProductId(it));
+
+    showIapDebug("fulfill_success", {
+      productId,
+      itemId: it.id,
+      category: it.category,
+    });
+
+    track("shop_purchase_complete", {
+      sku: grantId,
+      category: it.category,
+      mode: "iap",
+    });
+
+    if (autoEquip && it.category === "theme")
+      equipThemeImmediate(grantId, { source: equipSource });
+    if (autoEquip && it.category === "cursor")
+      await equipCursorImmediate(grantId, { source: equipSource });
+
+    if (autoEquip && it.category === "companions") {
+      await equipCompanion(grantId).catch(() => {});
+    }
+
+    if (it.category === "ask_memory") {
+      const cfg = resolveAskMemoryConfigFromItem(it);
+      await updateAskMemoryProfile((currentUser as any)?.id ?? null, cfg);
+      if (!cfg)
+        console.warn("[shop] ask_memory purchased but meta missing tier/limit");
+    }
+
+    if (it.category === "ask_personality") {
+      const pid = resolveAskPersonalityFromItem(it);
+      await updateAskPersonalityProfile((currentUser as any)?.id ?? null, pid);
+      if (!pid)
+        console.warn(
+          "[shop] ask_personality purchased but meta missing personalityId"
+        );
+    }
+  };
+
+
+  const processCompletedIapPurchase = async (
+    purchase: any,
+    fallbackItem?: any
+  ) => {
+    const productId =
+      getPurchaseProductId(purchase) || pendingIapProductIdRef.current || "";
+    const item =
+      resolveIapCatalogItem(productId) ||
+      fallbackItem ||
+      pendingIapItemRef.current;
+
+    if (!item) {
+      console.warn("[IAP] Could not resolve purchased item", {
+        productId,
+        purchase,
+      });
+      clearIapPurchasePendingState();
+      return false;
+    }
+
+    const transactionId = getPurchaseTransactionId(purchase);
+    const persistedTransactions = await readProcessedIapTransactions();
+    const alreadyProcessed =
+      !!transactionId &&
+      (processedPurchaseIdsRef.current.has(transactionId) ||
+        persistedTransactions.has(transactionId));
+
+    try {
+      if (!alreadyProcessed) {
+        await fulfillDigitalItem(item, productId);
+        await persistOwnedPurchaseLocally((item as any)?.id || null);
+        await persistOwnedPurchaseLocally((item as any)?.meta?.grantId || null);
+        await persistOwnedPurchaseLocally(productId);
+        await persistOwnedPurchaseLocally(
+          canonId((item as any)?.id || "") || null
+        );
+
+        if (transactionId) {
+          processedPurchaseIdsRef.current.add(transactionId);
+          await markIapTransactionProcessed(transactionId);
+        }
+      } else {
+        console.log("[IAP DEBUG] duplicate transaction ignored", {
+          transactionId,
+          productId,
+        });
+      }
+
+      // Coins are consumable; themes/cursors/etc. are non-consumable.
+      await ExpoIAP.finishTransaction({
+        purchase,
+        isConsumable: item?.category === "coin_pack",
+      });
+
+      console.log("[IAP DEBUG] transaction finished", {
+        transactionId,
+        productId,
+        consumable: item?.category === "coin_pack",
+      });
+
+      try {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      } catch {}
+
+      clearIapPurchasePendingState();
+      return true;
+    } catch (e) {
+      console.warn("[IAP] purchase fulfillment/finalization failed", e);
+      clearIapPurchasePendingState();
+      return false;
+    }
+  };
+
+  const restoreAvailableIapPurchases = async (silent = true) => {
+    try {
+      const purchases = await ExpoIAP.getAvailablePurchases();
+      if (!Array.isArray(purchases) || !purchases.length) return 0;
+
+      let restored = 0;
+      for (const purchase of purchases) {
+        const productId = getPurchaseProductId(purchase);
+        const item = resolveIapCatalogItem(productId);
+        if (!item) continue;
+
+        const ok = await processCompletedIapPurchase(purchase, item);
+        if (ok) restored += 1;
+      }
+
+      if (restored > 0 && !silent) {
+        Alert.alert(
+          "Purchases restored",
+          restored === 1
+            ? "Your Apple purchase was restored."
+            : `${restored} Apple purchases were restored.`
+        );
+      }
+
+      return restored;
+    } catch (e) {
+      console.warn("[IAP] getAvailablePurchases failed", e);
+      return 0;
+    }
+  };
+
+  const buyWithIap = async (it: any) => {
+    console.log("[IAP DEBUG] buyWithIap invoked", {
+      itemId: it?.id,
+      category: it?.category,
+    });
+
+    if (iapPurchaseInFlightRef.current) {
+      Alert.alert(
+        "Purchase in progress",
+        "Please finish or cancel the current Apple purchase first."
+      );
+      return;
+    }
+
+    if (
+      STRICT_TEST_COMPANION_IAP &&
+      it?.category === "companions" &&
+      !isStrictCompanionTestItem(it)
+    ) {
+      Alert.alert(
+        "Companion IAP test mode",
+        "Right now this build is locked to the Nova Bunny companion for IAP testing."
+      );
+      return;
+    }
+
+    if (isComingSoon(it)) {
+      Alert.alert("Coming soon", COMING_SOON_TEXT);
+      return;
+    }
+
+    const candidatePids =
+      STRICT_TEST_COMPANION_IAP &&
+      it?.category === "companions" &&
+      isStrictCompanionTestItem(it)
+        ? [STRICT_TEST_COMPANION_PRODUCT_ID]
+        : resolveStoreProductIdCandidates(it);
+
+    if (!candidatePids.length) {
+      Alert.alert(
+        "IAP not configured",
+        "This item is missing a usable App Store product ID."
+      );
+      return;
+    }
+
+    const available = await isIapAvailable();
+    if (!available) {
+      showIapUnavailableAlert("module_missing");
+      return;
+    }
+
+    const connected = await ensureIapConnected();
+    if (!connected) {
+      showIapUnavailableAlert("connect_failed");
+      return;
+    }
+
+    try {
+      const requestedIds = Array.from(new Set(candidatePids));
+      const products = await ExpoIAP.fetchProducts({
+        skus: requestedIds,
+        type: "in-app",
+      });
+
+      const candidateSet = new Set(normalizeIapProductIdSet(candidatePids));
+      const eligibleProducts = (Array.isArray(products) ? products : []).filter(
+        (product: any) => {
+          const id = String(product?.id || product?.productId || "").trim();
+          return normalizeIapProductIdSet([id]).some((v) =>
+            candidateSet.has(v)
+          );
+        }
+      );
+
+      const product = eligibleProducts[0];
+      const productId = String(
+        product?.id || product?.productId || requestedIds[0] || ""
+      ).trim();
+
+      if (!product || !productId) {
+        Alert.alert(
+          "IAP unavailable for item",
+          `Apple did not return a matching product for ${String(it?.id || "this item")}.`
+        );
+        return;
+      }
+
+      pendingIapProductIdRef.current = productId;
+      pendingIapItemRef.current = it;
+      iapPurchaseInFlightRef.current = true;
+
+      // Safety reset only. Successful/cancelled flows clear this from listeners.
+      purchaseResetTimerRef.current = setTimeout(() => {
+        clearIapPurchasePendingState();
+      }, 120000);
+
+      track("shop_iap_purchase_start", {
+        productId,
+        sku: it.id,
+        category: it.category,
+      });
+
+      console.log("[IAP DEBUG] requestPurchase starting", {
+        productId,
+        itemId: it?.id,
+      });
+
+      // The actual result is delivered to purchaseUpdatedListener or
+      // purchaseErrorListener. Never credit from this return value.
+      await ExpoIAP.requestPurchase({
+        request: {
+          apple: { sku: productId },
+          google: { skus: [productId] },
+        },
+        type: "in-app",
+      });
+    } catch (e: any) {
+      const message = String(e?.message || e || "");
+      const code = String(e?.code || "").toLowerCase();
+      const lower = message.toLowerCase();
+
+      console.warn("[IAP] requestPurchase failed", e);
+      clearIapPurchasePendingState();
+
+      if (
+        code.includes("cancel") ||
+        lower.includes("cancel") ||
+        lower.includes("user cancelled")
+      ) {
+        track("shop_iap_cancelled", { sku: it?.id });
+        return;
+      }
+
+      Alert.alert("Purchase error", message || "Could not start the purchase.");
+    }
+  };
+
+  useEffect(() => {
+    let mounted = true;
+
+    const startIap = async () => {
+      if (!(await isIapAvailable())) return;
+
+      // Register listeners before starting any purchase request.
+      purchaseUpdatedSubscriptionRef.current =
+        ExpoIAP.purchaseUpdatedListener(async (purchase: any) => {
+          if (!mounted) return;
+
+          console.log("[IAP DEBUG] purchaseUpdatedListener fired", {
+            productId: getPurchaseProductId(purchase),
+            transactionId: getPurchaseTransactionId(purchase),
+          });
+
+          await processCompletedIapPurchase(
+            purchase,
+            pendingIapItemRef.current || undefined
+          );
+        });
+
+      purchaseErrorSubscriptionRef.current =
+        ExpoIAP.purchaseErrorListener((error: any) => {
+          if (!mounted) return;
+
+          const message = String(error?.message || error || "");
+          const code = String(error?.code || "").toLowerCase();
+          const cancelled =
+            code.includes("cancel") || message.toLowerCase().includes("cancel");
+
+          console.warn("[IAP DEBUG] purchaseErrorListener fired", error);
+          clearIapPurchasePendingState();
+
+          if (cancelled) {
+            track("shop_iap_cancelled", {
+              productId: pendingIapProductIdRef.current,
+            });
+            return;
+          }
+
+          Alert.alert("Purchase error", message || "The purchase failed.");
+        });
+
+      const connected = await ensureIapConnected();
+      if (!connected || !mounted) return;
+
+      await fetchIapProducts();
+
+      // Complete any StoreKit transaction that succeeded while the app was
+      // closed or before JavaScript finished starting.
+      await restoreAvailableIapPurchases(true);
+    };
+
+    void startIap();
+
+    return () => {
+      mounted = false;
+
+      purchaseUpdatedSubscriptionRef.current?.remove?.();
+      purchaseUpdatedSubscriptionRef.current = null;
+
+      purchaseErrorSubscriptionRef.current?.remove?.();
+      purchaseErrorSubscriptionRef.current = null;
+
+      if (purchaseResetTimerRef.current) {
+        clearTimeout(purchaseResetTimerRef.current);
+        purchaseResetTimerRef.current = null;
+      }
+
+      pendingIapProductIdRef.current = null;
+      pendingIapItemRef.current = null;
+      iapProductsPromiseRef.current = null;
+      iapPurchaseInFlightRef.current = false;
+
+      if (iapConnectedRef.current) {
+        void ExpoIAP.endConnection().catch((e: any) =>
+          console.warn("[IAP] endConnection failed", e)
+        );
+        iapConnectedRef.current = false;
+      }
+    };
+  }, [currentUser?.id]);
 
   useEffect(() => {
     const onUrl = async (event: { url: string }) => {
@@ -1804,99 +2764,15 @@ export default function Shop() {
       const it = catalog.find((x) => x.id === sku);
       if (!it) return;
 
-      const cid = canonId(it.id);
+      const requiresShip =
+        REQUIRES_SHIPPING.has(it.category as Category) ||
+        (it.category === "bundle" && !!(it as any)?.meta?.requiresShipping);
 
-      if (
-        it.category === "theme" ||
-        it.category === "cursor" ||
-        it.category === "bundle"
-      ) {
-        const grantId = cid || it.id;
-
-        void grant(grantId);
-
-        track("shop_purchase_complete", {
-          sku: grantId,
-          category: it.category,
-          mode: "stripe",
-        });
-
-        if (it.category === "theme")
-          equipThemeImmediate(grantId, { source: "deeplink" });
-        if (it.category === "cursor")
-          void equipCursorImmediate(grantId, { source: "deeplink" });
+      if (!requiresShip) {
+        console.warn("[shop] Ignoring non-shipping Stripe return for", it.id);
         return;
       }
 
-      if (it.category === "coin_pack") {
-        const addAmt = dollarsToCoins(it.priceUSD ?? 0);
-        const cur = coinsRef.current ?? coins ?? 0;
-        const nextCoins = cur + addAmt;
-
-        coinsRef.current = nextCoins;
-        await setCoins(nextCoins);
-
-        track("shop_coins_added", {
-          amount: addAmt,
-          via: "stripe",
-          sku: it.id,
-        });
-        return;
-      }
-
-      // Ask memory upgrade
-      if (it.category === "ask_memory") {
-        const grantId = cid || it.id;
-        void grant(grantId);
-
-        const cfg = resolveAskMemoryConfigFromItem(it);
-        await updateAskMemoryProfile(
-          (currentUser as any)?.id ?? null,
-          cfg
-        );
-
-        track("shop_purchase_complete", {
-          sku: grantId,
-          category: it.category,
-          mode: "stripe",
-        });
-
-        if (!cfg) {
-          console.warn(
-            "[shop] ask_memory item purchased but no config found in catalog.meta"
-          );
-        }
-
-        return;
-      }
-
-      // Ask personality purchase
-      if (it.category === "ask_personality") {
-        const grantId = cid || it.id;
-        void grant(grantId);
-
-        const personalityId = resolveAskPersonalityFromItem(it);
-        await updateAskPersonalityProfile(
-          (currentUser as any)?.id ?? null,
-          personalityId
-        );
-
-        track("shop_purchase_complete", {
-          sku: grantId,
-          category: it.category,
-          mode: "stripe",
-        });
-
-        if (!personalityId) {
-          console.warn(
-            "[shop] ask_personality item purchased but no personalityId found in catalog.meta"
-          );
-        }
-
-        return;
-      }
-
-      // Tangible orders (plushies, clothing, tangibles, bundles that ship)
       const order: Order = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         sku: it.id,
@@ -1918,43 +2794,28 @@ export default function Shop() {
     const sub = RNLinking.addEventListener("url", onUrl);
     Linking.getInitialURL().then((url) => url && onUrl({ url }));
     return () => sub.remove();
-  }, [setCoins, coins, grant, currentUser]);
+  }, []);
 
-  function markOwned(id: string) {
-    const cid = canonId(id);
-    const grantId = cid || id;
-    void grant(grantId);
-    track("shop_owned_marked", {
-      id: grantId,
-    });
+  async function markOwned(id: string) {
+    const grantId = canonId(id) || id;
+    await grantAny(grantId);
+    track("shop_owned_marked", { id: grantId });
   }
 
-  function equipThemeImmediate(
-    shopThemeId: string,
-    meta?: Record<string, any>
-  ) {
+  function equipThemeImmediate(shopThemeId: string, meta?: Record<string, any>) {
     const cid = canonId(shopThemeId);
     const mapped = toThemeCtxId(cid) ?? cid;
     if (typeof setThemeById === "function") setThemeById(mapped);
-    track("shop_equip", {
-      kind: "theme",
-      id: cid,
-      mapped,
-      ...meta,
-    });
+    track("shop_equip", { kind: "theme", id: cid, mapped, ...meta });
   }
 
   function unequipThemeImmediate(meta?: Record<string, any>) {
     const prev = themeId;
     if (typeof setThemeById === "function") {
-      const def = toThemeCtxId("theme:neon") ?? "theme:neon";
+      const def = toThemeCtxId("theme_neon") ?? "neon";
       setThemeById(def as any);
     }
-    track("shop_unequip", {
-      kind: "theme",
-      id: prev,
-      ...meta,
-    });
+    track("shop_unequip", { kind: "theme", id: prev, ...meta });
   }
 
   async function equipCursorImmediate(
@@ -1965,12 +2826,7 @@ export default function Shop() {
     if (typeof setCursorById === "function") {
       await setCursorById(cid);
     }
-    track("shop_equip", {
-      kind: "cursor",
-      id: cid,
-      mapped: cid,
-      ...meta,
-    });
+    track("shop_equip", { kind: "cursor", id: cid, mapped: cid, ...meta });
   }
 
   async function unequipCursorImmediate(meta?: Record<string, any>) {
@@ -1978,130 +2834,123 @@ export default function Shop() {
     if (typeof setCursorById === "function") {
       await setCursorById(null);
     }
-    track("shop_unequip", {
-      kind: "cursor",
-      id: prev,
-      ...meta,
-    });
+    track("shop_unequip", { kind: "cursor", id: prev, ...meta });
   }
 
   const THEMES_MENU: QuickItem[] = useMemo(() => {
     const eq = canonId(themeId ?? "");
     return [
       {
-        id: "theme:neon",
+        id: "theme_neon",
         name: "Neon Nova",
         kind: "theme",
-        owned: isOwned("theme:neon"),
-        equipped: eq === canonId("theme:neon"),
+        owned: isOwnedAny("theme_neon"),
+        equipped: eq === canonId("theme_neon"),
       },
       {
-        id: "theme:starry",
+        id: "theme_starry",
         name: "Starry Night",
         kind: "theme",
-        owned: isOwned("theme:starry"),
-        equipped: eq === canonId("theme:starry"),
+        owned: isOwnedAny("theme_starry"),
+        equipped: eq === canonId("theme_starry"),
       },
       {
-        id: "theme:pink",
+        id: "theme_pink",
         name: "Pink Dawn",
         kind: "theme",
-        owned: isOwned("theme:pink"),
-        equipped: eq === canonId("theme:pink"),
+        owned: isOwnedAny("theme_pink"),
+        equipped: eq === canonId("theme_pink"),
       },
       {
-        id: "theme:dark",
+        id: "theme_dark",
         name: "Dark Nova",
         kind: "theme",
-        owned: isOwned("theme:dark"),
-        equipped: eq === canonId("theme:dark"),
+        owned: isOwnedAny("theme_dark"),
+        equipped: eq === canonId("theme_dark"),
       },
       {
-        id: "theme:mint",
+        id: "theme_mint",
         name: "Mint Breeze",
         kind: "theme",
-        owned: isOwned("theme:mint"),
-        equipped: eq === canonId("theme:mint"),
+        owned: isOwnedAny("theme_mint"),
+        equipped: eq === canonId("theme_mint"),
       },
       {
-        id: "theme:glitter",
+        id: "theme_glitter",
         name: "Glitter",
         kind: "theme",
-        owned: isOwned("theme:glitter"),
-        equipped: eq === canonId("theme:glitter"),
+        owned: isOwnedAny("theme_glitter"),
+        equipped: eq === canonId("theme_glitter"),
       },
       {
-        id: "theme:blackgold",
+        id: "theme_black_gold",
         name: "Black & Gold",
         kind: "theme",
-        owned: isOwned("theme:blackgold"),
-        equipped: eq === canonId("theme:blackgold"),
+        owned: isOwnedAny("theme_black_gold"),
+        equipped: eq === canonId("theme_black_gold"),
       },
       {
-        id: "theme:crimson",
+        id: "theme_crimson",
         name: "Crimson Dream",
         kind: "theme",
-        owned: isOwned("theme:crimson"),
-        equipped: eq === canonId("theme:crimson"),
+        owned: isOwnedAny("theme_crimson"),
+        equipped: eq === canonId("theme_crimson"),
       },
       {
-        id: "theme:emerald",
+        id: "theme_emerald",
         name: "Emerald Wave",
         kind: "theme",
-        owned: isOwned("theme:emerald"),
-        equipped: eq === canonId("theme:emerald"),
+        owned: isOwnedAny("theme_emerald"),
+        equipped: eq === canonId("theme_emerald"),
       },
       {
-        id: "theme:neonpurple",
+        id: "theme_neon_purple",
         name: "Neon Purple",
         kind: "theme",
-        owned: isOwned("theme:neonpurple"),
-        equipped: eq === canonId("theme:neonpurple"),
+        owned: isOwnedAny("theme_neon_purple"),
+        equipped: eq === canonId("theme_neon_purple"),
       },
       {
-        id: "theme:silver",
+        id: "theme_silver",
         name: "Silver Frost",
         kind: "theme",
-        owned: isOwned("theme:silver"),
-        equipped: eq === canonId("theme:silver"),
+        owned: isOwnedAny("theme_silver"),
+        equipped: eq === canonId("theme_silver"),
       },
     ];
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [purchases, themeId]);
+  }, [purchases, themeId, isOwnedAny]);
 
   const CURSORS_MENU: QuickItem[] = useMemo(() => {
     const eq = canonId(cursorId ?? "");
     return [
       {
-        id: "cursor:glow",
+        id: "cursor_glow",
         name: "Glow Cursor",
         kind: "cursor",
-        owned: isOwned("cursor:glow"),
-        equipped: eq === canonId("cursor:glow"),
+        owned: isOwnedAny("cursor_glow"),
+        equipped: eq === canonId("cursor_glow"),
       },
       {
-        id: "cursor:orb",
+        id: "cursor_orb",
         name: "Orb Glow",
         kind: "cursor",
-        owned: isOwned("cursor:orb"),
-        equipped: eq === canonId("cursor:orb"),
+        owned: isOwnedAny("cursor_orb"),
+        equipped: eq === canonId("cursor_orb"),
       },
       {
-        id: "cursor:star_trail",
+        id: "cursor_star_trail",
         name: "Star Trail",
         kind: "cursor",
-        owned: isOwned("cursor:star_trail"),
-        equipped: eq === canonId("cursor:star_trail"),
+        owned: isOwnedAny("cursor_star_trail"),
+        equipped: eq === canonId("cursor_star_trail"),
       },
     ];
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [purchases, cursorId]);
+  }, [purchases, cursorId, isOwnedAny]);
 
-  // My Companions strip uses both CompanionContext + PurchasesContext
   const ownedCompanions = useMemo(
     () =>
       COMPANIONS.filter((c: any) => {
-        const cid = c.canonId || canonId(c.id);
+        const cid = canonId(c.id);
 
         const effectType = getCompanionEffect(c.id);
         const isLegendary =
@@ -2112,22 +2961,17 @@ export default function Shop() {
           effectType === "legend_spiral" ||
           effectType === "shield";
 
-        // v1: legendary companions preview-only
-        if (isLegendary) {
-          return false;
-        }
+        if (isLegendary) return false;
 
         const fromContext = (ownedCompanionIds || []).some(
-          (ownedId: string) =>
-            ownedId === cid ||
-            ownedId === c.id ||
-            ownedId === canonId(c.id)
+          (ownedId: string) => canonId(ownedId) === cid
         );
-        const fromPurchases =
-          isOwned(c.id) || isOwned(cid) || isOwned(canonId(c.id));
+
+        const fromPurchases = isOwnedAny(c.id);
+
         return fromContext || fromPurchases;
       }),
-    [ownedCompanionIds, purchases, isOwned]
+    [ownedCompanionIds, purchases, isOwnedAny]
   );
 
   function quickEquip(id: string, kind: "theme" | "cursor") {
@@ -2156,13 +3000,12 @@ export default function Shop() {
   }
 
   function quickBuy(id: string) {
-    const kindGuess: "theme" | "cursor" | "other" = id.startsWith("theme:")
+    const cid = canonId(id);
+    const kindGuess: "theme" | "cursor" | "other" = cid.startsWith("theme:")
       ? "theme"
-      : id.startsWith("cursor:")
+      : cid.startsWith("cursor:")
       ? "cursor"
       : "other";
-
-    const cid = canonId(id);
 
     track("shop_quick_action", {
       action: "unlock_click",
@@ -2184,14 +3027,8 @@ export default function Shop() {
 
     setNeed(1000);
     setShowInsufficient(true);
-    track("shop_modal_insufficient_shown", {
-      needed: 1000,
-      via: "quick_row",
-    });
-    setTimeout(
-      () => scrollRef.current?.scrollToEnd({ animated: true }),
-      50
-    );
+    track("shop_modal_insufficient_shown", { needed: 1000, via: "quick_row" });
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
   }
 
   const groups = useMemo(() => {
@@ -2208,16 +3045,6 @@ export default function Shop() {
     };
 
     for (const it of catalog) {
-      // optional: skip some bundles if desired
-      if (it.category === "bundle") {
-        const idLc = (it.id ?? "").toLowerCase();
-        const titleLc =
-          typeof it.title === "string" ? it.title.toLowerCase() : "";
-        if (idLc.includes("neon") || titleLc.includes("neon starter")) {
-          // currently we *do* want the Neon bundle, so we don't continue here.
-        }
-      }
-
       byCat[it.category].push(it);
     }
     return byCat;
@@ -2227,7 +3054,15 @@ export default function Shop() {
     const price = it.priceCoins ?? 0;
     if (!price) return;
 
-    // ask_* are USD-only (no coin purchases)
+    if (isComingSoon(it)) {
+      Alert.alert("Coming soon", COMING_SOON_TEXT);
+      track("shop_blocked_coins_coming_soon", {
+        sku: it?.id,
+        category: it?.category,
+      });
+      return;
+    }
+
     if (it.category === "ask_memory" || it.category === "ask_personality") {
       return;
     }
@@ -2262,10 +3097,7 @@ export default function Shop() {
         withAddress: true,
       });
 
-      setPendingItem({
-        ...it,
-        priceCoins: price,
-      });
+      setPendingItem({ ...it, priceCoins: price });
       setPendingSize(chosen);
       setAddressVisible(true);
       return;
@@ -2286,13 +3118,66 @@ export default function Shop() {
     const nextCoins = curCoins - price;
     coinsRef.current = nextCoins;
 
-    const cid = canonId(it.id);
-    const grantId = cid || it.id;
+    if (it.category === "bundle") {
+      const grants: string[] =
+        (it as any)?.meta?.bundleGrants ||
+        (it as any)?.bundleGrants ||
+        [];
+
+      if (Array.isArray(grants) && grants.length) {
+        const normalized = grants.map((x) => canonId(x) || x);
+
+        void (async () => {
+          for (const gid of normalized) {
+            await grantAny(gid);
+          }
+
+          track("shop_purchase_complete", {
+            sku: it.id,
+            category: "bundle",
+            mode: "coins",
+            price,
+            grants: normalized,
+          });
+
+          const firstTheme = normalized.find((x) =>
+            String(x).startsWith("theme:")
+          );
+          const firstCursor = normalized.find((x) =>
+            String(x).startsWith("cursor:")
+          );
+
+          if (firstTheme)
+            equipThemeImmediate(firstTheme, { source: "coins_bundle" });
+          if (firstCursor)
+            await equipCursorImmediate(firstCursor, {
+              source: "coins_bundle",
+            });
+        })();
+
+        return;
+      }
+
+      const fallbackId = canonId(it.id) || it.id;
+      void grantAny(fallbackId);
+
+      track("shop_purchase_complete", {
+        sku: fallbackId,
+        category: "bundle",
+        mode: "coins",
+        price,
+        note: "bundleGrants missing",
+      });
+
+      return;
+    }
+
+    const grantIdRaw = (it as any)?.meta?.grantId || it.id;
+    const grantId = canonId(grantIdRaw) || grantIdRaw;
 
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     void setCoins(nextCoins);
-
-    void grant(grantId);
+    void grantAny(grantId);
 
     track("shop_purchase_complete", {
       sku: grantId,
@@ -2305,9 +3190,8 @@ export default function Shop() {
       equipThemeImmediate(grantId, { source: "coins_purchase" });
     if (it.category === "cursor")
       void equipCursorImmediate(grantId, { source: "coins_purchase" });
-    if (it.category === "companions") {
+    if (it.category === "companions")
       void equipCompanion(grantId).catch(() => {});
-    }
   }
 
   async function handleAddressConfirm(addr: AddressPayload) {
@@ -2341,7 +3225,7 @@ export default function Shop() {
       coinsRef.current = nextCoins;
       await setCoins(nextCoins);
 
-      markOwned(it.id);
+      await markOwned(it.id);
 
       const userForOrder =
         currentUser &&
@@ -2397,29 +3281,13 @@ export default function Shop() {
         userForOrder?.username ||
         "Nova customer";
 
-      const phone =
-        a.phone ||
-        a.contactPhone ||
-        a.phoneNumber ||
-        "";
-
-      const address1 =
-        a.address1 ||
-        a.line1 ||
-        a.addressLine1 ||
-        "";
-
-      const address2 =
-        a.address2 ||
-        a.line2 ||
-        a.addressLine2 ||
-        "";
-
+      const phone = a.phone || a.contactPhone || a.phoneNumber || "";
+      const address1 = a.address1 || a.line1 || a.addressLine1 || "";
+      const address2 = a.address2 || a.line2 || a.addressLine2 || "";
       const city = a.city || "";
       const state = a.state || a.region || "";
       const postalCode = a.postalCode || a.zip || "";
       const country = a.country || "";
-
       const notes = a.notes || "";
 
       void notifyCoinOrder({
@@ -2498,18 +3366,58 @@ export default function Shop() {
     }
   }
 
-  // call startCheckout with a proper amount in dollars
   async function moneyBuy(it: any, meta?: { size?: string }) {
     try {
-      // For ask_* items, require login so the profile can store the tier/personality
-      if (
-        (it.category === "ask_memory" || it.category === "ask_personality") &&
-        !(currentUser && (currentUser as any).id)
-      ) {
-        Alert.alert(
-          "Sign in required",
-          "Please sign in or create an account before purchasing Ask upgrades."
-        );
+      if (isComingSoon(it)) {
+        Alert.alert("Coming soon", COMING_SOON_TEXT);
+        track("shop_blocked_money_coming_soon", {
+          sku: it?.id,
+          category: it?.category,
+        });
+        return;
+      }
+
+      const isDigital =
+        it.category === "coin_pack" ||
+        it.category === "theme" ||
+        it.category === "cursor" ||
+        it.category === "companions" ||
+        it.category === "ask_memory" ||
+        it.category === "ask_personality" ||
+        (it.category === "bundle" && !(it as any)?.meta?.requiresShipping);
+
+      if (isDigital) {
+        if (
+          STRICT_TEST_COMPANION_IAP &&
+          it.category === "companions" &&
+          !isStrictCompanionTestItem(it)
+        ) {
+          Alert.alert(
+            "Companion IAP test mode",
+            "This build is focused on one companion only right now. Please tap the Nova Bunny companion for the IAP test."
+          );
+          return;
+        }
+
+        if (
+          (it.category === "ask_memory" || it.category === "ask_personality") &&
+          !(currentUser && (currentUser as any).id)
+        ) {
+          Alert.alert(
+            "Sign in required",
+            "Please sign in or create an account before purchasing Ask upgrades."
+          );
+          return;
+        }
+
+        track("shop_money_buy_click", {
+          sku: it.id,
+          category: it.category,
+          amount: it.priceUSD,
+          via: "iap",
+        });
+
+        await buyWithIap(it);
         return;
       }
 
@@ -2518,21 +3426,32 @@ export default function Shop() {
           ? it.priceUSD
           : undefined;
 
+      const sizeKey =
+        it.stripeProductId ||
+        it.productId ||
+        (it.stripe && it.stripe.productId) ||
+        it.id;
+
+      const chosen =
+        meta?.size || sizeCtl.get(sizeKey) || (getSizesFor(sizeKey)[0] ?? null);
+
       track("shop_money_buy_click", {
         sku: it.id,
         category: it.category,
         amount,
+        via: "stripe_physical",
+        size: chosen || null,
       });
 
       await startCheckout({
         sku: it.id,
         productId: it.stripeProductId || it.productId || undefined,
         priceId: it.stripePriceId || it.priceId || undefined,
-        amount, // dollars — checkout.ts will convert to cents
+        amount,
         currency: "usd",
         quantity: 1,
         meta: {
-          size: meta?.size || null,
+          size: chosen || null,
           category: it.category,
           title: it.title,
         },
@@ -2549,16 +3468,14 @@ export default function Shop() {
   }
 
   function equipTheme(it: any) {
-    if (!isOwned(it.id)) return;
+    if (!isOwnedAny(it.id)) return;
     equipThemeImmediate(it.id, { source: "card_equip" });
   }
 
   async function equipCursor(it: any) {
-    if (!isOwned(it.id)) return;
+    if (!isOwnedAny(it.id)) return;
     await equipCursorImmediate(it.id, { source: "card_equip" });
   }
-
-  /* ------------------------- Companion trigger logic ---------------------- */
 
   function wiggleAction() {
     floatScale.setValue(pinchScaleRef.current);
@@ -2705,16 +3622,14 @@ export default function Shop() {
         break;
     }
 
-    if (activeEffect) {
-      setEffectKey((k) => k + 1);
-    }
+    if (activeEffect) setEffectKey((k) => k + 1);
   }
 
   function triggerCompanion(id: string) {
-    const comp = COMPANIONS.find((c: any) => c.id === id);
+    const comp = COMPANIONS.find((c: any) => canonId(c.id) === canonId(id));
     if (comp) {
       setFloatingCompanion(comp);
-      setActiveEffect(getCompanionEffect(id));
+      setActiveEffect(getCompanionEffect(comp.id));
 
       const dims = Dimensions.get("window");
       const startX = dims.width - FLOAT_SIZE - 16;
@@ -2732,9 +3647,9 @@ export default function Shop() {
 
     setStripActiveId(id);
     companionAnim.setValue(0);
-    track("companion_triggered", { id });
+    track("companion_triggered", { id: canonId(id) });
 
-    equipCompanion(id).catch(() => {});
+    equipCompanion(canonId(id)).catch(() => {});
 
     Animated.sequence([
       Animated.timing(companionAnim, {
@@ -2747,12 +3662,8 @@ export default function Shop() {
         duration: 220,
         useNativeDriver: false,
       }),
-    ]).start(() => {
-      setStripActiveId(null);
-    });
+    ]).start(() => setStripActiveId(null));
   }
-
-  /* ----------------------------- Render helpers --------------------------- */
 
   const renderItem = (
     it: CatalogItem,
@@ -2761,11 +3672,9 @@ export default function Shop() {
     onOpenDetail: ((item: any) => void) | undefined,
     tokensArg: any
   ) => {
-    const owned = isOwned(it.id);
+    const owned = isOwnedAny(it.id);
     const src =
-      it.image ||
-      (it.altImageKey && altImages[it.altImageKey]) ||
-      null;
+      it.image || (it.altImageKey && altImages[it.altImageKey]) || null;
 
     const sizeKey =
       (it as any).stripeProductId ||
@@ -2774,8 +3683,7 @@ export default function Shop() {
       it.id;
 
     let sizes = getSizesFor(sizeKey);
-    if (!sizes.length && it.category === "clothing")
-      sizes = ["S", "M", "L", "XL"];
+    if (!sizes.length && it.category === "clothing") sizes = ["S", "M", "L", "XL"];
     const selected = sizes.length ? sizeCtl.get(sizeKey) || sizes[0] : null;
 
     const cid = canonId(it.id);
@@ -2795,16 +3703,14 @@ export default function Shop() {
     const isAskMemory = category === "ask_memory";
     const isAskPersonality = category === "ask_personality";
 
+    const locked = isComingSoon(it) && !owned;
+
     return (
-      <Card key={it.id} color={color}>
+      <Card key={it.id} color={color} comingSoon={locked}>
         {src ? (
           <Pressable
-            onPress={() => {
-              if (onOpenDetail) onOpenDetail(it);
-            }}
-            onLongPress={() => {
-              if (onOpenDetail) onOpenDetail(it);
-            }}
+            onPress={() => onOpenDetail?.(it)}
+            onLongPress={() => onOpenDetail?.(it)}
             delayLongPress={180}
             style={{
               width: "100%",
@@ -2821,7 +3727,11 @@ export default function Shop() {
           >
             <Image
               source={src}
-              style={{ width: "100%", height: "100%" }}
+              style={{
+                width: "100%",
+                height: "100%",
+                opacity: locked ? 0.72 : 1,
+              }}
               resizeMode="contain"
             />
           </Pressable>
@@ -2833,6 +3743,7 @@ export default function Shop() {
             fontSize: 14,
             fontWeight: "700",
             textAlign: "center",
+            opacity: locked ? 0.85 : 1,
           }}
         >
           {it.title}
@@ -2847,6 +3758,7 @@ export default function Shop() {
               textAlign: "center",
               marginTop: 16,
               paddingHorizontal: 8,
+              opacity: locked ? 0.8 : 1,
             }}
             numberOfLines={3}
           >
@@ -2855,7 +3767,10 @@ export default function Shop() {
         ) : null}
 
         {sizes.length > 0 ? (
-          <View style={{ marginTop: 10 }}>
+          <View
+            style={{ marginTop: 10, opacity: locked ? 0.55 : 1 }}
+            pointerEvents={locked ? "none" : "auto"}
+          >
             <Text
               style={{
                 color: tokensLocal.text as any,
@@ -2870,11 +3785,7 @@ export default function Shop() {
               value={selected}
               onChange={async (s: any) => {
                 sizeCtl.set(sizeKey, s);
-                track("shop_size_change", {
-                  sku: it.id,
-                  sizeKey,
-                  size: s,
-                });
+                track("shop_size_change", { sku: it.id, sizeKey, size: s });
 
                 if (it.category === "clothing") {
                   try {
@@ -2888,7 +3799,8 @@ export default function Shop() {
 
         <View style={{ height: 8 }} />
 
-        {/* Equipable themes */}
+        {(isAskMemory || isAskPersonality) && locked ? <ComingSoonPill /> : null}
+
         {equipable === "theme" ? (
           owned ? (
             <Pressable
@@ -2922,7 +3834,9 @@ export default function Shop() {
                 flexDirection: "row",
                 justifyContent: "space-between",
                 columnGap: 8,
+                opacity: locked ? 0.6 : 1,
               }}
+              pointerEvents={locked ? "none" : "auto"}
             >
               <Pressable
                 onPress={() => buyWithCoins(it)}
@@ -2962,7 +3876,6 @@ export default function Shop() {
             </View>
           )
         ) : equipable === "cursor" ? (
-          /* Equipable cursors */
           owned ? (
             <Pressable
               onPress={() =>
@@ -2995,7 +3908,9 @@ export default function Shop() {
                 flexDirection: "row",
                 justifyContent: "space-between",
                 columnGap: 8,
+                opacity: locked ? 0.6 : 1,
               }}
+              pointerEvents={locked ? "none" : "auto"}
             >
               <Pressable
                 onPress={() => buyWithCoins(it)}
@@ -3035,7 +3950,6 @@ export default function Shop() {
             </View>
           )
         ) : category === "coin_pack" ? (
-          /* Coin packs: USD-only */
           <Pressable
             onPress={() => moneyBuy(it)}
             style={({ pressed }) => ({
@@ -3054,7 +3968,6 @@ export default function Shop() {
             </Text>
           </Pressable>
         ) : isAskMemory || isAskPersonality ? (
-          /* Ask memory & personalities: USD-only and show Owned if purchased */
           owned ? (
             <View
               style={{
@@ -3076,6 +3989,8 @@ export default function Shop() {
                 Owned ✓
               </Text>
             </View>
+          ) : locked ? (
+            <ComingSoonPill />
           ) : (
             <Pressable
               onPress={() => moneyBuy(it)}
@@ -3091,18 +4006,19 @@ export default function Shop() {
               })}
             >
               <Text style={{ color: color, fontWeight: "800" }}>
-                ${it.priceUSD?.toFixed(0)} (USD)
+                ${it.priceUSD?.toFixed(0)}
               </Text>
             </Pressable>
           )
         ) : (
-          /* Default: plushies, clothing, tangibles, bundles */
           <View
             style={{
               flexDirection: "row",
               justifyContent: "space-between",
               columnGap: 8,
+              opacity: locked ? 0.6 : 1,
             }}
+            pointerEvents={locked ? "none" : "auto"}
           >
             <Pressable
               onPress={() => {
@@ -3153,20 +4069,18 @@ export default function Shop() {
     );
   };
 
-  // Floating companion bubble look
   const isFloatingSquareLegend =
     !!floatingCompanion &&
     isWhiteLegendId(
       (floatingCompanion.canonId || floatingCompanion.id) as string
     );
+
   const FLOAT_BORDER_RADIUS = isFloatingSquareLegend ? 16 : FLOAT_SIZE / 2;
   const FLOAT_BG_COLOR = isFloatingSquareLegend
     ? "#000"
     : tokens.isDark
     ? "rgba(15,23,42,0.95)"
     : "rgba(255,255,255,0.95)";
-
-  /* ---------------------------------- UI --------------------------------- */
 
   return (
     <LinearGradient
@@ -3241,7 +4155,6 @@ export default function Shop() {
           </View>
         </View>
 
-        {/* Owned companions quick strip */}
         {ownedCompanions.length > 0 && (
           <View style={{ marginTop: 16, marginBottom: 12 }}>
             <Text
@@ -3256,14 +4169,12 @@ export default function Shop() {
             </Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {ownedCompanions.map((it: any) => {
-                const cid = it.canonId || canonId(it.id);
+                const cid = canonId(it.id);
                 const isActive =
-                  equippedCompanionId &&
-                  canonId(equippedCompanionId) === cid;
+                  equippedCompanionId && canonId(equippedCompanionId) === cid;
+
                 const scale =
-                  isActive || stripActiveId === it.id
-                    ? companionScale
-                    : 1;
+                  isActive || stripActiveId === it.id ? companionScale : 1;
 
                 const abilityShort = getCompanionAbilityShort(it.id);
 
@@ -3336,6 +4247,7 @@ export default function Shop() {
                         </View>
                       )}
                     </Pressable>
+
                     <Text
                       style={{
                         color: tokens.text as any,
@@ -3348,6 +4260,7 @@ export default function Shop() {
                     >
                       {it.shortLabel || it.title}
                     </Text>
+
                     {abilityShort && (
                       <Text
                         style={{
@@ -3362,6 +4275,7 @@ export default function Shop() {
                         {abilityShort}
                       </Text>
                     )}
+
                     {isActive && (
                       <Text
                         style={{
@@ -3382,7 +4296,6 @@ export default function Shop() {
           </View>
         )}
 
-        {/* Quick rows */}
         <View data-quick-rows style={{ marginVertical: 16 }}>
           <QuickRow
             title="Themes"
@@ -3398,7 +4311,6 @@ export default function Shop() {
           />
         </View>
 
-        {/* Plushies */}
         <Section title="Plushies">
           {groups.plushies.map((it) =>
             renderItem(
@@ -3411,7 +4323,6 @@ export default function Shop() {
           )}
         </Section>
 
-        {/* Clothing */}
         <Section title="Clothing">
           {groups.clothing.map((it) =>
             renderItem(
@@ -3424,7 +4335,6 @@ export default function Shop() {
           )}
         </Section>
 
-        {/* Tangibles */}
         <Section title="Tangibles">
           {groups.tangibles.map((it) =>
             renderItem(
@@ -3437,27 +4347,22 @@ export default function Shop() {
           )}
         </Section>
 
-        {/* Companions (store view) */}
         <Section title="Companions">
           {COMPANIONS.map((it: any) => {
-            const cid = it.canonId || canonId(it.id);
+            const cid = canonId(it.id);
 
             const owned =
-              isOwned(it.id) ||
-              isOwned(it.canonId) ||
+              isOwnedAny(it.id) ||
               (ownedCompanionIds || []).some(
-                (ownedId: string) =>
-                  ownedId === cid ||
-                  ownedId === it.id ||
-                  ownedId === canonId(it.id)
+                (ownedId: string) => canonId(ownedId) === cid
               );
 
             const isEquipped =
-              equippedCompanionId &&
-              canonId(equippedCompanionId) === cid;
+              equippedCompanionId && canonId(equippedCompanionId) === cid;
 
             const src = it.image;
             const priceCoins = it.coinPrice ?? 25000;
+            const priceUSD = getCompanionUsdPrice(it);
 
             const effectType = getCompanionEffect(it.id);
             const isLegendary =
@@ -3471,7 +4376,6 @@ export default function Shop() {
             const isWhiteLegend = isWhiteLegendId(cid);
             const abilityShort = getCompanionAbilityShort(it.id);
 
-            // Neon for legendaries, gold if equipped, teal otherwise
             const baseBorderColor = isLegendary
               ? "#22E5FF"
               : CATEGORY_BORDER.tangibles;
@@ -3483,13 +4387,12 @@ export default function Shop() {
               ? "rgba(148,163,184,0.95)"
               : (tokens.text as any);
 
-            // Non-legendary companions: hide in store if owned (they live in My Companions)
-            if (owned && !isLegendary) {
-              return null;
-            }
+            if (owned && !isLegendary) return null;
+
+            const comingSoon = isLegendary;
 
             return (
-              <Card key={it.id} color={borderColor}>
+              <Card key={it.id} color={borderColor} comingSoon={comingSoon}>
                 {src ? (
                   <Pressable
                     onPress={() => setDetailItem(it)}
@@ -3568,27 +4471,7 @@ export default function Shop() {
                 <View style={{ height: 8 }} />
 
                 {isLegendary ? (
-                  <View
-                    style={{
-                      paddingVertical: 8,
-                      paddingHorizontal: 10,
-                      borderRadius: 999,
-                      borderWidth: 1,
-                      borderColor: "rgba(148,163,184,0.5)",
-                      backgroundColor: "rgba(15,23,42,0.65)",
-                      alignItems: "center",
-                    }}
-                  >
-                    <Text
-                      style={{
-                        color: "rgba(148,163,184,0.95)",
-                        fontSize: 11,
-                        fontWeight: "800",
-                      }}
-                    >
-                      Coming in the next update!
-                    </Text>
-                  </View>
+                  <ComingSoonPill />
                 ) : (
                   <View
                     style={{
@@ -3610,7 +4493,7 @@ export default function Shop() {
                         paddingVertical: 10,
                         borderRadius: 10,
                         borderWidth: 1,
-                        borderColor: borderColor,
+                        borderColor,
                         backgroundColor: pressed
                           ? "rgba(56,189,248,0.20)"
                           : "rgba(56,189,248,0.10)",
@@ -3630,7 +4513,7 @@ export default function Shop() {
                     <Pressable
                       onPress={() =>
                         moneyBuy(
-                          { ...it, category: "companions", priceUSD: 12.99 },
+                          { ...it, category: "companions", priceUSD },
                           {}
                         )
                       }
@@ -3640,7 +4523,7 @@ export default function Shop() {
                         paddingVertical: 10,
                         borderRadius: 10,
                         borderWidth: 1,
-                        borderColor: borderColor,
+                        borderColor,
                         backgroundColor: pressed
                           ? "rgba(56,189,248,0.16)"
                           : "transparent",
@@ -3653,7 +4536,7 @@ export default function Shop() {
                           fontSize: 12,
                         }}
                       >
-                        $12.99
+                        ${priceUSD.toFixed(2)}
                       </Text>
                     </Pressable>
                   </View>
@@ -3663,7 +4546,6 @@ export default function Shop() {
           })}
         </Section>
 
-        {/* Themes */}
         <View
           onLayout={(e) => {
             themeSectionY.current = e.nativeEvent.layout.y;
@@ -3682,7 +4564,6 @@ export default function Shop() {
           </Section>
         </View>
 
-        {/* Cursors */}
         <View
           onLayout={(e) => {
             cursorSectionY.current = e.nativeEvent.layout.y;
@@ -3701,7 +4582,6 @@ export default function Shop() {
           </Section>
         </View>
 
-        {/* Ask memory tiers */}
         <Section title="Ask Memory Upgrades">
           {groups.ask_memory.map((it) =>
             renderItem(
@@ -3714,7 +4594,6 @@ export default function Shop() {
           )}
         </Section>
 
-        {/* Ask personalities */}
         <Section title="Ask Personalities">
           {groups.ask_personality.map((it) =>
             renderItem(
@@ -3727,7 +4606,6 @@ export default function Shop() {
           )}
         </Section>
 
-        {/* Coin packs */}
         <Section title="Coin Packs">
           {groups.coin_pack.map((it) =>
             renderItem(
@@ -3741,7 +4619,6 @@ export default function Shop() {
         </Section>
       </ScrollView>
 
-      {/* Modals + overlays */}
       <ItemDetailModal
         visible={!!detailItem}
         item={detailItem}
@@ -3834,10 +4711,7 @@ export default function Shop() {
                 {floatingCompanion.title}
               </Text>
             )}
-            <CompanionEffectOverlay
-              type={activeEffect}
-              effectKey={effectKey}
-            />
+            <CompanionEffectOverlay type={activeEffect} effectKey={effectKey} />
           </Pressable>
         </Animated.View>
       )}
