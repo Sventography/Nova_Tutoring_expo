@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Nova Tutoring",
-    "slug": "nova-tutoring",
+    "slug": "Nova_Tutoring_expo_3",
     "version": "1.0.0",
     "orientation": "portrait",
     "scheme": "nova",
@@ -18,12 +18,12 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.sventography.novatutoring.ios",
-      "buildNumber": "12"
+      "buildNumber": "90"
     },
     "android": {
       "package": "com.sventography.novatutoring",
       "adaptiveIcon": {
-        "foregroundImage": "./app/assets/adaptive-icon.png",
+        "foregroundImage": "./app/assets/favicon.png",
         "backgroundColor": "#000000"
       }
     },
@@ -37,12 +37,18 @@
       "android",
       "web"
     ],
-    "entryPoint": "./expo-router/entry",
     "plugins": [
       "expo-mail-composer",
       "expo-router",
       "expo-web-browser",
-      "@stripe/stripe-react-native",
+      "expo-iap",
+      [
+        "@stripe/stripe-react-native",
+        {
+          "merchantIdentifier": "merchant.com.sventography.novatutoring",
+          "enableGooglePay": false
+        }
+      ],
       [
         "expo-build-properties",
         {

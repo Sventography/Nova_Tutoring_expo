@@ -1,4 +1,5 @@
 // app.config.js
+
 export default ({ config }) => {
   return {
     ...config,
@@ -24,8 +25,6 @@ export default ({ config }) => {
       ...(config.ios || {}),
       supportsTablet: true,
       bundleIdentifier: "com.sventography.novatutoring.ios",
-
-      // Apple already reviewed build 89.
       buildNumber: "90",
     },
 
@@ -33,7 +32,7 @@ export default ({ config }) => {
       ...(config.android || {}),
       package: "com.sventography.novatutoring",
       adaptiveIcon: {
-        foregroundImage: "./app/assets/adaptive-icon.png",
+        foregroundImage: "./app/assets/favicon.png",
         backgroundColor: "#000000",
       },
     },
@@ -51,8 +50,6 @@ export default ({ config }) => {
       "expo-mail-composer",
       "expo-router",
       "expo-web-browser",
-
-      // Keep this, but the shop code must use expo-iap APIs.
       "expo-iap",
 
       [
@@ -62,6 +59,7 @@ export default ({ config }) => {
           enableGooglePay: false,
         },
       ],
+
       [
         "expo-build-properties",
         {
@@ -89,8 +87,6 @@ export default ({ config }) => {
         process.env.EXPO_PUBLIC_BACKEND_URL ||
         "https://nove-tutoring-backend.onrender.com",
 
-      // Leave this as dummy-key.
-      // Never put a real OpenAI secret key in EXPO_PUBLIC_*.
       EXPO_PUBLIC_OPENAI_API_KEY:
         process.env.EXPO_PUBLIC_OPENAI_API_KEY || "dummy-key",
 
