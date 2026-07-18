@@ -139,7 +139,6 @@ export default function AskScreen() {
 
   return (
     <View
-      variant="bg"
       style={[
         styles.container,
         {

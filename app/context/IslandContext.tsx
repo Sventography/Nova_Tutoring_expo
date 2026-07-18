@@ -18,6 +18,7 @@ type IslandContextValue = {
   collapsed: boolean;
   positionY: number;
   loading: boolean;
+  lastGain: number;
   addIslandXp: (
     delta: number,
     reason?: string,
@@ -26,15 +27,17 @@ type IslandContextValue = {
   setCollapsed: (next: boolean) => Promise<void>;
   setPositionY: (y: number) => Promise<void>;
   refreshIsland: () => Promise<void>;
+  /** Give +5 XP once per calendar day per user (used by Home screen). */
+  grantDailyLoginXpIfNeeded: () => Promise<void>;
 };
 
-const IslandContext = createContext<IslandContextValue | undefined>(
-  undefined
-);
+const IslandContext = createContext<IslandContextValue | undefined>(undefined);
 
 const STATE_KEY = "@island/state.v1";
 const POS_KEY = "@island/xpbar/posY.v1";
 const COLLAPSED_KEY = "@island/xpbar/collapsed.v1";
+/** Tracks the last day we granted daily-login XP, per user. */
+const DAILY_XP_KEY = "@island/daily_login_xp_date.v1";
 
 // Simple leveling curve: each level needs a bit more XP
 function xpNeededForLevel(level: number): number {
@@ -55,6 +58,7 @@ export function IslandProvider({ children }: { children: ReactNode }) {
   const [collapsed, setCollapsedState] = useState(false);
   const [positionY, setPositionYState] = useState(140); // distance from top
   const [loading, setLoading] = useState(true);
+  const [lastGain, setLastGain] = useState(0);
 
   const xpToNext = xpNeededForLevel(level);
 
@@ -160,6 +164,9 @@ export function IslandProvider({ children }: { children: ReactNode }) {
   ) => {
     if (!delta || delta <= 0) return;
 
+    // record the most recent gain for the +XP!! pill
+    setLastGain(delta);
+
     setXp((prevXp) => {
       let nextXp = prevXp + delta;
       let nextLevel = level;
@@ -185,6 +192,35 @@ export function IslandProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  /**
+   * Once-per-calendar-day XP drip.
+   * Uses a per-user AsyncStorage key so multiple accounts on the same device
+   * don't share the same daily reward.
+   */
+  const grantDailyLoginXpIfNeeded = async () => {
+    try {
+      const today = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+      const userKey = supabaseUserId || "guest";
+      const storageKey = `${DAILY_XP_KEY}:${userKey}`;
+
+      const lastDate = await AsyncStorage.getItem(storageKey);
+      if (lastDate === today) {
+        // Already granted for this user today; nothing to do
+        return;
+      }
+
+      // Give a small, cozy drip of XP for showing up today
+      await addIslandXp(5, "daily_login", { date: today });
+
+      await AsyncStorage.setItem(storageKey, today);
+    } catch (e) {
+      console.warn(
+        "[IslandContext] grantDailyLoginXpIfNeeded error",
+        e
+      );
+    }
+  };
+
   const setCollapsed = async (next: boolean) => {
     setCollapsedState(next);
     try {
@@ -206,10 +242,12 @@ export function IslandProvider({ children }: { children: ReactNode }) {
     collapsed,
     positionY,
     loading,
+    lastGain,
     addIslandXp,
     setCollapsed,
     setPositionY,
     refreshIsland,
+    grantDailyLoginXpIfNeeded,
   };
 
   return (

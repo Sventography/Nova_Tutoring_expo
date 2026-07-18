@@ -1,94 +1,143 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
-import * as api from "../_lib/api";
+// app/_providers/AuthProvider.tsx
+// Legacy compatibility shim.
+// The real auth system now lives in app/context/UserContext.tsx.
 
-type User = {
-  id: number; email: string; username: string;
-  coins: number; questions_count: number; teasers_correct: number;
-  avatar_url: string;
-};
-
-type AuthCtx = {
-  user: User | null;
-  loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (email: string, username: string, password: string, confirm: string) => Promise<void>;
-  forgot: (email: string) => Promise<{ reset_token?: string }>;
-  reset: (token: string, password: string, confirm: string) => Promise<void>;
-  refresh: () => Promise<void>;
-  updateProfile: (patch: { username?: string; avatar_url?: string }) => Promise<void>;
-  logout: () => void;
-  addCoins: (delta: number) => void;
-};
-
-const Ctx = createContext<AuthCtx>({
-  user: null, loading: false,
-  login: async () => {}, register: async () => {}, forgot: async () => ({}),
-  reset: async () => {}, refresh: async () => {}, updateProfile: async () => {},
-  logout: () => {}, addCoins: () => {},
-});
-
-export function useAuth() { return useContext(Ctx); }
+import React from "react";
+import { useUser } from "../context/UserContext";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(false);
+  // No separate provider anymore.
+  // AppProviders/UserProvider handles the real auth state.
+  return <>{children}</>;
+}
 
-  async function refresh() {
-    try {
-      const r = await api.me();
-      setUser(r.user);
-    } catch {}
-  }
+export function useAuth() {
+  const userCtx = useUser();
+
+  const legacyUser = userCtx.user
+    ? {
+        ...userCtx.user,
+        id: userCtx.user.id,
+        email: userCtx.contactEmail ?? "",
+        username: userCtx.username ?? userCtx.name ?? "Student",
+        name: userCtx.name ?? userCtx.username ?? "Student",
+        avatarUrl: userCtx.avatarUrl ?? userCtx.avatar ?? undefined,
+        avatar_url: userCtx.avatarUrl ?? userCtx.avatar ?? undefined,
+
+        // Old provider expected these sometimes
+        coins: 0,
+        questions_count: 0,
+        teasers_correct: 0,
+      }
+    : null;
 
   async function login(email: string, password: string) {
-    setLoading(true);
-    try {
-      const r = await api.login(email, password);
-      setUser(r.user);
-    } finally { setLoading(false); }
+    await userCtx.loginWithEmailPassword(email, password);
+    return userCtx.user as any;
   }
 
-  async function register(email: string, username: string, password: string, confirm: string) {
-    setLoading(true);
-    try {
-      const r = await api.register(email, username, password, confirm);
-      setUser(r.user);
-    } finally { setLoading(false); }
+  async function register(
+    email: string,
+    username: string,
+    password: string,
+    confirm?: string
+  ) {
+    if (confirm != null && password !== confirm) {
+      throw new Error("Passwords do not match.");
+    }
+
+    await userCtx.signUpWithEmailPassword(username, email, password);
+    return userCtx.user as any;
+  }
+
+  async function signUp(email: string, password: string, username?: string) {
+    await userCtx.signUpWithEmailPassword(username || "Student", email, password);
+    return userCtx.user as any;
+  }
+
+  async function requestReset(email: string) {
+    await userCtx.resetPassword(email);
+    return undefined;
   }
 
   async function forgot(email: string) {
-    const r = await api.forgot(email);
-    return r;
+    await userCtx.resetPassword(email);
+    return {};
   }
 
-  async function reset(token: string, password: string, confirm: string) {
-    await api.resetPassword(token, password, confirm);
+  async function reset(_token: string, password: string, confirm?: string) {
+    if (confirm != null && password !== confirm) {
+      throw new Error("Passwords do not match.");
+    }
+
+    await userCtx.updatePassword(password);
   }
 
-  async function updateProfile(patch: { username?: string; avatar_url?: string }) {
-    const r = await api.updateMe(patch);
-    setUser(r.user);
+  async function refresh() {
+    // UserContext hydrates itself through Supabase.
+    return;
   }
 
-  function logout() {
-    api.setAuthToken(null);
-    setUser(null);
+  async function updateProfile(patch: {
+    username?: string;
+    avatar_url?: string;
+    avatarUrl?: string;
+    name?: string;
+  }) {
+    await userCtx.updateProfile({
+      username: patch.username ?? patch.name,
+      name: patch.name ?? patch.username,
+      displayName: patch.name ?? patch.username,
+      avatar: patch.avatar_url ?? patch.avatarUrl,
+      avatarUrl: patch.avatar_url ?? patch.avatarUrl,
+      avatarUri: patch.avatar_url ?? patch.avatarUrl,
+      photoURL: patch.avatar_url ?? patch.avatarUrl,
+      imageUrl: patch.avatar_url ?? patch.avatarUrl,
+    });
   }
 
-  function addCoins(delta: number) {
-    if (!delta) return;
-    setUser((u) => (u ? { ...u, coins: u.coins + delta } : u));
+  async function logout() {
+    await userCtx.signOut();
   }
 
-  useEffect(() => {
-    // Try to load /me on mount (no persistence for simplicity)
-    refresh();
-  }, []);
+  function addCoins(_delta: number) {
+    // Coins are handled by CoinsContext now.
+  }
 
-  return (
-    <Ctx.Provider value={{ user, loading, login, register, forgot, reset, refresh, updateProfile, logout, addCoins }}>
-      {children}
-    </Ctx.Provider>
-  );
+  return {
+    ...userCtx,
+
+    // Legacy user shape
+    user: legacyUser,
+
+    // Common legacy fields
+    loading: !userCtx.ready,
+    ready: userCtx.ready,
+    session: userCtx.session,
+    isLoggedIn: userCtx.isLoggedIn,
+
+    // Legacy auth aliases
+    login,
+    signIn: userCtx.loginWithEmailPassword,
+    signInWithEmailPassword: userCtx.loginWithEmailPassword,
+    loginWithEmailPassword: userCtx.loginWithEmailPassword,
+
+    register,
+    signUp,
+    signUpWithEmailPassword: userCtx.signUpWithEmailPassword,
+
+    requestReset,
+    forgot,
+    reset,
+    resetPassword: userCtx.resetPassword,
+    updatePassword: userCtx.updatePassword,
+
+    refresh,
+    updateProfile,
+
+    logout,
+    signOut: userCtx.signOut,
+
+    addCoins,
+  };
 }
-

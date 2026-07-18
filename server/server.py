@@ -155,22 +155,25 @@ SKU_TO_PRODUCT_ID: dict[str, str] = {
 # Ask monetization config (memory tiers + personalities)
 # -------------------------------------------------
 
+# Gold-standard free memory: keeps a tiny window even with no paid tier
+ASK_FREE_MEMORY_LIMIT = 5
+
 # Memory tiers by SKU → memory_limit
+# (matching your assets: nova_notes, nova_journal, nova_vault, nova_galaxy_archive)
 ASK_MEMORY_TIERS: dict[str, int] = {
-  "ask_memory_tier1": 20,
-  "ask_memory_tier2": 60,
-  "ask_memory_tier3": 150,
-  # If/when we add tier4, we can extend here, e.g. "ask_memory_tier4": 400,
+  "ask_memory_tier1": 20,   # Nova Notes
+  "ask_memory_tier2": 50,   # Nova Journal
+  "ask_memory_tier3": 100,  # Nova Vault
+  "ask_memory_tier4": 250,  # Nova Galaxy Archive
 }
 
 # Personalities unlocked by owning these SKUs
 # Values here are *internal codes* that we map to human tone text later.
-# Updated to match Nova Tutoring Ask personality SKUs.
 ASK_PERSONALITY_SKU_MAP: dict[str, str] = {
-  "ask_personality_calm_focus":   "calm_focus",
-  "ask_personality_coach":        "coach",
-  "ask_personality_playful":      "playful",
-  "ask_personality_storyteller":  "storyteller",
+  "ask_personality_calm_focus":  "calm_focus",
+  "ask_personality_coach":       "coach",
+  "ask_personality_playful":     "playful",
+  "ask_personality_storyteller": "storyteller",
 }
 
 # The free baseline personality everyone gets
@@ -720,13 +723,17 @@ def _extract_owned_from_purchases(purchases: object) -> dict:
 
 def fetch_profile_ask_settings(user_id: str):
   """
-  Returns (memory_limit, personality_code) for this user_id.
+  Returns (memory_limit, memory_tier_code, personality_code) for this user_id.
 
   memory_limit is derived from *purchased* ask memory tiers:
-    - tier3 (if owned) → 150
-    - tier2 (if owned) → 60
-    - tier1 (if owned) → 20
-    - otherwise        → 0  (no paid memory)
+    - tier4 (if owned) → 250
+    - tier3 (if owned) → 100
+    - tier2 (if owned) →  50
+    - tier1 (if owned) →  20
+    - otherwise        →   5  (free baseline)
+
+  memory_tier_code is a short string used by the client:
+    - "tier4", "tier3", "tier2", "tier1", or "free"
 
   personality_code is derived from:
     - row.ask_personality (string),
@@ -734,12 +741,12 @@ def fetch_profile_ask_settings(user_id: str):
   """
   if not (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY and user_id):
     print("[ask] fetch_profile_ask_settings skipped (missing config or user_id)")
-    return 0, ASK_PERSONALITY_FREE
+    return ASK_FREE_MEMORY_LIMIT, "free", ASK_PERSONALITY_FREE
 
   url = supabase_rest_url("profiles")
   params = {
     "id": f"eq.{user_id}",
-    "select": "ask_memory_limit,ask_personality,purchases",
+    "select": "ask_memory_limit,ask_memory_tier,ask_personality,purchases",
     "limit": 1,
   }
   headers = supabase_headers()
@@ -748,12 +755,12 @@ def fetch_profile_ask_settings(user_id: str):
     resp = requests.get(url, headers=headers, params=params, timeout=10)
     if resp.status_code >= 400:
       print("[ask] profile fetch error:", resp.status_code, resp.text)
-      return 0, ASK_PERSONALITY_FREE
+      return ASK_FREE_MEMORY_LIMIT, "free", ASK_PERSONALITY_FREE
 
     rows = resp.json()
     if not rows:
       print("[ask] profile fetch: no profile row for user", user_id)
-      return 0, ASK_PERSONALITY_FREE
+      return ASK_FREE_MEMORY_LIMIT, "free", ASK_PERSONALITY_FREE
 
     row = rows[0]
 
@@ -762,17 +769,32 @@ def fetch_profile_ask_settings(user_id: str):
     owned = _extract_owned_from_purchases(purchases)
     print(f"[ask] profile purchases owned keys for {user_id}:", list(owned.keys()))
 
-    # --- memory_limit from SKUs (highest tier wins) ---
-    memory_limit = 0
+    # --- memory_limit + memory_tier from SKUs (highest tier wins) ---
+    memory_limit = ASK_FREE_MEMORY_LIMIT
+    memory_tier_code = "free"
+    memory_sku_used = None
+
+    # Sort by limit descending so highest tier wins
     for sku, limit in sorted(
       ASK_MEMORY_TIERS.items(), key=lambda kv: kv[1], reverse=True
     ):
       if owned.get(sku):
         memory_limit = limit
+        memory_sku_used = sku
+        if sku == "ask_memory_tier4":
+          memory_tier_code = "tier4"
+        elif sku == "ask_memory_tier3":
+          memory_tier_code = "tier3"
+        elif sku == "ask_memory_tier2":
+          memory_tier_code = "tier2"
+        elif sku == "ask_memory_tier1":
+          memory_tier_code = "tier1"
         break
 
-    # Optionally respect legacy ask_memory_limit but never exceed
+    # Optionally respect legacy ask_memory_limit but never *lower* the limit
     legacy_limit = int(row.get("ask_memory_limit") or 0)
+    legacy_tier = (row.get("ask_memory_tier") or "").strip() or None
+
     if legacy_limit > memory_limit:
       print(
         "[ask] legacy ask_memory_limit higher than purchased tiers; "
@@ -780,6 +802,8 @@ def fetch_profile_ask_settings(user_id: str):
         legacy_limit,
       )
       memory_limit = legacy_limit
+      if legacy_tier:
+        memory_tier_code = legacy_tier
 
     # --- personalities ---
     raw_personality = (row.get("ask_personality") or ASK_PERSONALITY_FREE).strip().lower()
@@ -793,7 +817,10 @@ def fetch_profile_ask_settings(user_id: str):
       "hype_coach": "coach",
     }
     if raw_personality in personality_aliases:
-      print(f"[ask] mapping legacy personality {raw_personality!r} → {personality_aliases[raw_personality]!r}")
+      print(
+        f"[ask] mapping legacy personality {raw_personality!r} "
+        f"→ {personality_aliases[raw_personality]!r}"
+      )
       raw_personality = personality_aliases[raw_personality]
 
     # Everyone always has at least the free baseline
@@ -815,13 +842,14 @@ def fetch_profile_ask_settings(user_id: str):
 
     print(
       f"[ask] profile ask settings for {user_id}: "
-      f"memory_limit={memory_limit}, personality={personality_code!r}, "
+      f"memory_limit={memory_limit}, memory_tier={memory_tier_code!r}, "
+      f"memory_sku={memory_sku_used!r}, personality={personality_code!r}, "
       f"allowed={allowed_personalities}"
     )
-    return memory_limit, personality_code
+    return memory_limit, memory_tier_code, personality_code
   except Exception as e:
     print("[ask] profile fetch exception:", e)
-    return 0, ASK_PERSONALITY_FREE
+    return ASK_FREE_MEMORY_LIMIT, "free", ASK_PERSONALITY_FREE
 
 
 def fetch_memory_messages(user_id: str, memory_limit: int):
@@ -1048,7 +1076,7 @@ else:
   else:
     print("[server] OpenAI configured: False (unknown reason)")
 
-# Tone strings for personalities
+# Tone strings for personalities — keys must match personality codes used above
 ASK_TONE_LABELS: dict[str, str] = {
   "encouraging":  "warm, encouraging, and gently motivational",
   "calm_focus":   "calm, focused, and very structured, helping the student stay in study mode",
@@ -1073,6 +1101,7 @@ def _ask_logic():
   )
   question = str(question).strip()
   user_id = body.get("user_id")  # Supabase auth user id (string UUID)
+  history = body.get("history") or []  # optional client-side history fallback
 
   print("[server] /ask body:", body)
 
@@ -1080,13 +1109,24 @@ def _ask_logic():
     return jsonify(ok=False, error="missing question"), 400
 
   memory_limit = 0
+  memory_tier = "free"
   personality_code = ASK_PERSONALITY_FREE
   memory_messages: list[dict] = []
 
   if SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY and user_id:
-    memory_limit, personality_code = fetch_profile_ask_settings(user_id)
+    # New: returns (limit, tier_code, personality_code)
+    memory_limit, memory_tier, personality_code = fetch_profile_ask_settings(user_id)
     if memory_limit > 0:
       memory_messages = fetch_memory_messages(user_id, memory_limit)
+
+  # If no stored memory yet, we can fall back to a slice of client history.
+  # We still clamp it to the tier's memory_limit or the free baseline.
+  if not memory_messages and isinstance(history, list):
+    max_items = memory_limit if (memory_limit and memory_limit > 0) else ASK_FREE_MEMORY_LIMIT
+    tail = history[-max_items:]
+    print(f"[ask] using {len(tail)} client-side history items as fallback")
+  else:
+    tail = []
 
   tone_text = ASK_TONE_LABELS.get(
     personality_code,
@@ -1109,6 +1149,13 @@ def _ask_logic():
     if content:
       messages.append({"role": role, "content": content})
 
+  if not memory_messages:
+    for m in tail:
+      role = m.get("role") or "user"
+      content = m.get("content") or ""
+      if content:
+        messages.append({"role": role, "content": content})
+
   messages.append({"role": "user", "content": question})
 
   try:
@@ -1126,12 +1173,15 @@ def _ask_logic():
     else:
       print("[ask] skipping memory insert/trim (no supabase config, user_id, or memory_limit)")
 
+    # Return both legacy 'memory_limit' and new ask_memory_* fields
     return jsonify(
       ok=True,
       answer=answer,
       model=OPENAI_MODEL,
       personality=personality_code,
-      memory_limit=memory_limit,
+      memory_limit=memory_limit,       # legacy
+      ask_memory_tier=memory_tier,     # "free" | "tier1" | "tier2" | "tier3" | "tier4"
+      ask_memory_limit=memory_limit,   # numeric cap for non-pinned msgs
     )
 
   except Exception as e:

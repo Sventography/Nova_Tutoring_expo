@@ -32,7 +32,6 @@ import { useUser } from "../context/UserContext";
 import { useCompanion } from "../context/CompanionContext";
 import { COMPANIONS } from "../_lib/companionsCatalog";
 import { AchieveEmitter } from "../context/AchievementsContext"; // 🌟 listen for celebrate events
-import IslandMeterOverlay from "../components/IslandMeterOverlay";
 
 // --------------------
 // DEV-ONLY imports
@@ -280,7 +279,6 @@ function CompanionEffectOverlay({
 
       return (
         <>
-          {/* Flame tongues */}
           {tongues.map((idx) => {
             const baseHeight = 50 + idx * 4;
             const baseWidth = 12 + (idx % 3) * 2;
@@ -318,7 +316,6 @@ function CompanionEffectOverlay({
                   overflow: "hidden",
                 }}
               >
-                {/* inner bright core */}
                 <View
                   style={{
                     position: "absolute",
@@ -334,7 +331,6 @@ function CompanionEffectOverlay({
             );
           })}
 
-          {/* Floating embers */}
           {embers.map((idx) => {
             const size = 6 + (idx % 2) * 2;
             const baseRadius = 40 + idx * 8;
@@ -386,7 +382,6 @@ function CompanionEffectOverlay({
 
       return (
         <>
-          {/* soft glow behind the bolts */}
           <Animated.View
             style={{
               position: "absolute",
@@ -433,7 +428,6 @@ function CompanionEffectOverlay({
                   transform: [{ translateY }],
                 }}
               >
-                {/* three jagged segments to fake a Z-bolt */}
                 <View
                   style={{
                     position: "absolute",
@@ -636,8 +630,7 @@ function CompanionEffectOverlay({
       ? ["📚", "📖", "📘", "📙", "📗", "📕"]
       : type === "fire"
       ? ["🔥", "🔥", "🔥", "✨", "🔥", "🔥"]
-      : /* stars */
-        ["⭐", "🌟", "⭐", "✦", "✧", "⭐"];
+      : ["⭐", "🌟", "⭐", "✦", "✧", "⭐"];
 
   return (
     <>
@@ -658,8 +651,7 @@ function CompanionEffectOverlay({
           outputRange: [0, offsetX],
         });
 
-        const fontSize =
-          type === "books" ? 22 : type === "fire" ? 28 : 26;
+        const fontSize = type === "books" ? 22 : type === "fire" ? 28 : 26;
 
         return (
           <Animated.Text
@@ -695,7 +687,6 @@ function FloatingCompanionOverlay() {
   const bob = useRef(new Animated.Value(0)).current;
   const pan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
 
-  // multi-mode animation controls
   const floatScale = useRef(new Animated.Value(1)).current;
   const floatHop = useRef(new Animated.Value(0)).current;
   const floatShake = useRef(new Animated.Value(0)).current;
@@ -707,14 +698,12 @@ function FloatingCompanionOverlay() {
     outputRange: ["0deg", "360deg"],
   });
 
-  // FX type + key (to retrigger CompanionEffectOverlay)
   const [effectType, setEffectType] = useState<CompanionEffectType>("stars");
   const [effectKey, setEffectKey] = useState(0);
 
   const isTapRef = useRef(true);
   const offsetRef = useRef({ x: 0, y: 0 });
 
-  // gentle idle bobbing
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
@@ -728,6 +717,7 @@ function FloatingCompanionOverlay() {
           toValue: 0,
           duration: 800,
           easing: Easing.inOut(Easing.sin),
+          useNativeDriver: false,
         }),
       ])
     );
@@ -735,7 +725,6 @@ function FloatingCompanionOverlay() {
     return () => loop.stop();
   }, [bob]);
 
-  // sync FX type with currently equipped companion
   useEffect(() => {
     if (!activeCompanion) {
       setEffectType("stars");
@@ -750,8 +739,6 @@ function FloatingCompanionOverlay() {
     setEffectType(eff);
     setEffectKey((k) => k + 1);
   }, [activeCompanion]);
-
-  /* --------------------- Tap animation modes (like shop) ------------------ */
 
   function wiggleAction() {
     floatScale.setValue(1);
@@ -878,11 +865,8 @@ function FloatingCompanionOverlay() {
       if (Platform.OS !== "web") {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       }
-    } catch {
-      // ignore
-    }
+    } catch {}
 
-    // cycle through the same 5 modes as the shop bubble
     clickModeRef.current = (clickModeRef.current + 1) % 5;
     const mode = clickModeRef.current;
 
@@ -905,7 +889,6 @@ function FloatingCompanionOverlay() {
         break;
     }
 
-    // retrigger FX burst
     setEffectKey((k) => k + 1);
   };
 
@@ -928,7 +911,6 @@ function FloatingCompanionOverlay() {
         if (isTapRef.current) {
           handleTap();
         } else {
-          // persist new offset
           const current: { x: number; y: number } =
             (pan as any).__getValue?.() ?? { x: 0, y: 0 };
           offsetRef.current = current;
@@ -951,10 +933,7 @@ function FloatingCompanionOverlay() {
               translateX: Animated.add(pan.x, floatShake),
             },
             {
-              translateY: Animated.add(
-                Animated.add(bob, pan.y),
-                floatHop
-              ),
+              translateY: Animated.add(Animated.add(bob, pan.y), floatHop),
             },
             { scale: floatScale },
             { rotate: rotation },
@@ -963,7 +942,6 @@ function FloatingCompanionOverlay() {
       ]}
     >
       <View style={S.companionBadge}>
-        {/* FX burst overlay (same as shop tab) */}
         <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
           <CompanionEffectOverlay type={effectType} effectKey={effectKey} />
         </View>
@@ -978,8 +956,6 @@ function FloatingCompanionOverlay() {
   );
 }
 
-/* ----------------- Achievement celebration overlay (banner) ---------------- */
-
 function AchievementCelebrationOverlay() {
   const [visible, setVisible] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -988,8 +964,6 @@ function AchievementCelebrationOverlay() {
     if (!AchieveEmitter) return;
 
     const handler = (payload: any) => {
-      // We logged: "emit celebrate: Cards Saved: 10 — +15 coins"
-      // so the payload might just be a string.
       let msg: string;
 
       if (typeof payload === "string") {
@@ -1007,7 +981,6 @@ function AchievementCelebrationOverlay() {
       setMessage(msg);
       setVisible(true);
 
-      // auto-hide after a few seconds
       const timeout = setTimeout(() => {
         setVisible(false);
       }, 2600);
@@ -1015,7 +988,6 @@ function AchievementCelebrationOverlay() {
       return () => clearTimeout(timeout);
     };
 
-    // mitt-style or EventEmitter-style guards
     (AchieveEmitter as any).on?.("celebrate", handler);
     (AchieveEmitter as any).addListener?.("celebrate", handler);
 
@@ -1036,16 +1008,10 @@ function AchievementCelebrationOverlay() {
   );
 }
 
-/**
- * Root tabs layout.
- * All global providers (User, Theme, Coins, Purchases, Cursor, Toast, etc.)
- * are wired up in AppProviders + app/_layout.
- */
 export default function TabsLayout() {
   return (
     <>
       <GlobalTextDefaults />
-      {/* Global toast host lives here, inside ToastProvider from AppProviders */}
       <ToastHost />
       <InnerTabsLayout />
       {Platform.OS === "web" ? <CursorOverlay /> : null}
@@ -1053,23 +1019,15 @@ export default function TabsLayout() {
   );
 }
 
-/**
- * Inner layout that uses useUser().
- * We no longer *block* rendering on `ready`; we always render the tabs and let
- * profile hydration happen in the background so login can't get stuck.
- */
 function InnerTabsLayout() {
   const insets = useSafeAreaInsets();
   const HEADER_HEIGHT = (Platform.OS === "web" ? 64 : 56) + (insets?.top ?? 0);
 
-  // global touch tracking for mobile cursor trail
   const [p, setP] = useState<Pt>({ x: -1, y: -1 });
   const [down, setDown] = useState(false);
 
   const { ready } = useUser();
-  // (we keep `ready` so the context is used, but we don't gate on it anymore)
 
-  // ensure mobile has a default cursor trail (star) if none is set yet
   useEffect(() => {
     if (Platform.OS === "web") return;
 
@@ -1083,13 +1041,11 @@ function InnerTabsLayout() {
         if (!stored) {
           await AsyncStorage.setItem(CURSOR_EQUIPPED_KEY, "star");
           if (__DEV__) {
-            // eslint-disable-next-line no-console
             console.log("[cursor] seeded default cursor.equipped.v1=star");
           }
         }
       } catch (err) {
         if (__DEV__) {
-          // eslint-disable-next-line no-console
           console.warn("[cursor] error seeding default cursor", err);
         }
       }
@@ -1131,10 +1087,8 @@ function InnerTabsLayout() {
         Platform.OS === "web" ? undefined : () => setDown(false)
       }
     >
-      {/* 🔔 Achievement banner overlay now at the bottom */}
       <AchievementCelebrationOverlay />
 
-      {/* Header fixed at the top */}
       <View
         style={{
           position: "absolute",
@@ -1147,7 +1101,6 @@ function InnerTabsLayout() {
         <HeaderBar />
       </View>
 
-      {/* Achievements ↔ coins glue + auto tracking */}
       <AchievementsCoinsBridge />
       <AchievementsAutoTracker />
 
@@ -1267,7 +1220,6 @@ function InnerTabsLayout() {
             ),
           }}
         />
-        {/* 🌞 NOVA ISLAND TAB (COMING SOON) */}
         <Tabs.Screen
           name="island"
           options={{
@@ -1319,17 +1271,13 @@ function InnerTabsLayout() {
         />
       </Tabs>
 
-      {/* Global overlays */}
       <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
         <FxOverlay />
         {Platform.OS === "web" ? <StarTrailOverlay /> : null}
         {Platform.OS !== "web" ? (
           <TouchCursorOverlay p={p} down={down} />
         ) : null}
-        {/* 🌟 Global floating companion bubble with shop-style FX */}
         <FloatingCompanionOverlay />
-        {/* 🌴 Nova Island vertical meter on the left */}
-        <IslandMeterOverlay />
       </View>
     </View>
   );
@@ -1340,7 +1288,6 @@ export const S = StyleSheet.create({
     position: "absolute",
     left: 0,
     right: 0,
-    // 🔥 anchor near bottom, above tab bar
     bottom: Platform.OS === "ios" ? 96 : 88,
     zIndex: 9999,
     alignItems: "center",
@@ -1368,11 +1315,10 @@ export const S = StyleSheet.create({
   closeBtn: { position: "absolute", right: 10, top: 6, padding: 4 },
   closeText: { color: "white", fontSize: 22, lineHeight: 22 },
 
-  // 🌟 Floating companion styles
   companionWrap: {
     position: "absolute",
     right: 16,
-    bottom: Platform.OS === "web" ? 96 : 88, // above tab bar
+    bottom: Platform.OS === "web" ? 96 : 88,
     alignItems: "center",
     justifyContent: "center",
     zIndex: 9998,

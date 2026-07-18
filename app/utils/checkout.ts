@@ -40,7 +40,6 @@ function ensureHttp(s: string) {
 }
 
 function getExpoDevHost(): string | null {
-  // These differ depending on Expo Go / dev-client / SDK versions
   const hostUri =
     (Constants as any)?.expoConfig?.hostUri ||
     (Constants as any)?.manifest2?.extra?.expoClient?.hostUri ||
@@ -48,7 +47,6 @@ function getExpoDevHost(): string | null {
 
   if (typeof hostUri !== "string" || !hostUri) return null;
 
-  // hostUri/debuggerHost often looks like: "192.168.1.74:19000"
   const host = hostUri.split(":")[0];
   return host || null;
 }
@@ -57,11 +55,11 @@ function getExpoDevHost(): string | null {
  * Resolve the backend base URL.
  *
  * PROD:
- *  - Use extra.backendBase or EXPO_PUBLIC_BACKEND_URL (Render URL)
+ *  - Use extra.backendBase or EXPO_PUBLIC_BACKEND_URL
  *
  * DEV MODE:
  *  - Web: mirror the page host
- *  - Device/simulator: use Expo's dev host (e.g. 192.168.1.74)
+ *  - Device/simulator: use Expo's dev host
  *  - Fallbacks: 10.0.2.2 for Android emulator, 127.0.0.1 last-resort
  */
 function getBackend(): string {
@@ -76,40 +74,50 @@ function getBackend(): string {
 
   if (configured) {
     const base = ensureHttp(stripTrailingSlashes(configured));
-    if (__DEV__) console.warn("[checkout] BACKEND(configured)", base);
+    if (__DEV__) console.log("[checkout] BACKEND(configured)", base);
     return base;
   }
 
-  // 1) Web: use current page host
   if (Platform.OS === "web" && typeof window !== "undefined") {
     const h = window.location.hostname || "";
     const isLanIp = /^\d+\.\d+\.\d+\.\d+$/.test(h);
     const isLocal = /^(localhost|127\.0\.0\.1)$/i.test(h);
     const host = isLanIp || isLocal ? h : "127.0.0.1";
     const base = `http://${host}:${DEFAULT_PORT}`;
-    if (__DEV__) console.warn("[checkout] BACKEND(web-host)", base);
+    if (__DEV__) console.log("[checkout] BACKEND(web-host)", base);
     return base;
   }
 
-  // 2) Expo dev host (works for physical devices + simulators)
   const expoHost = getExpoDevHost();
   if (expoHost) {
     const base = `http://${expoHost}:${DEFAULT_PORT}`;
-    if (__DEV__) console.warn("[checkout] BACKEND(expo-host)", base);
+    if (__DEV__) console.log("[checkout] BACKEND(expo-host)", base);
     return base;
   }
 
-  // 3) Android emulator fallback
   if (Platform.OS === "android") {
     const base = `http://10.0.2.2:${DEFAULT_PORT}`;
-    if (__DEV__) console.warn("[checkout] BACKEND(android-emulator)", base);
+    if (__DEV__) console.log("[checkout] BACKEND(android-emulator)", base);
     return base;
   }
 
-  // 4) Last resort: assume local machine
   const base = `http://127.0.0.1:${DEFAULT_PORT}`;
-  if (__DEV__) console.warn("[checkout] BACKEND(fallback-127)", base);
+  if (__DEV__) console.log("[checkout] BACKEND(fallback-127)", base);
   return base;
+}
+
+function buildAbsoluteAppUrl(path: string) {
+  const normalized = path.startsWith("/") ? path : `/${path}`;
+
+  if (Platform.OS === "web" && typeof window !== "undefined") {
+    return `${window.location.origin}${normalized}`;
+  }
+
+  const linkingUri = (Constants as any)?.expoConfig?.scheme
+    ? `${(Constants as any).expoConfig.scheme}://${normalized.replace(/^\//, "")}`
+    : null;
+
+  return linkingUri || `novatutoring://${normalized.replace(/^\//, "")}`;
 }
 
 /** Small helper with timeout to avoid hanging fetches in dev */
@@ -135,11 +143,20 @@ async function postJSON(url: string, body: any, timeoutMs = 15000) {
       json = null;
     }
 
-    if (__DEV__) console.log("[checkout] status", res.status, json ?? text);
-    return { ok: res.ok, status: res.status, json, text };
+    if (__DEV__) {
+      console.log("[checkout] status", res.status, {
+        url,
+        body: json ?? text,
+      });
+    }
+
+    return { ok: res.ok, status: res.status, json, text, url };
   } catch (e: any) {
-    console.error("[checkout] network error", e?.message || e, { url });
-    return { ok: false, status: 0, json: null, text: String(e?.message || e) };
+    const msg = String(e?.message || e || "Network request failed");
+    if (__DEV__) {
+      console.log("[checkout] request failed", { url, message: msg });
+    }
+    return { ok: false, status: 0, json: null, text: msg, url };
   } finally {
     clearTimeout(t);
   }
@@ -160,6 +177,10 @@ function openUrl(url: string) {
   }
 }
 
+function unique<T>(arr: T[]) {
+  return Array.from(new Set(arr));
+}
+
 /** Main entry: start a Stripe Checkout session and redirect. */
 export async function startCheckout(
   input: CheckoutPayload
@@ -167,54 +188,57 @@ export async function startCheckout(
   const BACKEND = getBackend();
   if (__DEV__) console.log("[checkout] using BACKEND", BACKEND);
 
-  // Treat input.amount as **DOLLARS** (e.g. 12.99) coming from the shop.
   const amountDollars =
     typeof input.amount === "number" ? input.amount : undefined;
 
-  // Convert to integer cents for the backend / Stripe.
   const amountCents =
     typeof amountDollars === "number"
       ? Math.round(amountDollars * 100)
       : undefined;
+
+  const successUrl =
+    input.success_url || buildAbsoluteAppUrl("/shop?checkout=success");
+  const cancelUrl =
+    input.cancel_url || buildAbsoluteAppUrl("/shop?checkout=cancel");
 
   const payload: Record<string, any> = {
     sku: input.sku,
     priceId: input.priceId,
     productId: input.productId,
 
-    // ✅ Send cents for maximum compatibility with your Flask v9 backend.
-    // If the backend uses `amount` as cents → correct.
-    // If it uses `amount_cents` → also correct.
+    // send cents
     amount: amountCents,
     amount_cents: amountCents,
 
     currency: (input.currency || "usd").toLowerCase(),
     quantity: input.quantity ?? 1,
-    success_url: input.success_url,
-    cancel_url: input.cancel_url,
+    success_url: successUrl,
+    cancel_url: cancelUrl,
     meta: input.meta,
-    // 🔑 method is REQUIRED by your backend: "coins" or "card"
     method: input.method || "card",
-    // extra fields we sometimes send along
+
+    // extra optional fields
     title: (input as any).title,
     image: (input as any).image,
     images: (input as any).images,
     description: (input as any).description,
   };
 
-  // Try the real Flask endpoints that exist for you.
-  // Priority: /api/checkout (your v9 “CHECKOUT” route),
-  // then some legacy fallbacks.
-  const endpoints = [
+  // Best endpoint first, then legacy fallbacks.
+  // Dedupe in case some bases/paths collapse to the same URL.
+  const endpoints = unique([
     `${BACKEND}/api/checkout`,
-    `${BACKEND}/checkout`,
     `${BACKEND}/api/checkout/start`,
+    `${BACKEND}/checkout`,
     `${BACKEND}/checkout/start`,
-  ];
+  ]);
 
   let lastErr: any = null;
+  const tried: string[] = [];
 
   for (const url of endpoints) {
+    tried.push(url);
+
     const { ok, json, text, status } = await postJSON(url, payload);
 
     if (!ok) {
@@ -226,16 +250,20 @@ export async function startCheckout(
       continue;
     }
 
-    const checkoutUrl: string | undefined = json?.url ?? json?.checkout_url;
-    const sessionId: string | undefined = json?.id ?? json?.sessionId;
+    const checkoutUrl: string | undefined =
+      json?.url ?? json?.checkout_url ?? json?.checkoutUrl;
 
-    // ✅ Preferred path: backend returns a Stripe Checkout URL
+    const sessionId: string | undefined =
+      json?.id ?? json?.sessionId ?? json?.session_id;
+
     if (checkoutUrl) {
+      if (__DEV__) {
+        console.log("[checkout] opening checkout URL", checkoutUrl);
+      }
       openUrl(checkoutUrl);
       return { ok: true, url: checkoutUrl };
     }
 
-    // Web-only: if backend gives a sessionId instead, use Stripe.js
     if (Platform.OS === "web" && sessionId) {
       try {
         const mod =
@@ -267,7 +295,6 @@ export async function startCheckout(
       }
     }
 
-    // If we got here, the response didn't have url or sessionId
     lastErr = new Error("No url/sessionId in checkout response");
   }
 
@@ -275,9 +302,8 @@ export async function startCheckout(
     (lastErr && (lastErr.message || String(lastErr))) ||
     "All checkout endpoints failed.";
 
-  console.error("[checkout] final error", msg);
+  console.error("[checkout] final error", msg, { tried });
 
-  // 🔔 IMPORTANT: show a visible error so it never “does nothing”
   if (Platform.OS === "web" && typeof window !== "undefined") {
     window.alert?.(`Checkout error: ${msg}`);
   } else {

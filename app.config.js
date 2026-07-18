@@ -24,7 +24,9 @@ export default ({ config }) => {
       ...(config.ios || {}),
       supportsTablet: true,
       bundleIdentifier: "com.sventography.novatutoring.ios",
-      buildNumber: "87",
+
+      // Apple already reviewed build 89.
+      buildNumber: "90",
     },
 
     android: {
@@ -44,13 +46,15 @@ export default ({ config }) => {
     },
 
     platforms: ["ios", "android", "web"],
-    entryPoint: "./expo-router/entry",
 
     plugins: [
       "expo-mail-composer",
       "expo-router",
       "expo-web-browser",
+
+      // Keep this, but the shop code must use expo-iap APIs.
       "expo-iap",
+
       [
         "@stripe/stripe-react-native",
         {
@@ -85,6 +89,8 @@ export default ({ config }) => {
         process.env.EXPO_PUBLIC_BACKEND_URL ||
         "https://nove-tutoring-backend.onrender.com",
 
+      // Leave this as dummy-key.
+      // Never put a real OpenAI secret key in EXPO_PUBLIC_*.
       EXPO_PUBLIC_OPENAI_API_KEY:
         process.env.EXPO_PUBLIC_OPENAI_API_KEY || "dummy-key",
 

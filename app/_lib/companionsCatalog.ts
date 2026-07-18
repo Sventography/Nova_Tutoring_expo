@@ -1,4 +1,3 @@
-// app/_lib/companionsCatalog.ts
 import { ImageSourcePropType } from "react-native";
 import { canonId } from "./canonId";
 
@@ -17,44 +16,20 @@ export type CompanionRole = "power" | "support" | "cosmetic";
  * will hook into these types.
  */
 export type CompanionAbilityType =
-  | "achievement_reward_bonus" // Mecha Owl
-  | "quiz_time_bonus" // Chrono Fox
-  | "streak_milestone_bonus" // Celestra
-  | "streak_shield" // Axolotl Oracle
-  | "quiz_certificate_bonus" // Astral Nova (certs)
-  | "brainteaser_bonus" // Astral Nova (brainteasers)
-  | "global_coin_multiplier"; // Aetherwyrm
+  | "achievement_reward_bonus"
+  | "quiz_time_bonus"
+  | "streak_milestone_bonus"
+  | "streak_shield"
+  | "quiz_certificate_bonus"
+  | "brainteaser_bonus"
+  | "global_coin_multiplier";
 
 export type CompanionAbility = {
   type: CompanionAbilityType;
-
-  /**
-   * Flat bonus coins (e.g. +500 coins per certificate).
-   * Used by Astral Nova for quiz certificates.
-   */
   bonusCoinsFlat?: number;
-
-  /**
-   * Percent bonus (e.g. 0.10 = +10%).
-   * Used by Mecha Owl, Celestra, Aetherwyrm, etc.
-   */
   bonusPercent?: number;
-
-  /**
-   * Extra minutes for timers (e.g. +2 min for quiz).
-   * Used by Chrono Fox.
-   */
   extraMinutes?: number;
-
-  /**
-   * Cooldown in days for shield-like effects.
-   * Used by Axolotl Oracle (once every 7 days).
-   */
   cooldownDays?: number;
-
-  /**
-   * Optional short note for tooltips / UI later.
-   */
   note?: string;
 };
 
@@ -80,14 +55,28 @@ export type CompanionItem = {
   coinPrice: number;
   /**
    * Optional USD price for cash-only microtransactions.
-   * Used by legendary companions ($12.99).
    */
   priceUSD?: number;
   /** Optional ability; present for legendary companions */
   ability?: CompanionAbility;
   /** Role used for equip rules (power/support/cosmetic) */
   role: CompanionRole;
+
+  /**
+   * Arbitrary metadata used by Shop/IAP fulfillment.
+   * We use:
+   * - meta.iapProductId (App Store Connect product id)
+   */
+  meta?: Record<string, any>;
 };
+
+/**
+ * Helper: default iapProductId from companion id.
+ * "companion:nova_bunny" -> "companion_nova_bunny"
+ */
+function companionIapId(id: string) {
+  return String(id).toLowerCase().replace(/[^a-z0-9]+/g, "_");
+}
 
 export const COMPANIONS: CompanionItem[] = [
   // =======================
@@ -101,13 +90,16 @@ export const COMPANIONS: CompanionItem[] = [
     desc: "Legendary companion that grants +10% to achievement rewards.",
     image: require("../assets/companions/mecha_owl.png"),
     category: "companions",
-    coinPrice: 0, // cash-only
-    priceUSD: 12.99,
+    coinPrice: 0,
+    priceUSD: 7.99,
     role: "power",
     ability: {
       type: "achievement_reward_bonus",
       bonusPercent: 0.1,
       note: "+10% coins on achievement payouts",
+    },
+    meta: {
+      iapProductId: "companion_mecha_owl",
     },
   },
   {
@@ -118,13 +110,16 @@ export const COMPANIONS: CompanionItem[] = [
     desc: "Legendary companion that adds +2 minutes to all quiz timers.",
     image: require("../assets/companions/chrono_fox.png"),
     category: "companions",
-    coinPrice: 0, // cash-only
-    priceUSD: 12.99,
+    coinPrice: 0,
+    priceUSD: 7.99,
     role: "support",
     ability: {
       type: "quiz_time_bonus",
       extraMinutes: 2,
       note: "+2 minutes on quiz timers",
+    },
+    meta: {
+      iapProductId: "companion_chrono_fox",
     },
   },
   {
@@ -135,13 +130,16 @@ export const COMPANIONS: CompanionItem[] = [
     desc: "Legendary companion that grants +25% coins from streak milestones.",
     image: require("../assets/companions/celestra.png"),
     category: "companions",
-    coinPrice: 0, // cash-only
-    priceUSD: 12.99,
+    coinPrice: 0,
+    priceUSD: 7.99,
     role: "power",
     ability: {
       type: "streak_milestone_bonus",
       bonusPercent: 0.25,
       note: "+25% coins on streak milestone rewards",
+    },
+    meta: {
+      iapProductId: "companion_celestra",
     },
   },
   {
@@ -152,13 +150,16 @@ export const COMPANIONS: CompanionItem[] = [
     desc: "Legendary companion that prevents daily streak loss once every 7 days.",
     image: require("../assets/companions/axolotl_oracle.png"),
     category: "companions",
-    coinPrice: 0, // cash-only
-    priceUSD: 12.99,
+    coinPrice: 0,
+    priceUSD: 7.99,
     role: "support",
     ability: {
       type: "streak_shield",
       cooldownDays: 7,
       note: "Prevents one streak loss every 7 days (auto-activates if you miss a day)",
+    },
+    meta: {
+      iapProductId: "companion_axolotl_oracle",
     },
   },
   {
@@ -169,13 +170,16 @@ export const COMPANIONS: CompanionItem[] = [
     desc: "Legendary companion that grants +500 coins for certificates and boosts brainteaser rewards.",
     image: require("../assets/companions/astral_nova.png"),
     category: "companions",
-    coinPrice: 0, // cash-only
-    priceUSD: 12.99,
+    coinPrice: 0,
+    priceUSD: 7.99,
     role: "power",
     ability: {
       type: "quiz_certificate_bonus",
       bonusCoinsFlat: 500,
       note: "+500 bonus coins whenever a certificate is earned (plus extra brainteaser rewards)",
+    },
+    meta: {
+      iapProductId: "companion_astral_nova",
     },
   },
   {
@@ -186,13 +190,16 @@ export const COMPANIONS: CompanionItem[] = [
     desc: "A LEGENDARY companion that boosts coin rewards from all sources by +20%.",
     image: require("../assets/companions/aetherwyrm.png"),
     category: "companions",
-    coinPrice: 0, // cash-only
-    priceUSD: 12.99,
+    coinPrice: 0,
+    priceUSD: 7.99,
     role: "power",
     ability: {
       type: "global_coin_multiplier",
       bonusPercent: 0.2,
       note: "+20% coins from all reward sources",
+    },
+    meta: {
+      iapProductId: "companion_aetherwyrm",
     },
   },
 
@@ -208,7 +215,11 @@ export const COMPANIONS: CompanionItem[] = [
     image: require("../assets/companions/nova_bunny_coin.png"),
     category: "companions",
     coinPrice: 1000,
+    priceUSD: 2.99,
     role: "cosmetic",
+    meta: {
+      iapProductId: "companion_nova_bunny_1",
+    },
   },
   {
     id: "companion:balloons",
@@ -219,7 +230,11 @@ export const COMPANIONS: CompanionItem[] = [
     image: require("../assets/companions/balloons.png"),
     category: "companions",
     coinPrice: 1000,
+    priceUSD: 2.99,
     role: "cosmetic",
+    meta: {
+      iapProductId: "companion_balloons",
+    },
   },
   {
     id: "companion:hearts",
@@ -230,7 +245,11 @@ export const COMPANIONS: CompanionItem[] = [
     image: require("../assets/companions/hearts.png"),
     category: "companions",
     coinPrice: 1000,
+    priceUSD: 2.99,
     role: "cosmetic",
+    meta: {
+      iapProductId: "companion_hearts",
+    },
   },
   {
     id: "companion:sleepy_moon",
@@ -241,7 +260,11 @@ export const COMPANIONS: CompanionItem[] = [
     image: require("../assets/companions/sleepy_moon.png"),
     category: "companions",
     coinPrice: 1000,
+    priceUSD: 2.99,
     role: "cosmetic",
+    meta: {
+      iapProductId: "companion_sleepy_moon",
+    },
   },
   {
     id: "companion:star_blow",
@@ -252,7 +275,11 @@ export const COMPANIONS: CompanionItem[] = [
     image: require("../assets/companions/star_blow.png"),
     category: "companions",
     coinPrice: 1000,
+    priceUSD: 2.99,
     role: "cosmetic",
+    meta: {
+      iapProductId: "companion_star_blow",
+    },
   },
   {
     id: "companion:star_explode",
@@ -263,7 +290,11 @@ export const COMPANIONS: CompanionItem[] = [
     image: require("../assets/companions/star_explode.png"),
     category: "companions",
     coinPrice: 1000,
+    priceUSD: 2.99,
     role: "cosmetic",
+    meta: {
+      iapProductId: "companion_star_explode",
+    },
   },
   {
     id: "companion:star_throw",
@@ -274,7 +305,11 @@ export const COMPANIONS: CompanionItem[] = [
     image: require("../assets/companions/star_throw.png"),
     category: "companions",
     coinPrice: 1000,
+    priceUSD: 2.99,
     role: "cosmetic",
+    meta: {
+      iapProductId: "companion_star_throw",
+    },
   },
   {
     id: "companion:party_3d",
@@ -285,7 +320,11 @@ export const COMPANIONS: CompanionItem[] = [
     image: require("../assets/companions/3d_party.png"),
     category: "companions",
     coinPrice: 1000,
+    priceUSD: 2.99,
     role: "cosmetic",
+    meta: {
+      iapProductId: "companion_party_3d",
+    },
   },
   {
     id: "companion:party_3d_2",
@@ -296,7 +335,11 @@ export const COMPANIONS: CompanionItem[] = [
     image: require("../assets/companions/3d_party2.png"),
     category: "companions",
     coinPrice: 1000,
+    priceUSD: 2.99,
     role: "cosmetic",
+    meta: {
+      iapProductId: "companion_party_3d_2",
+    },
   },
   {
     id: "companion:coins_rain",
@@ -307,7 +350,11 @@ export const COMPANIONS: CompanionItem[] = [
     image: require("../assets/companions/coins.png"),
     category: "companions",
     coinPrice: 1000,
+    priceUSD: 2.99,
     role: "cosmetic",
+    meta: {
+      iapProductId: "companion_coins_rain",
+    },
   },
   {
     id: "companion:reading_buddy",
@@ -318,6 +365,10 @@ export const COMPANIONS: CompanionItem[] = [
     image: require("../assets/companions/read.png"),
     category: "companions",
     coinPrice: 1000,
+    priceUSD: 2.99,
     role: "cosmetic",
+    meta: {
+      iapProductId: "companion_reading_buddy",
+    },
   },
 ];

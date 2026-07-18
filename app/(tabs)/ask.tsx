@@ -1,10 +1,5 @@
 // app/(tabs)/ask.tsx
-import React, {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -26,8 +21,12 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "../context/ThemeContext";
 import { useAchievements } from "../context/AchievementsContext";
 import { useUser } from "../context/UserContext";
-import { useIsland } from "../context/IslandContext"; // 🌴 Nova Island XP hook
+import { useIsland } from "../context/IslandContext";
 import { usePurchases } from "../context/PurchasesContext";
+
+/* ----------------------------- V1 LOCKS (GREY OUT) ----------------------------- */
+const V1_LOCK_ASK_UPGRADES = true; // hides personality selector + shows memory "Coming soon"
+/* ------------------------------------------------------------------------------ */
 
 /* ────────────────────────────────────────── */
 /* ✨ Nova Thinking — Bounce + Dark Shimmer   */
@@ -86,10 +85,7 @@ function NovaThinking() {
         {letters.map((char, i) => (
           <Animated.Text
             key={i}
-            style={[
-              S.thinkingText,
-              { transform: [{ translateY: bounces[i] }] },
-            ]}
+            style={[S.thinkingText, { transform: [{ translateY: bounces[i] }] }]}
           >
             {char}
           </Animated.Text>
@@ -98,13 +94,7 @@ function NovaThinking() {
 
       <View style={S.contrastUnderlay} pointerEvents="none" />
 
-      <Animated.View
-        pointerEvents="none"
-        style={[
-          S.shimmer,
-          { transform: [{ translateX }] },
-        ]}
-      >
+      <Animated.View pointerEvents="none" style={[S.shimmer, { transform: [{ translateX }] }]}>
         <LinearGradient
           colors={[
             "transparent",
@@ -142,6 +132,13 @@ const BACKEND_BASE =
   (process.env.EXPO_PUBLIC_BACKEND_URL || "").replace(/\/$/, "") ||
   "http://127.0.0.1:5055";
 
+export type PersonalityKey =
+  | "encouraging"
+  | "calm_focus"
+  | "coach"
+  | "playful"
+  | "storyteller";
+
 async function callAskApi(
   question: string,
   history: AskHistoryItem[],
@@ -153,18 +150,10 @@ async function callAskApi(
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
-    if (jwt) {
-      headers["Authorization"] = `Bearer ${jwt}`;
-    }
+    if (jwt) headers["Authorization"] = `Bearer ${jwt}`;
 
-    const body: any = {
-      question,
-      history,
-      personality, // 🔹 Ask personality (frontend-selected)
-    };
-    if (userId) {
-      body.user_id = userId; // 🔹 Explicit user_id for stable logging
-    }
+    const body: any = { question, history, personality };
+    if (userId) body.user_id = userId;
 
     const res = await fetch(`${BACKEND_BASE}/api/ask`, {
       method: "POST",
@@ -189,35 +178,17 @@ async function callAskApi(
         coins_awarded: json.coins_awarded,
         ask_memory_tier: json.ask_memory_tier ?? null,
         ask_memory_limit:
-          typeof json.ask_memory_limit === "number"
-            ? json.ask_memory_limit
-            : null,
+          typeof json.ask_memory_limit === "number" ? json.ask_memory_limit : null,
       },
     };
   } catch (e: any) {
-    return {
-      ok: false,
-      error: e?.message || "Network error while calling /api/ask",
-    };
+    return { ok: false, error: e?.message || "Network error while calling /api/ask" };
   }
 }
 
 /* ────────────────────────────────────────── */
 /* 🧠 Ask personalities (gated by purchases) */
 /* ────────────────────────────────────────── */
-
-// Match your PNGs / SKUs:
-//   ask_personality_encouraging.png          (free default)
-//   ask_personality_calm_focus.png
-//   ask_personality_coach.png
-//   ask_personality_playful.png
-//   ask_personality_storyteller.png
-type PersonalityKey =
-  | "encouraging"
-  | "calm_focus"
-  | "coach"
-  | "playful"
-  | "storyteller";
 
 type PersonalityOption = {
   key: PersonalityKey;
@@ -227,36 +198,11 @@ type PersonalityOption = {
 };
 
 const PERSONALITY_OPTIONS: PersonalityOption[] = [
-  {
-    key: "encouraging",
-    label: "Encouraging",
-    subtitle: "Default Nova vibe",
-    sku: null, // free baseline
-  },
-  {
-    key: "calm_focus",
-    label: "Calm Focus",
-    subtitle: "Steady, clear explanations",
-    sku: "ask_personality_calm_focus",
-  },
-  {
-    key: "coach",
-    label: "Coach",
-    subtitle: "Direct, motivating guidance",
-    sku: "ask_personality_coach",
-  },
-  {
-    key: "playful",
-    label: "Playful",
-    subtitle: "Light, fun & supportive",
-    sku: "ask_personality_playful",
-  },
-  {
-    key: "storyteller",
-    label: "Storyteller",
-    subtitle: "Analogy-rich explanations",
-    sku: "ask_personality_storyteller",
-  },
+  { key: "encouraging", label: "Encouraging", subtitle: "Default Nova vibe", sku: null },
+  { key: "calm_focus", label: "Calm Focus", subtitle: "Steady, clear explanations", sku: "ask_personality_calm_focus" },
+  { key: "coach", label: "Coach", subtitle: "Direct, motivating guidance", sku: "ask_personality_coach" },
+  { key: "playful", label: "Playful", subtitle: "Light, fun & supportive", sku: "ask_personality_playful" },
+  { key: "storyteller", label: "Storyteller", subtitle: "Analogy-rich explanations", sku: "ask_personality_storyteller" },
 ];
 
 const AskPersonalitySelector = ({
@@ -266,43 +212,34 @@ const AskPersonalitySelector = ({
   value: PersonalityKey;
   onChange: (key: PersonalityKey) => void;
 }) => {
+  // v1 lock: hide entirely
+  if (V1_LOCK_ASK_UPGRADES) return null;
+
   const { tokens } = useTheme() as any;
   const purchases = (usePurchases() || {}) as any;
   const { isOwned, owned } = purchases;
 
   const hasSku = (sku?: string | null) => {
-    if (!sku) return true; // free mode is always available
+    if (!sku) return true;
     if (typeof isOwned === "function") return !!isOwned(sku);
     if (owned && typeof owned === "object") return !!owned[sku];
     return false;
   };
 
   const unlocked = PERSONALITY_OPTIONS.filter((opt) => hasSku(opt.sku));
-
-  // If only the default is unlocked, keep the UI clean and hide the selector
   if (!unlocked || unlocked.length <= 1) return null;
 
   const accent = tokens?.accent || "#22d3ee";
   const text = tokens?.text || "#e5e7eb";
   const textDim = tokens?.cardText || "#9ca3af";
-  const chipBgInactive = tokens?.isDark
-    ? "rgba(0,0,0,0.40)"
-    : "rgba(255,255,255,0.14)";
-  const chipBgActive = tokens?.isDark
-    ? "rgba(0,0,0,0.70)"
-    : "rgba(255,255,255,0.92)";
+  const chipBgInactive = tokens?.isDark ? "rgba(0,0,0,0.40)" : "rgba(255,255,255,0.14)";
+  const chipBgActive = tokens?.isDark ? "rgba(0,0,0,0.70)" : "rgba(255,255,255,0.92)";
   const chipTextActive = tokens?.isDark ? accent : "#0f172a";
 
   return (
     <View style={S.personalityRow}>
-      <Text style={[S.personalityLabel, { color: textDim }]}>
-        Nova mode
-      </Text>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={S.personalityChips}
-      >
+      <Text style={[S.personalityLabel, { color: textDim }]}>Nova mode</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={S.personalityChips}>
         {unlocked.map((opt) => {
           const active = opt.key === value;
           return (
@@ -312,31 +249,16 @@ const AskPersonalitySelector = ({
               style={[
                 S.personalityChip,
                 {
-                  borderColor: active
-                    ? accent
-                    : "rgba(148,163,184,0.50)",
-                  backgroundColor: active
-                    ? chipBgActive
-                    : chipBgInactive,
+                  borderColor: active ? accent : "rgba(148,163,184,0.50)",
+                  backgroundColor: active ? chipBgActive : chipBgInactive,
                 },
               ]}
             >
-              <Text
-                style={[
-                  S.personalityChipText,
-                  { color: active ? chipTextActive : text },
-                ]}
-              >
+              <Text style={[S.personalityChipText, { color: active ? chipTextActive : text }]}>
                 {opt.label}
               </Text>
               {opt.subtitle ? (
-                <Text
-                  style={{
-                    fontSize: 10,
-                    marginTop: 2,
-                    color: active ? chipTextActive : textDim,
-                  }}
-                >
+                <Text style={{ fontSize: 10, marginTop: 2, color: active ? chipTextActive : textDim }}>
                   {opt.subtitle}
                 </Text>
               ) : null}
@@ -352,9 +274,7 @@ const AskPersonalitySelector = ({
 
 const todayKey = () => {
   const d = new Date();
-  return `@ask/count/${d.getFullYear()}-${String(
-    d.getMonth() + 1
-  ).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return `@ask/count/${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
 
 async function loadCount(): Promise<number> {
@@ -368,36 +288,21 @@ async function bumpCount() {
 }
 
 function buildHistoryFromMessages(msgs: Msg[]): AskHistoryItem[] {
-  // Only include real conversation turns (user + assistant)
-  const relevant = msgs.filter(
-    (m) => m.role === "user" || m.role === "assistant"
-  );
-  // You can keep all; backend will trim based on tier
-  return relevant.map((m) => ({
-    role: m.role,
-    content: m.text,
-  }));
+  const relevant = msgs.filter((m) => m.role === "user" || m.role === "assistant");
+  return relevant.map((m) => ({ role: m.role, content: m.text }));
 }
 
-// Match your tier art:
-//   Tier 1 → Nova Notes
-//   Tier 2 → Nova Journal
-//   Tier 3 → Nova Vault
-//   Tier 4 → Nova Galaxy Archive
-function prettyMemoryTier(
-  tier: string | null,
-  limit: number | null
-): string {
+function prettyMemoryTier(tier: string | null, limit: number | null): string {
+  // v1 lock: always show coming soon
+  if (V1_LOCK_ASK_UPGRADES) return "Ask memory: Coming soon";
+
   const t = (tier || "free").toLowerCase();
   let label = "Free memory";
 
   if (t === "tier1" || t === "tier_1") label = "Tier 1 • Nova Notes";
-  else if (t === "tier2" || t === "tier_2")
-    label = "Tier 2 • Nova Journal";
-  else if (t === "tier3" || t === "tier_3")
-    label = "Tier 3 • Nova Vault";
-  else if (t === "tier4" || t === "tier_4")
-    label = "Tier 4 • Nova Galaxy Archive";
+  else if (t === "tier2" || t === "tier_2") label = "Tier 2 • Nova Journal";
+  else if (t === "tier3" || t === "tier_3") label = "Tier 3 • Nova Vault";
+  else if (t === "tier4" || t === "tier_4") label = "Tier 4 • Nova Galaxy Archive";
 
   if (limit != null && Number.isFinite(limit) && limit > 0) {
     return `${label} • remembers ~${limit} msgs`;
@@ -406,16 +311,16 @@ function prettyMemoryTier(
 }
 
 export default function Ask() {
-  const { tokens } = useTheme();
-  const { onAskQuestion } = useAchievements();
+  const { tokens } = useTheme() as any;
+  const { onAskQuestion } = useAchievements() as any;
   const {
     supabaseUserId,
     askPersonality,
     setAskPersonality,
     askMemoryTier,
     askMemoryLimit,
-  } = useUser();
-  const { addIslandXp } = useIsland(); // 🌴 hook in Nova Island XP
+  } = useUser() as any;
+  const { addIslandXp } = useIsland() as any;
 
   const [messages, setMessages] = useState<Msg[]>([
     {
@@ -434,38 +339,33 @@ export default function Ask() {
 
   const listRef = useRef<FlatList<Msg>>(null);
 
-  // Clamp whatever is in askPersonality to our known keys
   const validKeys = PERSONALITY_OPTIONS.map((o) => o.key);
-  const activePersonality: PersonalityKey =
-    validKeys.includes(askPersonality as PersonalityKey)
-      ? (askPersonality as PersonalityKey)
-      : "encouraging";
+
+  // v1 lock: force encouraging
+  const activePersonality: PersonalityKey = V1_LOCK_ASK_UPGRADES
+    ? "encouraging"
+    : validKeys.includes(askPersonality as PersonalityKey)
+    ? (askPersonality as PersonalityKey)
+    : "encouraging";
 
   useEffect(() => {
     loadCount().then(setCount).catch(() => {});
   }, []);
 
-  // Initialize memory display from profile if present
   useEffect(() => {
     setMemoryTier(askMemoryTier || "free");
-    setMemoryLimit(
-      typeof askMemoryLimit === "number" ? askMemoryLimit : null
-    );
+    setMemoryLimit(typeof askMemoryLimit === "number" ? askMemoryLimit : null);
   }, [askMemoryTier, askMemoryLimit]);
 
   useEffect(() => {
     const showSub = Keyboard.addListener("keyboardDidShow", () => {
-      setTimeout(() => {
-        listRef.current?.scrollToEnd({ animated: true });
-      }, 50);
+      setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50);
     });
     return () => showSub.remove();
   }, []);
 
   useEffect(() => {
-    setTimeout(() => {
-      listRef.current?.scrollToEnd({ animated: true });
-    }, 50);
+    setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50);
   }, [messages]);
 
   const send = useCallback(
@@ -476,7 +376,6 @@ export default function Ask() {
       setLoading(true);
       setError(null);
 
-      // Build history from current messages BEFORE adding this new one
       const historyPayload = buildHistoryFromMessages(messages);
 
       const userMsg: Msg = {
@@ -489,12 +388,7 @@ export default function Ask() {
       setInput("");
 
       try {
-        const apiRes = await callAskApi(
-          trimmed,
-          historyPayload,
-          activePersonality,
-          supabaseUserId
-        );
+        const apiRes = await callAskApi(trimmed, historyPayload, activePersonality, supabaseUserId);
 
         if (!apiRes.ok || !apiRes.data || !apiRes.data.answer) {
           setError(apiRes.error || "Something went wrong.");
@@ -503,31 +397,21 @@ export default function Ask() {
 
           setMessages((m) => [
             ...m,
-            {
-              id: `${Date.now() + 1}`,
-              role: "assistant",
-              text: answer,
-            },
+            { id: `${Date.now() + 1}`, role: "assistant", text: answer },
           ]);
 
-          // Update memory tier info from backend if present
-          if (apiRes.data.ask_memory_tier != null) {
-            setMemoryTier(apiRes.data.ask_memory_tier);
-          }
-          if (apiRes.data.ask_memory_limit != null) {
-            setMemoryLimit(apiRes.data.ask_memory_limit);
+          if (!V1_LOCK_ASK_UPGRADES) {
+            if (apiRes.data.ask_memory_tier != null) setMemoryTier(apiRes.data.ask_memory_tier);
+            if (apiRes.data.ask_memory_limit != null) setMemoryLimit(apiRes.data.ask_memory_limit);
           }
 
           const newCount = await bumpCount();
           setCount(newCount);
           onAskQuestion?.();
 
-          // 🌴 Nova Island: small drip of XP per successful Ask
+          // XP drip is okay to keep (Island bar will be greyed in v1 anyway)
           try {
-            await addIslandXp(2, "ask_answer", {
-              source: "ask",
-              length: answer.length,
-            });
+            await addIslandXp(2, "ask_answer", { source: "ask", length: answer.length });
           } catch (e) {
             console.warn("[Island] addIslandXp from Ask failed", e);
           }
@@ -538,15 +422,7 @@ export default function Ask() {
         setLoading(false);
       }
     },
-    [
-      input,
-      loading,
-      messages,
-      onAskQuestion,
-      addIslandXp,
-      activePersonality,
-      supabaseUserId,
-    ]
+    [input, loading, messages, onAskQuestion, addIslandXp, activePersonality, supabaseUserId]
   );
 
   const renderItem = ({ item }: { item: Msg }) => {
@@ -554,49 +430,33 @@ export default function Ask() {
     const align = isUser ? "flex-end" : "flex-start";
 
     return (
-      <View
-        style={{
-          paddingHorizontal: 12,
-          marginVertical: 6,
-          width: "100%",
-          alignItems: align,
-        }}
-      >
+      <View style={{ paddingHorizontal: 12, marginVertical: 6, width: "100%", alignItems: align }}>
         <View
           style={{
             maxWidth: "88%",
             borderRadius: 12,
             borderWidth: 1,
             borderColor: tokens.border,
-            backgroundColor: isUser
-              ? "rgba(0,0,0,0.08)"
-              : "rgba(0,0,0,0.06)",
+            backgroundColor: isUser ? "rgba(0,0,0,0.08)" : "rgba(0,0,0,0.06)",
             padding: 12,
           }}
         >
-          <Text style={{ color: tokens.text, fontSize: 15 }}>
-            {item.text}
-          </Text>
+          <Text style={{ color: tokens.text, fontSize: 15 }}>{item.text}</Text>
         </View>
       </View>
     );
   };
 
-  const memoryText = prettyMemoryTier(
-    memoryTier ?? askMemoryTier ?? "free",
-    memoryLimit ?? askMemoryLimit ?? null
-  );
-
+  const memoryText = prettyMemoryTier(memoryTier ?? askMemoryTier ?? "free", memoryLimit ?? askMemoryLimit ?? null);
   const currentPersonaLabel =
-    PERSONALITY_OPTIONS.find((o) => o.key === activePersonality)?.label ??
-    "Encouraging";
+    PERSONALITY_OPTIONS.find((o) => o.key === activePersonality)?.label ?? "Encouraging";
 
   return (
     <LinearGradient colors={tokens.gradient} style={{ flex: 1 }}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={115} // 👈 Raised slightly higher
+        keyboardVerticalOffset={115}
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={{ flex: 1 }}>
@@ -609,51 +469,28 @@ export default function Ask() {
               }}
             >
               <View>
-                <Text
-                  style={{
-                    color: tokens.text,
-                    fontWeight: "800",
-                    fontSize: 20,
-                  }}
-                >
+                <Text style={{ color: tokens.text, fontWeight: "800", fontSize: 20 }}>
                   Ask Nova
                 </Text>
-                <Text
-                  style={{
-                    color: tokens.cardText,
-                    fontWeight: "600",
-                    fontSize: 11,
-                    marginTop: 2,
-                  }}
-                >
+                <Text style={{ color: tokens.cardText, fontWeight: "600", fontSize: 11, marginTop: 2 }}>
                   {memoryText}
                 </Text>
-                <Text
-                  style={{
-                    color: tokens.cardText,
-                    fontWeight: "500",
-                    fontSize: 11,
-                    marginTop: 2,
-                  }}
-                >
+                <Text style={{ color: tokens.cardText, fontWeight: "500", fontSize: 11, marginTop: 2 }}>
                   Nova mode: {currentPersonaLabel}
+                  {V1_LOCK_ASK_UPGRADES ? " (Locked)" : ""}
                 </Text>
               </View>
-              <Text
-                style={{
-                  color: tokens.cardText,
-                  fontWeight: "700",
-                  fontSize: 13,
-                }}
-              >
+
+              <Text style={{ color: tokens.cardText, fontWeight: "700", fontSize: 13 }}>
                 Questions today: {count}
               </Text>
             </View>
 
-            {/* 🌟 Personality selector (only shows if >1 mode unlocked) */}
+            {/* Selector hidden when v1 locked */}
             <AskPersonalitySelector
               value={activePersonality}
               onChange={(next) => {
+                if (V1_LOCK_ASK_UPGRADES) return;
                 if (next === activePersonality) return;
                 setAskPersonality(next);
               }}
@@ -677,31 +514,20 @@ export default function Ask() {
                   borderRadius: 12,
                   borderWidth: 1,
                   borderColor: tokens.border,
-                  backgroundColor: tokens.isDark
-                    ? "rgba(255,255,255,0.04)"
-                    : "rgba(0,0,0,0.03)",
+                  backgroundColor: tokens.isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)",
                   paddingHorizontal: 8,
                 }}
               >
                 <TextInput
                   placeholder="Ask me anything…"
-                  placeholderTextColor={
-                    tokens.isDark ? "#678a94" : "#6b7685"
-                  }
+                  placeholderTextColor={tokens.isDark ? "#678a94" : "#6b7685"}
                   value={input}
                   onChangeText={setInput}
                   onSubmitEditing={send}
-                  style={{
-                    flex: 1,
-                    color: tokens.text,
-                    paddingVertical: 10,
-                  }}
+                  style={{ flex: 1, color: tokens.text, paddingVertical: 10 }}
                   editable={!loading}
                 />
-                <Pressable
-                  onPress={send}
-                  disabled={loading || !input.trim()}
-                >
+                <Pressable onPress={send} disabled={loading || !input.trim()}>
                   <Ionicons
                     name="arrow-up-circle"
                     size={28}
@@ -716,11 +542,7 @@ export default function Ask() {
                 </Pressable>
               </View>
 
-              {error ? (
-                <Text style={{ color: "#ffa7a7", marginTop: 6 }}>
-                  {error}
-                </Text>
-              ) : null}
+              {error ? <Text style={{ color: "#ffa7a7", marginTop: 6 }}>{error}</Text> : null}
             </View>
           </View>
         </TouchableWithoutFeedback>

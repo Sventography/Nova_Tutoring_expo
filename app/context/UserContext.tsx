@@ -1,4 +1,5 @@
 // app/context/UserContext.tsx
+
 import React, {
   createContext,
   useContext,
@@ -6,37 +7,46 @@ import React, {
   useState,
   ReactNode,
 } from "react";
+
 import type { Session, User as SupabaseUser } from "@supabase/supabase-js";
+
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Linking from "expo-linking";
 import { supabase } from "../lib/supabase";
 
 type LocalUserProfile = {
   id: string;
+
   username?: string | null;
   name?: string | null;
   displayName?: string | null;
+
   contactEmail?: string | null;
+
   avatar?: string | null;
   avatarUrl?: string | null;
   avatarUri?: string | null;
   photoURL?: string | null;
   imageUrl?: string | null;
 
-  // 🔹 Ask tab personalization
   askPersonality?: string | null;
-
-  // 🔹 Ask memory tiering
   askMemoryTier?: string | null;
   askMemoryLimit?: number | null;
 };
 
+type SignUpResult = {
+  needsEmailConfirmation: boolean;
+  email: string;
+};
+
 type UserContextValue = {
   ready: boolean;
+
   session: Session | null;
   supabaseUserId: string | null;
+
   user: LocalUserProfile | null;
 
-  /** Convenience boolean for Home / header */
   isLoggedIn: boolean;
 
   username: string | null;
@@ -49,30 +59,31 @@ type UserContextValue = {
   photoURL: string | null;
   imageUrl: string | null;
 
-  // 🔹 Ask personalization
   askPersonality: string | null;
   setAskPersonality: (p: string) => Promise<void> | void;
 
-  // 🔹 Ask memory
   askMemoryTier: string | null;
   askMemoryLimit: number | null;
 
   setUsername: (name: string) => Promise<void> | void;
   setAvatar: (uri: string | null) => Promise<void> | void;
+
   updateProfile: (patch: Partial<LocalUserProfile>) => Promise<void>;
 
   signUpWithEmailPassword: (
     username: string,
     email: string,
     password: string
-  ) => Promise<void>;
+  ) => Promise<SignUpResult>;
 
   loginWithEmailPassword: (email: string, password: string) => Promise<void>;
 
   resetPassword: (email: string) => Promise<void>;
+
   updatePassword: (newPassword: string) => Promise<void>;
 
   signOut: () => Promise<void>;
+
   deleteAccount: () => Promise<void>;
 };
 
@@ -80,13 +91,19 @@ const UserContext = createContext<UserContextValue | null>(null);
 
 const PROFILE_KEY = "user.profile.v1";
 const SUPABASE_JWT_KEY = "auth.supabase.jwt";
-// Best-guess legacy key; cleared defensively.
 const SUPABASE_AUTH_TOKEN_KEY = "@supabase.auth.token";
 
-// Normalizes username: trim, default, and limit to 8 chars
+const AUTH_CALLBACK_URL = Linking.createURL("auth/callback", {
+  scheme: "nova",
+});
+
 function normalizeUsername(raw: string | null | undefined): string {
   const base = (raw ?? "").trim() || "Student";
-  return base.slice(0, 8);
+ return base.slice(0, 10);
+}
+
+function cleanEmail(email: string): string {
+  return String(email || "").trim().toLowerCase();
 }
 
 async function persistProfile(profile: LocalUserProfile | null) {
@@ -97,116 +114,135 @@ async function persistProfile(profile: LocalUserProfile | null) {
   }
 }
 
-// Only clear auth tokens here, not the profile
+function isInvalidRefreshTokenError(err: any) {
+  const msg = String(err?.message || err || "").toLowerCase();
+
+  return (
+    msg.includes("invalid refresh token") ||
+    msg.includes("refresh token not found")
+  );
+}
+
+function formatRawError(error: any): string {
+  try {
+    if (!error) return "Unknown error";
+
+    if (typeof error === "string") return error;
+
+    if (error?.message) return String(error.message);
+
+    return JSON.stringify(error);
+  } catch {
+    return String(error);
+  }
+}
+
+function toFriendlyAuthError(error: any) {
+  const raw = formatRawError(error);
+  const msg = raw.toLowerCase();
+
+  console.log("[UserContext] auth error raw:", raw);
+  console.log("[UserContext] auth error object:", error);
+
+  if (msg.includes("network request failed")) {
+    return new Error(
+      `Network request failed while contacting Supabase.\n\nRaw error: ${raw}`
+    );
+  }
+
+  if (msg.includes("invalid login credentials")) {
+    return new Error("Incorrect email or password.");
+  }
+
+  if (msg.includes("email not confirmed")) {
+    return new Error("Please confirm your email before logging in.");
+  }
+
+  if (msg.includes("user already registered")) {
+    return new Error("An account with this email already exists.");
+  }
+
+  if (msg.includes("supabase configuration") || msg.includes("missing supabase")) {
+    return new Error("Supabase configuration missing from this build.");
+  }
+
+  if (msg.includes("username")) {
+    return new Error("That username is already taken.");
+  }
+
+  return error instanceof Error ? error : new Error(raw);
+}
+
 async function clearSupabaseAuthStorage(reason?: string) {
   try {
     console.log(
       "[UserContext] clearing Supabase auth tokens",
       reason ? `(${reason})` : ""
     );
-    await AsyncStorage.multiRemove([SUPABASE_JWT_KEY, SUPABASE_AUTH_TOKEN_KEY]);
+
+    const keys = await AsyncStorage.getAllKeys();
+
+    const supaKeys = keys.filter((k) => {
+      const low = String(k).toLowerCase();
+
+      return (
+        low.startsWith("sb-") ||
+        low.includes("supabase") ||
+        low.includes("auth-token") ||
+        k === SUPABASE_JWT_KEY ||
+        k === SUPABASE_AUTH_TOKEN_KEY
+      );
+    });
+
+    const toRemove = Array.from(
+      new Set([SUPABASE_JWT_KEY, SUPABASE_AUTH_TOKEN_KEY, ...supaKeys])
+    );
+
+    if (toRemove.length) {
+      console.log("[UserContext] removing auth keys:", toRemove);
+      await AsyncStorage.multiRemove(toRemove);
+    }
   } catch (e) {
     console.warn("[UserContext] clearSupabaseAuthStorage error:", e);
   }
 }
 
-// Hard-clear all local game/profile caches so a "new account" starts fresh.
-async function hardClearLocalGameState() {
-  try {
-    const keys = await AsyncStorage.getAllKeys();
-    const toRemove = keys.filter(
-      (k) =>
-        k.startsWith("@nova/coins.") ||
-        k.startsWith("@nova/streak.") ||
-        k.startsWith("@nova/purchases") ||
-        k === PROFILE_KEY
-    );
+async function repairInvalidRefreshToken(where: string) {
+  console.warn(`[UserContext] repairInvalidRefreshToken @ ${where}`);
 
-    if (toRemove.length) {
-      console.log(
-        "[UserContext] hardClearLocalGameState removing keys:",
-        toRemove
-      );
-      await AsyncStorage.multiRemove(toRemove);
-    }
-  } catch (e) {
-    console.warn("[UserContext] hardClearLocalGameState error:", e);
-  }
+  try {
+    await supabase.auth.signOut({ scope: "local" as any });
+  } catch {}
+
+  await clearSupabaseAuthStorage(`invalid refresh token @ ${where}`);
 }
 
-// Force Supabase-side profile to a clean baseline for a (supposed) new user.
-async function hardResetServerProfileForNewUser(
+async function seedProfileIfNeeded(
   userId: string,
   username: string,
-  email: string
+  email: string | null
 ) {
-  console.log(
-    "[UserContext] hardResetServerProfileForNewUser for",
-    userId,
-    username,
-    email
-  );
-
-  // 1) Delete any existing purchases rows for this user
   try {
-    const { error: delError } = await supabase
-      .from("purchases")
-      .delete()
-      .eq("user_id", userId);
+    const row = {
+      id: userId,
+      username,
+      contact_email: email,
+      avatar_url: null,
+      ask_personality: null,
+      ask_memory_tier: "free",
+      ask_memory_limit: 0,
+      updated_at: new Date().toISOString(),
+    };
 
-    if (delError) {
-      console.warn(
-        "[UserContext] hardResetServerProfileForNewUser purchases delete error:",
-        delError
-      );
-    } else {
-      console.log(
-        "[UserContext] hardResetServerProfileForNewUser purchases cleared"
-      );
+    const { error } = await supabase.from("profiles").upsert(row, {
+      onConflict: "id",
+    });
+
+    if (error) {
+      console.warn("[UserContext] seedProfileIfNeeded error:", error);
     }
   } catch (e) {
-    console.warn(
-      "[UserContext] hardResetServerProfileForNewUser purchases delete threw:",
-      e
-    );
-  }
-
-  // 2) Upsert a clean profiles row
-  try {
-    const { error: profileError } = await supabase.from("profiles").upsert(
-      {
-        id: userId,
-        username,
-        contact_email: email,
-        coins: 0,
-        daily_streak_current: 0,
-        daily_streak_last_utc: null,
-        daily_streak_best: 0,
-        // mirror purchases JSON as "empty" for backwards compatibility
-        purchases: { owned: {}, version: 1 },
-        // Ask memory defaults: free tier, limit 0 => use backend defaults
-        ask_memory_tier: "free",
-        ask_memory_limit: 0,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "id" }
-    );
-
-    if (profileError) {
-      console.warn(
-        "[UserContext] hardResetServerProfileForNewUser profiles upsert error:",
-        profileError
-      );
-    } else {
-      console.log(
-        "[UserContext] hardResetServerProfileForNewUser profiles baseline OK"
-      );
-    }
-  } catch (e) {
-    console.warn(
-      "[UserContext] hardResetServerProfileForNewUser profiles upsert threw:",
-      e
-    );
+    console.warn("[UserContext] seedProfileIfNeeded threw:", e);
   }
 }
 
@@ -216,41 +252,18 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [supabaseUserId, setSupabaseUserId] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
 
-  // ------------------ helper to hydrate from Supabase ------------------
-
   async function hydrateProfileFromSupabase(
     userId: string,
     authUser?: SupabaseUser | null
   ) {
     try {
-      // Try to reuse local profile for this user if it exists
-      let local: LocalUserProfile | null = null;
-      try {
-        const stored = await AsyncStorage.getItem(PROFILE_KEY);
-        if (stored) {
-          local = JSON.parse(stored);
-        }
-      } catch {
-        // ignore parse errors
-      }
-
-      if (local && local.id === userId) {
-        console.log(
-          "[UserContext] hydrateProfile: using existing local profile",
-          local.id,
-          local.username
-        );
-        setProfile(local);
-        return;
-      }
-
-      // Metadata hints from auth
       const meta: any = authUser?.user_metadata || {};
+
       const metaUsername =
         typeof meta.username === "string" ? meta.username : null;
+
       const authEmail = authUser?.email ?? null;
 
-      // Only request columns that definitely exist (+ ask_personality + memory)
       const { data: row, error } = await supabase
         .from("profiles")
         .select(
@@ -259,95 +272,49 @@ export function UserProvider({ children }: { children: ReactNode }) {
         .eq("id", userId)
         .maybeSingle();
 
-      if (error && (error as any).code !== "PGRST116") {
-        console.warn("[UserContext] load profile error:", error);
+      if (error) {
+        console.warn("[UserContext] hydrate profile select error:", error);
       }
 
-      let rowData: any = row;
-
-      // If there's no row yet, seed one so the backend has something real
-      if (!rowData) {
-        const seededUsername = normalizeUsername(metaUsername);
-        const seededEmail = authEmail;
-
-        const seedRow: any = {
-          id: userId,
-          username: seededUsername,
-          contact_email: seededEmail,
-          coins: 0,
-          daily_streak_current: 0,
-          daily_streak_last_utc: null,
-          daily_streak_best: 0,
-          ask_memory_tier: "free",
-          ask_memory_limit: 0,
-        };
-
-        console.log(
-          "[UserContext] hydrateProfile: seeding empty profile row",
-          seedRow
+      if (!row) {
+        await seedProfileIfNeeded(
+          userId,
+          normalizeUsername(metaUsername),
+          authEmail
         );
-        const { data: inserted, error: insertErr } = await supabase
-          .from("profiles")
-          .upsert(seedRow)
-          .select(
-            "id, username, contact_email, avatar_url, ask_personality, ask_memory_tier, ask_memory_limit"
-          )
-          .maybeSingle();
-
-        if (insertErr) {
-          console.warn(
-            "[UserContext] hydrateProfile seed upsert error (continuing with local only):",
-            insertErr
-          );
-        } else if (inserted) {
-          rowData = inserted;
-        }
       }
 
-      console.log("[UserContext] hydrateProfile rowData:", rowData);
-
-      let usernameRaw: string | null =
-        (rowData && rowData.username) ?? metaUsername ?? null;
-      let contactEmailRaw: string | null =
-        (rowData && rowData.contact_email) ?? authEmail ?? null;
-      let avatarRaw: string | null =
-        (rowData && rowData.avatar_url) ?? null;
-      let askPersonalityRaw: string | null =
-        (rowData && rowData.ask_personality) ?? null;
-
-      let askMemoryTierRaw: string | null =
-        (rowData && rowData.ask_memory_tier) ?? null;
-
-      let askMemoryLimitRaw: number | null = null;
-      if (rowData && rowData.ask_memory_limit != null) {
-        const raw = rowData.ask_memory_limit;
-        if (typeof raw === "number") {
-          askMemoryLimitRaw = raw;
-        } else if (typeof raw === "string") {
-          const parsed = parseInt(raw, 10);
-          askMemoryLimitRaw = Number.isFinite(parsed) ? parsed : null;
-        }
-      }
-
+      const usernameRaw = row?.username ?? metaUsername ?? null;
       const normalizedUsername = normalizeUsername(usernameRaw);
+
+      let askMemoryLimit: number | null = null;
+
+      if (typeof row?.ask_memory_limit === "number") {
+        askMemoryLimit = row.ask_memory_limit;
+      } else if (typeof row?.ask_memory_limit === "string") {
+        const parsed = parseInt(row.ask_memory_limit, 10);
+        askMemoryLimit = Number.isFinite(parsed) ? parsed : null;
+      }
 
       const next: LocalUserProfile = {
         id: userId,
-        username: normalizedUsername || null,
-        name: normalizedUsername || null,
-        displayName: normalizedUsername || null,
-        contactEmail: contactEmailRaw,
-        avatar: avatarRaw,
-        avatarUrl: avatarRaw,
-        avatarUri: avatarRaw,
-        photoURL: avatarRaw,
-        imageUrl: avatarRaw,
-        askPersonality: askPersonalityRaw,
-        askMemoryTier: askMemoryTierRaw,
-        askMemoryLimit: askMemoryLimitRaw,
-      };
 
-      console.log("[UserContext] hydrateProfile final:", next);
+        username: normalizedUsername,
+        name: normalizedUsername,
+        displayName: normalizedUsername,
+
+        contactEmail: row?.contact_email ?? authEmail,
+
+        avatar: row?.avatar_url ?? null,
+        avatarUrl: row?.avatar_url ?? null,
+        avatarUri: row?.avatar_url ?? null,
+        photoURL: row?.avatar_url ?? null,
+        imageUrl: row?.avatar_url ?? null,
+
+        askPersonality: row?.ask_personality ?? null,
+        askMemoryTier: row?.ask_memory_tier ?? "free",
+        askMemoryLimit,
+      };
 
       setProfile(next);
       await persistProfile(next);
@@ -356,63 +323,52 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  // --------------------- initial load (local + Supabase) ---------------------
-
   useEffect(() => {
     let cancelled = false;
 
-    // hard guard: never let ready stay false forever
     const failSafe = setTimeout(() => {
       if (!cancelled) {
-        console.log("[UserContext] FAILSAFE setReady(true)");
+        console.warn("[UserContext] init failsafe setReady(true)");
         setReady(true);
       }
     }, 5000);
 
     (async () => {
-      console.log("[UserContext] init effect start");
       try {
-        // 1) Load local cached profile first
         const stored = await AsyncStorage.getItem(PROFILE_KEY);
+
         if (stored) {
           try {
             const parsed = JSON.parse(stored);
-            console.log(
-              "[UserContext] init: loaded local profile",
-              parsed?.id,
-              parsed?.username
-            );
+
             if (!cancelled) {
               setProfile(parsed);
             }
-          } catch {
-            // ignore parse errors
-          }
+          } catch {}
         }
 
-        // 2) Ask Supabase for current session
-        const { data, error } = await supabase.auth.getSession();
-        if (error) {
-          console.warn("[UserContext] getSession error:", error);
+        let sess: Session | null = null;
 
-          const msg = (error as any)?.message || "";
-          if (
-            msg.includes("Invalid Refresh Token") ||
-            msg.includes("Refresh Token Not Found")
-          ) {
-            await clearSupabaseAuthStorage(
-              "invalid refresh token on getSession"
-            );
-            if (!cancelled) {
-              setSession(null);
-              setSupabaseUserId(null);
+        try {
+          const { data, error } = await supabase.auth.getSession();
+
+          if (error) {
+            console.warn("[UserContext] getSession error:", error);
+
+            if (isInvalidRefreshTokenError(error)) {
+              await repairInvalidRefreshToken("getSession");
             }
-            // keep whatever profile we already loaded locally
+          } else {
+            sess = data?.session ?? null;
+          }
+        } catch (e) {
+          console.warn("[UserContext] getSession threw:", e);
+
+          if (isInvalidRefreshTokenError(e)) {
+            await repairInvalidRefreshToken("getSession_throw");
           }
         }
 
-        const sess = data?.session ?? null;
-        console.log("[UserContext] init: session?", !!sess);
         if (!cancelled) {
           setSession(sess);
         }
@@ -424,26 +380,22 @@ export function UserProvider({ children }: { children: ReactNode }) {
         }
 
         const authUser = sess?.user ?? null;
+
         if (authUser) {
-          console.log(
-            "[UserContext] init: found authUser, hydrating profile for",
-            authUser.id
-          );
           if (!cancelled) {
             setSupabaseUserId(authUser.id);
           }
+
           await hydrateProfileFromSupabase(authUser.id, authUser);
-        } else {
-          console.log("[UserContext] init: no auth user (guest mode)");
         }
       } catch (e) {
         console.warn("[UserContext] init error:", e);
       } finally {
+        clearTimeout(failSafe);
+
         if (!cancelled) {
-          console.log("[UserContext] init: setReady(true)");
           setReady(true);
         }
-        clearTimeout(failSafe);
       }
     })();
 
@@ -451,77 +403,54 @@ export function UserProvider({ children }: { children: ReactNode }) {
       cancelled = true;
       clearTimeout(failSafe);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ----------------- react to auth changes (login / logout) ------------------
-
   useEffect(() => {
-    const { data } = supabase.auth.onAuthStateChange(
-      async (event, sess) => {
-        console.log("[UserContext] onAuthStateChange event:", event);
+    const { data } = supabase.auth.onAuthStateChange(async (_event, sess) => {
+      try {
+        console.log("[UserContext] onAuthStateChange:", _event);
 
-        try {
-          setSession(sess ?? null);
+        setSession(sess ?? null);
 
-          const token = sess?.access_token;
-          if (token) {
-            await AsyncStorage.setItem(SUPABASE_JWT_KEY, token);
-          } else {
-            await AsyncStorage.removeItem(SUPABASE_JWT_KEY);
-          }
-
-          const authUser = sess?.user ?? null;
-          if (authUser) {
-            console.log(
-              "[UserContext] onAuthStateChange: hydrating profile for",
-              authUser.id
-            );
-            setSupabaseUserId(authUser.id);
-            await hydrateProfileFromSupabase(authUser.id, authUser);
-          } else {
-            console.log(
-              "[UserContext] onAuthStateChange: no auth user, clearing supabaseUserId"
-            );
-            setSupabaseUserId(null);
-            // signOut() handles wiping profile + local state explicitly
-          }
-
-          // If we just signed in or refreshed, we know auth state is valid:
-          if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
-            setReady(true);
-          }
-
-          if (event === "SIGNED_OUT") {
-            setReady(true);
-          }
-        } catch (e) {
-          console.warn(
-            "[UserContext] onAuthStateChange handler error:",
-            e
-          );
+        if (sess?.access_token) {
+          await AsyncStorage.setItem(SUPABASE_JWT_KEY, sess.access_token);
+        } else {
+          await AsyncStorage.removeItem(SUPABASE_JWT_KEY);
         }
-      }
-    );
 
-    const subscription = data?.subscription;
+        const authUser = sess?.user ?? null;
+
+        if (authUser) {
+          setSupabaseUserId(authUser.id);
+          await hydrateProfileFromSupabase(authUser.id, authUser);
+        } else {
+          setSupabaseUserId(null);
+          setProfile(null);
+        }
+
+        setReady(true);
+      } catch (e) {
+        console.warn("[UserContext] onAuthStateChange error:", e);
+
+        if (isInvalidRefreshTokenError(e)) {
+          await repairInvalidRefreshToken("onAuthStateChange");
+          setSession(null);
+          setSupabaseUserId(null);
+          setProfile(null);
+        }
+
+        setReady(true);
+      }
+    });
 
     return () => {
       try {
-        subscription?.unsubscribe();
-      } catch (e) {
-        console.warn(
-          "[UserContext] onAuthStateChange cleanup error:",
-          e
-        );
-      }
+        data?.subscription?.unsubscribe();
+      } catch {}
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ---------------------- helpers for updating profile ----------------------
-
-  const baseUpdateProfileLocal = (patch: Partial<LocalUserProfile>) => {
+  const updateProfile = async (patch: Partial<LocalUserProfile>) => {
     setProfile((prev) => {
       const next: LocalUserProfile = {
         ...(prev || {
@@ -529,205 +458,105 @@ export function UserProvider({ children }: { children: ReactNode }) {
         }),
         ...patch,
       };
+
       void persistProfile(next);
+
       return next;
     });
-  };
 
-  const updateProfile = async (patch: Partial<LocalUserProfile>) => {
-    let usernameNormalized: string | null = null;
-
-    if (
-      typeof patch.username === "string" ||
-      typeof patch.name === "string" ||
-      typeof patch.displayName === "string"
-    ) {
-      const rawCandidate =
-        (patch.username as string | undefined) ??
-        (patch.name as string | undefined) ??
-        (patch.displayName as string | undefined) ??
-        null;
-
-      usernameNormalized = normalizeUsername(rawCandidate);
-
-      if (supabaseUserId && usernameNormalized) {
-        try {
-          const { data: existing, error } = await supabase
-            .from("profiles")
-            .select("id")
-            .eq("username", usernameNormalized)
-            .neq("id", supabaseUserId)
-            .maybeSingle();
-
-          if (error && (error as any).code !== "PGRST116") {
-            console.warn(
-              "[UserContext] username uniqueness check error:",
-              error
-            );
-          }
-
-          if (existing && (existing as any).id) {
-            const err = new Error(
-              "That username is already taken. Please choose another."
-            );
-            (err as any).code = "USERNAME_TAKEN";
-            throw err;
-          }
-        } catch (e) {
-          console.warn("[UserContext] updateProfile uniqueness error:", e);
-          throw e;
-        }
-      }
-    }
-
-    const localPatch: Partial<LocalUserProfile> = { ...patch };
-    if (usernameNormalized) {
-      localPatch.username = usernameNormalized;
-      localPatch.name = usernameNormalized;
-      localPatch.displayName = usernameNormalized;
-    }
-
-    baseUpdateProfileLocal(localPatch);
-
-    // Guest: local-only
-    if (!supabaseUserId) {
-      console.log(
-        "[UserContext] updateProfile called while no supabaseUserId (guest); local only",
-        localPatch
-      );
-      return;
-    }
-
-    // Build a safe row for upsert that always includes username/contact_email
-    const existingUsername =
-      profile?.username || profile?.name || profile?.displayName || null;
-    const existingContactEmail = profile?.contactEmail ?? null;
+    if (!supabaseUserId) return;
 
     const row: any = {
       id: supabaseUserId,
       updated_at: new Date().toISOString(),
     };
 
-    if (usernameNormalized || existingUsername) {
-      row.username = usernameNormalized || existingUsername;
+    const usernameCandidate =
+      patch.username ?? patch.name ?? patch.displayName ?? profile?.username;
+
+    if (typeof usernameCandidate === "string" && usernameCandidate.trim()) {
+      row.username = normalizeUsername(usernameCandidate);
     }
 
-    const candidateEmail =
-      localPatch.contactEmail ?? (localPatch as any).contact_email;
-    if (typeof candidateEmail === "string" && candidateEmail.trim()) {
-      row.contact_email = candidateEmail.trim();
-    } else if (existingContactEmail) {
-      row.contact_email = existingContactEmail;
-    } else if (session?.user?.email) {
-      row.contact_email = session.user.email;
+    const emailCandidate = patch.contactEmail ?? profile?.contactEmail;
+
+    if (typeof emailCandidate === "string" && emailCandidate.trim()) {
+      row.contact_email = cleanEmail(emailCandidate);
     }
 
-    const candidateAvatar =
-      localPatch.avatar ??
-      localPatch.avatarUrl ??
-      localPatch.avatarUri ??
-      localPatch.photoURL ??
-      localPatch.imageUrl ??
+    const avatarCandidate =
+      patch.avatar ??
+      patch.avatarUrl ??
+      patch.avatarUri ??
+      patch.photoURL ??
+      patch.imageUrl ??
       profile?.avatar ??
       profile?.avatarUrl ??
       profile?.avatarUri ??
       profile?.photoURL ??
       profile?.imageUrl;
 
-    if (typeof candidateAvatar === "string") {
-      row.avatar_url = candidateAvatar;
+    if (typeof avatarCandidate === "string") {
+      row.avatar_url = avatarCandidate;
     }
 
-    // 🔹 Ask personality: prefer any explicit patch, then existing
-    const candidateAskPersonality =
-      (patch as any).askPersonality ??
-      (patch as any).ask_personality ??
-      profile?.askPersonality ??
-      null;
-
-    if (typeof candidateAskPersonality === "string" && candidateAskPersonality) {
-      row.ask_personality = candidateAskPersonality;
-    }
-
-    // 🔹 Ask memory tier
-    const candidateAskMemoryTier =
-      (patch as any).askMemoryTier ??
-      (patch as any).ask_memory_tier ??
-      profile?.askMemoryTier ??
-      null;
-
-    if (typeof candidateAskMemoryTier === "string" && candidateAskMemoryTier) {
-      row.ask_memory_tier = candidateAskMemoryTier;
-    }
-
-    // 🔹 Ask memory limit
-    const candidateAskMemoryLimit =
-      (patch as any).askMemoryLimit ??
-      (patch as any).ask_memory_limit ??
-      profile?.askMemoryLimit ??
-      null;
+    const askPersonalityCandidate =
+      patch.askPersonality ?? profile?.askPersonality;
 
     if (
-      typeof candidateAskMemoryLimit === "number" &&
-      Number.isFinite(candidateAskMemoryLimit)
+      typeof askPersonalityCandidate === "string" &&
+      askPersonalityCandidate.trim()
     ) {
-      row.ask_memory_limit = candidateAskMemoryLimit;
+      row.ask_personality = askPersonalityCandidate;
     }
 
-    console.log("[UserContext] updateProfile Supabase upsert row:", row);
+    const askMemoryTierCandidate =
+      patch.askMemoryTier ?? profile?.askMemoryTier;
+
+    if (
+      typeof askMemoryTierCandidate === "string" &&
+      askMemoryTierCandidate.trim()
+    ) {
+      row.ask_memory_tier = askMemoryTierCandidate;
+    }
+
+    const askMemoryLimitCandidate =
+      patch.askMemoryLimit ?? profile?.askMemoryLimit;
+
+    if (
+      typeof askMemoryLimitCandidate === "number" &&
+      Number.isFinite(askMemoryLimitCandidate)
+    ) {
+      row.ask_memory_limit = askMemoryLimitCandidate;
+    }
 
     try {
-      const { error } = await supabase.from("profiles").upsert(row);
+      const { error } = await supabase.from("profiles").upsert(row, {
+        onConflict: "id",
+      });
 
       if (error) {
-        console.warn("[UserContext] updateProfile Supabase error:", error);
-
-        if ((error as any).code === "23505") {
-          const err = new Error(
-            "That username is already taken. Please choose another."
-          );
-          (err as any).code = "USERNAME_TAKEN";
-          throw err;
-        }
-
-        // For other errors (including RLS), we still keep the local profile
-        throw error;
-      } else {
-        console.log("[UserContext] updateProfile Supabase upsert OK");
-        // Re-hydrate from Supabase so we always match what's actually stored
-        try {
-          if (supabaseUserId) {
-            await hydrateProfileFromSupabase(
-              supabaseUserId,
-              session?.user ?? null
-            );
-          }
-        } catch (rehydrateErr) {
-          console.warn(
-            "[UserContext] updateProfile rehydrate error:",
-            rehydrateErr
-          );
-        }
+        console.warn("[UserContext] updateProfile upsert error:", error);
+        throw toFriendlyAuthError(error);
       }
     } catch (e) {
-      console.warn("[UserContext] updateProfile error:", e);
-      // Local profile is already updated; we just surface the error to UI
-      throw e;
+      console.warn("[UserContext] updateProfile threw:", e);
+      throw toFriendlyAuthError(e);
     }
   };
 
-  const setUsername = (name: string) => {
+  const setUsername = async (name: string) => {
     const normalized = normalizeUsername(name);
-    return updateProfile({
+
+    await updateProfile({
       username: normalized,
       name: normalized,
       displayName: normalized,
     });
   };
 
-  const setAvatar = (uri: string | null) => {
-    console.log("[UserContext] setAvatar called with", uri);
-    return updateProfile({
+  const setAvatar = async (uri: string | null) => {
+    await updateProfile({
       avatar: uri,
       avatarUrl: uri,
       avatarUri: uri,
@@ -736,13 +565,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const setAskPersonality = (p: string) => {
-    return updateProfile({
+  const setAskPersonality = async (p: string) => {
+    await updateProfile({
       askPersonality: p,
     });
   };
-
-  // -------------------- auth helpers (signup/login/etc.) --------------------
 
   const signUpWithEmailPassword = async (
     username: string,
@@ -751,56 +578,75 @@ export function UserProvider({ children }: { children: ReactNode }) {
   ) => {
     try {
       const normalizedUsername = normalizeUsername(username);
+      const normalizedEmail = cleanEmail(email);
 
-      // Make absolutely sure we aren't accidentally reusing an old session
-      await clearSupabaseAuthStorage("pre signUpWithEmailPassword");
-      await hardClearLocalGameState();
+      console.log("[UserContext] signUp start:", {
+        email: normalizedEmail,
+        username: normalizedUsername,
+      });
+
+      try {
+        await supabase.auth.signOut({ scope: "local" as any });
+      } catch {}
+
+      await clearSupabaseAuthStorage("before signUp");
+
       setSession(null);
       setSupabaseUserId(null);
       setProfile(null);
 
       const { data, error } = await supabase.auth.signUp({
-        email,
+        email: normalizedEmail,
         password,
         options: {
-          data: { username: normalizedUsername },
+          emailRedirectTo: AUTH_CALLBACK_URL,
+          data: {
+            username: normalizedUsername,
+          },
         },
       });
 
       if (error) {
-        console.warn("[UserContext] signUp error:", error);
+        console.log("[REAL SUPABASE SIGNUP ERROR]", error);
         throw error;
       }
 
-      const sess = data.session ?? null;
       const authUser = data.user ?? null;
+      const sess = data.session ?? null;
+      const needsEmailConfirmation = !sess;
+
       setSession(sess);
 
       if (sess?.access_token) {
         await AsyncStorage.setItem(SUPABASE_JWT_KEY, sess.access_token);
+      } else {
+        await AsyncStorage.removeItem(SUPABASE_JWT_KEY);
       }
 
-      if (authUser) {
-        // Force server-side profile/purchases to a clean baseline
-        await hardResetServerProfileForNewUser(
+      if (authUser && sess) {
+        setSupabaseUserId(authUser.id);
+
+        await seedProfileIfNeeded(
           authUser.id,
           normalizedUsername,
-          email
+          normalizedEmail
         );
-
-        setSupabaseUserId(authUser.id);
 
         const next: LocalUserProfile = {
           id: authUser.id,
+
           username: normalizedUsername,
           name: normalizedUsername,
           displayName: normalizedUsername,
-          contactEmail: email,
+
+          contactEmail: normalizedEmail,
+
           avatar: null,
           avatarUrl: null,
           avatarUri: null,
           photoURL: null,
           imageUrl: null,
+
           askPersonality: null,
           askMemoryTier: "free",
           askMemoryLimit: 0,
@@ -809,47 +655,48 @@ export function UserProvider({ children }: { children: ReactNode }) {
         setProfile(next);
         await persistProfile(next);
 
-        // After seeding/resetting, hydrate from Supabase so we exactly match
-        try {
-          await hydrateProfileFromSupabase(authUser.id, authUser);
-        } catch (e) {
-          console.warn("[UserContext] signUp hydrate error:", e);
-        }
+        await hydrateProfileFromSupabase(authUser.id, authUser);
+      } else {
+        setSupabaseUserId(null);
+        setProfile(null);
+        await persistProfile(null);
       }
 
       setReady(true);
+
+      return {
+        needsEmailConfirmation,
+        email: normalizedEmail,
+      };
     } catch (e) {
       console.warn("[UserContext] signUpWithEmailPassword threw:", e);
       setReady(true);
-      throw e;
+      throw toFriendlyAuthError(e);
     }
   };
 
   const loginWithEmailPassword = async (email: string, password: string) => {
-    console.log("[UserContext] loginWithEmailPassword start");
     try {
-      console.log("[UserContext] login: calling signInWithPassword");
+      const normalizedEmail = cleanEmail(email);
+
+      console.log("[UserContext] login start:", {
+        email: normalizedEmail,
+      });
+
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+        email: normalizedEmail,
         password,
       });
 
       if (error) {
-        console.warn("[UserContext] login error:", error);
+        console.log("[REAL SUPABASE LOGIN ERROR]", error);
         throw error;
       }
 
-      const sess = data.session ?? null;
       const authUser = data.user ?? null;
+      const sess = data.session ?? null;
 
-      console.log(
-        "[UserContext] login success, session?",
-        !!sess,
-        "user id:",
-        authUser?.id
-      );
-
-      setSession(sess ?? null);
+      setSession(sess);
 
       if (sess?.access_token) {
         await AsyncStorage.setItem(SUPABASE_JWT_KEY, sess.access_token);
@@ -859,31 +706,24 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
       if (authUser) {
         setSupabaseUserId(authUser.id);
-
-        try {
-          console.log(
-            "[UserContext] login: hydrate profile for",
-            authUser.id
-          );
-          await hydrateProfileFromSupabase(authUser.id, authUser);
-        } catch (e) {
-          console.warn("[UserContext] login hydrate error:", e);
-        }
+        await hydrateProfileFromSupabase(authUser.id, authUser);
       } else {
         setSupabaseUserId(null);
         setProfile(null);
       }
 
-      console.log("[UserContext] loginWithEmailPassword done");
+      setReady(true);
     } catch (e) {
       console.warn("[UserContext] loginWithEmailPassword threw:", e);
-      throw e;
+      setReady(true);
+      throw toFriendlyAuthError(e);
     }
   };
 
   const resetPassword = async (email: string) => {
     try {
-      const trimmed = email.trim();
+      const trimmed = cleanEmail(email);
+
       if (!trimmed) {
         throw new Error("Please enter an email address first.");
       }
@@ -894,12 +734,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
       });
 
       if (error) {
-        console.warn("[UserContext] resetPassword error:", error);
+        console.log("[REAL SUPABASE RESET ERROR]", error);
         throw error;
       }
     } catch (e) {
       console.warn("[UserContext] resetPassword threw:", e);
-      throw e;
+      throw toFriendlyAuthError(e);
     }
   };
 
@@ -908,44 +748,43 @@ export function UserProvider({ children }: { children: ReactNode }) {
       const { error } = await supabase.auth.updateUser({
         password: newPassword,
       });
+
       if (error) {
-        console.warn("[UserContext] updatePassword error:", error);
+        console.log("[REAL SUPABASE UPDATE PASSWORD ERROR]", error);
         throw error;
       }
     } catch (e) {
       console.warn("[UserContext] updatePassword threw:", e);
-      throw e;
+      throw toFriendlyAuthError(e);
     }
   };
 
   const signOut = async () => {
     try {
-      // Safe even if there's no active session (guest mode)
       await supabase.auth.signOut();
     } catch (e) {
       console.warn("[UserContext] signOut error:", e);
     } finally {
-      // Always clear local auth + profile so guests reset too
       setSession(null);
       setSupabaseUserId(null);
       setProfile(null);
 
       await clearSupabaseAuthStorage("signOut");
-      await hardClearLocalGameState();
+      await AsyncStorage.removeItem(PROFILE_KEY);
+
       setReady(true);
     }
   };
 
   const deleteAccount = async () => {
-    // For now, "delete account" just clears local data on this device.
     await signOut();
   };
 
-  // -------------------- flattened values for consumers ----------------------
-
   const flatUsername =
     profile?.username ?? profile?.name ?? profile?.displayName ?? null;
+
   const flatName = profile?.name ?? profile?.username ?? null;
+
   const flatContactEmail = profile?.contactEmail ?? null;
 
   const flatAvatar =
@@ -956,21 +795,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
     profile?.imageUrl ??
     null;
 
-  const isLoggedIn = !!(session && session.user && session.user.id);
-  const flatAskPersonality = profile?.askPersonality ?? null;
-  const flatAskMemoryTier = profile?.askMemoryTier ?? null;
-  const flatAskMemoryLimit =
-    typeof profile?.askMemoryLimit === "number"
-      ? profile!.askMemoryLimit
-      : null;
-
   const value: UserContextValue = {
     ready,
+
     session,
     supabaseUserId,
+
     user: profile,
 
-    isLoggedIn,
+    isLoggedIn: !!session?.user?.id,
 
     username: flatUsername,
     name: flatName,
@@ -982,18 +815,20 @@ export function UserProvider({ children }: { children: ReactNode }) {
     photoURL: profile?.photoURL ?? null,
     imageUrl: profile?.imageUrl ?? null,
 
-    askPersonality: flatAskPersonality,
+    askPersonality: profile?.askPersonality ?? null,
     setAskPersonality,
 
-    askMemoryTier: flatAskMemoryTier,
-    askMemoryLimit: flatAskMemoryLimit,
+    askMemoryTier: profile?.askMemoryTier ?? null,
+    askMemoryLimit: profile?.askMemoryLimit ?? null,
 
     setUsername,
     setAvatar,
+
     updateProfile,
 
     signUpWithEmailPassword,
     loginWithEmailPassword,
+
     resetPassword,
     updatePassword,
 
@@ -1001,15 +836,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
     deleteAccount,
   };
 
-  return (
-    <UserContext.Provider value={value}>{children}</UserContext.Provider>
-  );
+  return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 }
 
 export function useUser() {
   const ctx = useContext(UserContext);
+
   if (!ctx) {
     throw new Error("useUser must be used inside <UserProvider>");
   }
+
   return ctx;
 }

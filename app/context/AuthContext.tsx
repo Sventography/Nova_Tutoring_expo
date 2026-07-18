@@ -1,36 +1,138 @@
-import React, { createContext, useContext, useMemo } from "react";
-import { useUser, User } from "./UserContext";
+// app/context/AuthContext.tsx
+// Legacy compatibility shim.
+// The real auth system now lives in app/context/UserContext.tsx.
 
-type AuthCtx = {
-  login: (email: string, password: string) => Promise<User>;
-  logout: () => Promise<void>;
-};
-
-const AuthContext = createContext<AuthCtx | undefined>(undefined);
+import React from "react";
+import { useUser } from "./UserContext";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { user, login: setUser, logout: clearUser } = useUser();
-
-  async function login(email: string, password: string): Promise<User> {
-    const e = (email || "").trim();
-    const p = (password || "").trim();
-    if (!e || !p) throw new Error("Missing credentials");
-    const name = user?.name || e.split("@")[0] || "Guest";
-    const u: User = { id: user?.id || "local", name, email: e, avatarUrl: user?.avatarUrl || undefined };
-    await setUser(u);
-    return u;
-  }
-
-  async function logout() {
-    await clearUser();
-  }
-
-  const value = useMemo(() => ({ login, logout }), [user]);
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  // No separate provider anymore.
+  // AppProviders/UserProvider handles the real auth state.
+  return <>{children}</>;
 }
 
 export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used inside <AuthProvider>");
-  return ctx;
+  const userCtx = useUser();
+
+  const legacyUser = userCtx.user
+    ? {
+        ...userCtx.user,
+        id: userCtx.user.id,
+        email: userCtx.contactEmail ?? "",
+        username: userCtx.username ?? userCtx.name ?? "Student",
+        name: userCtx.name ?? userCtx.username ?? "Student",
+        avatarUrl: userCtx.avatarUrl ?? userCtx.avatar ?? undefined,
+        avatar_url: userCtx.avatarUrl ?? userCtx.avatar ?? undefined,
+      }
+    : null;
+
+  async function login(email: string, password: string) {
+    await userCtx.loginWithEmailPassword(email, password);
+    return userCtx.user as any;
+  }
+
+  async function register(
+    email: string,
+    username: string,
+    password: string,
+    confirm?: string
+  ) {
+    if (confirm != null && password !== confirm) {
+      throw new Error("Passwords do not match.");
+    }
+
+    await userCtx.signUpWithEmailPassword(username, email, password);
+    return userCtx.user as any;
+  }
+
+  async function signUp(email: string, password: string, username?: string) {
+    await userCtx.signUpWithEmailPassword(username || "Student", email, password);
+    return userCtx.user as any;
+  }
+
+  async function requestReset(email: string) {
+    await userCtx.resetPassword(email);
+    return undefined;
+  }
+
+  async function forgot(email: string) {
+    await userCtx.resetPassword(email);
+    return {};
+  }
+
+  async function reset(_token: string, password: string, confirm?: string) {
+    if (confirm != null && password !== confirm) {
+      throw new Error("Passwords do not match.");
+    }
+
+    await userCtx.updatePassword(password);
+  }
+
+  async function refresh() {
+    // UserContext hydrates itself through Supabase.
+    return;
+  }
+
+  async function updateProfile(patch: {
+    username?: string;
+    avatar_url?: string;
+    avatarUrl?: string;
+    name?: string;
+  }) {
+    await userCtx.updateProfile({
+      username: patch.username ?? patch.name,
+      name: patch.name ?? patch.username,
+      displayName: patch.name ?? patch.username,
+      avatar: patch.avatar_url ?? patch.avatarUrl,
+      avatarUrl: patch.avatar_url ?? patch.avatarUrl,
+      avatarUri: patch.avatar_url ?? patch.avatarUrl,
+      photoURL: patch.avatar_url ?? patch.avatarUrl,
+      imageUrl: patch.avatar_url ?? patch.avatarUrl,
+    });
+  }
+
+  async function logout() {
+    await userCtx.signOut();
+  }
+
+  function addCoins(_delta: number) {
+    // Coins are handled by CoinsContext now.
+  }
+
+  return {
+    ...userCtx,
+
+    // Legacy user shape
+    user: legacyUser,
+
+    // Common legacy fields
+    loading: !userCtx.ready,
+    ready: userCtx.ready,
+    session: userCtx.session,
+    isLoggedIn: userCtx.isLoggedIn,
+
+    // Legacy auth aliases
+    login,
+    signIn: userCtx.loginWithEmailPassword,
+    signInWithEmailPassword: userCtx.loginWithEmailPassword,
+    loginWithEmailPassword: userCtx.loginWithEmailPassword,
+
+    register,
+    signUp,
+    signUpWithEmailPassword: userCtx.signUpWithEmailPassword,
+
+    requestReset,
+    forgot,
+    reset,
+    resetPassword: userCtx.resetPassword,
+    updatePassword: userCtx.updatePassword,
+
+    refresh,
+    updateProfile,
+
+    logout,
+    signOut: userCtx.signOut,
+
+    addCoins,
+  };
 }

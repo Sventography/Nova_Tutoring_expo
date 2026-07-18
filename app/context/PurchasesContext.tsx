@@ -1,4 +1,3 @@
-// app/context/PurchasesContext.tsx
 import React, {
   createContext,
   useCallback,
@@ -35,11 +34,45 @@ const Ctx = createContext<PurchasesCtx | null>(null);
 // Keep this in sync with canonId used in Shop so everything agrees.
 function canonId(raw: string | null | undefined): string {
   if (!raw) return "";
+
   let v = String(raw).trim().toLowerCase();
 
-  // normalize separators
+  // normalize hyphens first
   v = v.replace(/-/g, "_");
 
+  // -----------------------------
+  // Ask upgrades / coin packs
+  // -----------------------------
+  if (
+    v === "ask_memory_tier1" ||
+    v === "ask_memory_tier2" ||
+    v === "ask_memory_tier3" ||
+    v === "ask_memory_tier4" ||
+    v === "ask_personality_calm_focus" ||
+    v === "ask_personality_coach" ||
+    v === "ask_personality_playful" ||
+    v === "ask_personality_storyteller" ||
+    v === "pack_1k" ||
+    v === "pack_5k" ||
+    v === "coins_1000" ||
+    v === "coins_5000" ||
+    v === "bundle_neon"
+  ) {
+    return v;
+  }
+
+  // -----------------------------
+  // Companions
+  // Keep companions as companion:...
+  // -----------------------------
+  if (v.startsWith("companion")) {
+    const rest = v.replace(/^companion[_:]?/, "");
+    return rest ? `companion:${rest}` : "";
+  }
+
+  // -----------------------------
+  // If no colon yet, normalize known theme/cursor values
+  // -----------------------------
   if (!v.includes(":")) {
     // known cursors
     if (v === "glow" || v === "cursor_glow") {
@@ -54,29 +87,48 @@ function canonId(raw: string | null | undefined): string {
     ) {
       v = "cursor:star_trail";
     }
+
     // known themes (base + variants)
     else if (
       [
         "neon",
+        "theme_neon",
         "starry",
+        "theme_starry",
         "pink",
+        "theme_pink",
         "dark",
+        "theme_dark",
         "mint",
+        "theme_mint",
         "glitter",
+        "theme_glitter",
         "blackgold",
         "black_gold",
+        "theme_blackgold",
+        "theme_black_gold",
         "crimson",
+        "theme_crimson",
+        "crimson_dream",
+        "theme_crimson_dream",
         "emerald",
+        "theme_emerald",
+        "emerald_wave",
+        "theme_emerald_wave",
         "neonpurple",
         "neon_purple",
+        "theme_neonpurple",
+        "theme_neon_purple",
         "silver",
-        "crimson_dream",
-        "emerald_wave",
+        "theme_silver",
         "silver_frost",
+        "theme_silver_frost",
       ].includes(v)
     ) {
-      v = "theme:" + v;
+      const themeRest = v.replace(/^theme_/, "");
+      v = "theme:" + themeRest;
     }
+
     // generic prefix cases
     else if (v.startsWith("cursor")) {
       v = "cursor:" + v.replace(/^cursor[_:]?/, "");
@@ -85,10 +137,14 @@ function canonId(raw: string | null | undefined): string {
     }
   }
 
-  // cursor aliases
+  // -----------------------------
+  // Cursor aliases
+  // -----------------------------
   if (v === "cursor:startrail") v = "cursor:star_trail";
 
-  // theme aliases
+  // -----------------------------
+  // Theme aliases
+  // -----------------------------
   if (v === "theme:black_gold") v = "theme:blackgold";
   if (v === "theme:neon_purple") v = "theme:neonpurple";
 
@@ -122,15 +178,14 @@ const MEMORY_TIER_SKUS: Record<Exclude<AskMemoryTierId, "free">, string> = {
 // How many messages (or roughly how much history) each tier grants.
 // You can freely tweak these numbers later as you tune the product.
 const MEMORY_TIER_LIMITS: Record<AskMemoryTierId, number> = {
-  free: 4,   // small taste
-  tier1: 12, // starter
-  tier2: 24, // solid
-  tier3: 48, // big
-  tier4: 96, // max
+  free: 4,
+  tier1: 12,
+  tier2: 24,
+  tier3: 48,
+  tier4: 96,
 };
 
 function computeHighestMemoryTier(purchases: PurchaseMap): AskMemoryTierId {
-  // Always prefer the highest tier the user owns.
   if (purchases[MEMORY_TIER_SKUS.tier4]) return "tier4";
   if (purchases[MEMORY_TIER_SKUS.tier3]) return "tier3";
   if (purchases[MEMORY_TIER_SKUS.tier2]) return "tier2";
@@ -144,7 +199,6 @@ function normalizePurchases(obj: any): PurchaseMap {
   const out: PurchaseMap = {};
   if (!obj || typeof obj !== "object") return out;
 
-  // If it has an `owned` field, that's our real payload.
   const source =
     obj && typeof (obj as any).owned === "object" && (obj as any).owned !== null
       ? (obj as any).owned
