@@ -9,7 +9,7 @@ import os
 import json  # used for raw payload pretty-print in owner emails
 import re    # used for simple coin-pack detection + helpers
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 import requests  # used for Supabase REST + Resend HTTP
 
@@ -979,6 +979,204 @@ def health():
     resend=bool(RESEND_API_KEY),
     shop_owner_email=bool(SHOP_OWNER_EMAIL),
     email_logo_url=bool(EMAIL_LOGO_URL),
+  )
+
+
+# -------------------------------------------------
+# Email confirmation landing page
+# -------------------------------------------------
+
+@app.get("/auth/confirmed")
+def auth_confirmed():
+  """
+  Normal HTTPS landing page used after Supabase verifies an email address.
+
+  Why this exists:
+  - Gmail/Brevo can reliably open a normal https:// URL.
+  - The page clearly tells the user that the account was confirmed.
+  - A direct button tap opens nova://auth/callback and forwards any
+    Supabase query/hash values to the installed Nova Tutoring app.
+  """
+  html = r"""<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="color-scheme" content="dark" />
+    <title>Nova Tutoring — Account Confirmed</title>
+
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family:
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        padding:
+          max(24px, env(safe-area-inset-top))
+          20px
+          max(24px, env(safe-area-inset-bottom));
+        display: grid;
+        place-items: center;
+        background:
+          radial-gradient(circle at top, #26204b 0%, #0b0b10 48%, #000 100%);
+        color: #fff;
+      }
+
+      .card {
+        width: min(100%, 440px);
+        padding: 32px 24px;
+        border: 1px solid rgba(139, 116, 255, 0.75);
+        border-radius: 24px;
+        background: rgba(18, 18, 30, 0.94);
+        box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
+        text-align: center;
+      }
+
+      .icon {
+        width: 78px;
+        height: 78px;
+        margin: 0 auto 18px;
+        display: grid;
+        place-items: center;
+        border: 2px solid #75e6b0;
+        border-radius: 999px;
+        background: #1d4938;
+        color: #75e6b0;
+        font-size: 46px;
+        font-weight: 900;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 28px;
+        line-height: 1.2;
+      }
+
+      p {
+        margin: 14px auto 0;
+        color: #c5c5d6;
+        font-size: 16px;
+        line-height: 1.55;
+      }
+
+      .button {
+        width: 100%;
+        margin-top: 26px;
+        padding: 15px 18px;
+        display: inline-block;
+        border: 0;
+        border-radius: 14px;
+        background: #8b74ff;
+        color: #fff;
+        font: inherit;
+        font-size: 17px;
+        font-weight: 800;
+        text-decoration: none;
+        cursor: pointer;
+      }
+
+      .secondary {
+        margin-top: 15px;
+        color: #9c9caf;
+        font-size: 13px;
+      }
+
+      .error .icon {
+        border-color: #ff9ea8;
+        background: #4a2028;
+        color: #ff9ea8;
+      }
+    </style>
+  </head>
+
+  <body>
+    <main class="card" id="card">
+      <div class="icon" id="icon">✓</div>
+
+      <h1 id="title">Account confirmed!</h1>
+
+      <p id="message">
+        Your email has been verified. Tap the button below to return to
+        Nova Tutoring and finish signing in.
+      </p>
+
+      <a class="button" id="openApp" href="nova://auth/callback">
+        Open Nova Tutoring
+      </a>
+
+      <p class="secondary">
+        If the app does not open, open Nova Tutoring manually and log in
+        using the email address and password you just created.
+      </p>
+    </main>
+
+    <script>
+      (function () {
+        var search = window.location.search || "";
+        var hash = window.location.hash || "";
+
+        var queryParams = new URLSearchParams(search);
+        var hashParams = new URLSearchParams(hash.replace(/^#/, ""));
+
+        var error =
+          queryParams.get("error_description") ||
+          queryParams.get("error") ||
+          hashParams.get("error_description") ||
+          hashParams.get("error");
+
+        var appUrl = "nova://auth/callback" + search + hash;
+        var openButton = document.getElementById("openApp");
+
+        openButton.setAttribute("href", appUrl);
+
+        if (error) {
+          var card = document.getElementById("card");
+          var icon = document.getElementById("icon");
+          var title = document.getElementById("title");
+          var message = document.getElementById("message");
+
+          card.classList.add("error");
+          icon.textContent = "!";
+          title.textContent = "We couldn’t confirm your account";
+
+          try {
+            message.textContent = decodeURIComponent(
+              String(error).replace(/\+/g, " ")
+            );
+          } catch (_) {
+            message.textContent = String(error).replace(/\+/g, " ");
+          }
+
+          openButton.textContent = "Return to Nova Tutoring";
+        }
+      })();
+    </script>
+  </body>
+</html>"""
+
+  return Response(
+    html,
+    status=200,
+    mimetype="text/html",
+    headers={
+      "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+      "Pragma": "no-cache",
+      "Expires": "0",
+    },
   )
 
 # -------------------------------------------------
