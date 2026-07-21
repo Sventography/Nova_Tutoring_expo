@@ -1,3 +1,5 @@
+// app/auth/callback.tsx
+
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -6,16 +8,25 @@ import {
   Text,
   View,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
 
 import { supabase } from "../lib/supabase";
 
 type CallbackParams = Record<string, string>;
-
 type CallbackStage = "loading" | "success" | "error";
 
-type Destination = "/(tabs)/account" | "/(auth)/login";
+const PENDING_CONFIRMATION_EMAIL_KEY =
+  "nova.auth.pending-confirmation-email.v1";
+const PENDING_EMAIL_CHANGE_KEY =
+  "nova.auth.pending-email-change.v1";
+
+const AUTH_TIMEOUT_MS = 8000;
+
+function normalizeEmail(value: unknown): string {
+  return String(value || "").trim().toLowerCase();
+}
 
 function readAuthParams(url: string): CallbackParams {
   const queryStart = url.indexOf("?");
@@ -32,11 +43,8 @@ function readAuthParams(url: string): CallbackParams {
       : "";
 
   const hash = hashStart >= 0 ? url.slice(hashStart + 1) : "";
-
   const combined = [query, hash].filter(Boolean).join("&");
-
   const search = new URLSearchParams(combined);
-
   const params: CallbackParams = {};
 
   search.forEach((value, key) => {
@@ -54,104 +62,222 @@ function safelyDecode(value: string): string {
   }
 }
 
-function friendlyCallbackError(error: unknown): string {
+function friendlyError(error: unknown): string {
   const message =
     error instanceof Error
       ? error.message
-      : String(error || "Unknown confirmation error");
+      : String(error || "Unknown authentication error");
 
-  const lowerMessage = message.toLowerCase();
+  const lower = message.toLowerCase();
 
-  if (
-    lowerMessage.includes("expired") ||
-    lowerMessage.includes("otp_expired")
-  ) {
-    return "That confirmation link has expired. Please request a new confirmation email.";
+  if (lower.includes("timed out")) {
+    return "Nova could not finish in time. Reopen the newest email link and try again.";
   }
 
-  if (
-    lowerMessage.includes("already") &&
-    lowerMessage.includes("confirmed")
-  ) {
-    return "Your account has already been confirmed. You can return to Nova Tutoring and log in.";
+  if (lower.includes("expired") || lower.includes("otp_expired")) {
+    return "That link has expired. Request a new email and use the newest link.";
   }
 
-  if (lowerMessage.includes("invalid")) {
-    return "That confirmation link is no longer valid. Please use the newest confirmation email.";
+  if (lower.includes("invalid")) {
+    return "That link is no longer valid. Use the newest email.";
   }
 
   return message;
 }
 
+async function withTimeout<T>(
+  promise: Promise<T>,
+  milliseconds: number,
+  label: string
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => {
+          reject(new Error(`${label} timed out after ${milliseconds}ms`));
+        }, milliseconds);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 export default function AuthCallback() {
   const router = useRouter();
-
   const incomingUrl = Linking.useLinkingURL();
 
-  const handledUrlRef = useRef<string | null>(null);
+  const attemptIdRef = useRef(0);
+  const redirectTimerRef =
+    useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const redirectTimerRef = useRef<ReturnType<
-    typeof setTimeout
-  > | null>(null);
-
-  const [stage, setStage] = useState<CallbackStage>("loading");
-
-  const [title, setTitle] = useState("Confirming your account…");
-
+  const [stage, setStage] =
+    useState<CallbackStage>("loading");
+  const [title, setTitle] =
+    useState("Finishing your request…");
   const [message, setMessage] = useState(
     "Please keep Nova Tutoring open for a moment."
   );
-
   const [destination, setDestination] =
-    useState<Destination>("/(tabs)/account");
+    useState<"account" | "login" | "reset">("account");
+  const [loginEmail, setLoginEmail] = useState("");
 
-  function openDestination(nextDestination: Destination) {
+  function clearRedirectTimer() {
     if (redirectTimerRef.current) {
       clearTimeout(redirectTimerRef.current);
       redirectTimerRef.current = null;
     }
+  }
 
-    router.replace(nextDestination);
+  function goNext() {
+    clearRedirectTimer();
+
+    if (destination === "reset") {
+      (router as any).replace("/reset-password");
+      return;
+    }
+
+    if (destination === "login") {
+      (router as any).replace({
+        pathname: "/sign-in",
+        params: {
+          mode: "login",
+          email: loginEmail,
+        },
+      });
+      return;
+    }
+
+    (router as any).replace("/(tabs)/account");
   }
 
   function showSuccess(
-    successMessage: string,
-    nextDestination: Destination
+    nextTitle: string,
+    nextMessage: string,
+    nextDestination: "account" | "login" | "reset",
+    autoContinue = false
   ) {
     setStage("success");
-    setTitle("Account confirmed!");
-    setMessage(successMessage);
+    setTitle(nextTitle);
+    setMessage(nextMessage);
     setDestination(nextDestination);
 
-    if (redirectTimerRef.current) {
-      clearTimeout(redirectTimerRef.current);
+    if (autoContinue) {
+      clearRedirectTimer();
+      redirectTimerRef.current = setTimeout(() => {
+        if (nextDestination === "reset") {
+          (router as any).replace("/reset-password");
+        } else if (nextDestination === "login") {
+          (router as any).replace({
+            pathname: "/sign-in",
+            params: {
+              mode: "login",
+              email: loginEmail,
+            },
+          });
+        } else {
+          (router as any).replace("/(tabs)/account");
+        }
+      }, 1800);
     }
-
-    redirectTimerRef.current = setTimeout(() => {
-      router.replace(nextDestination);
-    }, 3000);
   }
 
   useEffect(() => {
+    const attemptId = ++attemptIdRef.current;
     let cancelled = false;
 
-    async function finishConfirmation(url: string) {
-      if (!url || handledUrlRef.current === url) {
-        return;
-      }
+    function isCurrent() {
+      return !cancelled && attemptId === attemptIdRef.current;
+    }
 
-      handledUrlRef.current = url;
+    async function establishSession(
+      params: CallbackParams
+    ): Promise<boolean> {
+      const accessToken = params.access_token;
+      const refreshToken = params.refresh_token;
+      const code = params.code;
+      const tokenHash = params.token_hash;
+      const type = params.type;
 
-      try {
-        console.log("[AUTH CALLBACK] URL received:", url);
-
-        setStage("loading");
-        setTitle("Confirming your account…");
-        setMessage(
-          "Please keep Nova Tutoring open for a moment."
+      if (accessToken && refreshToken) {
+        const result = await withTimeout(
+          supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          }),
+          AUTH_TIMEOUT_MS,
+          "Starting your Nova session"
         );
 
+        if (result.error) throw result.error;
+        return !!result.data.session;
+      }
+
+      if (code) {
+        const result = await withTimeout(
+          supabase.auth.exchangeCodeForSession(code),
+          AUTH_TIMEOUT_MS,
+          "Completing the request"
+        );
+
+        if (result.error) throw result.error;
+        return !!result.data.session;
+      }
+
+      if (tokenHash && type) {
+        const result = await withTimeout(
+          supabase.auth.verifyOtp({
+            token_hash: tokenHash,
+            type: type as any,
+          }),
+          AUTH_TIMEOUT_MS,
+          "Verifying the request"
+        );
+
+        if (result.error) throw result.error;
+        return !!result.data.session;
+      }
+
+      const current = await withTimeout(
+        supabase.auth.getSession(),
+        5000,
+        "Checking your Nova session"
+      );
+
+      if (current.error) throw current.error;
+      return !!current.data.session;
+    }
+
+    async function run() {
+      try {
+        const pendingSignupEmail = normalizeEmail(
+          await AsyncStorage.getItem(
+            PENDING_CONFIRMATION_EMAIL_KEY
+          )
+        );
+        const pendingChangedEmail = normalizeEmail(
+          await AsyncStorage.getItem(PENDING_EMAIL_CHANGE_KEY)
+        );
+
+        setLoginEmail(pendingChangedEmail || pendingSignupEmail);
+
+        const url =
+          incomingUrl ||
+          (await withTimeout(
+            Linking.getInitialURL(),
+            4000,
+            "Reading the email link"
+          ));
+
+        if (!url) {
+          throw new Error("Nova did not receive the email link.");
+        }
+
         const params = readAuthParams(url);
+        const flowType = String(params.type || "").toLowerCase();
 
         const providerError =
           params.error_description ||
@@ -162,188 +288,142 @@ export default function AuthCallback() {
           throw new Error(safelyDecode(providerError));
         }
 
-        const accessToken = params.access_token;
-        const refreshToken = params.refresh_token;
-        const code = params.code;
-        const tokenHash = params.token_hash;
-        const type = params.type;
-
-        let hasAuthenticatedSession = false;
+        console.log("[AUTH CALLBACK] URL received:", url);
+        console.log("[AUTH CALLBACK] flow type:", flowType);
 
         /*
-         * Standard Supabase mobile confirmation:
-         * nova://auth/callback#access_token=...&refresh_token=...
+         * Password recovery must establish a recovery session before the
+         * user can call updateUser({ password }).
          */
-        if (accessToken && refreshToken) {
-          const { data, error } =
-            await supabase.auth.setSession({
-              access_token: accessToken,
-              refresh_token: refreshToken,
-            });
+        if (flowType === "recovery") {
+          const hasSession = await establishSession(params);
 
-          if (error) {
-            throw error;
+          if (!isCurrent()) return;
+
+          if (!hasSession) {
+            throw new Error(
+              "Nova could not start the password-recovery session."
+            );
           }
 
-          hasAuthenticatedSession = !!data.session;
-        }
-
-        /*
-         * PKCE callback support:
-         * nova://auth/callback?code=...
-         */
-        else if (code) {
-          const { data, error } =
-            await supabase.auth.exchangeCodeForSession(code);
-
-          if (error) {
-            throw error;
-          }
-
-          hasAuthenticatedSession = !!data.session;
-        }
-
-        /*
-         * Token-hash callback support.
-         */
-        else if (tokenHash && type) {
-          const { data, error } =
-            await supabase.auth.verifyOtp({
-              token_hash: tokenHash,
-              type: type as any,
-            });
-
-          if (error) {
-            throw error;
-          }
-
-          hasAuthenticatedSession = !!data.session;
-        }
-
-        /*
-         * The app may already have received the session through
-         * Supabase's authentication listener.
-         */
-        else {
-          const { data, error } =
-            await supabase.auth.getSession();
-
-          if (error) {
-            throw error;
-          }
-
-          hasAuthenticatedSession = !!data.session;
-        }
-
-        if (cancelled) {
+          showSuccess(
+            "Reset link verified!",
+            "Opening the screen where you can choose a new password…",
+            "reset",
+            true
+          );
           return;
         }
 
-        if (hasAuthenticatedSession) {
+        /*
+         * Email changes are already verified by Supabase before this app
+         * callback opens. Refresh the session, but never show the old generic
+         * signup error screen if the email-change link itself succeeded.
+         */
+        if (flowType === "email_change" || pendingChangedEmail) {
+          try {
+            await establishSession(params);
+          } catch (error) {
+            console.warn(
+              "[AUTH CALLBACK] email-change session warning:",
+              error
+            );
+          }
+
+          try {
+            const refreshed = await withTimeout(
+              supabase.auth.refreshSession(),
+              6000,
+              "Refreshing the changed email"
+            );
+
+            const refreshedEmail = normalizeEmail(
+              refreshed.data.user?.email ||
+              refreshed.data.session?.user?.email
+            );
+
+            if (
+              pendingChangedEmail &&
+              refreshedEmail === pendingChangedEmail
+            ) {
+              await AsyncStorage.removeItem(
+                PENDING_EMAIL_CHANGE_KEY
+              );
+            }
+          } catch (error) {
+            console.warn(
+              "[AUTH CALLBACK] email-change refresh warning:",
+              error
+            );
+          }
+
+          if (!isCurrent()) return;
+
           showSuccess(
+            "Email address confirmed!",
+            "Your login email was updated on the same Nova account. Your username, avatar, purchases, coins, streak, and progress are unchanged.",
+            "account",
+            true
+          );
+          return;
+        }
+
+        const hasSession = await establishSession(params);
+
+        if (!isCurrent()) return;
+
+        if (hasSession) {
+          await AsyncStorage.removeItem(
+            PENDING_CONFIRMATION_EMAIL_KEY
+          );
+
+          showSuccess(
+            "Account confirmed!",
             "Your Nova Tutoring account is ready. Opening your account…",
-            "/(tabs)/account"
+            "account",
+            true
           );
-        } else {
-          /*
-           * The email can still be successfully verified even when an
-           * email provider or browser does not pass the login session
-           * back into the app. Give the user a clear success message
-           * and send them to the login screen instead of showing a
-           * confusing technical error.
-           */
-          showSuccess(
-            "Your email has been verified. Opening the login screen so you can sign in…",
-            "/(auth)/login"
-          );
-        }
-      } catch (error) {
-        console.warn(
-          "[AUTH CALLBACK] confirmation failed:",
-          error
-        );
-
-        if (cancelled) {
           return;
         }
 
+        showSuccess(
+          "Email confirmed!",
+          "Your email is verified. Continue to Login with the email and password you registered.",
+          "login",
+          false
+        );
+      } catch (error) {
+        console.warn("[AUTH CALLBACK] failed:", error);
+
+        if (!isCurrent()) return;
+
         setStage("error");
-        setTitle("We couldn’t confirm your account");
-        setMessage(friendlyCallbackError(error));
-        setDestination("/(auth)/login");
+        setTitle("We couldn’t finish the request");
+        setMessage(friendlyError(error));
       }
     }
 
-    async function resolveUrl() {
-      try {
-        const url =
-          incomingUrl || (await Linking.getInitialURL());
-
-        if (!url) {
-          if (cancelled) {
-            return;
-          }
-
-          setStage("error");
-          setTitle("Confirmation link missing");
-          setMessage(
-            "Nova Tutoring did not receive the confirmation link. Please reopen the newest confirmation email and tap Confirm Email again."
-          );
-          setDestination("/(auth)/login");
-
-          return;
-        }
-
-        await finishConfirmation(url);
-      } catch (error) {
-        if (cancelled) {
-          return;
-        }
-
-        console.warn(
-          "[AUTH CALLBACK] unable to read incoming URL:",
-          error
-        );
-
-        setStage("error");
-        setTitle("We couldn’t open the confirmation link");
-        setMessage(friendlyCallbackError(error));
-        setDestination("/(auth)/login");
-      }
-    }
-
-    void resolveUrl();
+    void run();
 
     return () => {
       cancelled = true;
-
-      if (redirectTimerRef.current) {
-        clearTimeout(redirectTimerRef.current);
-        redirectTimerRef.current = null;
-      }
+      clearRedirectTimer();
     };
   }, [incomingUrl, router]);
 
-  const isLoading = stage === "loading";
-  const isSuccess = stage === "success";
-  const isError = stage === "error";
-
   return (
     <View style={s.container}>
-      {isLoading ? (
-        <ActivityIndicator
-          size="large"
-          color="#8b74ff"
-        />
+      {stage === "loading" ? (
+        <ActivityIndicator size="large" color="#8b74ff" />
       ) : null}
 
-      {isSuccess ? (
+      {stage === "success" ? (
         <View style={s.successCircle}>
           <Text style={s.successCheck}>✓</Text>
         </View>
       ) : null}
 
-      {isError ? (
+      {stage === "error" ? (
         <View style={s.errorCircle}>
           <Text style={s.errorMark}>!</Text>
         </View>
@@ -354,32 +434,20 @@ export default function AuthCallback() {
       <Text
         style={[
           s.message,
-          isError ? s.errorMessage : null,
+          stage === "error" ? s.errorMessage : null,
         ]}
       >
         {message}
       </Text>
 
-      {isSuccess ? (
-        <Pressable
-          style={s.button}
-          onPress={() => openDestination(destination)}
-        >
+      {stage !== "loading" ? (
+        <Pressable style={s.button} onPress={goNext}>
           <Text style={s.buttonText}>
-            {destination === "/(tabs)/account"
-              ? "Open My Account"
-              : "Continue to Login"}
-          </Text>
-        </Pressable>
-      ) : null}
-
-      {isError ? (
-        <Pressable
-          style={s.button}
-          onPress={() => openDestination("/(auth)/login")}
-        >
-          <Text style={s.buttonText}>
-            Return to Login
+            {destination === "reset"
+              ? "Choose New Password"
+              : destination === "login"
+              ? "Continue to Login"
+              : "Open My Account"}
           </Text>
         </Pressable>
       ) : null}
@@ -396,7 +464,6 @@ const s = StyleSheet.create({
     justifyContent: "center",
     gap: 16,
   },
-
   successCircle: {
     width: 72,
     height: 72,
@@ -406,16 +473,12 @@ const s = StyleSheet.create({
     borderColor: "#75e6b0",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 4,
   },
-
   successCheck: {
     color: "#75e6b0",
     fontSize: 40,
     fontWeight: "900",
-    lineHeight: 46,
   },
-
   errorCircle: {
     width: 72,
     height: 72,
@@ -425,23 +488,18 @@ const s = StyleSheet.create({
     borderColor: "#ff9ea8",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 4,
   },
-
   errorMark: {
     color: "#ff9ea8",
     fontSize: 38,
     fontWeight: "900",
-    lineHeight: 44,
   },
-
   title: {
-    color: "white",
+    color: "#ffffff",
     fontSize: 24,
-    fontWeight: "800",
+    fontWeight: "900",
     textAlign: "center",
   },
-
   message: {
     color: "#b9b9cb",
     fontSize: 15,
@@ -449,24 +507,21 @@ const s = StyleSheet.create({
     textAlign: "center",
     maxWidth: 360,
   },
-
   errorMessage: {
     color: "#ffb2ba",
   },
-
   button: {
     marginTop: 8,
     backgroundColor: "#8b74ff",
     paddingHorizontal: 22,
     paddingVertical: 13,
     borderRadius: 12,
-    minWidth: 180,
+    minWidth: 220,
     alignItems: "center",
   },
-
   buttonText: {
-    color: "white",
+    color: "#ffffff",
     fontSize: 15,
-    fontWeight: "800",
+    fontWeight: "900",
   },
 });

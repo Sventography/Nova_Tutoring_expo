@@ -989,13 +989,9 @@ def health():
 @app.get("/auth/confirmed")
 def auth_confirmed():
   """
-  Normal HTTPS landing page used after Supabase verifies an email address.
-
-  Why this exists:
-  - Gmail/Brevo can reliably open a normal https:// URL.
-  - The page clearly tells the user that the account was confirmed.
-  - A direct button tap opens nova://auth/callback and forwards any
-    Supabase query/hash values to the installed Nova Tutoring app.
+  Shared HTTPS landing page for signup confirmation, login-email changes,
+  and password recovery. JavaScript reads the Supabase `type` value from
+  the query/hash and shows the correct Nova Tutoring destination.
   """
   html = r"""<!doctype html>
 <html lang="en">
@@ -1006,7 +1002,7 @@ def auth_confirmed():
       content="width=device-width, initial-scale=1, viewport-fit=cover"
     />
     <meta name="color-scheme" content="dark" />
-    <title>Nova Tutoring — Account Confirmed</title>
+    <title>Nova Tutoring — Email Verified</title>
 
     <style>
       :root {
@@ -1018,9 +1014,7 @@ def auth_confirmed():
           sans-serif;
       }
 
-      * {
-        box-sizing: border-box;
-      }
+      * { box-sizing: border-box; }
 
       body {
         min-height: 100vh;
@@ -1078,15 +1072,12 @@ def auth_confirmed():
         margin-top: 26px;
         padding: 15px 18px;
         display: inline-block;
-        border: 0;
         border-radius: 14px;
         background: #8b74ff;
         color: #fff;
-        font: inherit;
         font-size: 17px;
         font-weight: 800;
         text-decoration: none;
-        cursor: pointer;
       }
 
       .secondary {
@@ -1106,21 +1097,15 @@ def auth_confirmed():
   <body>
     <main class="card" id="card">
       <div class="icon" id="icon">✓</div>
-
-      <h1 id="title">Account confirmed!</h1>
-
+      <h1 id="title">Email verified!</h1>
       <p id="message">
-        Your email has been verified. Tap the button below to return to
-        Nova Tutoring and finish signing in.
+        Tap the button below to return to Nova Tutoring.
       </p>
-
       <a class="button" id="openApp" href="nova://auth/callback">
         Open Nova Tutoring
       </a>
-
-      <p class="secondary">
-        If the app does not open, open Nova Tutoring manually and log in
-        using the email address and password you just created.
+      <p class="secondary" id="secondary">
+        You may also open Nova Tutoring manually.
       </p>
     </main>
 
@@ -1128,9 +1113,14 @@ def auth_confirmed():
       (function () {
         var search = window.location.search || "";
         var hash = window.location.hash || "";
-
         var queryParams = new URLSearchParams(search);
         var hashParams = new URLSearchParams(hash.replace(/^#/, ""));
+
+        var flowType = String(
+          queryParams.get("type") ||
+          hashParams.get("type") ||
+          ""
+        ).toLowerCase();
 
         var error =
           queryParams.get("error_description") ||
@@ -1138,20 +1128,52 @@ def auth_confirmed():
           hashParams.get("error_description") ||
           hashParams.get("error");
 
-        var appUrl = "nova://auth/callback" + search + hash;
+        var card = document.getElementById("card");
+        var icon = document.getElementById("icon");
+        var title = document.getElementById("title");
+        var message = document.getElementById("message");
         var openButton = document.getElementById("openApp");
+        var secondary = document.getElementById("secondary");
 
-        openButton.setAttribute("href", appUrl);
+        if (flowType === "email_change") {
+          document.title = "Nova Tutoring — Email Changed";
+          title.textContent = "Email address changed!";
+          message.textContent =
+            "Your new login email is active. Your Nova account and progress are unchanged.";
+          openButton.textContent = "Return to Nova Tutoring";
+          openButton.setAttribute("href", "nova://");
+          secondary.textContent =
+            "Open Nova Tutoring and your account will refresh automatically.";
+        } else if (flowType === "recovery") {
+          document.title = "Nova Tutoring — Reset Password";
+          title.textContent = "Reset link verified!";
+          message.textContent =
+            "Open Nova Tutoring to choose your new password.";
+          openButton.textContent = "Choose New Password";
+          openButton.setAttribute(
+            "href",
+            "nova://auth/callback" + search + hash
+          );
+          secondary.textContent =
+            "Keep this page open until Nova Tutoring displays the new-password screen.";
+        } else {
+          document.title = "Nova Tutoring — Account Confirmed";
+          title.textContent = "Account confirmed!";
+          message.textContent =
+            "Your email has been verified. Open Nova Tutoring to finish signing in.";
+          openButton.textContent = "Open Nova Tutoring";
+          openButton.setAttribute(
+            "href",
+            "nova://auth/callback" + search + hash
+          );
+          secondary.textContent =
+            "You can also open Nova Tutoring manually and log in.";
+        }
 
         if (error) {
-          var card = document.getElementById("card");
-          var icon = document.getElementById("icon");
-          var title = document.getElementById("title");
-          var message = document.getElementById("message");
-
           card.classList.add("error");
           icon.textContent = "!";
-          title.textContent = "We couldn’t confirm your account";
+          title.textContent = "We couldn’t complete the request";
 
           try {
             message.textContent = decodeURIComponent(
@@ -1162,6 +1184,7 @@ def auth_confirmed():
           }
 
           openButton.textContent = "Return to Nova Tutoring";
+          openButton.setAttribute("href", "nova://");
         }
       })();
     </script>
@@ -1178,6 +1201,7 @@ def auth_confirmed():
       "Expires": "0",
     },
   )
+
 
 # -------------------------------------------------
 # Checkout core (card / Stripe)

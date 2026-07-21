@@ -7,11 +7,11 @@ import React, {
   useState,
   ReactNode,
 } from "react";
+import { AppState } from "react-native";
 
 import type { Session, User as SupabaseUser } from "@supabase/supabase-js";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as Linking from "expo-linking";
 import { supabase } from "../lib/supabase";
 
 type LocalUserProfile = {
@@ -20,6 +20,7 @@ type LocalUserProfile = {
   username?: string | null;
   name?: string | null;
   displayName?: string | null;
+  usernameChangedAt?: string | null;
 
   contactEmail?: string | null;
 
@@ -51,6 +52,7 @@ type UserContextValue = {
 
   username: string | null;
   name: string | null;
+  usernameChangedAt: string | null;
   contactEmail: string | null;
 
   avatar: string | null;
@@ -66,6 +68,16 @@ type UserContextValue = {
   askMemoryLimit: number | null;
 
   setUsername: (name: string) => Promise<void> | void;
+  checkUsername: (name: string) => Promise<string>;
+  changeUsername: (name: string) => Promise<{
+    username: string;
+    changed_at?: string | null;
+    next_change_at?: string | null;
+  }>;
+  requestEmailChange: (
+    newEmail: string,
+    currentPassword: string
+  ) => Promise<void>;
   setAvatar: (uri: string | null) => Promise<void> | void;
 
   updateProfile: (patch: Partial<LocalUserProfile>) => Promise<void>;
@@ -92,18 +104,74 @@ const UserContext = createContext<UserContextValue | null>(null);
 const PROFILE_KEY = "user.profile.v1";
 const SUPABASE_JWT_KEY = "auth.supabase.jwt";
 const SUPABASE_AUTH_TOKEN_KEY = "@supabase.auth.token";
+const PENDING_EMAIL_CHANGE_KEY =
+  "nova.auth.pending-email-change.v1";
 
-const AUTH_CALLBACK_URL = Linking.createURL("auth/callback", {
-  scheme: "nova",
-});
+// Normal HTTPS landing page used by Supabase confirmation emails.
+// EXPO_PUBLIC_AUTH_CONFIRMATION_URL can override this without editing code.
+const AUTH_CONFIRMATION_PAGE_URL = (
+  process.env.EXPO_PUBLIC_AUTH_CONFIRMATION_URL ||
+  "https://confirm.sventographystudios.com/auth/confirmed"
+).trim();
+
+const PASSWORD_RECOVERY_PAGE_URL = (
+  process.env.EXPO_PUBLIC_PASSWORD_RECOVERY_URL ||
+  "https://confirm.sventographystudios.com/auth/confirmed"
+).trim();
 
 function normalizeUsername(raw: string | null | undefined): string {
   const base = (raw ?? "").trim() || "Student";
- return base.slice(0, 10);
+  return base.slice(0, 8);
+}
+
+function usernameStatusError(status: string): Error {
+  const normalized = String(status || "").toLowerCase();
+
+  const messages: Record<string, string> = {
+    empty: "Please enter a username.",
+    too_short: "Usernames must be at least 3 characters long.",
+    too_long: "Usernames can be up to 8 characters long.",
+    invalid_chars:
+      "Use only letters, numbers, and underscores in your username.",
+    taken: "That username is already taken.",
+    same: "That is already your username.",
+    cooldown:
+      "You can change your username only once every 30 days.",
+  };
+
+  const error: any = new Error(
+    messages[normalized] || "Could not use that username."
+  );
+
+  error.code = `USERNAME_${normalized.toUpperCase()}`;
+  return error;
 }
 
 function cleanEmail(email: string): string {
   return String(email || "").trim().toLowerCase();
+}
+
+async function withTimeout<T>(
+  promise: Promise<T>,
+  milliseconds: number,
+  message: string
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => {
+          reject(new Error(message));
+        }, milliseconds);
+      }),
+    ]);
+  } finally {
+    if (timer) {
+      clearTimeout(timer);
+    }
+  }
 }
 
 async function persistProfile(profile: LocalUserProfile | null) {
@@ -166,8 +234,41 @@ function toFriendlyAuthError(error: any) {
     return new Error("Supabase configuration missing from this build.");
   }
 
-  if (msg.includes("username")) {
+  if (msg.includes("username_cooldown")) {
+    const detail = raw.includes(":") ? raw.split(":").slice(1).join(":").trim() : "";
+    return new Error(
+      detail
+        ? `You can change your username again after ${detail}.`
+        : "You can change your username only once every 30 days."
+    );
+  }
+
+  if (msg.includes("username_too_short")) {
+    return new Error("Usernames must be at least 3 characters long.");
+  }
+
+  if (msg.includes("username_too_long")) {
+    return new Error("Usernames can be up to 8 characters long.");
+  }
+
+  if (msg.includes("username_invalid_chars")) {
+    return new Error(
+      "Use only letters, numbers, and underscores in your username."
+    );
+  }
+
+  if (msg.includes("username_taken")) {
     return new Error("That username is already taken.");
+  }
+
+  if (msg.includes("username_change_requires_rpc")) {
+    return new Error(
+      "Username changes must be completed from the Change Username screen."
+    );
+  }
+
+  if (msg.includes("username")) {
+    return new Error("That username could not be used.");
   }
 
   return error instanceof Error ? error : new Error(raw);
@@ -267,7 +368,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       const { data: row, error } = await supabase
         .from("profiles")
         .select(
-          "id, username, contact_email, avatar_url, ask_personality, ask_memory_tier, ask_memory_limit"
+          "id, username, username_changed_at, contact_email, avatar_url, ask_personality, ask_memory_tier, ask_memory_limit"
         )
         .eq("id", userId)
         .maybeSingle();
@@ -302,8 +403,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
         username: normalizedUsername,
         name: normalizedUsername,
         displayName: normalizedUsername,
+        usernameChangedAt: row?.username_changed_at ?? null,
 
-        contactEmail: row?.contact_email ?? authEmail,
+        contactEmail: authEmail ?? row?.contact_email ?? null,
 
         avatar: row?.avatar_url ?? null,
         avatarUrl: row?.avatar_url ?? null,
@@ -315,6 +417,27 @@ export function UserProvider({ children }: { children: ReactNode }) {
         askMemoryTier: row?.ask_memory_tier ?? "free",
         askMemoryLimit,
       };
+
+      if (
+        row &&
+        authEmail &&
+        cleanEmail(String(row.contact_email || "")) !== cleanEmail(authEmail)
+      ) {
+        const { error: emailSyncError } = await supabase
+          .from("profiles")
+          .update({
+            contact_email: cleanEmail(authEmail),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", userId);
+
+        if (emailSyncError) {
+          console.warn(
+            "[UserContext] contact email sync error:",
+            emailSyncError
+          );
+        }
+      }
 
       setProfile(next);
       await persistProfile(next);
@@ -406,47 +529,161 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const { data } = supabase.auth.onAuthStateChange(async (_event, sess) => {
-      try {
-        console.log("[UserContext] onAuthStateChange:", _event);
+    /*
+     * Keep this callback synchronous. Supabase auth operations can wait for
+     * auth-state listeners, so awaiting storage or database work inside the
+     * callback can leave signInWithPassword() or updateUser() spinning.
+     */
+    const { data } = supabase.auth.onAuthStateChange((_event, sess) => {
+      console.log("[UserContext] onAuthStateChange:", _event);
 
-        setSession(sess ?? null);
+      setSession(sess ?? null);
 
-        if (sess?.access_token) {
-          await AsyncStorage.setItem(SUPABASE_JWT_KEY, sess.access_token);
-        } else {
-          await AsyncStorage.removeItem(SUPABASE_JWT_KEY);
-        }
+      const authUser = sess?.user ?? null;
 
-        const authUser = sess?.user ?? null;
-
-        if (authUser) {
-          setSupabaseUserId(authUser.id);
-          await hydrateProfileFromSupabase(authUser.id, authUser);
-        } else {
-          setSupabaseUserId(null);
-          setProfile(null);
-        }
-
-        setReady(true);
-      } catch (e) {
-        console.warn("[UserContext] onAuthStateChange error:", e);
-
-        if (isInvalidRefreshTokenError(e)) {
-          await repairInvalidRefreshToken("onAuthStateChange");
-          setSession(null);
-          setSupabaseUserId(null);
-          setProfile(null);
-        }
-
-        setReady(true);
+      if (authUser) {
+        setSupabaseUserId(authUser.id);
+      } else {
+        setSupabaseUserId(null);
+        setProfile(null);
       }
+
+      setReady(true);
+
+      /*
+       * Run storage and profile hydration after the auth callback returns.
+       * This avoids blocking the auth method that emitted the event.
+       */
+      setTimeout(() => {
+        void (async () => {
+          try {
+            if (sess?.access_token) {
+              await AsyncStorage.setItem(
+                SUPABASE_JWT_KEY,
+                sess.access_token
+              );
+            } else {
+              await AsyncStorage.removeItem(SUPABASE_JWT_KEY);
+            }
+
+            if (authUser) {
+              const pendingEmailChange = cleanEmail(
+                (await AsyncStorage.getItem(
+                  PENDING_EMAIL_CHANGE_KEY
+                )) || ""
+              );
+
+              if (
+                pendingEmailChange &&
+                cleanEmail(authUser.email || "") ===
+                  pendingEmailChange
+              ) {
+                await AsyncStorage.removeItem(
+                  PENDING_EMAIL_CHANGE_KEY
+                );
+              }
+
+              await hydrateProfileFromSupabase(
+                authUser.id,
+                authUser
+              );
+            }
+          } catch (error) {
+            console.warn(
+              "[UserContext] deferred auth-state work warning:",
+              error
+            );
+
+            if (isInvalidRefreshTokenError(error)) {
+              await repairInvalidRefreshToken(
+                "deferred_onAuthStateChange"
+              );
+              setSession(null);
+              setSupabaseUserId(null);
+              setProfile(null);
+            }
+          }
+        })();
+      }, 0);
     });
 
     return () => {
       try {
         data?.subscription?.unsubscribe();
       } catch {}
+    };
+  }, []);
+
+  /*
+   * Email confirmation and password-recovery links temporarily leave Nova.
+   * Refresh the authenticated user whenever Nova returns to the foreground
+   * so a newly changed email appears without requiring an app restart.
+   */
+  useEffect(() => {
+    let active = true;
+
+    async function refreshAuthenticatedUser() {
+      try {
+        const { data, error } = await supabase.auth.refreshSession();
+
+        if (error) {
+          console.warn(
+            "[UserContext] foreground refreshSession error:",
+            error
+          );
+          return;
+        }
+
+        const refreshedSession = data.session ?? null;
+        const authUser = data.user ?? refreshedSession?.user ?? null;
+
+        if (!active || !refreshedSession || !authUser) {
+          return;
+        }
+
+        setSession(refreshedSession);
+        setSupabaseUserId(authUser.id);
+
+        if (refreshedSession.access_token) {
+          await AsyncStorage.setItem(
+            SUPABASE_JWT_KEY,
+            refreshedSession.access_token
+          );
+        }
+
+        const pendingEmailChange = cleanEmail(
+          (await AsyncStorage.getItem(PENDING_EMAIL_CHANGE_KEY)) || ""
+        );
+
+        if (
+          pendingEmailChange &&
+          cleanEmail(authUser.email || "") === pendingEmailChange
+        ) {
+          await AsyncStorage.removeItem(PENDING_EMAIL_CHANGE_KEY);
+        }
+
+        await hydrateProfileFromSupabase(authUser.id, authUser);
+        setReady(true);
+      } catch (error) {
+        console.warn(
+          "[UserContext] foreground auth refresh warning:",
+          error
+        );
+      }
+    }
+
+    const subscription = AppState.addEventListener(
+      "change",
+      (nextState) => {
+        if (nextState === "active") {
+          void refreshAuthenticatedUser();
+        }
+      }
+    );
+
+    return () => {
+      active = false;
+      subscription.remove();
     };
   }, []);
 
@@ -471,18 +708,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
       updated_at: new Date().toISOString(),
     };
 
-    const usernameCandidate =
-      patch.username ?? patch.name ?? patch.displayName ?? profile?.username;
-
-    if (typeof usernameCandidate === "string" && usernameCandidate.trim()) {
-      row.username = normalizeUsername(usernameCandidate);
-    }
-
-    const emailCandidate = patch.contactEmail ?? profile?.contactEmail;
-
-    if (typeof emailCandidate === "string" && emailCandidate.trim()) {
-      row.contact_email = cleanEmail(emailCandidate);
-    }
+    // Identity fields are intentionally excluded from ordinary profile saves.
+    // Username changes use change_username(); login email changes use Supabase Auth.
 
     const avatarCandidate =
       patch.avatar ??
@@ -545,14 +772,169 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const setUsername = async (name: string) => {
-    const normalized = normalizeUsername(name);
+  const checkUsername = async (name: string): Promise<string> => {
+    const candidate = String(name || "").trim();
 
-    await updateProfile({
-      username: normalized,
-      name: normalized,
-      displayName: normalized,
+    const { data, error } = await supabase.rpc("check_username", {
+      desired_username: candidate,
     });
+
+    if (error) {
+      throw toFriendlyAuthError(error);
+    }
+
+    return String(data || "error");
+  };
+
+  const changeUsername = async (name: string) => {
+    if (!supabaseUserId) {
+      throw new Error("You must be signed in to change your username.");
+    }
+
+    const candidate = String(name || "").trim();
+    const status = await checkUsername(candidate);
+
+    if (status !== "ok" && status !== "same") {
+      throw usernameStatusError(status);
+    }
+
+    const { data, error } = await supabase.rpc("change_username", {
+      desired_username: candidate,
+    });
+
+    if (error) {
+      throw toFriendlyAuthError(error);
+    }
+
+    await hydrateProfileFromSupabase(
+      supabaseUserId,
+      session?.user ?? null
+    );
+
+    return {
+      username: String((data as any)?.username || candidate),
+      changed_at: (data as any)?.changed_at ?? null,
+      next_change_at: (data as any)?.next_change_at ?? null,
+    };
+  };
+
+  // Kept as a compatibility alias for older components.
+  const setUsername = async (name: string) => {
+    await changeUsername(name);
+  };
+
+  const requestEmailChange = async (
+    newEmail: string,
+    currentPassword: string
+  ) => {
+    if (!session?.user?.id) {
+      throw new Error("You must be signed in to change your login email.");
+    }
+
+    const currentEmail = cleanEmail(session.user.email || "");
+    const normalizedEmail = cleanEmail(newEmail);
+    const password = String(currentPassword || "");
+
+    if (!currentEmail) {
+      throw new Error("Nova could not determine your current login email.");
+    }
+
+    if (!password) {
+      throw new Error("Enter your current password.");
+    }
+
+    if (!normalizedEmail || !normalizedEmail.includes("@")) {
+      throw new Error("Enter a valid email address.");
+    }
+
+    if (currentEmail === normalizedEmail) {
+      throw new Error("That is already your login email.");
+    }
+
+    /*
+     * Verify the current password before requesting the sensitive change.
+     * This creates a fresh session for the same account and does not create
+     * a second account or erase any progress.
+     */
+    const {
+      data: verificationData,
+      error: verificationError,
+    } = await withTimeout(
+      supabase.auth.signInWithPassword({
+        email: currentEmail,
+        password,
+      }),
+      12000,
+      "Nova could not verify your password in time. Please try again."
+    );
+
+    if (verificationError) {
+      const lower = String(
+        verificationError?.message || verificationError
+      ).toLowerCase();
+
+      if (lower.includes("invalid login credentials")) {
+        throw new Error("Your current password is incorrect.");
+      }
+
+      throw toFriendlyAuthError(verificationError);
+    }
+
+    if (
+      !verificationData.user ||
+      verificationData.user.id !== session.user.id
+    ) {
+      throw new Error(
+        "Nova could not verify that password for this account."
+      );
+    }
+
+    if (verificationData.session) {
+      setSession(verificationData.session);
+      setSupabaseUserId(verificationData.user.id);
+
+      if (verificationData.session.access_token) {
+        await AsyncStorage.setItem(
+          SUPABASE_JWT_KEY,
+          verificationData.session.access_token
+        );
+      }
+    }
+
+    /*
+     * Save the target before Supabase sends the message. The app uses this
+     * when it returns to the foreground to refresh the same user's session.
+     */
+    await AsyncStorage.setItem(
+      PENDING_EMAIL_CHANGE_KEY,
+      normalizedEmail
+    );
+
+    let updateResult: any;
+
+    try {
+      updateResult = await withTimeout(
+        supabase.auth.updateUser({
+          email: normalizedEmail,
+        }),
+        12000,
+        "Nova did not receive a response from Supabase in time."
+      );
+    } catch (error) {
+      /*
+       * The server may still have accepted the request before the local
+       * response timed out, so keep the pending email and tell the user to
+       * check the inbox before sending another request.
+       */
+      throw new Error(
+        "Nova did not receive a response in time. Check the new inbox first—the confirmation email may still have been sent."
+      );
+    }
+
+    if (updateResult.error) {
+      await AsyncStorage.removeItem(PENDING_EMAIL_CHANGE_KEY);
+      throw toFriendlyAuthError(updateResult.error);
+    }
   };
 
   const setAvatar = async (uri: string | null) => {
@@ -585,6 +967,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
         username: normalizedUsername,
       });
 
+      const usernameStatus = await checkUsername(normalizedUsername);
+
+      if (usernameStatus !== "ok") {
+        throw usernameStatusError(usernameStatus);
+      }
+
       try {
         await supabase.auth.signOut({ scope: "local" as any });
       } catch {}
@@ -599,7 +987,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         email: normalizedEmail,
         password,
         options: {
-          emailRedirectTo: AUTH_CALLBACK_URL,
+          emailRedirectTo: AUTH_CONFIRMATION_PAGE_URL,
           data: {
             username: normalizedUsername,
           },
@@ -638,6 +1026,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
           username: normalizedUsername,
           name: normalizedUsername,
           displayName: normalizedUsername,
+          usernameChangedAt: null,
 
           contactEmail: normalizedEmail,
 
@@ -706,13 +1095,22 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
       if (authUser) {
         setSupabaseUserId(authUser.id);
-        await hydrateProfileFromSupabase(authUser.id, authUser);
+
+        // Authentication is complete at this point. Do not hold the login
+        // screen open while the profile table finishes hydrating.
+        setReady(true);
+
+        void hydrateProfileFromSupabase(
+          authUser.id,
+          authUser
+        );
       } else {
         setSupabaseUserId(null);
         setProfile(null);
+        setReady(true);
       }
 
-      setReady(true);
+      await AsyncStorage.removeItem(PENDING_EMAIL_CHANGE_KEY);
     } catch (e) {
       console.warn("[UserContext] loginWithEmailPassword threw:", e);
       setReady(true);
@@ -728,10 +1126,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
         throw new Error("Please enter an email address first.");
       }
 
-      const { error } = await supabase.auth.resetPasswordForEmail(trimmed, {
-        redirectTo:
-          "https://novatutoring-eoq65leh2-contactnovatutoring-8350s-projects.vercel.app",
-      });
+      const { error } = await supabase.auth.resetPasswordForEmail(
+        trimmed,
+        {
+          redirectTo: PASSWORD_RECOVERY_PAGE_URL,
+        }
+      );
 
       if (error) {
         console.log("[REAL SUPABASE RESET ERROR]", error);
@@ -760,20 +1160,40 @@ export function UserProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    // Update the visible app state immediately.
+    setSession(null);
+    setSupabaseUserId(null);
+    setProfile(null);
+    setReady(true);
+
+    // Supabase sign-out is best effort and must never trap the UI.
     try {
-      await supabase.auth.signOut();
+      const result: any = await Promise.race([
+        supabase.auth.signOut({ scope: "local" as any }),
+        new Promise((_, reject) =>
+          setTimeout(
+            () => reject(new Error("Supabase local sign-out timed out")),
+            2500
+          )
+        ),
+      ]);
+
+      if (result?.error) {
+        console.warn("[UserContext] local signOut error:", result.error);
+      }
     } catch (e) {
-      console.warn("[UserContext] signOut error:", e);
-    } finally {
-      setSession(null);
-      setSupabaseUserId(null);
-      setProfile(null);
-
-      await clearSupabaseAuthStorage("signOut");
-      await AsyncStorage.removeItem(PROFILE_KEY);
-
-      setReady(true);
+      console.warn("[UserContext] signOut warning:", e);
     }
+
+    // Always clear every locally stored authentication value.
+    await Promise.allSettled([
+      clearSupabaseAuthStorage("signOut"),
+      AsyncStorage.removeItem(PROFILE_KEY),
+      AsyncStorage.removeItem(
+        "nova.auth.pending-confirmation-email.v1"
+      ),
+      AsyncStorage.removeItem(PENDING_EMAIL_CHANGE_KEY),
+    ]);
   };
 
   const deleteAccount = async () => {
@@ -784,6 +1204,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     profile?.username ?? profile?.name ?? profile?.displayName ?? null;
 
   const flatName = profile?.name ?? profile?.username ?? null;
+  const flatUsernameChangedAt = profile?.usernameChangedAt ?? null;
 
   const flatContactEmail = profile?.contactEmail ?? null;
 
@@ -807,6 +1228,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
     username: flatUsername,
     name: flatName,
+    usernameChangedAt: flatUsernameChangedAt,
     contactEmail: flatContactEmail,
 
     avatar: flatAvatar,
@@ -822,6 +1244,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
     askMemoryLimit: profile?.askMemoryLimit ?? null,
 
     setUsername,
+    checkUsername,
+    changeUsername,
+    requestEmailChange,
     setAvatar,
 
     updateProfile,

@@ -1,21 +1,20 @@
 // app/(tabs)/account.tsx
+
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  View,
-  Text,
-  TextInput,
-  Pressable,
-  Image,
-  StyleSheet,
   Alert,
-  Platform,
+  Image,
   Modal,
+  Platform,
+  Pressable,
   ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
 import * as Linking from "expo-linking";
-import * as FileSystem from "expo-file-system";
 import { useRouter } from "expo-router";
 
 import { useUser } from "../context/UserContext";
@@ -23,7 +22,6 @@ import { useTheme } from "../context/ThemeContext";
 import { useCoins } from "../context/CoinsContext";
 import { useStreak } from "../context/StreakContext";
 import { showToast } from "../utils/toast";
-import { supabase } from "../lib/supabase";
 
 const DISCORD_INVITE_URL = "https://discord.gg/NR9PAjtrg";
 
@@ -34,6 +32,7 @@ export default function AccountScreen() {
     session,
     setAvatar,
     updateProfile,
+    resetPassword,
     signOut,
     deleteAccount,
   } = useUser() as any;
@@ -43,71 +42,77 @@ export default function AccountScreen() {
   const { resetStreak } = useStreak();
   const router = useRouter();
 
-  const [name, setName] = useState("");
-  const [contactEmail, setContactEmail] = useState("");
   const [avatarLocal, setAvatarLocal] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
 
-  // "Logged in" = real Supabase session, not just a local profile.
-  const isLoggedIn = !!(session && session.user && session.user.id);
+  const isLoggedIn = !!session?.user?.id;
 
-  const currentAvatar = useMemo(() => {
-    return (
+  const currentAvatar = useMemo(
+    () =>
       user?.avatarUri ??
       user?.avatarUrl ??
       user?.avatar ??
       user?.photoURL ??
       user?.imageUrl ??
-      null
-    );
-  }, [
-    user?.avatarUri,
-    user?.avatarUrl,
-    user?.avatar,
-    user?.photoURL,
-    user?.imageUrl,
-  ]);
+      null,
+    [
+      user?.avatarUri,
+      user?.avatarUrl,
+      user?.avatar,
+      user?.photoURL,
+      user?.imageUrl,
+    ]
+  );
+
+  const loginUsername =
+    user?.username || user?.name || user?.displayName || "";
+
+  const loginEmail =
+    (session?.user?.email as string | undefined) || "";
 
   useEffect(() => {
     if (!ready) return;
-
-    // Hydrate fields from the current profile, even in guest mode.
-    if (!user) {
-      setName("");
-      setContactEmail("");
-      setAvatarLocal(null);
-      return;
-    }
-
-    setName(user?.username || user?.name || "");
-    setContactEmail(user?.contactEmail || user?.email || "");
     setAvatarLocal(currentAvatar);
-  }, [ready, user, currentAvatar]);
+  }, [ready, currentAvatar]);
 
-  const pickAvatarWeb = async () => {
-    return new Promise<string | null>((resolve) => {
+  const pickAvatarWeb = async () =>
+    new Promise<string | null>((resolve) => {
       try {
-        const input = document.createElement("input");
+        const webGlobal = globalThis as any;
+        const doc = webGlobal?.document;
+        const FileReaderClass = webGlobal?.FileReader;
+
+        if (!doc || !FileReaderClass) {
+          resolve(null);
+          return;
+        }
+
+        const input = doc.createElement("input");
         input.type = "file";
         input.accept = "image/*";
+
         input.onchange = () => {
           const file = input.files?.[0];
-          if (!file) return resolve(null);
 
-          const reader = new FileReader();
-          reader.onload = () => resolve(String(reader.result));
+          if (!file) {
+            resolve(null);
+            return;
+          }
+
+          const reader = new FileReaderClass();
+          reader.onload = () => resolve(String(reader.result || ""));
           reader.onerror = () => resolve(null);
-          reader.readAsDataURL(file); // web gets a data: URL already
+          reader.readAsDataURL(file);
         };
+
         input.click();
       } catch {
         resolve(null);
       }
     });
-  };
 
-  const saveAvatarEverywhere = async (uri: string | null) => {
+  async function saveAvatarEverywhere(uri: string | null) {
     await updateProfile?.({
       avatarUri: uri,
       avatarUrl: uri,
@@ -115,8 +120,9 @@ export default function AccountScreen() {
       photoURL: uri,
       imageUrl: uri,
     });
+
     await setAvatar?.(uri ?? null);
-  };
+  }
 
   async function onPickAvatar() {
     if (!isLoggedIn) {
@@ -125,201 +131,113 @@ export default function AccountScreen() {
     }
 
     try {
-      let uri: string | null = null;
+      let storedUri: string | null = null;
 
       if (Platform.OS === "web") {
-        // Web: we already get a data: URL string from FileReader
-        uri = await pickAvatarWeb();
+        storedUri = await pickAvatarWeb();
       } else {
-        const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (!perm.granted) {
-          Alert.alert("Permission required", "Media access needed");
+        const permission =
+          await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+        if (!permission.granted) {
+          Alert.alert(
+            "Permission required",
+            "Please allow Nova Tutoring to access your photos."
+          );
           return;
         }
 
-        const res = await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        const result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ["images"],
           allowsEditing: true,
-          quality: 0.9,
+          aspect: [1, 1],
+          quality: 0.35,
+          base64: true,
         });
 
-        if (res.canceled) return;
-        uri = res.assets?.[0]?.uri || null;
-      }
+        if (result.canceled) return;
 
-      if (!uri) return;
+        const asset = result.assets?.[0];
 
-      // 🔒 Persist as a data: URL so it survives restarts
-      let storedUri = uri;
-
-      if (Platform.OS !== "web") {
-        try {
-          const base64 = await FileSystem.readAsStringAsync(uri, {
-            encoding: FileSystem.EncodingType.Base64,
-          });
-          // We don't know the exact mime type here; jpeg is a safe default
-          const mime = "image/jpeg";
-          storedUri = `data:${mime};base64,${base64}`;
-        } catch (err) {
-          console.warn(
-            "[Account] Failed to convert avatar to base64, using file URI instead",
-            err
-          );
+        if (!asset) {
+          throw new Error("No image was returned by the photo picker.");
         }
+
+        storedUri = asset.base64
+          ? `data:image/jpeg;base64,${asset.base64}`
+          : asset.uri;
       }
+
+      if (!storedUri) return;
 
       setAvatarLocal(storedUri);
       await saveAvatarEverywhere(storedUri);
       showToast("Avatar updated");
-    } catch (e: any) {
-      console.log("onPickAvatar error:", e);
+    } catch (error: any) {
       Alert.alert(
         "Avatar error",
-        e?.message ? String(e.message) : String(e)
-      );
-    }
-  }
-
-  async function onSave() {
-    if (!isLoggedIn) {
-      showToast("Sign in to save your profile");
-      return;
-    }
-
-    const trimmedName = (name || "").trim() || "Student";
-
-    // Hard limit: 8 characters for username
-    if (trimmedName.length > 8) {
-      Alert.alert(
-        "Username too long",
-        "Usernames can be up to 8 characters long."
-      );
-      return;
-    }
-
-    const newEmail = contactEmail.trim();
-
-    try {
-      await updateProfile?.({
-        username: trimmedName,
-        name: trimmedName,
-        displayName: trimmedName,
-        contactEmail: newEmail,
-        avatarUri: avatarLocal,
-        avatarUrl: avatarLocal,
-        avatar: avatarLocal,
-        photoURL: avatarLocal,
-        imageUrl: avatarLocal,
-      });
-
-      showToast("Profile saved");
-    } catch (e: any) {
-      const code = e?.code || e?.message;
-      if (code === "USERNAME_TAKEN") {
-        showToast("That username is already taken. Please choose another.");
-        return;
-      }
-
-      Alert.alert(
-        "Save error",
-        e?.message ? String(e.message) : "Could not save your profile."
+        error?.message || "The selected photo could not be used."
       );
     }
   }
 
   async function onSignOut() {
-    try {
-      // Always clear via context helper (works for guests + logged-in)
-      await signOut?.();
-    } catch (e) {
-      console.log("[Account] signOut error", e);
+    if (!isLoggedIn) {
+      (router as any).push("/sign-in");
+      return;
     }
 
-    // also clear coins + streak locally so HeaderBar updates instantly
+    const task = Promise.resolve(signOut?.()).catch((error) => {
+      console.warn("[Account] signOut warning:", error);
+    });
+
     setCoins?.(0);
-    await resetStreak?.();
-
-    setName("");
-    setContactEmail("");
     setAvatarLocal(null);
-
-    showToast(isLoggedIn ? "Signed out" : "Session cleared");
-
-    // go back to the landing screen (works for both guest + logged-in)
-    try {
-      router.replace("/");
-    } catch (e) {
-      console.log("[Account] Failed to navigate to / from Account", e);
-    }
-  }
-
-  function onDeleteAccountPress() {
-    setShowDeleteModal(true);
+    showToast("Signed out");
+    (router as any).replace("/");
+    void task;
   }
 
   async function handleConfirmDelete() {
     try {
       await deleteAccount?.();
-
-      // after delete, fully clear coins + streak on this device
       setCoins?.(0);
       await resetStreak?.();
-
-      setName("");
-      setContactEmail("");
       setAvatarLocal(null);
       setShowDeleteModal(false);
-      showToast("Account deleted");
-
-      try {
-        router.replace("/");
-      } catch {
-        // ignore navigation errors
-      }
-    } catch (e: any) {
+      showToast("Account removed from this device");
+      (router as any).replace("/");
+    } catch (error: any) {
       setShowDeleteModal(false);
       Alert.alert(
         "Error",
-        e?.message ? String(e.message) : "Could not delete account"
+        error?.message || "Could not remove the account."
       );
     }
   }
 
-  const loginEmail =
-    (session?.user?.email as string | undefined) ||
-    user?.contactEmail ||
-    user?.email ||
-    contactEmail ||
-    "";
-  const loginUsername = user?.username || user?.name || name || "";
-
   async function onForgotPassword() {
-    const email = loginEmail.trim();
-
-    if (!email) {
+    if (!loginEmail) {
       Alert.alert(
-        "No email on file",
-        "To reset your password, first sign up or sign in with an email address."
+        "No login email",
+        "Sign in first so Nova knows which account to reset."
       );
       return;
     }
 
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo:
-          "https://novatutoring-eoq65leh2-contactnovatutoring-8350s-projects.vercel.app",
-      });
-
-      if (error) throw error;
+      await resetPassword?.(loginEmail);
 
       Alert.alert(
         "Check your email",
-        `We sent a password reset link to:\n\n${email}`
+        `We sent a clickable password-reset button to:
+
+${loginEmail}`
       );
-    } catch (e: any) {
+    } catch (error: any) {
       Alert.alert(
         "Reset error",
-        e?.message ? String(e.message) : "Could not send reset email"
+        error?.message || "Could not send the reset email."
       );
     }
   }
@@ -330,14 +248,15 @@ export default function AccountScreen() {
     const body = encodeURIComponent(
       "Hi Nova Tutoring team,\n\nI have a question about the app:\n\n"
     );
-    const url = `mailto:${email}?subject=${subject}&body=${body}`;
 
     try {
-      await Linking.openURL(url);
-    } catch (e) {
+      await Linking.openURL(
+        `mailto:${email}?subject=${subject}&body=${body}`
+      );
+    } catch {
       Alert.alert(
         "Email not available",
-        "You can email us at contact.novatutoring@gmail.com."
+        "You can email contact.novatutoring@gmail.com."
       );
     }
   }
@@ -345,109 +264,237 @@ export default function AccountScreen() {
   async function onJoinDiscord() {
     try {
       await Linking.openURL(DISCORD_INVITE_URL);
-    } catch (e) {
+    } catch {
       Alert.alert(
         "Unable to open Discord",
-        "If the link doesn’t open, you can paste this in your browser or Discord:\n\nhttps://discord.gg/NR9PAjtrg"
+        "Open https://discord.gg/NR9PAjtrg in your browser or Discord."
       );
     }
   }
 
+  function IdentityRow({
+    label,
+    value,
+    action,
+    onPress,
+  }: {
+    label: string;
+    value: string;
+    action: string;
+    onPress: () => void;
+  }) {
+    return (
+      <View style={S.identityRow}>
+        <View style={S.identityText}>
+          <Text style={[S.identityLabel, { color: tokens.cardText }]}>
+            {label}
+          </Text>
+          <Text
+            style={[S.identityValue, { color: tokens.text }]}
+            numberOfLines={1}
+          >
+            {value || "—"}
+          </Text>
+        </View>
+
+        <Pressable
+          onPress={onPress}
+          disabled={!isLoggedIn}
+          style={[
+            S.smallButton,
+            {
+              borderColor: tokens.accent,
+              opacity: isLoggedIn ? 1 : 0.45,
+            },
+          ]}
+        >
+          <Text style={[S.smallButtonText, { color: tokens.text }]}>
+            {action}
+          </Text>
+        </Pressable>
+      </View>
+    );
+  }
+
   return (
-    <LinearGradient colors={tokens.gradient} style={{ flex: 1 }}>
-      {/* MAIN SCROLLABLE CONTENT */}
+    <LinearGradient colors={tokens.gradient} style={S.flex}>
       <ScrollView
-        style={{ flex: 1 }}
+        style={S.flex}
         contentContainerStyle={S.wrap}
-        keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
         <Text style={[S.h1, { color: tokens.accent }]}>
           Account Settings
         </Text>
 
-        {/* Avatar + fields */}
-        <View style={S.row}>
-          <Pressable
-            onPress={onPickAvatar}
-            style={[S.avatarWrap, { borderColor: tokens.border }]}
-          >
-            {avatarLocal ? (
-              <Image source={{ uri: avatarLocal }} style={S.avatar} />
-            ) : (
-              <View
-                style={[
-                  S.avatar,
-                  S.avatarPlaceholder,
-                  { backgroundColor: tokens.card },
-                ]}
-              >
-                <Text style={[S.avatarInitial, { color: tokens.text }]}>
-                  {(name || "S").slice(0, 1).toUpperCase()}
-                </Text>
-              </View>
-            )}
-          </Pressable>
+        <View
+          style={[
+            S.card,
+            {
+              borderColor: tokens.border,
+              backgroundColor: tokens.card,
+            },
+          ]}
+        >
+          <Text style={[S.sectionTitle, { color: tokens.text }]}>
+            Profile
+          </Text>
 
-          <View style={{ flex: 1 }}>
-            <Text style={[S.label, { color: tokens.cardText }]}>
-              Username
-            </Text>
-            <TextInput
-              value={name}
-              onChangeText={setName}
-              placeholder="Your name"
-              maxLength={32} // raw input can be longer; we enforce 8 on save
-              placeholderTextColor={
-                tokens.isDark ? "#678a94" : "#6b7685"
-              }
+          <View style={S.avatarSection}>
+            <Pressable
+              onPress={onPickAvatar}
+              style={[S.avatarWrap, { borderColor: tokens.border }]}
+            >
+              {avatarLocal ? (
+                <Image
+                  source={{ uri: avatarLocal }}
+                  style={S.avatar}
+                />
+              ) : (
+                <View
+                  style={[
+                    S.avatar,
+                    S.avatarPlaceholder,
+                    {
+                      backgroundColor: tokens.isDark
+                        ? "#0b2030"
+                        : "#e8f7fb",
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[S.avatarInitial, { color: tokens.text }]}
+                  >
+                    {(loginUsername || "S").slice(0, 1).toUpperCase()}
+                  </Text>
+                </View>
+              )}
+            </Pressable>
+
+            <Pressable
+              onPress={onPickAvatar}
+              disabled={!isLoggedIn}
               style={[
-                S.input,
+                S.photoButton,
                 {
-                  borderColor: tokens.border,
-                  backgroundColor: tokens.card,
-                  color: tokens.text,
+                  borderColor: tokens.accent,
+                  opacity: isLoggedIn ? 1 : 0.45,
                 },
-              ]}
-            />
-
-            <Text
-              style={[
-                S.label,
-                { color: tokens.cardText, marginTop: 10 },
               ]}
             >
-              Contact Email (optional)
-            </Text>
-            <TextInput
-              value={contactEmail}
-              onChangeText={setContactEmail}
-              placeholder="you@example.com"
-              autoCapitalize="none"
-              keyboardType={
-                Platform.OS === "web" ? "default" : "email-address"
-              }
-              placeholderTextColor={
-                tokens.isDark ? "#678a94" : "#6b7685"
-              }
-              style={[
-                S.input,
-                {
-                  borderColor: tokens.border,
-                  backgroundColor: tokens.card,
-                  color: tokens.text,
-                },
-              ]}
-            />
+              <Text style={[S.photoButtonText, { color: tokens.text }]}>
+                Change Photo
+              </Text>
+            </Pressable>
           </View>
+
+          <IdentityRow
+            label="Username"
+            value={loginUsername}
+            action="Change"
+            onPress={() => (router as any).push("/change-username")}
+          />
+
+          <View style={[S.divider, { backgroundColor: tokens.border }]} />
+
+          <IdentityRow
+            label="Login Email"
+            value={loginEmail}
+            action="Change"
+            onPress={() => (router as any).push("/change-email")}
+          />
+
+          <Text style={[S.identityNote, { color: tokens.cardText }]}>
+            Username and login email use separate, protected change flows.
+          </Text>
         </View>
 
-        {/* Top buttons */}
-        <View style={S.rowBtns}>
+        <View
+          style={[
+            S.card,
+            {
+              borderColor: tokens.border,
+              backgroundColor: tokens.card,
+            },
+          ]}
+        >
+          <Text style={[S.sectionTitle, { color: tokens.text }]}>
+            Security
+          </Text>
+
+          <Text style={[S.smallNote, { color: tokens.cardText }]}>
+            Password-reset messages are sent to your current login email.
+          </Text>
+
+          <Pressable onPress={onForgotPassword} style={S.textLinkWrap}>
+            <Text style={S.textLink}>
+              Forgot password? Send reset email
+            </Text>
+          </Pressable>
+
           <Pressable
+            onPress={() =>
+              Alert.alert(
+                "Your login email",
+                loginEmail || "No login email is available."
+              )
+            }
+            style={S.textLinkWrap}
+          >
+            <Text style={S.textLink}>
+              Forgot which email you used?
+            </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() =>
+              Alert.alert(
+                "Your username",
+                loginUsername || "No username is available."
+              )
+            }
+            style={S.textLinkWrap}
+          >
+            <Text style={S.textLink}>Forgot your username?</Text>
+          </Pressable>
+        </View>
+
+        <Pressable
+          style={[
+            S.signOutButton,
+            {
+              borderColor: isLoggedIn ? "#ff6b6b" : tokens.accent,
+              backgroundColor: tokens.isDark
+                ? "rgba(255,255,255,0.08)"
+                : "rgba(0,0,0,0.05)",
+            },
+          ]}
+          onPress={onSignOut}
+        >
+          <Text style={[S.signOutText, { color: tokens.text }]}>
+            {isLoggedIn ? "Sign Out" : "Login / Register"}
+          </Text>
+        </Pressable>
+
+        <Pressable
+          style={S.removeButton}
+          onPress={() => setShowDeleteModal(true)}
+        >
+          <Text style={S.removeText}>
+            Remove Account From This Device
+          </Text>
+        </Pressable>
+
+        <Text style={[S.removeNote, { color: tokens.cardText }]}>
+          This clears the local session and saved device data. It does not
+          delete server-side order records.
+        </Text>
+
+        <View style={S.community}>
+          <Pressable
+            onPress={onJoinDiscord}
             style={[
-              S.btn,
+              S.discordButton,
               {
                 borderColor: tokens.accent,
                 backgroundColor: tokens.isDark
@@ -455,187 +502,25 @@ export default function AccountScreen() {
                   : "rgba(0,160,220,0.12)",
               },
             ]}
-            onPress={onSave}
           >
-            <Text style={[S.btnt, { color: tokens.text }]}>Save</Text>
-          </Pressable>
-
-          <Pressable
-            style={[
-              S.btn,
-              {
-                borderColor: "#ff6b6b",
-                backgroundColor: tokens.isDark
-                  ? "rgba(255,107,107,0.18)"
-                  : "rgba(255,107,107,0.12)",
-              },
-            ]}
-            onPress={onSignOut}
-          >
-            <Text style={[S.btnt, { color: tokens.text }]}>
-              {isLoggedIn ? "Sign Out" : "Back to Start"}
-            </Text>
-          </Pressable>
-        </View>
-
-        {/* DELETE ACCOUNT – slimmer, like the other buttons */}
-        <View style={{ marginTop: 24 }}>
-          <Pressable
-            style={[
-              S.deleteBtn,
-              {
-                borderColor: "#ff2b2b",
-                backgroundColor: tokens.isDark
-                  ? "rgba(255,43,43,0.28)"
-                  : "rgba(255,43,43,0.18)",
-              },
-            ]}
-            onPress={onDeleteAccountPress}
-          >
-            <Text style={S.deleteText}>Delete Account</Text>
-          </Pressable>
-          <Text
-            style={{
-              marginTop: 6,
-              fontSize: 11,
-              color: tokens.cardText,
-            }}
-          >
-            This will remove your profile and all saved local data on this
-            device.
-          </Text>
-        </View>
-
-        {/* Current info card */}
-        <View
-          style={[
-            S.card,
-            {
-              borderColor: tokens.border,
-              backgroundColor: tokens.card,
-            },
-          ]}
-        >
-          <Text style={[S.k, { color: tokens.cardText }]}>Current</Text>
-          <Text style={[S.v, { color: tokens.text }]}>
-            Username: {loginUsername || "—"}
-          </Text>
-          <Text style={[S.v, { color: tokens.text }]}>
-            Login Email: {loginEmail || "—"}
-          </Text>
-          <Text style={[S.v, { color: tokens.text }]}>
-            Contact Email: {user?.contactEmail || "—"}
-          </Text>
-          <Text style={[S.v, { color: tokens.text }]}>
-            Avatar: {currentAvatar ? "Set" : "None"}
-          </Text>
-        </View>
-
-        {/* Security / “forgot” helpers */}
-        <View
-          style={[
-            S.card,
-            {
-              borderColor: tokens.border,
-              backgroundColor: tokens.card,
-            },
-          ]}
-        >
-          <Text style={[S.k, { color: tokens.cardText }]}>Security</Text>
-
-          <Text style={[S.smallNote, { color: tokens.cardText }]}>
-            This is the email you should use on the login screen:
-          </Text>
-          <Text style={[S.v, { color: tokens.text }]}>
-            {loginEmail || "No login email saved yet"}
-          </Text>
-
-          {/* Forgot password – text link */}
-          <Pressable
-            style={{ marginTop: 8 }}
-            onPress={onForgotPassword}
-          >
-            <Text style={S.privacyLink}>
-              Forgot password? Send reset email
+            <Text style={[S.discordText, { color: tokens.text }]}>
+              🗯️ Join our Discord
             </Text>
           </Pressable>
 
-          {/* Forgot email */}
-          <Pressable
-            style={{ marginTop: 4 }}
-            onPress={() => {
-              if (!loginEmail) {
-                Alert.alert(
-                  "No email saved",
-                  "Once you sign up or sign in with an email, it will be shown here so you can remember it later."
-                );
-              } else {
-                Alert.alert("Login email", loginEmail);
-              }
-            }}
-          >
-            <Text style={S.privacyLink}>
-              Forgot which email you used?
-            </Text>
-          </Pressable>
-
-          {/* Forgot username */}
-          <Pressable
-            style={{ marginTop: 4 }}
-            onPress={() => {
-              if (!loginUsername) {
-                Alert.alert(
-                  "No username saved",
-                  "Once you choose a username, it will be shown here so you can remember it later."
-                );
-              } else {
-                Alert.alert("Your username", loginUsername);
-              }
-            }}
-          >
-            <Text style={S.privacyLink}>Forgot your username?</Text>
-          </Pressable>
-        </View>
-
-        {/* Contact + Community + Privacy links */}
-        <View style={S.privacyRow}>
-          {/* Highlighted Discord pill – TOP */}
-          <Pressable
-            onPress={onJoinDiscord}
-            style={[
-              S.discordBtn,
-              {
-                borderColor: tokens.accent,
-                backgroundColor: tokens.isDark
-                  ? "rgba(0,255,200,0.22)"
-                  : "rgba(0,160,220,0.14)",
-              },
-            ]}
-          >
-            <Text style={S.discordIcon}>🗯️</Text>
-            <Text style={[S.privacyLink, { color: tokens.text }]}>
-              Join our Discord
-            </Text>
-          </Pressable>
-
-          {/* Contact + Privacy under it */}
-          <Pressable
-            onPress={onContactUs}
-            style={{ marginTop: 10 }}
-          >
-            <Text style={S.privacyLink}>Contact Us</Text>
+          <Pressable onPress={onContactUs} style={S.textLinkWrap}>
+            <Text style={S.textLink}>Contact Us</Text>
           </Pressable>
 
           <Pressable
-            style={{ marginTop: 6 }}
             onPress={() => setShowPrivacyModal(true)}
+            style={S.textLinkWrap}
           >
-            <Text style={S.privacyLink}>Privacy Policy</Text>
+            <Text style={S.textLink}>Privacy Policy</Text>
           </Pressable>
         </View>
       </ScrollView>
 
-      {/* Delete Account confirmation modal */}
       <Modal
         visible={showDeleteModal}
         transparent
@@ -653,46 +538,30 @@ export default function AccountScreen() {
             ]}
           >
             <Text style={[S.modalTitle, { color: tokens.text }]}>
-              Delete account?
+              Remove this account?
             </Text>
             <Text style={[S.modalBody, { color: tokens.cardText }]}>
-              Are you sure? This will delete your name, avatar, coins,
-              achievements, purchases, and all other saved data on this
-              device. This cannot be undone.
+              This signs out and clears Nova Tutoring’s saved account data
+              from this device. It does not currently delete the online
+              Supabase account.
             </Text>
 
-            <View style={S.modalRowBtns}>
+            <View style={S.modalRow}>
               <Pressable
-                style={[
-                  S.modalBtn,
-                  {
-                    borderColor: tokens.border,
-                    backgroundColor: tokens.isDark
-                      ? "rgba(255,255,255,0.06)"
-                      : "rgba(0,0,0,0.04)",
-                  },
-                ]}
+                style={[S.modalButton, { borderColor: tokens.border }]}
                 onPress={() => setShowDeleteModal(false)}
               >
-                <Text style={[S.btnt, { color: tokens.text }]}>
+                <Text style={[S.modalButtonText, { color: tokens.text }]}>
                   Cancel
                 </Text>
               </Pressable>
 
               <Pressable
-                style={[
-                  S.modalBtn,
-                  {
-                    borderColor: "#ff2b2b",
-                    backgroundColor: tokens.isDark
-                      ? "rgba(255,43,43,0.25)"
-                      : "rgba(255,43,43,0.18)",
-                  },
-                ]}
+                style={[S.modalButton, { borderColor: "#ff2b2b" }]}
                 onPress={handleConfirmDelete}
               >
-                <Text style={[S.btnt, { color: tokens.text }]}>
-                  Delete
+                <Text style={[S.modalButtonText, { color: tokens.text }]}>
+                  Remove
                 </Text>
               </Pressable>
             </View>
@@ -700,7 +569,6 @@ export default function AccountScreen() {
         </View>
       </Modal>
 
-      {/* Privacy Policy modal */}
       <Modal
         visible={showPrivacyModal}
         transparent
@@ -721,61 +589,29 @@ export default function AccountScreen() {
               Privacy Policy
             </Text>
 
-            <ScrollView
-              style={{ maxHeight: 360, marginTop: 8 }}
-              showsVerticalScrollIndicator
-            >
+            <ScrollView style={S.privacyScroll}>
               <Text style={[S.modalBody, { color: tokens.cardText }]}>
-                Nova Tutoring stores your profile (name, optional contact
-                email, avatar), your coins, achievements, quiz history, and
-                shop purchases on this device and, when you create an
-                account or sign in, in our secure online database so the
-                app can show your progress and unlocked items across your
-                devices.{"\n\n"}
-                We do not sell your personal data and we do not show
-                third-party ads inside the app.{"\n\n"}
-                When you make real-money purchases, payments are processed
-                by trusted third-party providers such as Stripe. Your full
-                card details are handled by those providers and are not
-                stored in this app.{"\n\n"}
-                For physical orders or coin-based orders that require
-                fulfillment, we may collect your name, email address, and
-                shipping details so we can process and ship your order and
-                send order confirmations. Order information and basic
-                account details may be stored securely on our server or in
-                logs for support, receipts, and record-keeping.{"\n\n"}
-                You can erase your local profile, coins, achievements, and
-                purchase history on this device at any time using the
-                “Delete Account” option on this screen, which removes your
-                saved data on this device and returns you to the start of
-                the app. Some order and account records may still exist on
-                our server where required for payment processing or
-                support; you can reach out to us if you have questions
-                about those records.{"\n\n"}
-                For more details or questions, please refer to the privacy
-                information in the App Store listing or contact us using
-                the email address listed there.
+                Nova Tutoring stores profile information, progress, coins,
+                achievements, quiz history, and purchases locally and, for
+                signed-in users, in its online database.{"\n\n"}
+                Login-email changes are handled by Supabase Auth. Username
+                changes are recorded and protected by database rules.{"\n\n"}
+                Nova Tutoring does not sell personal information or display
+                third-party ads inside the app. Payment providers process
+                payment details, which are not stored directly by Nova
+                Tutoring.{"\n\n"}
+                Contact support for questions about account or order records.
               </Text>
             </ScrollView>
 
-            <View style={[S.modalRowBtns, { marginTop: 14 }]}>
-              <Pressable
-                style={[
-                  S.modalBtn,
-                  {
-                    borderColor: tokens.border,
-                    backgroundColor: tokens.isDark
-                      ? "rgba(255,255,255,0.06)"
-                      : "rgba(0,0,0,0.04)",
-                  },
-                ]}
-                onPress={() => setShowPrivacyModal(false)}
-              >
-                <Text style={[S.btnt, { color: tokens.text }]}>
-                  Close
-                </Text>
-              </Pressable>
-            </View>
+            <Pressable
+              style={[S.modalButton, { borderColor: tokens.border }]}
+              onPress={() => setShowPrivacyModal(false)}
+            >
+              <Text style={[S.modalButtonText, { color: tokens.text }]}>
+                Close
+              </Text>
+            </Pressable>
           </View>
         </View>
       </Modal>
@@ -783,103 +619,158 @@ export default function AccountScreen() {
   );
 }
 
-export const S = StyleSheet.create({
-  // used as contentContainerStyle for the ScrollView
+const S = StyleSheet.create({
+  flex: { flex: 1 },
   wrap: {
     padding: 16,
     gap: 12,
-    paddingBottom: 32, // tiny extra room so Privacy row clears the tab bar
+    paddingBottom: 40,
   },
-  h1: { fontWeight: "800", fontSize: 22 },
-  row: { flexDirection: "row", gap: 12, alignItems: "center" },
+  h1: {
+    fontSize: 22,
+    fontWeight: "900",
+  },
+  card: {
+    borderWidth: 1.5,
+    borderRadius: 16,
+    padding: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "900",
+    marginBottom: 12,
+  },
+  avatarSection: {
+    alignItems: "center",
+    marginBottom: 16,
+  },
   avatarWrap: {
     width: 96,
     height: 96,
     borderRadius: 48,
-    overflow: "hidden",
     borderWidth: 2,
+    overflow: "hidden",
   },
-  avatar: { width: 96, height: 96 },
+  avatar: {
+    width: 96,
+    height: 96,
+  },
   avatarPlaceholder: {
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarInitial: { fontWeight: "800", fontSize: 32 },
-  label: { marginBottom: 6 },
-  input: {
-    borderWidth: 1.5,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    minWidth: 160,
-  },
-  rowBtns: { flexDirection: "row", gap: 10 },
-  btn: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1.5,
-  },
-  btnt: { fontWeight: "800" },
-  card: {
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    marginTop: 8,
-  },
-  k: { marginBottom: 6 },
-  v: { fontWeight: "600", marginTop: 2 },
-
-  smallNote: {
-    fontSize: 11,
-    marginTop: 4,
-  },
-
-  deleteBtn: {
-    width: "100%",
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1.5,
-  },
-  deleteText: {
+  avatarInitial: {
+    fontSize: 34,
     fontWeight: "900",
-    fontSize: 16,
-    color: "#000000",
   },
-
-  privacyRow: {
-    marginTop: 18,
-    alignItems: "center",
-  },
-  privacyLink: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#9ad8ff",
-    textDecorationLine: "underline",
-  },
-
-  // pill-style Discord button
-  discordBtn: {
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 999,
+  photoButton: {
+    marginTop: 10,
     borderWidth: 1.5,
+    borderRadius: 999,
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+  },
+  photoButtonText: {
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  identityRow: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 12,
+  },
+  identityText: {
+    flex: 1,
+  },
+  identityLabel: {
+    fontSize: 12,
+    marginBottom: 3,
+  },
+  identityValue: {
+    fontSize: 16,
+    fontWeight: "900",
+  },
+  smallButton: {
+    borderWidth: 1.5,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  smallButtonText: {
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    marginVertical: 14,
+  },
+  identityNote: {
+    fontSize: 11,
+    lineHeight: 16,
+    marginTop: 14,
+  },
+  smallNote: {
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  textLinkWrap: {
+    marginTop: 10,
+    alignItems: "center",
+  },
+  textLink: {
+    color: "#9ad8ff",
+    fontSize: 13,
+    fontWeight: "700",
+    textDecorationLine: "underline",
+  },
+  signOutButton: {
+    borderWidth: 1.5,
+    borderRadius: 12,
+    minHeight: 50,
+    alignItems: "center",
     justifyContent: "center",
   },
-  discordIcon: {
-    fontSize: 18,
-    marginRight: 6,
+  signOutText: {
+    fontSize: 16,
+    fontWeight: "900",
   },
-
+  removeButton: {
+    borderWidth: 1.5,
+    borderColor: "#ff2b2b",
+    backgroundColor: "rgba(255,43,43,0.16)",
+    borderRadius: 12,
+    minHeight: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 10,
+  },
+  removeText: {
+    color: "#ff9ea8",
+    fontSize: 14,
+    fontWeight: "900",
+  },
+  removeNote: {
+    fontSize: 11,
+    lineHeight: 15,
+    textAlign: "center",
+  },
+  community: {
+    marginTop: 12,
+    alignItems: "center",
+  },
+  discordButton: {
+    borderWidth: 1.5,
+    borderRadius: 999,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+  },
+  discordText: {
+    fontSize: 14,
+    fontWeight: "800",
+  },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.55)",
+    backgroundColor: "rgba(0,0,0,0.58)",
     alignItems: "center",
     justifyContent: "center",
     padding: 24,
@@ -887,31 +778,39 @@ export const S = StyleSheet.create({
   modalCard: {
     width: "100%",
     maxWidth: 420,
-    borderRadius: 18,
     borderWidth: 1.5,
+    borderRadius: 18,
     padding: 18,
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: "800",
-    marginBottom: 8,
+    fontSize: 19,
+    fontWeight: "900",
     textAlign: "center",
+    marginBottom: 10,
   },
   modalBody: {
     fontSize: 13,
-    lineHeight: 18,
-    textAlign: "left",
+    lineHeight: 19,
   },
-  modalRowBtns: {
+  modalRow: {
     flexDirection: "row",
     gap: 10,
     marginTop: 18,
   },
-  modalBtn: {
+  modalButton: {
     flex: 1,
-    paddingVertical: 10,
-    borderRadius: 12,
-    alignItems: "center",
     borderWidth: 1.5,
+    borderRadius: 12,
+    minHeight: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 16,
+  },
+  modalButtonText: {
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  privacyScroll: {
+    maxHeight: 350,
   },
 });
