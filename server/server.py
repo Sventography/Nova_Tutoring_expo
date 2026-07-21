@@ -372,6 +372,177 @@ def record_purchase_row(
     print("[coin-order] purchases insert exception:", repr(e))
 
 # -------------------------------------------------
+# Permanent account deletion
+# -------------------------------------------------
+
+def _extract_bearer_token():
+  auth_header = (request.headers.get("Authorization") or "").strip()
+
+  if not auth_header.lower().startswith("bearer "):
+    return None
+
+  token = auth_header[7:].strip()
+  return token or None
+
+
+def _verify_supabase_access_token(access_token: str):
+  """
+  Ask Supabase Auth for the current user. This validates the caller's JWT
+  against the Auth server rather than trusting a user id supplied by the app.
+  """
+  if not (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY):
+    raise RuntimeError("Supabase server configuration is incomplete.")
+
+  response = requests.get(
+    f"{SUPABASE_URL}/auth/v1/user",
+    headers={
+      "apikey": SUPABASE_SERVICE_ROLE_KEY,
+      "Authorization": f"Bearer {access_token}",
+    },
+    timeout=12,
+  )
+
+  if response.status_code != 200:
+    print(
+      "[account-delete] token verification failed:",
+      response.status_code,
+      response.text[:1000],
+    )
+    return None
+
+  try:
+    user = response.json()
+  except Exception:
+    return None
+
+  return user if isinstance(user, dict) else None
+
+
+def _delete_public_rows(table: str, column: str, user_id: str):
+  response = requests.delete(
+    supabase_rest_url(table),
+    headers=supabase_headers({
+      "Content-Type": "application/json",
+      "Prefer": "return=minimal",
+    }),
+    params={column: f"eq.{user_id}"},
+    timeout=15,
+  )
+
+  if response.status_code not in (200, 204):
+    raise RuntimeError(
+      f"Could not delete {table}: "
+      f"{response.status_code} {response.text[:1000]}"
+    )
+
+
+def _delete_supabase_auth_user(user_id: str):
+  response = requests.delete(
+    f"{SUPABASE_URL}/auth/v1/admin/users/{user_id}",
+    headers={
+      "apikey": SUPABASE_SERVICE_ROLE_KEY,
+      "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+      "Content-Type": "application/json",
+    },
+    timeout=15,
+  )
+
+  if response.status_code not in (200, 204):
+    raise RuntimeError(
+      "Could not delete the Supabase Auth user: "
+      f"{response.status_code} {response.text[:1000]}"
+    )
+
+
+@app.post("/api/account/delete")
+def delete_current_account():
+  """
+  Permanently deletes the authenticated Nova account.
+
+  The database audit showed:
+  - achievements, purchases, and quiz_results cascade from profiles
+  - ask_messages, transactions, and username_change_history require
+    explicit deletion
+  - profiles.id does not cascade from auth.users
+
+  The client may not choose a user id. The id always comes from the verified
+  Supabase access token.
+  """
+  if not (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY):
+    return jsonify({
+      "ok": False,
+      "error": "Account deletion is not configured on the server.",
+    }), 503
+
+  payload = request.get_json(silent=True) or {}
+
+  if payload.get("confirmation") != "DELETE_MY_ACCOUNT":
+    return jsonify({
+      "ok": False,
+      "error": "Permanent deletion was not explicitly confirmed.",
+    }), 400
+
+  access_token = _extract_bearer_token()
+
+  if not access_token:
+    return jsonify({
+      "ok": False,
+      "error": "A valid signed-in session is required.",
+    }), 401
+
+  try:
+    verified_user = _verify_supabase_access_token(access_token)
+  except Exception as error:
+    print("[account-delete] verification exception:", repr(error))
+    return jsonify({
+      "ok": False,
+      "error": "Nova could not verify the signed-in account.",
+    }), 503
+
+  user_id = norm((verified_user or {}).get("id"))
+
+  if not user_id:
+    return jsonify({
+      "ok": False,
+      "error": "The signed-in account could not be verified.",
+    }), 401
+
+  try:
+    # These tables have user ids but no foreign-key cascade.
+    _delete_public_rows("ask_messages", "user_id", user_id)
+    _delete_public_rows("transactions", "user_id", user_id)
+    _delete_public_rows(
+      "username_change_history",
+      "user_id",
+      user_id,
+    )
+
+    # Deleting the profile cascades achievements, purchases, and quiz_results.
+    _delete_public_rows("profiles", "id", user_id)
+
+    # Finally remove the actual login from auth.users.
+    _delete_supabase_auth_user(user_id)
+
+    print("[account-delete] permanently deleted user:", user_id)
+
+    return jsonify({
+      "ok": True,
+      "deleted": True,
+    }), 200
+
+  except Exception as error:
+    print("[account-delete] deletion failed:", repr(error))
+
+    return jsonify({
+      "ok": False,
+      "error": (
+        "Nova could not finish deleting the account. "
+        "Please try again. No service-role credentials were exposed."
+      ),
+    }), 500
+
+
+# -------------------------------------------------
 # Email helpers (Resend HTTP ONLY, no SMTP)
 # -------------------------------------------------
 

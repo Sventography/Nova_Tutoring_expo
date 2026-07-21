@@ -96,7 +96,7 @@ type UserContextValue = {
 
   signOut: () => Promise<void>;
 
-  deleteAccount: () => Promise<void>;
+  deleteAccount: (currentPassword: string) => Promise<void>;
 };
 
 const UserContext = createContext<UserContextValue | null>(null);
@@ -118,6 +118,11 @@ const PASSWORD_RECOVERY_PAGE_URL = (
   process.env.EXPO_PUBLIC_PASSWORD_RECOVERY_URL ||
   "https://confirm.sventographystudios.com/auth/confirmed"
 ).trim();
+
+const BACKEND_BASE_URL = (
+  process.env.EXPO_PUBLIC_BACKEND_URL ||
+  "https://nove-tutoring-backend.onrender.com"
+).replace(/\/+$/, "");
 
 function normalizeUsername(raw: string | null | undefined): string {
   const base = (raw ?? "").trim() || "Student";
@@ -1196,8 +1201,126 @@ export function UserProvider({ children }: { children: ReactNode }) {
     ]);
   };
 
-  const deleteAccount = async () => {
-    await signOut();
+  const deleteAccount = async (currentPassword: string) => {
+    const currentSession = session;
+    const currentUser = currentSession?.user ?? null;
+    const currentEmail = cleanEmail(currentUser?.email || "");
+    const password = String(currentPassword || "");
+
+    if (!currentUser?.id || !currentSession?.access_token) {
+      throw new Error("You must be signed in to delete your account.");
+    }
+
+    if (!currentEmail) {
+      throw new Error(
+        "Nova could not determine the login email for this account."
+      );
+    }
+
+    if (!password) {
+      throw new Error("Enter your current password.");
+    }
+
+    /*
+     * Require the password again before this irreversible action. This
+     * refreshes the session for the same account without creating a new one.
+     */
+    const {
+      data: verificationData,
+      error: verificationError,
+    } = await withTimeout(
+      supabase.auth.signInWithPassword({
+        email: currentEmail,
+        password,
+      }),
+      12000,
+      "Nova could not verify your password in time. Please try again."
+    );
+
+    if (verificationError) {
+      const lower = String(
+        verificationError?.message || verificationError
+      ).toLowerCase();
+
+      if (lower.includes("invalid login credentials")) {
+        throw new Error("Your current password is incorrect.");
+      }
+
+      throw toFriendlyAuthError(verificationError);
+    }
+
+    if (
+      !verificationData.user ||
+      verificationData.user.id !== currentUser.id
+    ) {
+      throw new Error(
+        "Nova could not verify that password for this account."
+      );
+    }
+
+    const accessToken =
+      verificationData.session?.access_token ||
+      currentSession.access_token;
+
+    let response: Response;
+
+    try {
+      response = await withTimeout(
+        fetch(`${BACKEND_BASE_URL}/api/account/delete`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            confirmation: "DELETE_MY_ACCOUNT",
+          }),
+        }),
+        30000,
+        "Nova did not receive a response from the deletion service in time."
+      );
+    } catch (error) {
+      throw error instanceof Error
+        ? error
+        : new Error("Could not contact the account-deletion service.");
+    }
+
+    const rawBody = await response.text();
+
+    let payload: any = null;
+
+    try {
+      payload = rawBody ? JSON.parse(rawBody) : null;
+    } catch {
+      payload = null;
+    }
+
+    if (!response.ok) {
+      throw new Error(
+        payload?.error ||
+          payload?.message ||
+          rawBody ||
+          "Nova could not permanently delete this account."
+      );
+    }
+
+    /*
+     * The server has removed the Auth user and linked database data.
+     * Clear all local identity state without waiting for another remote call.
+     */
+    setSession(null);
+    setSupabaseUserId(null);
+    setProfile(null);
+    setReady(true);
+
+    await Promise.allSettled([
+      clearSupabaseAuthStorage("permanent account deletion"),
+      AsyncStorage.removeItem(PROFILE_KEY),
+      AsyncStorage.removeItem(
+        "nova.auth.pending-confirmation-email.v1"
+      ),
+      AsyncStorage.removeItem(PENDING_EMAIL_CHANGE_KEY),
+    ]);
   };
 
   const flatUsername =

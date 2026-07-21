@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Image,
   Modal,
@@ -10,6 +11,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -44,6 +46,8 @@ export default function AccountScreen() {
 
   const [avatarLocal, setAvatarLocal] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deletingAccount, setDeletingAccount] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
 
   const isLoggedIn = !!session?.user?.id;
@@ -199,20 +203,43 @@ export default function AccountScreen() {
   }
 
   async function handleConfirmDelete() {
+    if (!deletePassword) {
+      Alert.alert(
+        "Password required",
+        "Enter your current password to permanently delete this account."
+      );
+      return;
+    }
+
+    setDeletingAccount(true);
+
     try {
-      await deleteAccount?.();
+      await deleteAccount?.(deletePassword);
+
       setCoins?.(0);
-      await resetStreak?.();
+
+      try {
+        await Promise.resolve(resetStreak?.());
+      } catch (error) {
+        console.warn(
+          "[Account] local streak reset after deletion warning:",
+          error
+        );
+      }
+
       setAvatarLocal(null);
+      setDeletePassword("");
       setShowDeleteModal(false);
-      showToast("Account removed from this device");
+      showToast("Account permanently deleted");
       (router as any).replace("/");
     } catch (error: any) {
-      setShowDeleteModal(false);
       Alert.alert(
-        "Error",
-        error?.message || "Could not remove the account."
+        "Could not delete account",
+        error?.message ||
+          "Nova could not permanently delete this account."
       );
+    } finally {
+      setDeletingAccount(false);
     }
   }
 
@@ -477,17 +504,24 @@ ${loginEmail}`
         </Pressable>
 
         <Pressable
-          style={S.removeButton}
-          onPress={() => setShowDeleteModal(true)}
+          style={[
+            S.removeButton,
+            { opacity: isLoggedIn ? 1 : 0.45 },
+          ]}
+          disabled={!isLoggedIn}
+          onPress={() => {
+            setDeletePassword("");
+            setShowDeleteModal(true);
+          }}
         >
           <Text style={S.removeText}>
-            Remove Account From This Device
+            Delete My Account Permanently
           </Text>
         </Pressable>
 
         <Text style={[S.removeNote, { color: tokens.cardText }]}>
-          This clears the local session and saved device data. It does not
-          delete server-side order records.
+          Permanently deletes your Nova login and account data. This cannot
+          be undone. App Store purchase records held by Apple are separate.
         </Text>
 
         <View style={S.community}>
@@ -525,7 +559,12 @@ ${loginEmail}`
         visible={showDeleteModal}
         transparent
         animationType="fade"
-        onRequestClose={() => setShowDeleteModal(false)}
+        onRequestClose={() => {
+          if (!deletingAccount) {
+            setShowDeleteModal(false);
+            setDeletePassword("");
+          }
+        }}
       >
         <View style={S.modalBackdrop}>
           <View
@@ -538,18 +577,60 @@ ${loginEmail}`
             ]}
           >
             <Text style={[S.modalTitle, { color: tokens.text }]}>
-              Remove this account?
+              Permanently delete this account?
             </Text>
+
             <Text style={[S.modalBody, { color: tokens.cardText }]}>
-              This signs out and clears Nova Tutoring’s saved account data
-              from this device. It does not currently delete the online
-              Supabase account.
+              This permanently removes your Nova Tutoring login, username,
+              profile, avatar, messages, achievements, quiz results,
+              transaction records, purchases stored by Nova, and saved
+              progress. This action cannot be undone.
             </Text>
+
+            <Text
+              style={[
+                S.deletePasswordLabel,
+                { color: tokens.cardText },
+              ]}
+            >
+              Current password
+            </Text>
+
+            <TextInput
+              value={deletePassword}
+              onChangeText={setDeletePassword}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              editable={!deletingAccount}
+              placeholder="Enter current password"
+              placeholderTextColor="#77798a"
+              style={[
+                S.deletePasswordInput,
+                {
+                  color: tokens.text,
+                  borderColor: tokens.border,
+                  backgroundColor: tokens.isDark
+                    ? "rgba(0,0,0,0.24)"
+                    : "rgba(255,255,255,0.75)",
+                },
+              ]}
+            />
 
             <View style={S.modalRow}>
               <Pressable
-                style={[S.modalButton, { borderColor: tokens.border }]}
-                onPress={() => setShowDeleteModal(false)}
+                disabled={deletingAccount}
+                style={[
+                  S.modalButton,
+                  {
+                    borderColor: tokens.border,
+                    opacity: deletingAccount ? 0.5 : 1,
+                  },
+                ]}
+                onPress={() => {
+                  setShowDeleteModal(false);
+                  setDeletePassword("");
+                }}
               >
                 <Text style={[S.modalButtonText, { color: tokens.text }]}>
                   Cancel
@@ -557,12 +638,24 @@ ${loginEmail}`
               </Pressable>
 
               <Pressable
-                style={[S.modalButton, { borderColor: "#ff2b2b" }]}
+                disabled={deletingAccount}
+                style={[
+                  S.modalButton,
+                  {
+                    borderColor: "#ff2b2b",
+                    backgroundColor: "rgba(255,43,43,0.13)",
+                    opacity: deletingAccount ? 0.65 : 1,
+                  },
+                ]}
                 onPress={handleConfirmDelete}
               >
-                <Text style={[S.modalButtonText, { color: tokens.text }]}>
-                  Remove
-                </Text>
+                {deletingAccount ? (
+                  <ActivityIndicator color="#ff8d8d" />
+                ) : (
+                  <Text style={[S.modalButtonText, { color: "#ff8d8d" }]}>
+                    Delete Forever
+                  </Text>
+                )}
               </Pressable>
             </View>
           </View>
@@ -791,6 +884,19 @@ const S = StyleSheet.create({
   modalBody: {
     fontSize: 13,
     lineHeight: 19,
+  },
+  deletePasswordLabel: {
+    fontSize: 13,
+    fontWeight: "800",
+    marginTop: 18,
+    marginBottom: 7,
+  },
+  deletePasswordInput: {
+    borderWidth: 1.5,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: 16,
   },
   modalRow: {
     flexDirection: "row",
