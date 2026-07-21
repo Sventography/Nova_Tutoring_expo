@@ -109,6 +109,32 @@ async function safeSetJSON(key: string, value: any): Promise<void> {
   }
 }
 
+async function withTimeout<T>(
+  promise: Promise<T>,
+  milliseconds: number,
+  fallback: T
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((resolve) => {
+        timer = setTimeout(() => {
+          console.warn(
+            `[StreakContext] Remote streak request timed out after ${milliseconds}ms`
+          );
+          resolve(fallback);
+        }, milliseconds);
+      }),
+    ]);
+  } finally {
+    if (timer) {
+      clearTimeout(timer);
+    }
+  }
+}
+
 /**
  * Migrate any legacy guest keys into the v2 guest keys (one-time).
  */
@@ -281,7 +307,11 @@ export function StreakProvider({ children }: { children: ReactNode }) {
       const [storedMeta, storedLogs, remoteMeta] = await Promise.all([
         safeGetJSON<StreakMeta>(metaKey),
         safeGetJSON<string[]>(logsKey),
-        fetchStreakFromSupabase(supabaseUserId ?? null),
+        withTimeout(
+          fetchStreakFromSupabase(supabaseUserId ?? null),
+          3000,
+          null
+        ),
       ]);
 
       let nextMeta: StreakMeta = {

@@ -54,3 +54,6 @@ expo-env.d.ts
 *.bak.*
 *.save
 *.webfix
+
+__pycache__/
+*.pyc

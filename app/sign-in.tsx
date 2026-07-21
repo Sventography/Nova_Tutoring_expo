@@ -1,5 +1,5 @@
 // app/sign-in.tsx
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -13,9 +13,10 @@ import {
   Modal,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import * as Linking from "expo-linking";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { useTheme } from "./context/ThemeContext";
 import { useUser } from "./context/UserContext";
@@ -24,8 +25,15 @@ import { showToast } from "./utils/toast";
 // ✅ Your real Discord invite
 const DISCORD_INVITE_URL = "https://discord.gg/NR9PAjtrg";
 
+const PENDING_CONFIRMATION_EMAIL_KEY =
+  "nova.auth.pending-confirmation-email.v1";
+
 export default function SignInScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{
+    email?: string | string[];
+    mode?: string | string[];
+  }>();
   const { tokens } = useTheme();
   const {
     signUpWithEmailPassword,
@@ -46,6 +54,22 @@ export default function SignInScreen() {
   const [liPassword, setLiPassword] = useState("");
 
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const rawMode = Array.isArray(params.mode) ? params.mode[0] : params.mode;
+    const rawEmail = Array.isArray(params.email) ? params.email[0] : params.email;
+    const normalizedEmail = String(rawEmail || "").trim().toLowerCase();
+
+    if (rawMode === "login") {
+      setMode("login");
+    } else if (rawMode === "register" || rawMode === "signup") {
+      setMode("signup");
+    }
+
+    if (normalizedEmail) {
+      setLiEmail(normalizedEmail);
+    }
+  }, [params.email, params.mode]);
 
   // Discord modal
   const [discordVisible, setDiscordVisible] = useState(false);
@@ -87,10 +111,26 @@ export default function SignInScreen() {
       return;
     }
 
+    if (username.length < 3) {
+      Alert.alert(
+        "Username too short",
+        "Usernames must be at least 3 characters long."
+      );
+      return;
+    }
+
     if (username.length > 8) {
       Alert.alert(
         "Username too long",
         "Usernames can be up to 8 characters long."
+      );
+      return;
+    }
+
+    if (!/^[A-Za-z0-9_]+$/.test(username)) {
+      Alert.alert(
+        "Invalid username",
+        "Use only letters, numbers, and underscores."
       );
       return;
     }
@@ -116,13 +156,34 @@ export default function SignInScreen() {
       await hapticTap();
 
       // IMPORTANT: UserContext expects (username, email, password)
-      await signUpWithEmailPassword(username, email, password);
+      const result = await signUpWithEmailPassword(
+        username,
+        email,
+        password
+      );
 
-      // tiny delay so auth listeners + contexts can settle
-      await new Promise((resolve) => setTimeout(resolve, 150));
+      const confirmationEmail =
+        String(result?.email || email).trim().toLowerCase();
 
-      showToast("Account created! You’re signed in.");
-      goToMainTabs();
+      console.log("[SIGNUP RESULT]", result);
+
+      // Nova requires email confirmation, so every successful
+      // registration stays in the confirmation flow.
+      await AsyncStorage.setItem(
+        PENDING_CONFIRMATION_EMAIL_KEY,
+        confirmationEmail
+      );
+
+      showToast("Account created! Check your email for the code.");
+
+      (router as any).replace({
+        pathname: "/confirm-email",
+        params: {
+          email: confirmationEmail,
+        },
+      });
+
+      return;
     } catch (e: any) {
       console.log("signUp error:", e);
       const code = e?.code || "";
@@ -172,6 +233,8 @@ export default function SignInScreen() {
 
       await loginWithEmailPassword(email, password);
 
+      await AsyncStorage.removeItem(PENDING_CONFIRMATION_EMAIL_KEY);
+
       // tiny buffer for downstream listeners
       await new Promise((resolve) => setTimeout(resolve, 150));
 
@@ -180,7 +243,32 @@ export default function SignInScreen() {
     } catch (e: any) {
       console.log("login error:", e);
       const msg = e?.message ? String(e.message) : String(e ?? "");
-      Alert.alert("Login error", msg || "Could not log you in right now.");
+      const lower = msg.toLowerCase();
+
+      if (lower.includes("confirm your email")) {
+        await AsyncStorage.setItem(
+          PENDING_CONFIRMATION_EMAIL_KEY,
+          email
+        );
+
+        Alert.alert(
+          "Email not confirmed",
+          "Enter the code from your Nova Tutoring email, or resend the confirmation message.",
+          [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Enter code",
+              onPress: () =>
+                router.replace({
+                  pathname: "/confirm-email",
+                  params: { email },
+                }),
+            },
+          ]
+        );
+      } else {
+        Alert.alert("Login error", msg || "Could not log you in right now.");
+      }
     } finally {
       setLoading(false);
     }
@@ -315,14 +403,14 @@ export default function SignInScreen() {
                 <TextInput
                   value={suUsername}
                   onChangeText={setSuUsername}
-                  placeholder="NovaStudent"
+                  placeholder="NovaUser"
                   placeholderTextColor={
                     tokens.isDark ? "#6b7685" : "#607080"
                   }
                   style={[styles.input, inputBaseStyle]}
                   autoCapitalize="none"
                   autoCorrect={false}
-                  maxLength={16}
+                  maxLength={8}
                   editable={!loading}
                 />
 

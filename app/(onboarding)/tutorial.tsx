@@ -1,5 +1,16 @@
+// app/(onboarding)/tutorial.tsx
+
 import React, { useMemo, useRef, useState } from "react";
-import { View, Text, StyleSheet, Image, Pressable, FlatList, Dimensions, Platform } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  Pressable,
+  FlatList,
+  Dimensions,
+  Platform,
+} from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
@@ -38,10 +49,10 @@ export default function Tutorial() {
       {
         key: "login",
         title: "Your Profile",
-        body: "Log in, set your name, and pick an avatar anytime.",
+        body: "Log in, register, set your name, and pick an avatar anytime.",
         image: require("../assets/tutorial/nova_login.png"),
         slot: "center",
-        stageH: 0.60,
+        stageH: 0.6,
         offsetY: 0,
       },
       {
@@ -103,27 +114,36 @@ export default function Tutorial() {
   );
 
   const buzz = async () => {
-    if (Platform.OS !== "web") await Haptics.selectionAsync().catch(() => {});
+    if (Platform.OS !== "web") {
+      await Haptics.selectionAsync().catch(() => {});
+    }
   };
 
   const finish = async () => {
     await buzz();
     await AsyncStorage.setItem(KEY, "1");
-    router.replace("/(tabs)/ask");
+
+    // Return to the splash/start screen so the user sees
+    // Login / Register before choosing whether to continue as a guest.
+    router.replace("/");
   };
 
   const goTo = async (nextIndex: number) => {
     const clamped = Math.max(0, Math.min(slides.length - 1, nextIndex));
     const offset = clamped * width;
 
-    // scrollToOffset works better than scrollToIndex on web
     listRef.current?.scrollToOffset({ offset, animated: true });
     setIndex(clamped);
   };
 
   const next = async () => {
     await buzz();
-    if (index >= slides.length - 1) return finish();
+
+    if (index >= slides.length - 1) {
+      await finish();
+      return;
+    }
+
     await goTo(index + 1);
   };
 
@@ -136,7 +156,9 @@ export default function Tutorial() {
   return (
     <View style={s.screen}>
       <FlatList
-        ref={(r) => (listRef.current = r)}
+        ref={(r) => {
+          listRef.current = r;
+        }}
         data={slides}
         horizontal
         pagingEnabled
@@ -145,7 +167,11 @@ export default function Tutorial() {
         disableIntervalMomentum
         showsHorizontalScrollIndicator={false}
         keyExtractor={(it) => it.key}
-        getItemLayout={(_, i) => ({ length: width, offset: width * i, index: i })}
+        getItemLayout={(_, i) => ({
+          length: width,
+          offset: width * i,
+          index: i,
+        })}
         onMomentumScrollEnd={(e) => {
           const i = Math.round(e.nativeEvent.contentOffset.x / width);
           setIndex(i);
@@ -167,7 +193,10 @@ export default function Tutorial() {
               <Image
                 source={item.image}
                 resizeMode="contain"
-                style={[s.image, { transform: [{ translateY: item.offsetY }] }]}
+                style={[
+                  s.image,
+                  { transform: [{ translateY: item.offsetY }] },
+                ]}
               />
             </View>
           </View>
@@ -176,7 +205,11 @@ export default function Tutorial() {
 
       <View style={s.footer}>
         <Pressable onPress={next} style={s.primaryBtn}>
-          <Text style={s.primaryText}>{index === slides.length - 1 ? "Finish" : "Next"}</Text>
+          <Text style={s.primaryText}>
+            {index === slides.length - 1
+              ? "Continue to Login / Register"
+              : "Next"}
+          </Text>
         </Pressable>
 
         <Pressable onPress={finish}>
@@ -188,16 +221,57 @@ export default function Tutorial() {
 }
 
 const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "black", paddingTop: 56 },
-  page: { flex: 1, alignItems: "center", paddingHorizontal: 18 },
-  title: { color: "white", fontSize: 26, fontWeight: "800", textAlign: "center" },
-  body: { color: "#aaa", marginTop: 12, textAlign: "center", lineHeight: 20, maxWidth: 380 },
-
-  stage: { width: "100%", alignItems: "center", marginTop: 16 },
-  image: { width: "94%", height: "100%" },
-
-  footer: { paddingHorizontal: 22, paddingBottom: 22, gap: 12 },
-  primaryBtn: { backgroundColor: "#00e5ff", paddingVertical: 14, borderRadius: 14, alignItems: "center" },
-  primaryText: { fontWeight: "800", color: "black", fontSize: 16 },
-  skip: { color: "#888", textAlign: "center", fontWeight: "700" },
+  screen: {
+    flex: 1,
+    backgroundColor: "black",
+    paddingTop: 56,
+  },
+  page: {
+    flex: 1,
+    alignItems: "center",
+    paddingHorizontal: 18,
+  },
+  title: {
+    color: "white",
+    fontSize: 26,
+    fontWeight: "800",
+    textAlign: "center",
+  },
+  body: {
+    color: "#aaa",
+    marginTop: 12,
+    textAlign: "center",
+    lineHeight: 20,
+    maxWidth: 380,
+  },
+  stage: {
+    width: "100%",
+    alignItems: "center",
+    marginTop: 16,
+  },
+  image: {
+    width: "94%",
+    height: "100%",
+  },
+  footer: {
+    paddingHorizontal: 22,
+    paddingBottom: 22,
+    gap: 12,
+  },
+  primaryBtn: {
+    backgroundColor: "#00e5ff",
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: "center",
+  },
+  primaryText: {
+    fontWeight: "800",
+    color: "black",
+    fontSize: 16,
+  },
+  skip: {
+    color: "#888",
+    textAlign: "center",
+    fontWeight: "700",
+  },
 });

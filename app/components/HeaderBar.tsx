@@ -129,7 +129,11 @@ export default function HeaderBar() {
     } catch {}
   };
 
-  const streakLabel = !loaded ? "…" : `${count}🔥`;
+  const safeStreakCount = Number.isFinite(Number(count))
+    ? Math.max(0, Number(count))
+    : 0;
+
+  const streakLabel = `${safeStreakCount}🔥`;
 
   const hit = 8;
   const iconSize = 18;

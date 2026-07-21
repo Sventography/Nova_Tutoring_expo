@@ -1,5 +1,6 @@
 // app/index.tsx
-import React, { useRef, useEffect } from "react";
+
+import React, { useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -18,35 +19,83 @@ import { useUser } from "./context/UserContext";
 import { useIsland } from "./context/IslandContext";
 
 const TUTORIAL_KEY = "onboarding.tutorial.done.v1";
+const PENDING_CONFIRMATION_EMAIL_KEY =
+  "nova.auth.pending-confirmation-email.v1";
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { isLoggedIn } = (useUser() || {}) as any;
+  const { isLoggedIn, ready } = (useUser() || {}) as any;
   const { grantDailyLoginXpIfNeeded } = useIsland();
+
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const startupRouteHandledRef = useRef(false);
 
-  // One-time tutorial gate (shows only once ever)
   useEffect(() => {
-    (async () => {
-      try {
-        const done = await AsyncStorage.getItem(TUTORIAL_KEY);
-        if (!done) {
-          router.replace("/tutorial");
-        }
-      } catch {
-        // ignore tutorial errors
-      }
-    })();
-  }, [router]);
+    if (!ready || startupRouteHandledRef.current) {
+      return;
+    }
 
-  // Daily login XP: +5 island XP once per calendar day
+    let cancelled = false;
+
+    async function chooseStartupRoute() {
+      try {
+        // A successful login or code confirmation makes any old pending
+        // confirmation reminder obsolete.
+        if (isLoggedIn) {
+          await AsyncStorage.removeItem(
+            PENDING_CONFIRMATION_EMAIL_KEY
+          );
+        } else {
+          const pendingEmail = String(
+            (await AsyncStorage.getItem(
+              PENDING_CONFIRMATION_EMAIL_KEY
+            )) || ""
+          )
+            .trim()
+            .toLowerCase();
+
+          if (pendingEmail && !cancelled) {
+            startupRouteHandledRef.current = true;
+
+            router.replace({
+              pathname: "/confirm-email",
+              params: {
+                email: pendingEmail,
+              },
+            });
+
+            return;
+          }
+        }
+
+        const tutorialDone = await AsyncStorage.getItem(TUTORIAL_KEY);
+
+        if (!tutorialDone && !cancelled) {
+          startupRouteHandledRef.current = true;
+          router.replace("/tutorial");
+          return;
+        }
+
+        startupRouteHandledRef.current = true;
+      } catch (error) {
+        console.warn("[HomeScreen] startup routing error:", error);
+        startupRouteHandledRef.current = true;
+      }
+    }
+
+    void chooseStartupRoute();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoggedIn, ready, router]);
+
   useEffect(() => {
     grantDailyLoginXpIfNeeded().catch(() => {});
   }, [grantDailyLoginXpIfNeeded]);
 
-  // Subtle pulsing animation
   useEffect(() => {
-    Animated.loop(
+    const animation = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
           toValue: 1.05,
@@ -59,15 +108,23 @@ export default function HomeScreen() {
           useNativeDriver: false,
         }),
       ])
-    ).start();
+    );
+
+    animation.start();
+
+    return () => {
+      animation.stop();
+    };
   }, [pulseAnim]);
 
   const hapticTap = async () => {
     if (Platform.OS !== "web") {
       try {
-        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+        await Haptics.impactAsync(
+          Haptics.ImpactFeedbackStyle.Heavy
+        );
       } catch {
-        // ignore haptics errors
+        // Ignore haptics errors.
       }
     }
   };
@@ -79,11 +136,13 @@ export default function HomeScreen() {
 
   const handleLoginPress = async () => {
     await hapticTap();
+
     if (isLoggedIn) {
       router.push("/(tabs)/account");
-    } else {
-      router.push("/sign-in");
+      return;
     }
+
+    router.push("/sign-in");
   };
 
   const handleResetTutorial = async () => {
@@ -92,38 +151,36 @@ export default function HomeScreen() {
         await Haptics.notificationAsync(
           Haptics.NotificationFeedbackType.Success
         );
-      } catch {}
+      } catch {
+        // Ignore haptics errors.
+      }
     }
+
     try {
       await AsyncStorage.removeItem(TUTORIAL_KEY);
-    } catch {}
+    } catch {
+      // Ignore storage errors.
+    }
+
     router.replace("/tutorial");
   };
 
   return (
     <View style={styles.container}>
-      {/* Logo (long-press to reset tutorial) */}
-      <Pressable onLongPress={handleResetTutorial} delayLongPress={500}>
-        <Image source={require("./assets/logo.png")} style={styles.logo} />
+      <Pressable
+        onLongPress={handleResetTutorial}
+        delayLongPress={500}
+      >
+        <Image
+          source={require("./assets/logo.png")}
+          style={styles.logo}
+        />
       </Pressable>
 
-      {/* Let’s Learn button */}
       <Pressable onPress={handleLetsLearn}>
-        <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
-          <LinearGradient
-            colors={["#00e5ff", "#66b2ff", "#000000"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.button}
-          >
-            <Text style={styles.buttonText}>Let’s Learn</Text>
-          </LinearGradient>
-        </Animated.View>
-      </Pressable>
-
-      {/* Login / Account button */}
-      <Pressable onPress={handleLoginPress}>
-        <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+        <Animated.View
+          style={{ transform: [{ scale: pulseAnim }] }}
+        >
           <LinearGradient
             colors={["#00e5ff", "#66b2ff", "#000000"]}
             start={{ x: 0, y: 0 }}
@@ -131,16 +188,34 @@ export default function HomeScreen() {
             style={styles.button}
           >
             <Text style={styles.buttonText}>
-              {isLoggedIn ? "Go to Account" : "Log In"}
+              {isLoggedIn ? "Let’s Learn" : "Continue as Guest"}
             </Text>
           </LinearGradient>
         </Animated.View>
       </Pressable>
 
-      {/* Subtitle (only when logged out) */}
-      {!isLoggedIn && (
-        <Text style={styles.subtitle}>Log in to save your progress!</Text>
-      )}
+      <Pressable onPress={handleLoginPress}>
+        <Animated.View
+          style={{ transform: [{ scale: pulseAnim }] }}
+        >
+          <LinearGradient
+            colors={["#00e5ff", "#66b2ff", "#000000"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.button}
+          >
+            <Text style={styles.buttonText}>
+              {isLoggedIn ? "Go to Account" : "Login / Register"}
+            </Text>
+          </LinearGradient>
+        </Animated.View>
+      </Pressable>
+
+      {!isLoggedIn ? (
+        <Text style={styles.subtitle}>
+          Log in or register to save your progress.
+        </Text>
+      ) : null}
 
       <Text style={styles.hint}>
         Tip: Long-press the logo to replay the tutorial.
