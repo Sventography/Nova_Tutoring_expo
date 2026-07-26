@@ -9,9 +9,12 @@ import {
 } from "react-native";
 import * as Haptics from "expo-haptics";
 
-type Props = { state: any; descriptors: any; navigation: any };
+type Props = {
+  state: any;
+  descriptors: any;
+  navigation: any;
+};
 
-// ✅ Include "island" so the new tab actually shows up
 const ALLOWED = new Set([
   "ask",
   "flashcards",
@@ -21,7 +24,7 @@ const ALLOWED = new Set([
   "achievements",
   "history",
   "relax",
-  "island",       // ← new
+  "island",
   "account",
   "certificates",
   "collections",
@@ -34,9 +37,9 @@ export default function ScrollableTabBar({
   navigation,
 }: Props) {
   const items = state.routes.filter(
-    (r: any) =>
-      ALLOWED.has(r.name) &&
-      descriptors[r.key]?.options?.href !== null
+    (route: any) =>
+      ALLOWED.has(route.name) &&
+      descriptors[route.key]?.options?.href !== null
   );
 
   return (
@@ -47,57 +50,58 @@ export default function ScrollableTabBar({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={S.row}
       >
-        {items.map((route: any, idx: number) => {
-          const isFocused = state.index === state.routes.indexOf(route);
-          const { options } = descriptors[route.key] || {};
-          const raw =
+        {items.map((route: any) => {
+          const isFocused =
+            state.index ===
+            state.routes.indexOf(route);
+
+          const { options } =
+            descriptors[route.key] || {};
+
+          const rawLabel =
             options?.tabBarLabel ??
             options?.title ??
             route.name ??
             "";
+
           const label =
-            typeof raw === "string"
-              ? raw.toUpperCase()
-              : String(raw);
+            typeof rawLabel === "string"
+              ? rawLabel.toUpperCase()
+              : String(rawLabel);
 
-          const isIsland = route.name === "island";
-
-          // 🔵 Normal tabs vs. 🌫 teaser Island tab
           const activeColor = "#00e5ff";
-          const inactiveColor = "rgba(0,229,255,0.7)";
-          const teaserColor = "rgba(148,163,184,0.8)";
+          const inactiveColor =
+            "rgba(0,229,255,0.7)";
 
-          const labelColor = isIsland
-            ? teaserColor // keep Island a bit dim to feel "coming soon"
-            : isFocused
-            ? activeColor
-            : inactiveColor;
-
-          const iconColor = isIsland
-            ? teaserColor
-            : isFocused
+          const color = isFocused
             ? activeColor
             : inactiveColor;
 
           const onPress = async () => {
-            const ev = navigation.emit({
+            const event = navigation.emit({
               type: "tabPress",
               target: route.key,
               canPreventDefault: true,
             });
-            if (!isFocused && !ev.defaultPrevented) {
+
+            if (
+              !isFocused &&
+              !event.defaultPrevented
+            ) {
               try {
                 await Haptics.selectionAsync();
               } catch {}
+
               navigation.navigate(route.name);
             }
           };
 
           const icon =
-            typeof options?.tabBarIcon === "function"
+            typeof options?.tabBarIcon ===
+            "function"
               ? options.tabBarIcon({
                   focused: isFocused,
-                  color: iconColor,
+                  color,
                   size: 22,
                 })
               : null;
@@ -108,18 +112,32 @@ export default function ScrollableTabBar({
               onPress={onPress}
               style={[
                 S.item,
-                isFocused && !isIsland && S.itemActive, // Island stays visually subtle even when focused
+                isFocused && S.itemActive,
               ]}
               hitSlop={10}
+              accessibilityRole="button"
+              accessibilityState={{
+                selected: isFocused,
+              }}
+              accessibilityLabel={`${label} tab`}
             >
-              <View style={S.iconBox}>{icon}</View>
+              <View style={S.iconBox}>
+                {icon}
+              </View>
+
               <Text
-                style={[S.label, { color: labelColor }]}
+                style={[
+                  S.label,
+                  { color },
+                ]}
                 numberOfLines={1}
               >
                 {label}
               </Text>
-              {isFocused && !isIsland && <View style={S.underline} />}
+
+              {isFocused ? (
+                <View style={S.underline} />
+              ) : null}
             </Pressable>
           );
         })}
@@ -150,9 +168,15 @@ export const S = StyleSheet.create({
     shadowColor: "#00e5ff",
     shadowOpacity: 0.45,
     shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
+    shadowOffset: {
+      width: 0,
+      height: 6,
+    },
     borderWidth: 1,
-    borderColor: "rgba(0,229,255,0.5)",
+    borderColor:
+      "rgba(0,229,255,0.5)",
+    backgroundColor:
+      "rgba(0,229,255,0.06)",
   },
   iconBox: {
     height: 24,

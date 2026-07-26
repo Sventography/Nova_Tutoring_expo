@@ -18,68 +18,87 @@ import {
   COMPANIONS,
   type CompanionItem,
 } from "../_lib/companionsCatalog";
+import {
+  getCommonCompanionFriendshipProfile,
+  getFriendshipLevelFromPoints,
+  getFriendshipProgress,
+  normalizeCommonCompanionId,
+  type CompanionActivityKey,
+  type FriendshipLevel,
+} from "../_lib/commonCompanionFriendship";
 
-export type CompanionInteractionKind = "tap" | "pet";
+export type CompanionInteractionKind =
+  | "tap"
+  | "pet"
+  | "activity";
 
 export type CompanionInteractionResult = {
   points: number;
-  level: number;
+  level: FriendshipLevel;
   leveledUp: boolean;
+  awardedPoints: number;
+  dailyCapReached: boolean;
+  maxed: boolean;
+  nextLevelAt: number | null;
+};
+
+export type CompanionDailyStatus = {
+  date: string;
+  tapsUsed: number;
+  petsUsed: number;
+  activitiesUsed: number;
+  tapsRemaining: number;
+  petsRemaining: number;
+  activitiesRemaining: number;
+};
+
+type DailyEntry = {
+  tap: number;
+  pet: number;
+  activity: number;
+};
+
+type DailyInteractionState = {
+  date: string;
+  companions: Record<string, DailyEntry>;
 };
 
 type CompanionContextValue = {
-  /** Canonical ID of the currently active companion. */
   activeCompanionId: string | null;
-
-  /**
-   * Legacy alias used by an older CompanionOverlay component.
-   * It always matches activeCompanionId.
-   */
   equippedCompanionId: string | null;
-
-  /** Full companion object for the active companion. */
   activeCompanion: CompanionItem | null;
-
-  /** All owned companion canonical IDs derived from PurchasesContext. */
   ownedCompanions: string[];
-
-  /** Persistent friendship points for regular cosmetic companions. */
   friendshipPoints: Record<string, number>;
-
-  /** Equip a companion by catalog ID. */
-  equipCompanion: (id: string) => Promise<void>;
-
-  /** Unequip the active companion. */
-  clearCompanion: () => Promise<void>;
-
-  /** Reload the active companion and friendship data from storage. */
-  reload: () => Promise<void>;
-
-  /** Whether storage hydration has finished. */
   ready: boolean;
 
-  /** Convenience helper for active state. */
+  equipCompanion: (id: string) => Promise<void>;
+  clearCompanion: () => Promise<void>;
+  reload: () => Promise<void>;
+
   isActive: (
     id: string | null | undefined
   ) => boolean;
 
-  /** Return stored friendship points for a companion. */
   getFriendshipPoints: (
     id: string | null | undefined
   ) => number;
 
-  /** Return friendship level 1–6 for a companion. */
   getFriendshipLevel: (
     id: string | null | undefined
-  ) => number;
+  ) => FriendshipLevel;
 
-  /**
-   * Record a tap or pet interaction.
-   * Only role="cosmetic" companions gain friendship in this version.
-   */
+  getFriendshipDailyStatus: (
+    id: string | null | undefined
+  ) => CompanionDailyStatus;
+
   recordCompanionInteraction: (
     id: string,
-    kind: CompanionInteractionKind
+    kind: "tap" | "pet"
+  ) => Promise<CompanionInteractionResult>;
+
+  recordCompanionActivity: (
+    id: string,
+    activity: CompanionActivityKey
   ) => Promise<CompanionInteractionResult>;
 };
 
@@ -90,6 +109,28 @@ const BASE_KEY = "@nova/companion.active";
 const LEGACY_BASE_KEY = "@nova/active-companion";
 const FRIENDSHIP_BASE_KEY =
   "@nova/companion.friendship.v1";
+const FRIENDSHIP_DAILY_BASE_KEY =
+  "@nova/companion.friendship.daily.v1";
+
+const DAILY_CAPS: Record<
+  CompanionInteractionKind,
+  number
+> = {
+  tap: 8,
+  pet: 2,
+  activity: 5,
+};
+
+const FRIENDSHIP_POINTS_PER_ACTION: Record<
+  CompanionInteractionKind,
+  number
+> = {
+  tap: 1,
+  pet: 3,
+  activity: 2,
+};
+
+const MAX_FRIENDSHIP_POINTS = 120;
 
 function storageKey(userId: string | null): string {
   return userId
@@ -113,7 +154,43 @@ function friendshipStorageKey(
     : `${FRIENDSHIP_BASE_KEY}/guest`;
 }
 
-function sanitizePoints(value: unknown): number {
+function friendshipDailyStorageKey(
+  userId: string | null
+): string {
+  return userId
+    ? `${FRIENDSHIP_DAILY_BASE_KEY}/${userId}`
+    : `${FRIENDSHIP_DAILY_BASE_KEY}/guest`;
+}
+
+function localDateKey(date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(
+    date.getMonth() + 1
+  ).padStart(2, "0");
+  const day = String(date.getDate()).padStart(
+    2,
+    "0"
+  );
+
+  return `${year}-${month}-${day}`;
+}
+
+function emptyDailyState(): DailyInteractionState {
+  return {
+    date: localDateKey(),
+    companions: {},
+  };
+}
+
+function emptyDailyEntry(): DailyEntry {
+  return {
+    tap: 0,
+    pet: 0,
+    activity: 0,
+  };
+}
+
+function sanitizeCount(value: unknown): number {
   const parsed = Math.floor(Number(value));
 
   return Number.isFinite(parsed) && parsed > 0
@@ -121,15 +198,11 @@ function sanitizePoints(value: unknown): number {
     : 0;
 }
 
-function friendshipLevelForPoints(
-  points: number
-): number {
-  if (points >= 120) return 6;
-  if (points >= 75) return 5;
-  if (points >= 40) return 4;
-  if (points >= 20) return 3;
-  if (points >= 8) return 2;
-  return 1;
+function sanitizePoints(value: unknown): number {
+  return Math.min(
+    MAX_FRIENDSHIP_POINTS,
+    sanitizeCount(value)
+  );
 }
 
 function findCompanion(
@@ -164,19 +237,96 @@ function normalizeFriendshipMap(
   for (const [rawId, rawPoints] of Object.entries(
     value as Record<string, unknown>
   )) {
-    const cid = canonId(rawId);
-    const companion = findCompanion(cid);
+    const id = normalizeCommonCompanionId(rawId);
 
-    // Friendship is intentionally limited to the regular Nova
-    // companions. Legendary power/support companions are untouched.
-    if (!companion || companion.role !== "cosmetic") {
-      continue;
-    }
+    if (!id) continue;
 
-    output[cid] = sanitizePoints(rawPoints);
+    output[id] = sanitizePoints(rawPoints);
   }
 
   return output;
+}
+
+function normalizeDailyState(
+  value: unknown
+): DailyInteractionState {
+  if (
+    !value ||
+    typeof value !== "object" ||
+    Array.isArray(value)
+  ) {
+    return emptyDailyState();
+  }
+
+  const raw = value as Partial<DailyInteractionState>;
+
+  if (raw.date !== localDateKey()) {
+    return emptyDailyState();
+  }
+
+  const companions: Record<string, DailyEntry> = {};
+
+  if (
+    raw.companions &&
+    typeof raw.companions === "object"
+  ) {
+    for (const [rawId, rawEntry] of Object.entries(
+      raw.companions
+    )) {
+      const id = normalizeCommonCompanionId(rawId);
+
+      if (
+        !id ||
+        !rawEntry ||
+        typeof rawEntry !== "object"
+      ) {
+        continue;
+      }
+
+      const entry = rawEntry as Partial<DailyEntry>;
+
+      companions[id] = {
+        tap: sanitizeCount(entry.tap),
+        pet: sanitizeCount(entry.pet),
+        activity: sanitizeCount(entry.activity),
+      };
+    }
+  }
+
+  return {
+    date: localDateKey(),
+    companions,
+  };
+}
+
+function statusFromState(
+  state: DailyInteractionState,
+  id: string | null
+): CompanionDailyStatus {
+  const normalized =
+    normalizeDailyState(state);
+  const entry =
+    (id && normalized.companions[id]) ||
+    emptyDailyEntry();
+
+  return {
+    date: normalized.date,
+    tapsUsed: entry.tap,
+    petsUsed: entry.pet,
+    activitiesUsed: entry.activity,
+    tapsRemaining: Math.max(
+      0,
+      DAILY_CAPS.tap - entry.tap
+    ),
+    petsRemaining: Math.max(
+      0,
+      DAILY_CAPS.pet - entry.pet
+    ),
+    activitiesRemaining: Math.max(
+      0,
+      DAILY_CAPS.activity - entry.activity
+    ),
+  };
 }
 
 type CompanionProviderProps = {
@@ -197,11 +347,20 @@ export const CompanionProvider: React.FC<
     useState<string | null>(null);
   const [friendshipPoints, setFriendshipPoints] =
     useState<Record<string, number>>({});
+  const [
+    dailyInteractionState,
+    setDailyInteractionState,
+  ] = useState<DailyInteractionState>(
+    emptyDailyState
+  );
   const [ready, setReady] = useState(false);
 
   const friendshipRef = useRef<
     Record<string, number>
   >({});
+  const dailyRef = useRef<DailyInteractionState>(
+    emptyDailyState()
+  );
 
   const key = useMemo(
     () => storageKey(userId),
@@ -215,6 +374,11 @@ export const CompanionProvider: React.FC<
 
   const friendshipKey = useMemo(
     () => friendshipStorageKey(userId),
+    [userId]
+  );
+
+  const friendshipDailyKey = useMemo(
+    () => friendshipDailyStorageKey(userId),
     [userId]
   );
 
@@ -235,37 +399,49 @@ export const CompanionProvider: React.FC<
     [friendshipKey]
   );
 
+  const persistDailyState = useCallback(
+    async (next: DailyInteractionState) => {
+      try {
+        await AsyncStorage.setItem(
+          friendshipDailyKey,
+          JSON.stringify(next)
+        );
+      } catch (error) {
+        console.warn(
+          "[CompanionContext] Failed to persist daily friendship limits",
+          error
+        );
+      }
+    },
+    [friendshipDailyKey]
+  );
+
   const loadFromStorage = useCallback(async () => {
     try {
       const [
         currentRaw,
         legacyRaw,
         friendshipRaw,
+        dailyRaw,
       ] = await Promise.all([
         AsyncStorage.getItem(key),
         AsyncStorage.getItem(legacyKey),
         AsyncStorage.getItem(friendshipKey),
+        AsyncStorage.getItem(
+          friendshipDailyKey
+        ),
       ]);
 
       const raw = currentRaw || legacyRaw;
 
       if (raw) {
-        const cid = canonId(raw);
-        setActiveCompanionId(cid);
-
-        console.log(
-          "[CompanionContext] loaded active companion:",
-          cid
-        );
+        setActiveCompanionId(canonId(raw));
       } else {
         setActiveCompanionId(null);
-
-        console.log(
-          "[CompanionContext] no active companion stored"
-        );
       }
 
       let parsedFriendship: unknown = {};
+      let parsedDaily: unknown = {};
 
       if (friendshipRaw) {
         try {
@@ -276,11 +452,38 @@ export const CompanionProvider: React.FC<
         }
       }
 
-      const normalized =
-        normalizeFriendshipMap(parsedFriendship);
+      if (dailyRaw) {
+        try {
+          parsedDaily = JSON.parse(dailyRaw);
+        } catch {
+          parsedDaily = {};
+        }
+      }
 
-      friendshipRef.current = normalized;
-      setFriendshipPoints(normalized);
+      const normalizedFriendship =
+        normalizeFriendshipMap(
+          parsedFriendship
+        );
+      const normalizedDaily =
+        normalizeDailyState(parsedDaily);
+
+      friendshipRef.current =
+        normalizedFriendship;
+      dailyRef.current = normalizedDaily;
+
+      setFriendshipPoints(
+        normalizedFriendship
+      );
+      setDailyInteractionState(
+        normalizedDaily
+      );
+
+      await Promise.allSettled([
+        persistFriendship(
+          normalizedFriendship
+        ),
+        persistDailyState(normalizedDaily),
+      ]);
     } catch (error) {
       console.warn(
         "[CompanionContext] Failed to hydrate companion data",
@@ -289,17 +492,35 @@ export const CompanionProvider: React.FC<
 
       setActiveCompanionId(null);
       friendshipRef.current = {};
+      dailyRef.current =
+        emptyDailyState();
       setFriendshipPoints({});
+      setDailyInteractionState(
+        dailyRef.current
+      );
     } finally {
       setReady(true);
     }
-  }, [friendshipKey, key, legacyKey]);
+  }, [
+    friendshipDailyKey,
+    friendshipKey,
+    key,
+    legacyKey,
+    persistDailyState,
+    persistFriendship,
+  ]);
 
   useEffect(() => {
     setReady(false);
     setActiveCompanionId(null);
+
     friendshipRef.current = {};
+    dailyRef.current = emptyDailyState();
+
     setFriendshipPoints({});
+    setDailyInteractionState(
+      dailyRef.current
+    );
 
     void loadFromStorage();
   }, [loadFromStorage]);
@@ -308,9 +529,14 @@ export const CompanionProvider: React.FC<
     async (id: string | null) => {
       try {
         if (id) {
-          await AsyncStorage.setItem(key, id);
+          await AsyncStorage.setItem(
+            key,
+            id
+          );
         } else {
-          await AsyncStorage.removeItem(key);
+          await AsyncStorage.removeItem(
+            key
+          );
         }
       } catch (error) {
         console.warn(
@@ -328,23 +554,15 @@ export const CompanionProvider: React.FC<
 
       setActiveCompanionId(cid);
       await persistActive(cid);
-
-      console.log(
-        "[CompanionContext] equipped companion:",
-        cid
-      );
     },
     [persistActive]
   );
 
-  const clearCompanion = useCallback(async () => {
-    setActiveCompanionId(null);
-    await persistActive(null);
-
-    console.log(
-      "[CompanionContext] cleared active companion"
-    );
-  }, [persistActive]);
+  const clearCompanion =
+    useCallback(async () => {
+      setActiveCompanionId(null);
+      await persistActive(null);
+    }, [persistActive]);
 
   const reload = useCallback(async () => {
     setReady(false);
@@ -368,7 +586,9 @@ export const CompanionProvider: React.FC<
 
   const activeCompanion =
     useMemo<CompanionItem | null>(() => {
-      return findCompanion(activeCompanionId);
+      return findCompanion(
+        activeCompanionId
+      );
     }, [activeCompanionId]);
 
   const isActive = useCallback(
@@ -391,10 +611,13 @@ export const CompanionProvider: React.FC<
     (
       id: string | null | undefined
     ): number => {
-      if (!id) return 0;
+      const normalized =
+        normalizeCommonCompanionId(id);
+
+      if (!normalized) return 0;
 
       return sanitizePoints(
-        friendshipPoints[canonId(id)]
+        friendshipPoints[normalized]
       );
     },
     [friendshipPoints]
@@ -403,71 +626,202 @@ export const CompanionProvider: React.FC<
   const getFriendshipLevel = useCallback(
     (
       id: string | null | undefined
-    ): number => {
-      return friendshipLevelForPoints(
+    ): FriendshipLevel => {
+      return getFriendshipLevelFromPoints(
         getFriendshipPoints(id)
       );
     },
     [getFriendshipPoints]
   );
 
+  const getFriendshipDailyStatus =
+    useCallback(
+      (
+        id: string | null | undefined
+      ): CompanionDailyStatus => {
+        const normalized =
+          normalizeCommonCompanionId(id);
+
+        return statusFromState(
+          dailyInteractionState,
+          normalized
+        );
+      },
+      [dailyInteractionState]
+    );
+
+  const awardFriendship = useCallback(
+    async (
+      rawId: string,
+      kind: CompanionInteractionKind
+    ): Promise<CompanionInteractionResult> => {
+      const id =
+        normalizeCommonCompanionId(rawId);
+      const profile =
+        getCommonCompanionFriendshipProfile(
+          rawId
+        );
+      const companion = findCompanion(rawId);
+
+      if (
+        !id ||
+        !profile ||
+        !companion ||
+        companion.role !== "cosmetic"
+      ) {
+        return {
+          points: 0,
+          level: 1,
+          leveledUp: false,
+          awardedPoints: 0,
+          dailyCapReached: false,
+          maxed: false,
+          nextLevelAt: 8,
+        };
+      }
+
+      const currentPoints = sanitizePoints(
+        friendshipRef.current[id]
+      );
+      const previousProgress =
+        getFriendshipProgress(
+          currentPoints
+        );
+
+      if (
+        currentPoints >=
+        MAX_FRIENDSHIP_POINTS
+      ) {
+        return {
+          points: currentPoints,
+          level: 6,
+          leveledUp: false,
+          awardedPoints: 0,
+          dailyCapReached: false,
+          maxed: true,
+          nextLevelAt: null,
+        };
+      }
+
+      const currentDaily =
+        normalizeDailyState(
+          dailyRef.current
+        );
+      const currentEntry =
+        currentDaily.companions[id] ||
+        emptyDailyEntry();
+      const cap = DAILY_CAPS[kind];
+
+      if (currentEntry[kind] >= cap) {
+        return {
+          points: currentPoints,
+          level: previousProgress.level,
+          leveledUp: false,
+          awardedPoints: 0,
+          dailyCapReached: true,
+          maxed: false,
+          nextLevelAt:
+            previousProgress.nextLevelAt,
+        };
+      }
+
+      const requestedIncrease =
+        FRIENDSHIP_POINTS_PER_ACTION[kind];
+      const nextPoints = Math.min(
+        MAX_FRIENDSHIP_POINTS,
+        currentPoints + requestedIncrease
+      );
+      const awardedPoints =
+        nextPoints - currentPoints;
+      const nextProgress =
+        getFriendshipProgress(nextPoints);
+
+      const nextFriendship = {
+        ...friendshipRef.current,
+        [id]: nextPoints,
+      };
+
+      const nextEntry: DailyEntry = {
+        ...currentEntry,
+        [kind]: currentEntry[kind] + 1,
+      };
+
+      const nextDaily: DailyInteractionState = {
+        date: localDateKey(),
+        companions: {
+          ...currentDaily.companions,
+          [id]: nextEntry,
+        },
+      };
+
+      friendshipRef.current =
+        nextFriendship;
+      dailyRef.current = nextDaily;
+
+      setFriendshipPoints(
+        nextFriendship
+      );
+      setDailyInteractionState(
+        nextDaily
+      );
+
+      await Promise.allSettled([
+        persistFriendship(
+          nextFriendship
+        ),
+        persistDailyState(nextDaily),
+      ]);
+
+      return {
+        points: nextPoints,
+        level: nextProgress.level,
+        leveledUp:
+          nextProgress.level >
+          previousProgress.level,
+        awardedPoints,
+        dailyCapReached: false,
+        maxed:
+          nextPoints >=
+          MAX_FRIENDSHIP_POINTS,
+        nextLevelAt:
+          nextProgress.nextLevelAt,
+      };
+    },
+    [
+      persistDailyState,
+      persistFriendship,
+    ]
+  );
+
   const recordCompanionInteraction =
     useCallback(
       async (
         id: string,
-        kind: CompanionInteractionKind
-      ): Promise<CompanionInteractionResult> => {
-        const companion = findCompanion(id);
-        const cid = canonId(id);
-
-        if (
-          !companion ||
-          companion.role !== "cosmetic"
-        ) {
-          return {
-            points: 0,
-            level: 1,
-            leveledUp: false,
-          };
-        }
-
-        const currentMap =
-          friendshipRef.current;
-        const previousPoints = sanitizePoints(
-          currentMap[cid]
-        );
-        const previousLevel =
-          friendshipLevelForPoints(previousPoints);
-
-        // Petting is a more deliberate interaction than tapping.
-        const increase = kind === "pet" ? 3 : 1;
-        const nextPoints =
-          previousPoints + increase;
-        const nextLevel =
-          friendshipLevelForPoints(nextPoints);
-
-        const nextMap = {
-          ...currentMap,
-          [cid]: nextPoints,
-        };
-
-        friendshipRef.current = nextMap;
-        setFriendshipPoints(nextMap);
-
-        await persistFriendship(nextMap);
-
-        return {
-          points: nextPoints,
-          level: nextLevel,
-          leveledUp: nextLevel > previousLevel,
-        };
+        kind: "tap" | "pet"
+      ) => {
+        return awardFriendship(id, kind);
       },
-      [persistFriendship]
+      [awardFriendship]
     );
 
-  const canonicalActiveId = activeCompanionId
-    ? canonId(activeCompanionId)
-    : null;
+  const recordCompanionActivity =
+    useCallback(
+      async (
+        id: string,
+        _activity: CompanionActivityKey
+      ) => {
+        return awardFriendship(
+          id,
+          "activity"
+        );
+      },
+      [awardFriendship]
+    );
+
+  const canonicalActiveId =
+    activeCompanionId
+      ? canonId(activeCompanionId)
+      : null;
 
   const value =
     useMemo<CompanionContextValue>(
@@ -486,7 +840,9 @@ export const CompanionProvider: React.FC<
         isActive,
         getFriendshipPoints,
         getFriendshipLevel,
+        getFriendshipDailyStatus,
         recordCompanionInteraction,
+        recordCompanionActivity,
       }),
       [
         ready,
@@ -500,19 +856,24 @@ export const CompanionProvider: React.FC<
         isActive,
         getFriendshipPoints,
         getFriendshipLevel,
+        getFriendshipDailyStatus,
         recordCompanionInteraction,
+        recordCompanionActivity,
       ]
     );
 
   return (
-    <CompanionContext.Provider value={value}>
+    <CompanionContext.Provider
+      value={value}
+    >
       {children}
     </CompanionContext.Provider>
   );
 };
 
 export function useCompanion(): CompanionContextValue {
-  const context = useContext(CompanionContext);
+  const context =
+    useContext(CompanionContext);
 
   if (!context) {
     throw new Error(

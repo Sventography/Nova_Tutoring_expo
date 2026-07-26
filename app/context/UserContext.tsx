@@ -126,7 +126,7 @@ type UserContextValue = {
     newEmail: string,
     currentPassword: string
   ) => Promise<void>;
-  setAvatar: (uri: string | null) => Promise<void> | void;
+  setAvatar: (uri: string | null) => Promise<string | null>;
 
   updateProfile: (patch: Partial<LocalUserProfile>) => Promise<void>;
 
@@ -171,6 +171,174 @@ const BACKEND_BASE_URL = (
   process.env.EXPO_PUBLIC_BACKEND_URL ||
   "https://nove-tutoring-backend.onrender.com"
 ).replace(/\/+$/, "");
+
+
+const AVATAR_BUCKET = "avatars";
+const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
+
+type ParsedAvatarDataUri = {
+  mimeType: "image/jpeg" | "image/png" | "image/webp";
+  extension: "jpg" | "png" | "webp";
+  base64: string;
+};
+
+function parseAvatarDataUri(uri: string): ParsedAvatarDataUri {
+  const match = String(uri || "").match(
+    /^data:(image\/(?:jpeg|jpg|png|webp));base64,([a-z0-9+/=_-]+)$/i
+  );
+
+  if (!match) {
+    throw new Error(
+      "Nova could not read that photo. Please choose a JPEG, PNG, or WebP image."
+    );
+  }
+
+  const rawMime = match[1].toLowerCase();
+  const mimeType =
+    rawMime === "image/jpg" ? "image/jpeg" : rawMime;
+
+  const extension =
+    mimeType === "image/png"
+      ? "png"
+      : mimeType === "image/webp"
+      ? "webp"
+      : "jpg";
+
+  return {
+    mimeType: mimeType as ParsedAvatarDataUri["mimeType"],
+    extension,
+    base64: match[2],
+  };
+}
+
+function decodeBase64ToArrayBuffer(base64Value: string): ArrayBuffer {
+  const alphabet =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+  const normalized = String(base64Value || "")
+    .replace(/\s+/g, "")
+    .replace(/-/g, "+")
+    .replace(/_/g, "/");
+
+  if (!normalized || normalized.length % 4 !== 0) {
+    throw new Error("Nova received invalid avatar image data.");
+  }
+
+  const padding = normalized.endsWith("==")
+    ? 2
+    : normalized.endsWith("=")
+    ? 1
+    : 0;
+
+  const outputLength =
+    (normalized.length / 4) * 3 - padding;
+
+  if (outputLength <= 0 || outputLength > MAX_AVATAR_BYTES) {
+    throw new Error(
+      "That avatar is too large. Please choose an image under 5 MB."
+    );
+  }
+
+  const bytes = new Uint8Array(outputLength);
+  let outputIndex = 0;
+
+  for (let index = 0; index < normalized.length; index += 4) {
+    const char1 = normalized[index];
+    const char2 = normalized[index + 1];
+    const char3 = normalized[index + 2];
+    const char4 = normalized[index + 3];
+
+    const value1 = alphabet.indexOf(char1);
+    const value2 = alphabet.indexOf(char2);
+    const value3 = char3 === "=" ? 0 : alphabet.indexOf(char3);
+    const value4 = char4 === "=" ? 0 : alphabet.indexOf(char4);
+
+    if (
+      value1 < 0 ||
+      value2 < 0 ||
+      (char3 !== "=" && value3 < 0) ||
+      (char4 !== "=" && value4 < 0)
+    ) {
+      throw new Error("Nova received invalid avatar image data.");
+    }
+
+    const combined =
+      (value1 << 18) |
+      (value2 << 12) |
+      (value3 << 6) |
+      value4;
+
+    if (outputIndex < outputLength) {
+      bytes[outputIndex++] = (combined >> 16) & 255;
+    }
+    if (outputIndex < outputLength) {
+      bytes[outputIndex++] = (combined >> 8) & 255;
+    }
+    if (outputIndex < outputLength) {
+      bytes[outputIndex++] = combined & 255;
+    }
+  }
+
+  return bytes.buffer;
+}
+
+async function uploadAvatarToSupabase(
+  userId: string,
+  dataUri: string
+): Promise<string> {
+  const parsed = parseAvatarDataUri(dataUri);
+  const fileBody = decodeBase64ToArrayBuffer(parsed.base64);
+  const objectPath = `${userId}/avatar.${parsed.extension}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from(AVATAR_BUCKET)
+    .upload(objectPath, fileBody, {
+      contentType: parsed.mimeType,
+      cacheControl: "0",
+      upsert: true,
+    });
+
+  if (uploadError) {
+    const raw = String(uploadError?.message || uploadError);
+    const lower = raw.toLowerCase();
+
+    if (
+      lower.includes("bucket") &&
+      (lower.includes("not found") || lower.includes("does not exist"))
+    ) {
+      throw new Error(
+        'The Supabase "avatars" Storage bucket has not been created yet.'
+      );
+    }
+
+    if (
+      lower.includes("row-level security") ||
+      lower.includes("policy") ||
+      lower.includes("unauthorized")
+    ) {
+      throw new Error(
+        "Supabase blocked the avatar upload. Run the avatar Storage setup SQL first."
+      );
+    }
+
+    throw new Error(`Avatar upload failed: ${raw}`);
+  }
+
+  const { data } = supabase.storage
+    .from(AVATAR_BUCKET)
+    .getPublicUrl(objectPath);
+
+  const publicUrl = String(data?.publicUrl || "").trim();
+
+  if (!publicUrl) {
+    throw new Error(
+      "Nova uploaded the avatar but could not create its public URL."
+    );
+  }
+
+  const separator = publicUrl.includes("?") ? "&" : "?";
+  return `${publicUrl}${separator}v=${Date.now()}`;
+}
 
 function normalizeUsername(raw: string | null | undefined): string {
   const base = (raw ?? "").trim() || "Student";
@@ -1003,14 +1171,42 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const setAvatar = async (uri: string | null) => {
+  const setAvatar = async (
+    uri: string | null
+  ): Promise<string | null> => {
+    if (!supabaseUserId) {
+      throw new Error(
+        "You must be signed in to save an avatar."
+      );
+    }
+
+    let persistentUri: string | null = null;
+
+    if (uri === null) {
+      persistentUri = null;
+    } else if (uri.startsWith("data:image/")) {
+      persistentUri = await uploadAvatarToSupabase(
+        supabaseUserId,
+        uri
+      );
+    } else if (/^https?:\/\//i.test(uri)) {
+      // Compatibility path for an already-uploaded avatar URL.
+      persistentUri = uri;
+    } else {
+      throw new Error(
+        "That photo was only available temporarily. Please choose it again so Nova can upload it permanently."
+      );
+    }
+
     await updateProfile({
-      avatar: uri,
-      avatarUrl: uri,
-      avatarUri: uri,
-      photoURL: uri,
-      imageUrl: uri,
+      avatar: persistentUri,
+      avatarUrl: persistentUri,
+      avatarUri: persistentUri,
+      photoURL: persistentUri,
+      imageUrl: persistentUri,
     });
+
+    return persistentUri;
   };
 
   const setAskPersonality = async (

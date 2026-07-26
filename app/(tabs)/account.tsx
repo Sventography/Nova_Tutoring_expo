@@ -41,6 +41,7 @@ export default function AccountScreen() {
   const router = useRouter();
 
   const [avatarLocal, setAvatarLocal] = useState<string | null>(null);
+  const [savingAvatar, setSavingAvatar] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletePassword, setDeletePassword] = useState("");
   const [deletingAccount, setDeletingAccount] = useState(false);
@@ -90,12 +91,34 @@ export default function AccountScreen() {
 
         const input = doc.createElement("input");
         input.type = "file";
-        input.accept = "image/*";
+        input.accept = "image/jpeg,image/png,image/webp";
 
         input.onchange = () => {
           const file = input.files?.[0];
 
           if (!file) {
+            resolve(null);
+            return;
+          }
+
+          if (
+            !["image/jpeg", "image/png", "image/webp"].includes(
+              String(file.type || "").toLowerCase()
+            )
+          ) {
+            Alert.alert(
+              "Unsupported image",
+              "Please choose a JPEG, PNG, or WebP image."
+            );
+            resolve(null);
+            return;
+          }
+
+          if (Number(file.size || 0) > 5 * 1024 * 1024) {
+            Alert.alert(
+              "Image too large",
+              "Please choose an avatar smaller than 5 MB."
+            );
             resolve(null);
             return;
           }
@@ -112,11 +135,14 @@ export default function AccountScreen() {
       }
     });
 
-  async function saveAvatarEverywhere(uri: string | null) {
-    // setAvatar already writes every supported avatar field through
-    // UserContext.updateProfile(). Calling both functions duplicated the same
-    // image save and could race two profile upserts.
-    await setAvatar?.(uri ?? null);
+  async function saveAvatarEverywhere(
+    uri: string | null
+  ): Promise<string | null> {
+    const saved = await setAvatar?.(uri ?? null);
+
+    return typeof saved === "string" || saved === null
+      ? saved
+      : uri;
   }
 
   async function onPickAvatar() {
@@ -124,6 +150,11 @@ export default function AccountScreen() {
       showToast("Sign in to change your avatar");
       return;
     }
+
+    if (savingAvatar) return;
+
+    const previousAvatar = avatarLocal;
+    setSavingAvatar(true);
 
     try {
       let storedUri: string | null = null;
@@ -146,7 +177,7 @@ export default function AccountScreen() {
           mediaTypes: ["images"],
           allowsEditing: true,
           aspect: [1, 1],
-          quality: 0.35,
+          quality: 0.45,
           base64: true,
         });
 
@@ -158,21 +189,35 @@ export default function AccountScreen() {
           throw new Error("No image was returned by the photo picker.");
         }
 
-        storedUri = asset.base64
-          ? `data:image/jpeg;base64,${asset.base64}`
-          : asset.uri;
+        if (!asset.base64) {
+          throw new Error(
+            "Nova could not prepare that photo for permanent upload. Please choose it again."
+          );
+        }
+
+        storedUri = `data:image/jpeg;base64,${asset.base64}`;
       }
 
       if (!storedUri) return;
 
+      // Show the crop immediately while the permanent upload finishes.
       setAvatarLocal(storedUri);
-      await saveAvatarEverywhere(storedUri);
-      showToast("Avatar updated");
+
+      const persistentUrl =
+        await saveAvatarEverywhere(storedUri);
+
+      setAvatarLocal(persistentUrl);
+      showToast("Avatar saved to your account");
     } catch (error: any) {
+      // Never leave a temporary preview behind after a failed upload.
+      setAvatarLocal(previousAvatar);
+
       Alert.alert(
         "Avatar error",
-        error?.message || "The selected photo could not be used."
+        error?.message || "The selected photo could not be saved."
       );
+    } finally {
+      setSavingAvatar(false);
     }
   }
 
@@ -374,7 +419,14 @@ ${loginEmail}`
           <View style={S.avatarSection}>
             <Pressable
               onPress={onPickAvatar}
-              style={[S.avatarWrap, { borderColor: tokens.border }]}
+              disabled={savingAvatar}
+              style={[
+                S.avatarWrap,
+                {
+                  borderColor: tokens.border,
+                  opacity: savingAvatar ? 0.72 : 1,
+                },
+              ]}
             >
               {avatarLocal ? (
                 <Image
@@ -400,21 +452,28 @@ ${loginEmail}`
                   </Text>
                 </View>
               )}
+
+              {savingAvatar ? (
+                <View style={S.avatarSavingOverlay}>
+                  <ActivityIndicator color="#ffffff" />
+                </View>
+              ) : null}
             </Pressable>
 
             <Pressable
               onPress={onPickAvatar}
-              disabled={!isLoggedIn}
+              disabled={!isLoggedIn || savingAvatar}
               style={[
                 S.photoButton,
                 {
                   borderColor: tokens.accent,
-                  opacity: isLoggedIn ? 1 : 0.45,
+                  opacity:
+                    isLoggedIn && !savingAvatar ? 1 : 0.45,
                 },
               ]}
             >
               <Text style={[S.photoButtonText, { color: tokens.text }]}>
-                Change Photo
+                {savingAvatar ? "Saving Photo…" : "Change Photo"}
               </Text>
             </Pressable>
           </View>
@@ -753,6 +812,12 @@ const S = StyleSheet.create({
     height: 96,
   },
   avatarPlaceholder: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarSavingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.42)",
     alignItems: "center",
     justifyContent: "center",
   },

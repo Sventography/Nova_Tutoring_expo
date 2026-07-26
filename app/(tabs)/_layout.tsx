@@ -1,5 +1,10 @@
 // app/(tabs)/_layout.tsx
-import React, { useEffect, useState, useRef } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useState,
+  useRef,
+} from "react";
 import {
   View,
   Text,
@@ -10,9 +15,12 @@ import {
   Animated,
   Easing,
   PanResponder,
+  Modal,
+  ScrollView,
+  DeviceEventEmitter,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Tabs } from "expo-router";
+import { Tabs, usePathname } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -32,6 +40,22 @@ import { useUser } from "../context/UserContext";
 import { useCompanion } from "../context/CompanionContext";
 import { COMPANIONS } from "../_lib/companionsCatalog";
 import { AchieveEmitter } from "../context/AchievementsContext"; // 🌟 listen for celebrate events
+import {
+  getCommonCompanionFriendshipProfile,
+  getFriendshipProgress,
+  getFriendshipRewardForLevel,
+  getTapBurstIcons,
+  getUnlockedAnimations,
+  getUnlockedDialogue,
+  type CommonCompanionFriendshipProfile,
+  type CompanionActivityKey,
+  type CompanionAnimationKey,
+  type FriendshipLevelReward,
+} from "../_lib/commonCompanionFriendship";
+import type {
+  CompanionDailyStatus,
+  CompanionInteractionResult,
+} from "../context/CompanionContext";
 
 // --------------------
 // DEV-ONLY imports
@@ -672,248 +696,601 @@ function CompanionEffectOverlay({
   );
 }
 
-type CommonCompanionDialogue = {
-  tap: string[];
-  pet: string[];
-  idle: string[];
-};
+const COMPANION_ACTIVITY_EVENT =
+  "companion:activity";
+const SHOP_PURCHASE_COMPLETED_EVENT =
+  "shop:purchase_completed";
 
-const COMMON_COMPANION_DIALOGUE: Record<
-  string,
-  CommonCompanionDialogue
-> = {
-  nova_bunny: {
-    tap: [
-      "Boing! What are we learning next?",
-      "I found a study spark! ✨",
-      "One more question? I’m ready!",
-    ],
-    pet: [
-      "Ears officially scritched. 💜",
-      "That was the perfect little pat!",
-      "Okay… you may pet me again.",
-    ],
-    idle: [
-      "I’m keeping your study spot warm.",
-      "Tiny hop break?",
-      "I believe in you, human.",
-    ],
-  },
-  balloons: {
-    tap: [
-      "Up, up, and onward! 🎈",
-      "Your progress is lifting us!",
-      "That deserves a little float!",
-    ],
-    pet: [
-      "Gentle! I’m full of celebration.",
-      "Aww… friendship is lighter than air.",
-      "You made the balloons blush.",
-    ],
-    idle: [
-      "I’m just floating through the syllabus.",
-      "Goals look smaller from up here.",
-      "Waiting for the next celebration…",
-    ],
-  },
-  hearts: {
-    tap: [
-      "A little encouragement delivery! 💜",
-      "You’re doing better than you think.",
-      "Heart boost activated.",
-    ],
-    pet: [
-      "That one goes straight to my heart.",
-      "Friendship received. Sending it back!",
-      "You are officially appreciated.",
-    ],
-    idle: [
-      "Just a reminder: you’ve got this.",
-      "No pressure. One step at a time.",
-      "I saved a little kindness for you.",
-    ],
-  },
-  sleepy_moon: {
-    tap: [
-      "I’m awake… mostly. 🌙",
-      "One tiny lesson before nap time?",
-      "The stars say you can do it.",
-    ],
-    pet: [
-      "Mmm… cozy.",
-      "That was very moon-approved.",
-      "Five more seconds of petting, please.",
-    ],
-    idle: [
-      "Studying quietly beside you…",
-      "Wake me when there’s a hard question.",
-      "A small break is allowed, you know.",
-    ],
-  },
-  star_blow: {
-    tap: [
-      "Pfffft—stars everywhere! ✨",
-      "I blew you a study wish.",
-      "Catch that sparkle!",
-    ],
-    pet: [
-      "Careful, I’m ticklish!",
-      "You shook loose another star.",
-      "Sparkly friendship acquired.",
-    ],
-    idle: [
-      "Practicing my star-puff technique.",
-      "There is glitter in the homework now.",
-      "Quietly charging a sparkle…",
-    ],
-  },
-  star_explode: {
-    tap: [
-      "KABOOM! Study energy! 💥",
-      "A perfectly educational explosion.",
-      "Big spark for a big brain!",
-    ],
-    pet: [
-      "Soft pats prevent spontaneous combustion.",
-      "Friendship blast contained!",
-      "You found my calm little center.",
-    ],
-    idle: [
-      "Trying very hard not to explode.",
-      "Current status: dramatically stable.",
-      "Waiting for the next big idea…",
-    ],
-  },
-  star_throw: {
-    tap: [
-      "Catch! ⭐",
-      "Fastball of knowledge!",
-      "I tossed you a lucky star.",
-    ],
-    pet: [
-      "Nice catch—and nice pat.",
-      "My throwing arm feels appreciated.",
-      "Friendship landed safely.",
-    ],
-    idle: [
-      "Aiming at the next goal.",
-      "Practicing trick shots quietly.",
-      "Ready when you are, coach.",
-    ],
-  },
-  party_3d: {
-    tap: [
-      "That deserves confetti! 🎉",
-      "Party mode: educational edition!",
-      "Tiny celebration deployed!",
-    ],
-    pet: [
-      "Best party guest ever.",
-      "You just unlocked the friendship dance!",
-      "Pat received—encore activated!",
-    ],
-    idle: [
-      "Saving the confetti for your next win.",
-      "The party is respectfully on standby.",
-      "Quietly rehearsing a victory dance.",
-    ],
-  },
-  party_3d_2: {
-    tap: [
-      "Encore party mode! 🎊",
-      "Round two of celebration!",
-      "Extra hype has arrived!",
-    ],
-    pet: [
-      "VIP friendship confirmed.",
-      "That pat deserves an encore.",
-      "You are invited to every future party.",
-    ],
-    idle: [
-      "Preparing the sequel celebration.",
-      "Confetti reserves are fully stocked.",
-      "Waiting for a reason to go wild…",
-    ],
-  },
-  coins_rain: {
-    tap: [
-      "Shiny progress! 🪙",
-      "Cha-ching—but make it learning.",
-      "A little sparkle for your effort!",
-    ],
-    pet: [
-      "Friendship is the real treasure.",
-      "That pat was worth more than gold.",
-      "Premium-grade head pat received.",
-    ],
-    idle: [
-      "Counting your little victories.",
-      "Polishing the motivation coins.",
-      "Progress adds up, even slowly.",
-    ],
-  },
-  reading_buddy: {
-    tap: [
-      "One more page? 📚",
-      "I bookmarked our study spot.",
-      "Tell me what chapter we’re on!",
-    ],
-    pet: [
-      "A quiet little thank-you.",
-      "Best study partner behavior detected.",
-      "Friendship bookmark added.",
-    ],
-    idle: [
-      "Reading beside you counts as company.",
-      "I’ll hold our place.",
-      "No rush. Good learning takes time.",
-    ],
-  },
-};
+function randomLine(lines: string[]): string {
+  if (!lines.length) return "";
 
-function commonCompanionKey(
-  rawId: string | null | undefined
-): string {
-  return String(rawId || "")
-    .trim()
-    .toLowerCase()
-    .replace(/^companion:/, "")
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
-}
-
-function randomDialogueLine(
-  key: string,
-  kind: keyof CommonCompanionDialogue
-): string {
-  const dialogue =
-    COMMON_COMPANION_DIALOGUE[key] ??
-    COMMON_COMPANION_DIALOGUE.nova_bunny;
-
-  const lines = dialogue[kind];
   return lines[
     Math.floor(Math.random() * lines.length)
   ];
 }
 
+function latestUnlockedReward(
+  profile: CommonCompanionFriendshipProfile,
+  level: number
+): FriendshipLevelReward {
+  const safeIndex = Math.max(
+    0,
+    Math.min(profile.levels.length - 1, level - 1)
+  );
+
+  return profile.levels[safeIndex];
+}
+
+function unlockedDoubleTapReward(
+  profile: CommonCompanionFriendshipProfile,
+  level: number
+): FriendshipLevelReward | null {
+  return (
+    [...profile.levels]
+      .reverse()
+      .find(
+        (reward) =>
+          reward.level <= level &&
+          reward.specialInteraction?.type ===
+            "double_tap"
+      ) ?? null
+  );
+}
+
+function activityLabel(
+  activity: CompanionActivityKey
+): string {
+  const labels: Record<
+    CompanionActivityKey,
+    string
+  > = {
+    ask: "Ask Nova",
+    quiz: "Quiz",
+    brainteasers: "Brainteaser",
+    flashcards: "Flashcards",
+    collections: "Collections",
+    achievements: "Achievement",
+    shop_purchase: "Shop unlock",
+    coins_earned: "Coin reward",
+    relax: "Relax",
+    island_level_up: "Island level-up",
+    daily_login: "Daily login",
+  };
+
+  return labels[activity];
+}
+
+function CompanionIconBurst({
+  icons,
+  burstKey,
+  animation,
+}: {
+  icons: string[];
+  burstKey: number;
+  animation: CompanionAnimationKey;
+}) {
+  const anim = useRef(
+    new Animated.Value(0)
+  ).current;
+
+  useEffect(() => {
+    anim.setValue(0);
+
+    Animated.timing(anim, {
+      toValue: 1,
+      duration:
+        animation === "light_show"
+          ? 1650
+          : 1150,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: false,
+    }).start();
+  }, [anim, animation, burstKey]);
+
+  const visibleIcons =
+    icons.length > 0
+      ? icons.slice(0, 8)
+      : ["✨"];
+
+  return (
+    <>
+      {visibleIcons.map((icon, index) => {
+        const centered =
+          index - (visibleIcons.length - 1) / 2;
+        const radialAngle =
+          (index / visibleIcons.length) *
+            Math.PI *
+            2 -
+          Math.PI / 2;
+
+        let endX =
+          Math.cos(radialAngle) *
+          (42 + (index % 3) * 10);
+        let endY =
+          Math.sin(radialAngle) *
+          (58 + (index % 2) * 14);
+
+        if (
+          animation === "star_gust" ||
+          animation === "heart_trail"
+        ) {
+          endX = -52 - index * 12;
+          endY = centered * 11;
+        } else if (
+          animation === "star_arc" ||
+          animation === "star_toss" ||
+          animation === "target_toss"
+        ) {
+          endX = -60 - index * 8;
+          endY = -18 + Math.abs(centered) * 10;
+        } else if (
+          animation === "float_up" ||
+          animation === "balloon_sway" ||
+          animation === "balloon_spin"
+        ) {
+          endX = centered * 17;
+          endY = -92 - (index % 3) * 18;
+        } else if (
+          animation === "coin_rain"
+        ) {
+          endX = centered * 16;
+          endY = 34 + (index % 2) * 16;
+        } else if (
+          animation === "page_turn" ||
+          animation === "reading_pose"
+        ) {
+          endX = centered * 24;
+          endY = -50 - (index % 2) * 18;
+        }
+
+        const translateX = anim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0, endX],
+        });
+
+        const translateY =
+          animation === "coin_rain"
+            ? anim.interpolate({
+                inputRange: [0, 0.45, 1],
+                outputRange: [0, -70, endY],
+              })
+            : animation === "star_arc" ||
+              animation === "star_toss" ||
+              animation === "target_toss"
+            ? anim.interpolate({
+                inputRange: [0, 0.45, 1],
+                outputRange: [0, -65, endY],
+              })
+            : anim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, endY],
+              });
+
+        const opacity = anim.interpolate({
+          inputRange: [0, 0.16, 0.78, 1],
+          outputRange: [0, 1, 0.92, 0],
+        });
+
+        const scale = anim.interpolate({
+          inputRange: [0, 0.32, 1],
+          outputRange: [0.45, 1.12, 0.72],
+        });
+
+        const rotate = anim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [
+            "0deg",
+            `${centered * 75}deg`,
+          ],
+        });
+
+        return (
+          <Animated.Text
+            key={`${burstKey}-${index}-${icon}`}
+            style={{
+              position: "absolute",
+              left: "50%",
+              top: "50%",
+              marginLeft: -12,
+              marginTop: -12,
+              fontSize:
+                icon.length > 2 ? 15 : 23,
+              opacity,
+              transform: [
+                { translateX },
+                { translateY },
+                { rotate },
+                { scale },
+              ],
+            }}
+          >
+            {icon}
+          </Animated.Text>
+        );
+      })}
+    </>
+  );
+}
+
+function FriendshipProgressModal({
+  visible,
+  onClose,
+  profile,
+  points,
+  dailyStatus,
+  image,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  profile: CommonCompanionFriendshipProfile;
+  points: number;
+  dailyStatus: CompanionDailyStatus;
+  image: any;
+}) {
+  const progress =
+    getFriendshipProgress(points);
+  const nextReward =
+    progress.level < 6
+      ? getFriendshipRewardForLevel(
+          profile.id,
+          (progress.level + 1) as any
+        )
+      : null;
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <Pressable
+        style={S.friendshipModalBackdrop}
+        onPress={onClose}
+      >
+        <Pressable
+          style={[
+            S.friendshipModalCard,
+            {
+              borderColor: profile.accent,
+            },
+          ]}
+          onPress={(event) =>
+            event.stopPropagation()
+          }
+        >
+          <View style={S.friendshipModalHeader}>
+            <View
+              style={[
+                S.friendshipPortrait,
+                {
+                  borderColor: profile.accent,
+                },
+              ]}
+            >
+              <Image
+                source={image}
+                style={S.friendshipPortraitImage}
+                resizeMode="contain"
+              />
+            </View>
+
+            <View style={{ flex: 1 }}>
+              <Text
+                style={[
+                  S.friendshipModalEyebrow,
+                  { color: profile.accent },
+                ]}
+              >
+                {profile.friendshipEmoji}{" "}
+                {progress.stage}
+              </Text>
+              <Text
+                style={
+                  S.friendshipModalTitle
+                }
+              >
+                {profile.title}
+              </Text>
+              <Text
+                style={
+                  S.friendshipModalPersonality
+                }
+              >
+                {profile.personality}
+              </Text>
+            </View>
+
+            <Pressable
+              onPress={onClose}
+              hitSlop={10}
+            >
+              <Ionicons
+                name="close"
+                color="#e2e8f0"
+                size={23}
+              />
+            </Pressable>
+          </View>
+
+          <View style={S.friendshipProgressCard}>
+            <View
+              style={
+                S.friendshipProgressTop
+              }
+            >
+              <Text
+                style={
+                  S.friendshipProgressLabel
+                }
+              >
+                Friendship Level{" "}
+                {progress.level}
+              </Text>
+              <Text
+                style={[
+                  S.friendshipProgressValue,
+                  { color: profile.accent },
+                ]}
+              >
+                {progress.level >= 6
+                  ? `${points} · MAX`
+                  : `${points} / ${progress.nextLevelAt}`}
+              </Text>
+            </View>
+
+            <View
+              style={
+                S.friendshipProgressTrack
+              }
+            >
+              <View
+                style={[
+                  S.friendshipProgressFill,
+                  {
+                    width: `${
+                      Math.max(
+                        0.025,
+                        progress.progress
+                      ) * 100
+                    }%`,
+                    backgroundColor:
+                      profile.accent,
+                  },
+                ]}
+              />
+            </View>
+
+            <Text
+              style={
+                S.friendshipDailyText
+              }
+            >
+              Today: {dailyStatus.tapsRemaining}{" "}
+              tap XP,{" "}
+              {dailyStatus.petsRemaining} pets,
+              and{" "}
+              {
+                dailyStatus.activitiesRemaining
+              }{" "}
+              learning reactions remaining
+            </Text>
+          </View>
+
+          {nextReward ? (
+            <View
+              style={[
+                S.friendshipNextCard,
+                {
+                  borderColor:
+                    `${profile.accent}88`,
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  S.friendshipNextEyebrow,
+                  { color: profile.accent },
+                ]}
+              >
+                NEXT UNLOCK · LEVEL{" "}
+                {nextReward.level}
+              </Text>
+              <Text
+                style={
+                  S.friendshipNextTitle
+                }
+              >
+                {nextReward.title}
+              </Text>
+              <Text
+                style={
+                  S.friendshipNextDescription
+                }
+              >
+                {nextReward.description}
+              </Text>
+            </View>
+          ) : (
+            <View
+              style={[
+                S.friendshipNextCard,
+                {
+                  borderColor:
+                    `${profile.accent}88`,
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  S.friendshipNextEyebrow,
+                  { color: profile.accent },
+                ]}
+              >
+                BONDED
+              </Text>
+              <Text
+                style={
+                  S.friendshipNextTitle
+                }
+              >
+                Island resident unlocked
+              </Text>
+              <Text
+                style={
+                  S.friendshipNextDescription
+                }
+              >
+                This companion now has a
+                permanent home on Nova Island.
+              </Text>
+            </View>
+          )}
+
+          <ScrollView
+            style={{ maxHeight: 330 }}
+            showsVerticalScrollIndicator={false}
+          >
+            {profile.levels.map((reward) => {
+              const unlocked =
+                reward.level <=
+                progress.level;
+
+              return (
+                <View
+                  key={reward.level}
+                  style={[
+                    S.friendshipRewardRow,
+                    {
+                      borderColor: unlocked
+                        ? `${profile.accent}66`
+                        : "rgba(71,85,105,0.55)",
+                      backgroundColor: unlocked
+                        ? `${profile.accent}12`
+                        : "rgba(15,23,42,0.58)",
+                    },
+                  ]}
+                >
+                  <View
+                    style={[
+                      S.friendshipRewardLevel,
+                      {
+                        borderColor: unlocked
+                          ? profile.accent
+                          : "#64748b",
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        S.friendshipRewardLevelText,
+                        {
+                          color: unlocked
+                            ? profile.accent
+                            : "#94a3b8",
+                        },
+                      ]}
+                    >
+                      {reward.level}
+                    </Text>
+                  </View>
+
+                  <View style={{ flex: 1 }}>
+                    <Text
+                      style={[
+                        S.friendshipRewardTitle,
+                        {
+                          color: unlocked
+                            ? "#f8fafc"
+                            : "#94a3b8",
+                        },
+                      ]}
+                    >
+                      {reward.stage} ·{" "}
+                      {reward.title}
+                    </Text>
+                    <Text
+                      style={
+                        S.friendshipRewardDescription
+                      }
+                    >
+                      {reward.description}
+                    </Text>
+
+                    {reward.islandKeepsake ? (
+                      <Text
+                        style={[
+                          S.friendshipRewardBonus,
+                          {
+                            color:
+                              profile.accent,
+                          },
+                        ]}
+                      >
+                        Island keepsake:{" "}
+                        {
+                          reward
+                            .islandKeepsake
+                            .title
+                        }
+                      </Text>
+                    ) : null}
+
+                    {reward.islandResident ? (
+                      <Text
+                        style={[
+                          S.friendshipRewardBonus,
+                          {
+                            color:
+                              profile.accent,
+                          },
+                        ]}
+                      >
+                        Permanent island
+                        resident
+                      </Text>
+                    ) : null}
+                  </View>
+
+                  <Ionicons
+                    name={
+                      unlocked
+                        ? "checkmark-circle"
+                        : "lock-closed"
+                    }
+                    color={
+                      unlocked
+                        ? profile.accent
+                        : "#64748b"
+                    }
+                    size={19}
+                  />
+                </View>
+              );
+            })}
+          </ScrollView>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
 /**
- * Global floating companion bubble.
+ * Live draggable companion.
  *
- * Regular role="cosmetic" Nova companions now support:
- * - Companion-specific tap animation, effect, and dialogue
- * - Hold-to-pet interaction with heart effects
- * - Persistent friendship levels through CompanionContext
- * - Occasional quiet idle reactions
- * - Existing drag behavior
- *
- * Legendary power/support companions intentionally keep their old behavior
- * until their dedicated interaction pass.
+ * Friendship progression is enabled only when a profile exists in
+ * commonCompanionFriendship.ts. Legendary companions therefore keep their
+ * previous interaction cycle and are not included in this system.
  */
 function FloatingCompanionOverlay() {
+  const pathname = usePathname();
   const {
     activeCompanion,
-    getFriendshipLevel,
+    friendshipPoints,
+    getFriendshipPoints,
+    getFriendshipDailyStatus,
     recordCompanionInteraction,
+    recordCompanionActivity,
   } = useCompanion();
 
   const bob = useRef(
@@ -922,49 +1299,98 @@ function FloatingCompanionOverlay() {
   const pan = useRef(
     new Animated.ValueXY({ x: 0, y: 0 })
   ).current;
-
-  const floatScale = useRef(
+  const scale = useRef(
     new Animated.Value(1)
   ).current;
-  const floatHop = useRef(
+  const hop = useRef(
     new Animated.Value(0)
   ).current;
-  const floatShake = useRef(
+  const shake = useRef(
     new Animated.Value(0)
   ).current;
-  const floatRotate = useRef(
+  const driftX = useRef(
     new Animated.Value(0)
   ).current;
-  const clickModeRef = useRef(0);
+  const rotate = useRef(
+    new Animated.Value(0)
+  ).current;
+  const tilt = useRef(
+    new Animated.Value(0)
+  ).current;
 
-  const rotation = floatRotate.interpolate({
-    inputRange: [0, 1],
-    outputRange: ["0deg", "360deg"],
-  });
-
-  const [effectType, setEffectType] =
+  const [legendEffect, setLegendEffect] =
     useState<CompanionEffectType>("stars");
-  const [effectKey, setEffectKey] =
+  const [legendEffectKey, setLegendEffectKey] =
+    useState(0);
+  const [burstIcons, setBurstIcons] =
+    useState<string[]>([]);
+  const [burstAnimation, setBurstAnimation] =
+    useState<CompanionAnimationKey>(
+      "happy_bounce"
+    );
+  const [burstKey, setBurstKey] =
     useState(0);
   const [speech, setSpeech] =
     useState<string | null>(null);
   const [speechKind, setSpeechKind] =
-    useState<"tap" | "pet" | "idle">("tap");
+    useState<
+      "tap" | "pet" | "idle" | "activity"
+    >("tap");
+  const [friendshipOpen, setFriendshipOpen] =
+    useState(false);
 
-  const baseEffectRef =
-    useRef<CompanionEffectType>("stars");
-  const activeCompanionRef =
+  const activeId =
+    (activeCompanion as any)?.canonId ||
+    (activeCompanion as any)?.id ||
+    "";
+  const profile =
+    getCommonCompanionFriendshipProfile(
+      activeId
+    );
+  const isCommon =
+    !!profile &&
+    activeCompanion?.role === "cosmetic";
+  const points = isCommon
+    ? getFriendshipPoints(activeId)
+    : 0;
+  const friendshipProgress =
+    getFriendshipProgress(points);
+  const dailyStatus = isCommon
+    ? getFriendshipDailyStatus(activeId)
+    : {
+        date: "",
+        tapsUsed: 0,
+        petsUsed: 0,
+        activitiesUsed: 0,
+        tapsRemaining: 0,
+        petsRemaining: 0,
+        activitiesRemaining: 0,
+      };
+
+  const activeRef =
     useRef<any>(activeCompanion);
-  const isCommonRef = useRef(false);
-  const commonKeyRef = useRef("");
+  const profileRef =
+    useRef<CommonCompanionFriendshipProfile | null>(
+      profile
+    );
+  const pointsRef = useRef(points);
   const recordInteractionRef =
     useRef(recordCompanionInteraction);
+  const recordActivityRef =
+    useRef(recordCompanionActivity);
+  const speechVisibleRef = useRef(false);
+  const draggingRef = useRef(false);
+  const tapCandidateRef = useRef(false);
+  const longPressTriggeredRef =
+    useRef(false);
+  const offsetRef = useRef({
+    x: 0,
+    y: 0,
+  });
+  const clickModeRef = useRef(0);
+  const lastTapAtRef = useRef(0);
 
   const speechTimerRef =
-    useRef<ReturnType<typeof setTimeout> | null>(
-      null
-    );
-  const effectRestoreTimerRef =
     useRef<ReturnType<typeof setTimeout> | null>(
       null
     );
@@ -972,41 +1398,35 @@ function FloatingCompanionOverlay() {
     useRef<ReturnType<typeof setTimeout> | null>(
       null
     );
-  const introducedRef =
-    useRef<Set<string>>(new Set());
-  const isDraggingRef = useRef(false);
-  const speechVisibleRef = useRef(false);
+  const singleTapTimerRef =
+    useRef<ReturnType<typeof setTimeout> | null>(
+      null
+    );
+  const activityHandlerRef =
+    useRef<
+      (
+        activity: CompanionActivityKey,
+        award: boolean
+      ) => void
+    >(() => {});
 
-  const isTapRef = useRef(true);
-  const longPressTriggeredRef =
-    useRef(false);
-  const offsetRef = useRef({ x: 0, y: 0 });
-
-  const handleTapRef =
-    useRef<() => void>(() => {});
-  const handlePetRef =
-    useRef<() => void>(() => {});
-
-  const isCommonCompanion =
-    activeCompanion?.role === "cosmetic";
-  const activeId =
-    (activeCompanion as any)?.canonId ||
-    (activeCompanion as any)?.id ||
-    "";
-  const activeCommonKey =
-    commonCompanionKey(activeId);
-  const friendshipLevel = isCommonCompanion
-    ? getFriendshipLevel(activeId)
-    : 1;
-
-  activeCompanionRef.current =
-    activeCompanion;
-  isCommonRef.current =
-    isCommonCompanion;
-  commonKeyRef.current =
-    activeCommonKey;
+  activeRef.current = activeCompanion;
+  profileRef.current = profile;
+  pointsRef.current = points;
   recordInteractionRef.current =
     recordCompanionInteraction;
+  recordActivityRef.current =
+    recordCompanionActivity;
+
+  const rotation = rotate.interpolate({
+    inputRange: [-1, 1],
+    outputRange: ["-360deg", "360deg"],
+  });
+
+  const tiltRotation = tilt.interpolate({
+    inputRange: [-1, 1],
+    outputRange: ["-16deg", "16deg"],
+  });
 
   const clearSpeechTimer = () => {
     if (speechTimerRef.current) {
@@ -1016,48 +1436,676 @@ function FloatingCompanionOverlay() {
   };
 
   const showSpeech = (
-    text: string,
-    kind: "tap" | "pet" | "idle" = "tap",
-    duration = 2900
+    message: string,
+    kind:
+      | "tap"
+      | "pet"
+      | "idle"
+      | "activity",
+    duration = 3000
   ) => {
-    clearSpeechTimer();
+    if (!message) return;
 
+    clearSpeechTimer();
     speechVisibleRef.current = true;
     setSpeechKind(kind);
-    setSpeech(text);
+    setSpeech(message);
 
-    speechTimerRef.current = setTimeout(() => {
-      speechVisibleRef.current = false;
-      setSpeech(null);
-      speechTimerRef.current = null;
-    }, duration);
+    speechTimerRef.current = setTimeout(
+      () => {
+        speechVisibleRef.current = false;
+        setSpeech(null);
+        speechTimerRef.current = null;
+      },
+      duration
+    );
   };
 
-  const clearLongPressTimer = () => {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-  };
-
-  const triggerCompanionEffect = (
-    type: CompanionEffectType
+  const triggerBurst = (
+    icons: string[],
+    animation: CompanionAnimationKey
   ) => {
-    if (effectRestoreTimerRef.current) {
-      clearTimeout(effectRestoreTimerRef.current);
-      effectRestoreTimerRef.current = null;
+    setBurstIcons(icons);
+    setBurstAnimation(animation);
+    setBurstKey((key) => key + 1);
+  };
+
+  const resetTransforms = () => {
+    scale.stopAnimation();
+    hop.stopAnimation();
+    shake.stopAnimation();
+    driftX.stopAnimation();
+    rotate.stopAnimation();
+    tilt.stopAnimation();
+
+    scale.setValue(1);
+    hop.setValue(0);
+    shake.setValue(0);
+    driftX.setValue(0);
+    rotate.setValue(0);
+    tilt.setValue(0);
+  };
+
+  const performAnimation = (
+    animation: CompanionAnimationKey
+  ) => {
+    resetTransforms();
+
+    const timing = (
+      value: Animated.Value,
+      toValue: number,
+      duration: number
+    ) =>
+      Animated.timing(value, {
+        toValue,
+        duration,
+        easing: Easing.inOut(Easing.quad),
+        useNativeDriver: false,
+      });
+
+    const hopSequence = (
+      height: number,
+      repeats = 1
+    ) =>
+      Animated.sequence(
+        Array.from(
+          { length: repeats },
+          () => [
+            timing(hop, -height, 125),
+            Animated.spring(hop, {
+              toValue: 0,
+              friction: 4,
+              useNativeDriver: false,
+            }),
+          ]
+        ).flat()
+      );
+
+    const wiggle = (
+      amount = 7,
+      repeats = 2
+    ) =>
+      Animated.sequence(
+        Array.from(
+          { length: repeats },
+          () => [
+            timing(shake, amount, 70),
+            timing(shake, -amount, 70),
+          ]
+        )
+          .flat()
+          .concat([timing(shake, 0, 70)])
+      );
+
+    const pulse = (
+      low = 0.9,
+      high = 1.16
+    ) =>
+      Animated.sequence([
+        timing(scale, low, 110),
+        timing(scale, high, 150),
+        timing(scale, 1, 180),
+      ]);
+
+    const spin = (duration = 420) =>
+      Animated.sequence([
+        timing(rotate, 1, duration),
+        timing(rotate, 0, 0),
+      ]);
+
+    const tiltSequence = (
+      amount = 0.75
+    ) =>
+      Animated.sequence([
+        timing(tilt, amount, 150),
+        timing(tilt, -amount, 150),
+        timing(tilt, 0, 130),
+      ]);
+
+    switch (animation) {
+      case "gentle_bob":
+        pulse(0.97, 1.04).start();
+        break;
+      case "happy_bounce":
+        hopSequence(15).start();
+        break;
+      case "big_hop":
+        hopSequence(29).start();
+        break;
+      case "double_hop":
+        hopSequence(20, 2).start();
+        break;
+      case "ear_wiggle":
+      case "page_turn":
+        wiggle(5, 3).start();
+        break;
+      case "paw_wave":
+      case "book_nod":
+        tiltSequence(0.7).start();
+        break;
+      case "float_up":
+        Animated.sequence([
+          timing(hop, -34, 330),
+          timing(hop, 0, 430),
+        ]).start();
+        break;
+      case "balloon_sway":
+        Animated.parallel([
+          tiltSequence(0.85),
+          Animated.sequence([
+            timing(hop, -12, 280),
+            timing(hop, 0, 320),
+          ]),
+        ]).start();
+        break;
+      case "balloon_spin":
+      case "party_spin":
+      case "streamer_spin":
+      case "coin_flip":
+        spin(
+          animation === "coin_flip"
+            ? 320
+            : 460
+        ).start();
+        break;
+      case "heart_pulse":
+      case "star_breath":
+        pulse(0.9, 1.18).start();
+        break;
+      case "heart_twirl":
+        Animated.parallel([
+          pulse(0.92, 1.13),
+          spin(480),
+        ]).start();
+        break;
+      case "heart_trail":
+      case "star_gust":
+        Animated.parallel([
+          timing(driftX, -20, 360),
+          pulse(0.94, 1.1),
+        ]).start(() =>
+          driftX.setValue(0)
+        );
+        break;
+      case "sleepy_tilt":
+        Animated.sequence([
+          timing(tilt, 0.8, 260),
+          Animated.delay(220),
+          timing(tilt, 0, 260),
+        ]).start();
+        break;
+      case "yawn":
+        Animated.sequence([
+          timing(scale, 0.84, 240),
+          timing(scale, 1.12, 260),
+          timing(scale, 1, 220),
+        ]).start();
+        break;
+      case "curl_up":
+        Animated.parallel([
+          Animated.sequence([
+            timing(scale, 0.72, 260),
+            Animated.delay(330),
+            timing(scale, 1, 280),
+          ]),
+          Animated.sequence([
+            timing(tilt, 0.85, 260),
+            Animated.delay(330),
+            timing(tilt, 0, 280),
+          ]),
+        ]).start();
+        break;
+      case "star_puff":
+        pulse(0.78, 1.24).start();
+        break;
+      case "compress":
+        pulse(0.67, 1.2).start();
+        break;
+      case "shake":
+        wiggle(9, 4).start();
+        break;
+      case "star_burst":
+        Animated.parallel([
+          pulse(0.64, 1.28),
+          wiggle(8, 3),
+        ]).start();
+        break;
+      case "star_arc":
+        Animated.parallel([
+          timing(driftX, -25, 400),
+          hopSequence(14),
+        ]).start(() =>
+          driftX.setValue(0)
+        );
+        break;
+      case "star_toss":
+      case "target_toss":
+        Animated.parallel([
+          spin(350),
+          timing(
+            driftX,
+            animation === "target_toss"
+              ? -34
+              : -24,
+            360
+          ),
+          hopSequence(
+            animation === "target_toss"
+              ? 20
+              : 13
+          ),
+        ]).start(() =>
+          driftX.setValue(0)
+        );
+        break;
+      case "party_shimmy":
+        wiggle(10, 4).start();
+        break;
+      case "victory_dance":
+        Animated.parallel([
+          hopSequence(18, 2),
+          wiggle(7, 4),
+          pulse(0.92, 1.12),
+        ]).start();
+        break;
+      case "neon_dance":
+        Animated.parallel([
+          wiggle(8, 3),
+          pulse(0.88, 1.16),
+        ]).start();
+        break;
+      case "light_show":
+        Animated.parallel([
+          spin(700),
+          pulse(0.82, 1.24),
+          wiggle(5, 4),
+        ]).start();
+        break;
+      case "coin_toss":
+        hopSequence(23).start();
+        break;
+      case "coin_rain":
+        Animated.parallel([
+          hopSequence(18),
+          spin(420),
+        ]).start();
+        break;
+      case "reading_pose":
+        Animated.sequence([
+          timing(scale, 0.9, 220),
+          timing(tilt, 0.35, 180),
+          Animated.delay(420),
+          timing(tilt, 0, 180),
+          timing(scale, 1, 200),
+        ]).start();
+        break;
+      default:
+        pulse().start();
+        break;
+    }
+  };
+
+  const friendshipResultText = (
+    result: CompanionInteractionResult
+  ): string => {
+    if (result.maxed) {
+      return "Bonded friendship is already at maximum. 💜";
     }
 
-    setEffectType(type);
-    setEffectKey((key) => key + 1);
-
-    if (type !== baseEffectRef.current) {
-      effectRestoreTimerRef.current =
-        setTimeout(() => {
-          setEffectType(baseEffectRef.current);
-          effectRestoreTimerRef.current = null;
-        }, 1500);
+    if (result.dailyCapReached) {
+      return "Friendship XP is full for today—our reactions still work, and we can earn more tomorrow.";
     }
+
+    if (result.leveledUp) {
+      const reward =
+        profileRef.current?.levels[
+          result.level - 1
+        ];
+
+      return `Friendship Level ${result.level}: ${
+        reward?.title || "New reward"
+      } unlocked!`;
+    }
+
+    return result.awardedPoints > 0
+      ? `Friendship +${result.awardedPoints}`
+      : "";
+  };
+
+  const handleSingleTap = async () => {
+    const currentProfile =
+      profileRef.current;
+    const companion = activeRef.current;
+
+    if (!currentProfile || !companion) {
+      clickModeRef.current =
+        (clickModeRef.current + 1) % 5;
+
+      const mode = clickModeRef.current;
+      if (mode === 0) {
+        performAnimation("happy_bounce");
+      } else if (mode === 1) {
+        performAnimation("big_hop");
+      } else if (mode === 2) {
+        performAnimation("party_spin");
+      } else if (mode === 3) {
+        performAnimation("party_shimmy");
+      } else {
+        performAnimation("heart_twirl");
+      }
+
+      setLegendEffectKey(
+        (key) => key + 1
+      );
+      return;
+    }
+
+    const result =
+      await recordInteractionRef.current(
+        currentProfile.id,
+        "tap"
+      );
+    const effectivePoints =
+      result.points;
+    const currentReward =
+      latestUnlockedReward(
+        currentProfile,
+        result.level
+      );
+    const animations =
+      getUnlockedAnimations(
+        currentProfile.id,
+        effectivePoints
+      ).filter(
+        (animation) =>
+          animation !== "gentle_bob"
+      );
+    const animation =
+      randomLine(animations as string[]) as
+        | CompanionAnimationKey
+        | "";
+
+    const chosenAnimation =
+      animation ||
+      currentReward.animations[0] ||
+      "happy_bounce";
+    const lines = getUnlockedDialogue(
+      currentProfile.id,
+      effectivePoints,
+      "tap"
+    );
+    const companionLine =
+      randomLine(lines);
+    const resultLine =
+      friendshipResultText(result);
+
+    performAnimation(chosenAnimation);
+    triggerBurst(
+      getTapBurstIcons(
+        currentProfile.id,
+        effectivePoints
+      ),
+      chosenAnimation
+    );
+
+    showSpeech(
+      [companionLine, resultLine]
+        .filter(Boolean)
+        .join("\n"),
+      "tap",
+      result.leveledUp ? 3900 : 3000
+    );
+  };
+
+  const handleDoubleTap = async () => {
+    const currentProfile =
+      profileRef.current;
+
+    if (!currentProfile) {
+      await handleSingleTap();
+      return;
+    }
+
+    const currentPoints =
+      pointsRef.current;
+    const currentLevel =
+      getFriendshipProgress(
+        currentPoints
+      ).level;
+    const specialReward =
+      unlockedDoubleTapReward(
+        currentProfile,
+        currentLevel
+      );
+
+    if (!specialReward) {
+      await handleSingleTap();
+      return;
+    }
+
+    const result =
+      await recordInteractionRef.current(
+        currentProfile.id,
+        "tap"
+      );
+    const animation =
+      specialReward.animations[
+        specialReward.animations.length - 1
+      ] || "happy_bounce";
+    const lines =
+      specialReward.dialogue.tap ?? [];
+    const resultLine =
+      friendshipResultText(result);
+
+    performAnimation(animation);
+    triggerBurst(
+      specialReward.tapBurstIcons,
+      animation
+    );
+
+    showSpeech(
+      [
+        randomLine(lines),
+        specialReward.specialInteraction
+          ?.title,
+        resultLine,
+      ]
+        .filter(Boolean)
+        .join("\n"),
+      "tap",
+      result.leveledUp ? 4100 : 3300
+    );
+  };
+
+  const handlePet = async () => {
+    const currentProfile =
+      profileRef.current;
+
+    if (!currentProfile) return;
+
+    try {
+      if (Platform.OS !== "web") {
+        void Haptics.notificationAsync(
+          Haptics
+            .NotificationFeedbackType
+            .Success
+        );
+      }
+    } catch {}
+
+    const result =
+      await recordInteractionRef.current(
+        currentProfile.id,
+        "pet"
+      );
+    const lines = getUnlockedDialogue(
+      currentProfile.id,
+      result.points,
+      "pet"
+    );
+    const resultLine =
+      friendshipResultText(result);
+
+    performAnimation("heart_pulse");
+    triggerBurst(
+      ["💜", "🩷", "💙", "❤️", "💜"],
+      "heart_trail"
+    );
+
+    showSpeech(
+      [randomLine(lines), resultLine]
+        .filter(Boolean)
+        .join("\n"),
+      "pet",
+      result.leveledUp ? 4100 : 3300
+    );
+  };
+
+  const reactToActivity = async (
+    activity: CompanionActivityKey,
+    award: boolean
+  ) => {
+    const currentProfile =
+      profileRef.current;
+
+    if (!currentProfile) return;
+
+    const beforePoints =
+      pointsRef.current;
+    const result = award
+      ? await recordActivityRef.current(
+          currentProfile.id,
+          activity
+        )
+      : {
+          points: beforePoints,
+          level:
+            getFriendshipProgress(
+              beforePoints
+            ).level,
+          leveledUp: false,
+          awardedPoints: 0,
+          dailyCapReached: false,
+          maxed:
+            beforePoints >= 120,
+          nextLevelAt:
+            getFriendshipProgress(
+              beforePoints
+            ).nextLevelAt,
+        };
+
+    const lines = getUnlockedDialogue(
+      currentProfile.id,
+      result.points,
+      "idle",
+      activity
+    );
+
+    if (!lines.length) {
+      if (
+        award &&
+        result.awardedPoints > 0
+      ) {
+        showSpeech(
+          `${activityLabel(
+            activity
+          )} together · Friendship +${
+            result.awardedPoints
+          }`,
+          "activity",
+          2400
+        );
+      }
+
+      return;
+    }
+
+    const reward =
+      latestUnlockedReward(
+        currentProfile,
+        result.level
+      );
+    const animation =
+      reward.animations[
+        reward.animations.length - 1
+      ] || "happy_bounce";
+    const resultLine =
+      friendshipResultText(result);
+
+    performAnimation(animation);
+    triggerBurst(
+      reward.tapBurstIcons,
+      animation
+    );
+
+    showSpeech(
+      [randomLine(lines), resultLine]
+        .filter(Boolean)
+        .join("\n"),
+      "activity",
+      result.leveledUp ? 4200 : 3200
+    );
+  };
+
+  activityHandlerRef.current = (
+    activity,
+    award
+  ) => {
+    void reactToActivity(
+      activity,
+      award
+    );
+  };
+
+  const queueTap = () => {
+    const currentProfile =
+      profileRef.current;
+
+    if (!currentProfile) {
+      void handleSingleTap();
+      return;
+    }
+
+    const now = Date.now();
+    const currentLevel =
+      getFriendshipProgress(
+        pointsRef.current
+      ).level;
+    const hasDoubleTap =
+      !!unlockedDoubleTapReward(
+        currentProfile,
+        currentLevel
+      );
+
+    if (
+      hasDoubleTap &&
+      now - lastTapAtRef.current <= 310
+    ) {
+      lastTapAtRef.current = 0;
+
+      if (singleTapTimerRef.current) {
+        clearTimeout(
+          singleTapTimerRef.current
+        );
+        singleTapTimerRef.current = null;
+      }
+
+      void handleDoubleTap();
+      return;
+    }
+
+    lastTapAtRef.current = now;
+
+    if (!hasDoubleTap) {
+      void handleSingleTap();
+      return;
+    }
+
+    singleTapTimerRef.current =
+      setTimeout(() => {
+        singleTapTimerRef.current = null;
+        void handleSingleTap();
+      }, 315);
   };
 
   useEffect(() => {
@@ -1065,14 +2113,18 @@ function FloatingCompanionOverlay() {
       Animated.sequence([
         Animated.timing(bob, {
           toValue: -6,
-          duration: 800,
-          easing: Easing.inOut(Easing.sin),
+          duration: 900,
+          easing: Easing.inOut(
+            Easing.sin
+          ),
           useNativeDriver: false,
         }),
         Animated.timing(bob, {
           toValue: 0,
-          duration: 800,
-          easing: Easing.inOut(Easing.sin),
+          duration: 900,
+          easing: Easing.inOut(
+            Easing.sin
+          ),
           useNativeDriver: false,
         }),
       ])
@@ -1085,569 +2137,352 @@ function FloatingCompanionOverlay() {
 
   useEffect(() => {
     if (!activeCompanion) {
-      baseEffectRef.current = "stars";
-      setEffectType("stars");
       setSpeech(null);
+      setFriendshipOpen(false);
       return;
     }
 
-    const id =
-      (activeCompanion as any).canonId ||
-      (activeCompanion as any).id ||
-      "";
-    const nextEffect = getCompanionEffect(id);
-
-    baseEffectRef.current = nextEffect;
-    setEffectType(nextEffect);
-    setEffectKey((key) => key + 1);
+    const effect =
+      getCompanionEffect(activeId);
+    setLegendEffect(effect);
+    setLegendEffectKey(
+      (key) => key + 1
+    );
     setSpeech(null);
+    setFriendshipOpen(false);
     speechVisibleRef.current = false;
-    clearSpeechTimer();
 
-    const key = commonCompanionKey(id);
-
-    if (
-      activeCompanion.role === "cosmetic" &&
-      !introducedRef.current.has(key)
-    ) {
-      introducedRef.current.add(key);
-
-      const introTimer = setTimeout(() => {
+    if (profile) {
+      const timer = setTimeout(() => {
         showSpeech(
-          "Tap me for a reaction—or hold me to give me a little pet. 💜",
+          `Friendship Level ${
+            getFriendshipProgress(
+              getFriendshipPoints(
+                profile.id
+              )
+            ).level
+          }. Tap me, hold to pet me, or tap my friendship badge.`,
           "idle",
           3900
         );
       }, 850);
 
-      return () => clearTimeout(introTimer);
+      return () => clearTimeout(timer);
     }
-  }, [activeCompanion]);
-
-  useEffect(() => {
-    if (!isCommonCompanion || !activeCommonKey) {
-      return;
-    }
-
-    let cancelled = false;
-    let idleTimer:
-      | ReturnType<typeof setTimeout>
-      | null = null;
-
-    const scheduleIdleReaction = () => {
-      const delay =
-        42000 + Math.floor(Math.random() * 26000);
-
-      idleTimer = setTimeout(() => {
-        if (
-          !cancelled &&
-          !isDraggingRef.current &&
-          !speechVisibleRef.current
-        ) {
-          showSpeech(
-            randomDialogueLine(
-              activeCommonKey,
-              "idle"
-            ),
-            "idle",
-            2600
-          );
-
-          floatScale.setValue(1);
-
-          Animated.sequence([
-            Animated.timing(floatScale, {
-              toValue: 1.06,
-              duration: 180,
-              useNativeDriver: false,
-            }),
-            Animated.timing(floatScale, {
-              toValue: 1,
-              duration: 220,
-              useNativeDriver: false,
-            }),
-          ]).start();
-        }
-
-        if (!cancelled) {
-          scheduleIdleReaction();
-        }
-      }, delay);
-    };
-
-    scheduleIdleReaction();
-
-    return () => {
-      cancelled = true;
-
-      if (idleTimer) {
-        clearTimeout(idleTimer);
-      }
-    };
   }, [
-    activeCommonKey,
-    floatScale,
-    isCommonCompanion,
+    activeCompanion,
+    activeId,
+    getFriendshipPoints,
+    profile,
   ]);
 
   useEffect(() => {
-    return () => {
-      clearSpeechTimer();
-      clearLongPressTimer();
+    if (!profile) return;
 
-      if (effectRestoreTimerRef.current) {
-        clearTimeout(
-          effectRestoreTimerRef.current
+    let cancelled = false;
+    let timer:
+      | ReturnType<typeof setTimeout>
+      | null = null;
+
+    const schedule = () => {
+      timer = setTimeout(() => {
+        if (
+          !cancelled &&
+          !draggingRef.current &&
+          !speechVisibleRef.current
+        ) {
+          const idleLines =
+            getUnlockedDialogue(
+              profile.id,
+              pointsRef.current,
+              "idle"
+            );
+          const animations =
+            getUnlockedAnimations(
+              profile.id,
+              pointsRef.current
+            ).filter(
+              (animation) =>
+                animation !== "gentle_bob"
+            );
+          const animation =
+            (randomLine(
+              animations as string[]
+            ) as CompanionAnimationKey) ||
+            "gentle_bob";
+
+          showSpeech(
+            randomLine(idleLines),
+            "idle",
+            2600
+          );
+          performAnimation(animation);
+        }
+
+        if (!cancelled) schedule();
+      }, 43000 + Math.floor(Math.random() * 27000));
+    };
+
+    schedule();
+
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [profile, friendshipPoints]);
+
+  useEffect(() => {
+    const activitySub =
+      DeviceEventEmitter.addListener(
+        COMPANION_ACTIVITY_EVENT,
+        (payload: {
+          activity?: CompanionActivityKey;
+        }) => {
+          if (payload?.activity) {
+            activityHandlerRef.current(
+              payload.activity,
+              true
+            );
+          }
+        }
+      );
+
+    const purchaseSub =
+      DeviceEventEmitter.addListener(
+        SHOP_PURCHASE_COMPLETED_EVENT,
+        () => {
+          activityHandlerRef.current(
+            "shop_purchase",
+            true
+          );
+        }
+      );
+
+    let achievementSubscription: any =
+      null;
+    let achievementHandler:
+      | ((payload: any) => void)
+      | null = null;
+
+    if (AchieveEmitter) {
+      achievementHandler = (
+        payload: any
+      ) => {
+        activityHandlerRef.current(
+          "achievements",
+          true
+        );
+
+        if (
+          Number(payload?.coins) > 0
+        ) {
+          activityHandlerRef.current(
+            "coins_earned",
+            false
+          );
+        }
+      };
+
+      if (
+        typeof (AchieveEmitter as any)
+          .addListener === "function"
+      ) {
+        achievementSubscription = (
+          AchieveEmitter as any
+        ).addListener(
+          "celebrate",
+          achievementHandler
+        );
+      } else if (
+        typeof (AchieveEmitter as any).on ===
+        "function"
+      ) {
+        (AchieveEmitter as any).on(
+          "celebrate",
+          achievementHandler
+        );
+      }
+    }
+
+    return () => {
+      activitySub.remove();
+      purchaseSub.remove();
+
+      if (
+        achievementSubscription?.remove
+      ) {
+        achievementSubscription.remove();
+      } else if (
+        achievementHandler &&
+        typeof (AchieveEmitter as any)
+          ?.off === "function"
+      ) {
+        (AchieveEmitter as any).off(
+          "celebrate",
+          achievementHandler
         );
       }
     };
   }, []);
 
-  function wiggleAction() {
-    floatScale.setValue(1);
+  useEffect(() => {
+    const activity:
+      | CompanionActivityKey
+      | null = pathname.includes(
+      "/flashcards"
+    )
+      ? "flashcards"
+      : pathname.includes("/collections")
+      ? "collections"
+      : pathname.includes("/relax")
+      ? "relax"
+      : null;
 
-    Animated.sequence([
-      Animated.timing(floatScale, {
-        toValue: 1.18,
-        duration: 120,
-        useNativeDriver: false,
-      }),
-      Animated.timing(floatScale, {
-        toValue: 0.95,
-        duration: 110,
-        useNativeDriver: false,
-      }),
-      Animated.timing(floatScale, {
-        toValue: 1.05,
-        duration: 110,
-        useNativeDriver: false,
-      }),
-      Animated.timing(floatScale, {
-        toValue: 1,
-        duration: 110,
-        useNativeDriver: false,
-      }),
-    ]).start();
-  }
+    if (!activity) return;
 
-  function hopAction() {
-    floatHop.setValue(0);
-
-    Animated.sequence([
-      Animated.timing(floatHop, {
-        toValue: -14,
-        duration: 120,
-        useNativeDriver: false,
-      }),
-      Animated.timing(floatHop, {
-        toValue: 0,
-        duration: 160,
-        useNativeDriver: false,
-      }),
-    ]).start();
-  }
-
-  function bigHopAction() {
-    floatHop.setValue(0);
-    floatScale.setValue(1);
-
-    Animated.parallel([
-      Animated.sequence([
-        Animated.timing(floatHop, {
-          toValue: -24,
-          duration: 150,
-          useNativeDriver: false,
-        }),
-        Animated.spring(floatHop, {
-          toValue: 0,
-          friction: 4,
-          useNativeDriver: false,
-        }),
-      ]),
-      Animated.sequence([
-        Animated.timing(floatScale, {
-          toValue: 1.12,
-          duration: 120,
-          useNativeDriver: false,
-        }),
-        Animated.timing(floatScale, {
-          toValue: 1,
-          duration: 220,
-          useNativeDriver: false,
-        }),
-      ]),
-    ]).start();
-  }
-
-  function spinAction() {
-    floatRotate.setValue(0);
-
-    Animated.sequence([
-      Animated.timing(floatRotate, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: false,
-      }),
-      Animated.timing(floatRotate, {
-        toValue: 0,
-        duration: 0,
-        useNativeDriver: false,
-      }),
-    ]).start();
-  }
-
-  function shimmyAction() {
-    floatShake.setValue(0);
-
-    Animated.sequence([
-      Animated.timing(floatShake, {
-        toValue: 7,
-        duration: 70,
-        useNativeDriver: false,
-      }),
-      Animated.timing(floatShake, {
-        toValue: -7,
-        duration: 70,
-        useNativeDriver: false,
-      }),
-      Animated.timing(floatShake, {
-        toValue: 5,
-        duration: 60,
-        useNativeDriver: false,
-      }),
-      Animated.timing(floatShake, {
-        toValue: -5,
-        duration: 60,
-        useNativeDriver: false,
-      }),
-      Animated.timing(floatShake, {
-        toValue: 0,
-        duration: 70,
-        useNativeDriver: false,
-      }),
-    ]).start();
-  }
-
-  function swirlAction() {
-    floatScale.setValue(1);
-    floatRotate.setValue(0);
-
-    Animated.parallel([
-      Animated.sequence([
-        Animated.timing(floatScale, {
-          toValue: 1.2,
-          duration: 160,
-          useNativeDriver: false,
-        }),
-        Animated.timing(floatScale, {
-          toValue: 0.95,
-          duration: 140,
-          useNativeDriver: false,
-        }),
-        Animated.timing(floatScale, {
-          toValue: 1,
-          duration: 140,
-          useNativeDriver: false,
-        }),
-      ]),
-      Animated.sequence([
-        Animated.timing(floatRotate, {
-          toValue: 1,
-          duration: 400,
-          useNativeDriver: false,
-        }),
-        Animated.timing(floatRotate, {
-          toValue: 0,
-          duration: 0,
-          useNativeDriver: false,
-        }),
-      ]),
-    ]).start();
-  }
-
-  function sleepyAction() {
-    floatScale.setValue(1);
-    floatRotate.setValue(0);
-
-    Animated.parallel([
-      Animated.sequence([
-        Animated.timing(floatScale, {
-          toValue: 0.9,
-          duration: 200,
-          useNativeDriver: false,
-        }),
-        Animated.timing(floatScale, {
-          toValue: 1.04,
-          duration: 250,
-          useNativeDriver: false,
-        }),
-        Animated.timing(floatScale, {
-          toValue: 1,
-          duration: 180,
-          useNativeDriver: false,
-        }),
-      ]),
-      Animated.sequence([
-        Animated.timing(floatRotate, {
-          toValue: 0.04,
-          duration: 240,
-          useNativeDriver: false,
-        }),
-        Animated.timing(floatRotate, {
-          toValue: 0,
-          duration: 240,
-          useNativeDriver: false,
-        }),
-      ]),
-    ]).start();
-  }
-
-  function performCommonTapAction(key: string) {
-    if (key === "nova_bunny") {
-      bigHopAction();
-      return;
-    }
-
-    if (key === "balloons") {
-      swirlAction();
-      return;
-    }
-
-    if (key === "hearts") {
-      wiggleAction();
-      return;
-    }
-
-    if (key === "sleepy_moon") {
-      sleepyAction();
-      return;
-    }
-
-    if (key === "star_blow") {
-      wiggleAction();
-      return;
-    }
-
-    if (key === "star_explode") {
-      bigHopAction();
-      return;
-    }
-
-    if (key === "star_throw") {
-      spinAction();
-      return;
-    }
-
-    if (
-      key === "party_3d" ||
-      key === "party_3d_2"
-    ) {
-      shimmyAction();
-      return;
-    }
-
-    if (key === "coins_rain") {
-      hopAction();
-      return;
-    }
-
-    if (key === "reading_buddy") {
-      wiggleAction();
-      return;
-    }
-
-    wiggleAction();
-  }
-
-  const handleTap = () => {
-    try {
-      if (Platform.OS !== "web") {
-        Haptics.impactAsync(
-          Haptics.ImpactFeedbackStyle.Light
-        );
-      }
-    } catch {}
-
-    if (isCommonRef.current) {
-      const key = commonKeyRef.current;
-
-      performCommonTapAction(key);
-      triggerCompanionEffect(
-        baseEffectRef.current
+    const timer = setTimeout(() => {
+      activityHandlerRef.current(
+        activity,
+        false
       );
+    }, 700);
 
-      showSpeech(
-        randomDialogueLine(key, "tap"),
-        "tap"
-      );
+    return () => clearTimeout(timer);
+  }, [pathname]);
 
-      const id =
-        (activeCompanionRef.current as any)
-          ?.canonId ||
-        (activeCompanionRef.current as any)?.id;
+  useEffect(() => {
+    return () => {
+      clearSpeechTimer();
 
-      if (id) {
-        void recordInteractionRef.current(
-          id,
-          "tap"
+      if (longPressTimerRef.current) {
+        clearTimeout(
+          longPressTimerRef.current
         );
       }
 
-      return;
-    }
-
-    // Preserve the existing generic interaction cycle for legends.
-    clickModeRef.current =
-      (clickModeRef.current + 1) % 5;
-    const mode = clickModeRef.current;
-
-    switch (mode) {
-      case 0:
-        wiggleAction();
-        break;
-      case 1:
-        hopAction();
-        break;
-      case 2:
-        spinAction();
-        break;
-      case 3:
-        shimmyAction();
-        break;
-      case 4:
-      default:
-        swirlAction();
-        break;
-    }
-
-    triggerCompanionEffect(
-      baseEffectRef.current
-    );
-  };
-
-  const handlePet = async () => {
-    if (!isCommonRef.current) {
-      return;
-    }
-
-    try {
-      if (Platform.OS !== "web") {
-        Haptics.notificationAsync(
-          Haptics.NotificationFeedbackType.Success
+      if (singleTapTimerRef.current) {
+        clearTimeout(
+          singleTapTimerRef.current
         );
       }
-    } catch {}
-
-    wiggleAction();
-    triggerCompanionEffect("hearts");
-
-    const companion =
-      activeCompanionRef.current;
-    const id =
-      (companion as any)?.canonId ||
-      (companion as any)?.id ||
-      "";
-    const key = commonKeyRef.current;
-
-    const result =
-      await recordInteractionRef.current(
-        id,
-        "pet"
-      );
-
-    const friendshipMessage =
-      result.leveledUp
-        ? `Friendship Level ${result.level} reached! 💜`
-        : `Friendship +3 · Level ${result.level}`;
-
-    showSpeech(
-      `${randomDialogueLine(
-        key,
-        "pet"
-      )}\n${friendshipMessage}`,
-      "pet",
-      3400
-    );
-  };
-
-  handleTapRef.current = handleTap;
-  handlePetRef.current = () => {
-    void handlePet();
-  };
+    };
+  }, []);
 
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
+      onStartShouldSetPanResponder:
+        () => true,
+      onMoveShouldSetPanResponder:
+        () => true,
 
       onPanResponderGrant: () => {
-        isTapRef.current = true;
-        isDraggingRef.current = false;
-        longPressTriggeredRef.current = false;
-        clearLongPressTimer();
+        tapCandidateRef.current = true;
+        draggingRef.current = false;
+        longPressTriggeredRef.current =
+          false;
 
-        if (isCommonRef.current) {
+        if (longPressTimerRef.current) {
+          clearTimeout(
+            longPressTimerRef.current
+          );
+        }
+
+        if (profileRef.current) {
           longPressTimerRef.current =
             setTimeout(() => {
-              longPressTriggeredRef.current = true;
-              isTapRef.current = false;
-              handlePetRef.current();
-            }, 540);
+              longPressTriggeredRef.current =
+                true;
+              tapCandidateRef.current = false;
+              void handlePet();
+            }, 560);
         }
       },
 
-      onPanResponderMove: (_event, gesture) => {
+      onPanResponderMove: (
+        _event,
+        gesture
+      ) => {
         if (
           Math.abs(gesture.dx) > 8 ||
           Math.abs(gesture.dy) > 8
         ) {
-          isTapRef.current = false;
-          isDraggingRef.current = true;
-          clearLongPressTimer();
+          tapCandidateRef.current = false;
+          draggingRef.current = true;
+
+          if (
+            longPressTimerRef.current
+          ) {
+            clearTimeout(
+              longPressTimerRef.current
+            );
+            longPressTimerRef.current =
+              null;
+          }
         }
 
-        const nextX =
-          offsetRef.current.x + gesture.dx;
-        const nextY =
-          offsetRef.current.y + gesture.dy;
-
         pan.setValue({
-          x: nextX,
-          y: nextY,
+          x:
+            offsetRef.current.x +
+            gesture.dx,
+          y:
+            offsetRef.current.y +
+            gesture.dy,
         });
       },
 
       onPanResponderRelease: () => {
-        clearLongPressTimer();
-
-        if (
-          isTapRef.current &&
-          !longPressTriggeredRef.current
-        ) {
-          handleTapRef.current();
-        } else if (
-          isDraggingRef.current
-        ) {
-          const current: {
-            x: number;
-            y: number;
-          } =
-            (pan as any).__getValue?.() ?? {
-              x: 0,
-              y: 0,
-            };
-
-          offsetRef.current = current;
+        if (longPressTimerRef.current) {
+          clearTimeout(
+            longPressTimerRef.current
+          );
+          longPressTimerRef.current = null;
         }
 
-        isDraggingRef.current = false;
-        longPressTriggeredRef.current = false;
+        if (
+          tapCandidateRef.current &&
+          !longPressTriggeredRef.current
+        ) {
+          try {
+            if (Platform.OS !== "web") {
+              void Haptics.impactAsync(
+                Haptics
+                  .ImpactFeedbackStyle
+                  .Light
+              );
+            }
+          } catch {}
+
+          queueTap();
+        } else if (
+          draggingRef.current
+        ) {
+          const current:
+            | { x: number; y: number }
+            | undefined = (
+            pan as any
+          ).__getValue?.();
+
+          if (current) {
+            offsetRef.current = current;
+          }
+        }
+
+        draggingRef.current = false;
+        longPressTriggeredRef.current =
+          false;
       },
 
       onPanResponderTerminate: () => {
-        clearLongPressTimer();
-        isDraggingRef.current = false;
-        longPressTriggeredRef.current = false;
+        if (longPressTimerRef.current) {
+          clearTimeout(
+            longPressTimerRef.current
+          );
+          longPressTimerRef.current = null;
+        }
+
+        draggingRef.current = false;
+        longPressTriggeredRef.current =
+          false;
       },
 
       onPanResponderTerminationRequest:
@@ -1655,112 +2490,177 @@ function FloatingCompanionOverlay() {
     })
   ).current;
 
-  if (!activeCompanion) {
-    return null;
-  }
+  if (!activeCompanion) return null;
 
   const speechAccent =
     speechKind === "pet"
       ? "#f472b6"
+      : speechKind === "activity"
+      ? "#facc15"
       : speechKind === "idle"
       ? "#a78bfa"
-      : "#22d3ee";
+      : profile?.accent || "#22d3ee";
 
   return (
-    <Animated.View
-      {...panResponder.panHandlers}
-      style={[
-        S.companionWrap,
-        {
-          transform: [
-            {
-              translateX: Animated.add(
-                pan.x,
-                floatShake
-              ),
-            },
-            {
-              translateY: Animated.add(
-                Animated.add(bob, pan.y),
-                floatHop
-              ),
-            },
-            { scale: floatScale },
-            { rotate: rotation },
-          ],
-        },
-      ]}
-    >
-      {isCommonCompanion && speech ? (
-        <View
-          pointerEvents="none"
-          style={[
-            S.companionSpeechBubble,
-            {
-              borderColor: speechAccent,
-            },
-          ]}
-        >
-          <Text
-            style={[
-              S.companionSpeechTitle,
-              { color: speechAccent },
-            ]}
-          >
-            {(activeCompanion as any)
-              .shortLabel ||
-              (activeCompanion as any).title ||
-              "Nova Companion"}
-          </Text>
-
-          <Text style={S.companionSpeechText}>
-            {speech}
-          </Text>
-
-          <View
-            style={[
-              S.companionSpeechArrow,
+    <>
+      <Animated.View
+        style={[
+          S.companionWrap,
+          {
+            transform: [
               {
-                borderTopColor: speechAccent,
+                translateX: Animated.add(
+                  Animated.add(
+                    pan.x,
+                    shake
+                  ),
+                  driftX
+                ),
               },
-            ]}
-          />
-        </View>
-      ) : null}
-
-      <View style={S.companionBadge}>
-        <View
-          pointerEvents="none"
-          style={StyleSheet.absoluteFillObject}
-        >
-          <CompanionEffectOverlay
-            type={effectType}
-            effectKey={effectKey}
-          />
-        </View>
-
-        <Image
-          source={(activeCompanion as any).image}
-          style={S.companionImage}
-          resizeMode="contain"
-        />
-
-        {isCommonCompanion ? (
+              {
+                translateY: Animated.add(
+                  Animated.add(
+                    bob,
+                    pan.y
+                  ),
+                  hop
+                ),
+              },
+              { scale },
+              { rotate: rotation },
+              {
+                rotate: tiltRotation,
+              },
+            ],
+          },
+        ]}
+      >
+        {profile && speech ? (
           <View
             pointerEvents="none"
-            style={S.companionFriendshipBadge}
+            style={[
+              S.companionSpeechBubble,
+              {
+                borderColor:
+                  speechAccent,
+              },
+            ]}
+          >
+            <Text
+              style={[
+                S.companionSpeechTitle,
+                {
+                  color: speechAccent,
+                },
+              ]}
+            >
+              {profile.shortLabel} ·{" "}
+              {friendshipProgress.stage}
+            </Text>
+            <Text
+              style={
+                S.companionSpeechText
+              }
+            >
+              {speech}
+            </Text>
+            <View
+              style={[
+                S.companionSpeechArrow,
+                {
+                  borderTopColor:
+                    speechAccent,
+                },
+              ]}
+            />
+          </View>
+        ) : null}
+
+        <View
+          {...panResponder.panHandlers}
+          style={S.companionDragTarget}
+        >
+          <View style={S.companionBadge}>
+            <View
+              pointerEvents="none"
+              style={
+                StyleSheet.absoluteFillObject
+              }
+            >
+              {profile ? (
+                <CompanionIconBurst
+                  icons={burstIcons}
+                  burstKey={burstKey}
+                  animation={
+                    burstAnimation
+                  }
+                />
+              ) : (
+                <CompanionEffectOverlay
+                  type={legendEffect}
+                  effectKey={
+                    legendEffectKey
+                  }
+                />
+              )}
+            </View>
+
+            <Image
+              source={
+                (activeCompanion as any)
+                  .image
+              }
+              style={S.companionImage}
+              resizeMode="contain"
+            />
+          </View>
+        </View>
+
+        {profile ? (
+          <Pressable
+            onPress={() =>
+              setFriendshipOpen(true)
+            }
+            style={({ pressed }) => [
+              S.companionFriendshipBadge,
+              {
+                borderColor:
+                  profile.accent,
+                opacity: pressed
+                  ? 0.72
+                  : 1,
+              },
+            ]}
+            hitSlop={8}
           >
             <Text
               style={
                 S.companionFriendshipText
               }
             >
-              💜 {friendshipLevel}
+              {profile.friendshipEmoji}{" "}
+              {friendshipProgress.level}
             </Text>
-          </View>
+          </Pressable>
         ) : null}
-      </View>
-    </Animated.View>
+      </Animated.View>
+
+      {profile ? (
+        <FriendshipProgressModal
+          visible={friendshipOpen}
+          onClose={() =>
+            setFriendshipOpen(false)
+          }
+          profile={profile}
+          points={points}
+          dailyStatus={dailyStatus}
+          image={
+            (activeCompanion as any)
+              .image
+          }
+        />
+      ) : null}
+    </>
   );
 }
 
@@ -2150,26 +3050,30 @@ export const S = StyleSheet.create({
     width: 48,
     height: 48,
   },
+  companionDragTarget: {
+    width: 64,
+    height: 64,
+  },
   companionSpeechBubble: {
     position: "absolute",
     right: 0,
-    bottom: 78,
-    width: 218,
-    borderRadius: 15,
+    bottom: 80,
+    width: 232,
+    borderRadius: 16,
     borderWidth: 1.5,
-    backgroundColor: "rgba(2,8,23,0.96)",
+    backgroundColor: "rgba(2,8,23,0.97)",
     paddingHorizontal: 12,
     paddingVertical: 10,
     shadowColor: "#000",
-    shadowOpacity: 0.42,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 8,
+    shadowOpacity: 0.46,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 7 },
+    elevation: 9,
   },
   companionSpeechTitle: {
     fontSize: 10,
     fontWeight: "900",
-    letterSpacing: 0.45,
+    letterSpacing: 0.4,
     textTransform: "uppercase",
     marginBottom: 4,
   },
@@ -2193,26 +3097,188 @@ export const S = StyleSheet.create({
   },
   companionFriendshipBadge: {
     position: "absolute",
-    right: -8,
-    bottom: -8,
-    minWidth: 32,
-    height: 22,
+    right: -10,
+    bottom: -10,
+    minWidth: 39,
+    height: 25,
     borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "rgba(244,114,182,0.92)",
-    backgroundColor: "rgba(76,5,25,0.96)",
-    paddingHorizontal: 6,
+    borderWidth: 1.5,
+    backgroundColor: "rgba(30,5,38,0.98)",
+    paddingHorizontal: 7,
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#f472b6",
-    shadowOpacity: 0.5,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.54,
+    shadowRadius: 7,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 10,
   },
   companionFriendshipText: {
-    color: "#fce7f3",
+    color: "#fdf4ff",
+    fontSize: 10,
+    fontWeight: "900",
+  },
+  friendshipModalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.76)",
+    justifyContent: "center",
+    padding: 18,
+    zIndex: 20000,
+  },
+  friendshipModalCard: {
+    width: "100%",
+    maxWidth: 500,
+    maxHeight: "88%",
+    alignSelf: "center",
+    borderRadius: 22,
+    borderWidth: 1.5,
+    backgroundColor: "rgba(2,8,23,0.99)",
+    padding: 16,
+    shadowColor: "#000",
+    shadowOpacity: 0.55,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 20,
+  },
+  friendshipModalHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+    marginBottom: 13,
+  },
+  friendshipPortrait: {
+    width: 62,
+    height: 62,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    backgroundColor: "rgba(15,23,42,0.92)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  friendshipPortraitImage: {
+    width: 50,
+    height: 50,
+  },
+  friendshipModalEyebrow: {
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 0.55,
+    textTransform: "uppercase",
+  },
+  friendshipModalTitle: {
+    color: "#f8fafc",
+    fontSize: 21,
+    fontWeight: "900",
+    marginTop: 2,
+  },
+  friendshipModalPersonality: {
+    color: "#cbd5e1",
+    fontSize: 11,
+    lineHeight: 15,
+    marginTop: 3,
+  },
+  friendshipProgressCard: {
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: "rgba(148,163,184,0.28)",
+    backgroundColor: "rgba(15,23,42,0.72)",
+    padding: 12,
+    marginBottom: 10,
+  },
+  friendshipProgressTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 10,
+  },
+  friendshipProgressLabel: {
+    color: "#e2e8f0",
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  friendshipProgressValue: {
+    fontSize: 11,
+    fontWeight: "900",
+  },
+  friendshipProgressTrack: {
+    height: 9,
+    borderRadius: 999,
+    overflow: "hidden",
+    backgroundColor: "rgba(30,41,59,0.95)",
+    marginTop: 9,
+  },
+  friendshipProgressFill: {
+    height: "100%",
+    minWidth: 4,
+    borderRadius: 999,
+  },
+  friendshipDailyText: {
+    color: "#94a3b8",
+    fontSize: 9.5,
+    lineHeight: 14,
+    marginTop: 8,
+  },
+  friendshipNextCard: {
+    borderRadius: 15,
+    borderWidth: 1,
+    backgroundColor: "rgba(30,27,75,0.34)",
+    padding: 12,
+    marginBottom: 10,
+  },
+  friendshipNextEyebrow: {
     fontSize: 9,
     fontWeight: "900",
+    letterSpacing: 0.6,
+  },
+  friendshipNextTitle: {
+    color: "#f8fafc",
+    fontSize: 15,
+    fontWeight: "900",
+    marginTop: 3,
+  },
+  friendshipNextDescription: {
+    color: "#cbd5e1",
+    fontSize: 11,
+    lineHeight: 16,
+    marginTop: 3,
+  },
+  friendshipRewardRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 11,
+    marginBottom: 8,
+  },
+  friendshipRewardLevel: {
+    width: 31,
+    height: 31,
+    borderRadius: 11,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  friendshipRewardLevelText: {
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  friendshipRewardTitle: {
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: "900",
+  },
+  friendshipRewardDescription: {
+    color: "#94a3b8",
+    fontSize: 10,
+    lineHeight: 14,
+    marginTop: 2,
+  },
+  friendshipRewardBonus: {
+    fontSize: 9,
+    lineHeight: 13,
+    fontWeight: "800",
+    marginTop: 4,
   },
   companionLabel: {
     marginTop: 4,

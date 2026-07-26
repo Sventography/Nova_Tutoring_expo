@@ -10,9 +10,11 @@ import React, {
   type ReactNode,
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { DeviceEventEmitter } from "react-native";
 
 import { supabase } from "../lib/supabase";
 import { useUser } from "./UserContext";
+import type { CompanionActivityKey } from "../_lib/commonCompanionFriendship";
 
 export type IslandMilestone = {
   id: string;
@@ -75,6 +77,24 @@ export const ISLAND_MILESTONES: IslandMilestone[] = [
 ];
 
 type XpSource = "quiz" | "brainteasers" | "ask" | "login" | "other";
+
+export const COMPANION_ACTIVITY_EVENT =
+  "companion:activity";
+
+function companionActivityForXpSource(
+  source: XpSource
+): CompanionActivityKey | null {
+  if (source === "quiz") return "quiz";
+  if (source === "brainteasers") {
+    return "brainteasers";
+  }
+  if (source === "ask") return "ask";
+  if (source === "login") {
+    return "daily_login";
+  }
+
+  return null;
+}
 
 type TodayBreakdown = {
   date: string;
@@ -492,6 +512,32 @@ export function IslandProvider({ children }: { children: ReactNode }) {
       setLastGainReason(gain.reason);
       setLastGainAt(gain.at);
       setLastGainToken((token) => token + 1);
+
+      const companionActivity =
+        companionActivityForXpSource(source);
+
+      if (companionActivity) {
+        DeviceEventEmitter.emit(
+          COMPANION_ACTIVITY_EVENT,
+          {
+            activity: companionActivity,
+            amount,
+            reason: gain.reason,
+            islandLevel: nextLevel,
+          }
+        );
+      }
+
+      if (nextLevel > current.level) {
+        DeviceEventEmitter.emit(
+          COMPANION_ACTIVITY_EVENT,
+          {
+            activity: "island_level_up",
+            previousLevel: current.level,
+            islandLevel: nextLevel,
+          }
+        );
+      }
 
       await Promise.allSettled([
         persistLocal(snapshot, gain),
