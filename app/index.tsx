@@ -1,26 +1,33 @@
 // app/index.tsx
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
-  View,
-  Text,
+  ActivityIndicator,
+  Animated,
+  Image,
+  Platform,
   Pressable,
   StyleSheet,
-  Image,
-  Animated,
-  Platform,
+  Text,
+  View,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
-import * as Haptics from "expo-haptics";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { LinearGradient } from "expo-linear-gradient";
+import { Redirect, useRouter } from "expo-router";
+import * as Haptics from "expo-haptics";
 
 import { useUser } from "./context/UserContext";
 import { useIsland } from "./context/IslandContext";
 
-const TUTORIAL_KEY = "onboarding.tutorial.done.v1";
+const TUTORIAL_KEY = "onboarding.tutorial.done.v2";
 const PENDING_CONFIRMATION_EMAIL_KEY =
   "nova.auth.pending-confirmation-email.v1";
+
+type StartupDestination =
+  | { type: "checking" }
+  | { type: "home" }
+  | { type: "tutorial" }
+  | { type: "confirm-email"; email: string };
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -28,19 +35,16 @@ export default function HomeScreen() {
   const { grantDailyLoginXpIfNeeded } = useIsland();
 
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  const startupRouteHandledRef = useRef(false);
+  const [startupDestination, setStartupDestination] =
+    useState<StartupDestination>({ type: "checking" });
 
   useEffect(() => {
-    if (!ready || startupRouteHandledRef.current) {
-      return;
-    }
+    if (!ready) return;
 
     let cancelled = false;
 
-    async function chooseStartupRoute() {
+    async function chooseStartupDestination() {
       try {
-        // A successful login or code confirmation makes any old pending
-        // confirmation reminder obsolete.
         if (isLoggedIn) {
           await AsyncStorage.removeItem(
             PENDING_CONFIRMATION_EMAIL_KEY
@@ -54,44 +58,48 @@ export default function HomeScreen() {
             .trim()
             .toLowerCase();
 
-          if (pendingEmail && !cancelled) {
-            startupRouteHandledRef.current = true;
-
-            router.replace({
-              pathname: "/confirm-email",
-              params: {
+          if (pendingEmail) {
+            if (!cancelled) {
+              setStartupDestination({
+                type: "confirm-email",
                 email: pendingEmail,
-              },
-            });
-
+              });
+            }
             return;
           }
         }
 
-        const tutorialDone = await AsyncStorage.getItem(TUTORIAL_KEY);
+        const tutorialDone =
+          await AsyncStorage.getItem(TUTORIAL_KEY);
 
-        if (!tutorialDone && !cancelled) {
-          startupRouteHandledRef.current = true;
-          router.replace("/tutorial");
-          return;
-        }
+        if (cancelled) return;
 
-        startupRouteHandledRef.current = true;
+        setStartupDestination(
+          tutorialDone === "1"
+            ? { type: "home" }
+            : { type: "tutorial" }
+        );
       } catch (error) {
-        console.warn("[HomeScreen] startup routing error:", error);
-        startupRouteHandledRef.current = true;
+        console.warn(
+          "[HomeScreen] startup routing error:",
+          error
+        );
+
+        if (!cancelled) {
+          setStartupDestination({ type: "tutorial" });
+        }
       }
     }
 
-    void chooseStartupRoute();
+    void chooseStartupDestination();
 
     return () => {
       cancelled = true;
     };
-  }, [isLoggedIn, ready, router]);
+  }, [isLoggedIn, ready]);
 
   useEffect(() => {
-    grantDailyLoginXpIfNeeded().catch(() => {});
+    void grantDailyLoginXpIfNeeded().catch(() => {});
   }, [grantDailyLoginXpIfNeeded]);
 
   useEffect(() => {
@@ -100,21 +108,18 @@ export default function HomeScreen() {
         Animated.timing(pulseAnim, {
           toValue: 1.05,
           duration: 1200,
-          useNativeDriver: false,
+          useNativeDriver: true,
         }),
         Animated.timing(pulseAnim, {
           toValue: 1,
           duration: 1200,
-          useNativeDriver: false,
+          useNativeDriver: true,
         }),
       ])
     );
 
     animation.start();
-
-    return () => {
-      animation.stop();
-    };
+    return () => animation.stop();
   }, [pulseAnim]);
 
   const hapticTap = async () => {
@@ -123,26 +128,24 @@ export default function HomeScreen() {
         await Haptics.impactAsync(
           Haptics.ImpactFeedbackStyle.Heavy
         );
-      } catch {
-        // Ignore haptics errors.
-      }
+      } catch {}
     }
   };
 
   const handleLetsLearn = async () => {
     await hapticTap();
-    router.push("/ask");
+    (router as any).push("/ask");
   };
 
   const handleLoginPress = async () => {
     await hapticTap();
 
     if (isLoggedIn) {
-      router.push("/(tabs)/account");
+      (router as any).push("/(tabs)/account");
       return;
     }
 
-    router.push("/sign-in");
+    (router as any).push("/sign-in");
   };
 
   const handleResetTutorial = async () => {
@@ -151,19 +154,57 @@ export default function HomeScreen() {
         await Haptics.notificationAsync(
           Haptics.NotificationFeedbackType.Success
         );
-      } catch {
-        // Ignore haptics errors.
-      }
+      } catch {}
     }
 
     try {
       await AsyncStorage.removeItem(TUTORIAL_KEY);
-    } catch {
-      // Ignore storage errors.
-    }
+    } catch {}
 
-    router.replace("/tutorial");
+    setStartupDestination({ type: "tutorial" });
   };
+
+  if (
+    !ready ||
+    startupDestination.type === "checking"
+  ) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Image
+          source={require("./assets/logo.png")}
+          style={styles.loadingLogo}
+        />
+        <ActivityIndicator
+          size="large"
+          color="#00e5ff"
+        />
+        <Text style={styles.loadingText}>
+          Starting Nova…
+        </Text>
+      </View>
+    );
+  }
+
+  if (startupDestination.type === "tutorial") {
+    return <Redirect href={"/tutorial" as any} />;
+  }
+
+  if (
+    startupDestination.type === "confirm-email"
+  ) {
+    return (
+      <Redirect
+        href={
+          {
+            pathname: "/confirm-email",
+            params: {
+              email: startupDestination.email,
+            },
+          } as any
+        }
+      />
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -179,16 +220,24 @@ export default function HomeScreen() {
 
       <Pressable onPress={handleLetsLearn}>
         <Animated.View
-          style={{ transform: [{ scale: pulseAnim }] }}
+          style={{
+            transform: [{ scale: pulseAnim }],
+          }}
         >
           <LinearGradient
-            colors={["#00e5ff", "#66b2ff", "#000000"]}
+            colors={[
+              "#00e5ff",
+              "#66b2ff",
+              "#000000",
+            ]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.button}
           >
             <Text style={styles.buttonText}>
-              {isLoggedIn ? "Let’s Learn" : "Continue as Guest"}
+              {isLoggedIn
+                ? "Let’s Learn"
+                : "Continue as Guest"}
             </Text>
           </LinearGradient>
         </Animated.View>
@@ -196,16 +245,24 @@ export default function HomeScreen() {
 
       <Pressable onPress={handleLoginPress}>
         <Animated.View
-          style={{ transform: [{ scale: pulseAnim }] }}
+          style={{
+            transform: [{ scale: pulseAnim }],
+          }}
         >
           <LinearGradient
-            colors={["#00e5ff", "#66b2ff", "#000000"]}
+            colors={[
+              "#00e5ff",
+              "#66b2ff",
+              "#000000",
+            ]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.button}
           >
             <Text style={styles.buttonText}>
-              {isLoggedIn ? "Go to Account" : "Login / Register"}
+              {isLoggedIn
+                ? "Go to Account"
+                : "Login / Register"}
             </Text>
           </LinearGradient>
         </Animated.View>
@@ -213,18 +270,38 @@ export default function HomeScreen() {
 
       {!isLoggedIn ? (
         <Text style={styles.subtitle}>
-          Log in or register to save your progress.
+          Log in or register to save your
+          progress.
         </Text>
       ) : null}
 
       <Text style={styles.hint}>
-        Tip: Long-press the logo to replay the tutorial.
+        Tip: Long-press the logo to replay the
+        tutorial.
       </Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 16,
+    backgroundColor: "black",
+  },
+  loadingLogo: {
+    width: 180,
+    height: 180,
+    resizeMode: "contain",
+    marginBottom: 8,
+  },
+  loadingText: {
+    color: "#9aa",
+    fontSize: 14,
+    fontWeight: "600",
+  },
   container: {
     flex: 1,
     alignItems: "center",

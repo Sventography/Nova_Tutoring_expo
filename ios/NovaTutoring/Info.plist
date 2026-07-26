@@ -39,7 +39,7 @@
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>91</string>
+	<string>95</string>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>airmail</string>
@@ -77,11 +77,9 @@
 		<true/>
 	</dict>
 	<key>NSCameraUsageDescription</key>
-	<string>Allow $(PRODUCT_NAME) to access your camera</string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>Allow $(PRODUCT_NAME) to access your microphone</string>
+	<string>Nova Tutoring uses the camera only if you choose to scan a payment card during checkout for physical merchandise.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Allow $(PRODUCT_NAME) to access your photos</string>
+	<string>Nova Tutoring uses your photo library only when you choose a profile picture. For example, you can select a photo to display as your account avatar.</string>
 	<key>NSUserActivityTypes</key>
 	<array>
 		<string>$(PRODUCT_BUNDLE_IDENTIFIER).expo.index_route</string>

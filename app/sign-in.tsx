@@ -1,68 +1,145 @@
 // app/sign-in.tsx
-import React, { useEffect, useState } from "react";
+
+import React, {
+  useEffect,
+  useState,
+} from "react";
 import {
-  View,
-  Text,
-  TextInput,
-  Pressable,
-  StyleSheet,
   Alert,
   KeyboardAvoidingView,
-  Platform,
-  ScrollView,
   Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import {
+  useLocalSearchParams,
+  useRouter,
+} from "expo-router";
 import * as Haptics from "expo-haptics";
 import * as Linking from "expo-linking";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { useTheme } from "./context/ThemeContext";
 import { useUser } from "./context/UserContext";
+import { DISCORD_INVITE_URL } from "./constants/community";
 import { showToast } from "./utils/toast";
-
-// ✅ Your real Discord invite
-const DISCORD_INVITE_URL = "https://discord.gg/NR9PAjtrg";
 
 const PENDING_CONFIRMATION_EMAIL_KEY =
   "nova.auth.pending-confirmation-email.v1";
 
+type Mode = "signup" | "login";
+
+function normalizeEmail(
+  value: string
+): string {
+  return String(value || "")
+    .trim()
+    .toLowerCase();
+}
+
+function errorCode(
+  error: any
+): string {
+  return String(
+    error?.code ||
+      error?.error_code ||
+      ""
+  )
+    .trim()
+    .toUpperCase();
+}
+
+function errorMessage(
+  error: any
+): string {
+  return String(
+    error?.message ||
+      error ||
+      ""
+  ).trim();
+}
+
 export default function SignInScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{
-    email?: string | string[];
-    mode?: string | string[];
-  }>();
+
+  const params =
+    useLocalSearchParams<{
+      email?: string | string[];
+      mode?: string | string[];
+    }>();
+
   const { tokens } = useTheme();
+
   const {
     signUpWithEmailPassword,
     loginWithEmailPassword,
+    resetPassword,
     ready,
   } = useUser() as any;
 
-  const [mode, setMode] = useState<"signup" | "login">("signup");
+  const [mode, setMode] =
+    useState<Mode>("signup");
 
-  // Sign Up fields
-  const [suUsername, setSuUsername] = useState("");
-  const [suEmail, setSuEmail] = useState("");
-  const [suPassword, setSuPassword] = useState("");
-  const [suConfirmPassword, setSuConfirmPassword] = useState("");
+  const [
+    suUsername,
+    setSuUsername,
+  ] = useState("");
+  const [suEmail, setSuEmail] =
+    useState("");
+  const [
+    suPassword,
+    setSuPassword,
+  ] = useState("");
+  const [
+    suConfirmPassword,
+    setSuConfirmPassword,
+  ] = useState("");
 
-  // Login fields
-  const [liEmail, setLiEmail] = useState("");
-  const [liPassword, setLiPassword] = useState("");
+  const [liEmail, setLiEmail] =
+    useState("");
+  const [
+    liPassword,
+    setLiPassword,
+  ] = useState("");
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] =
+    useState(false);
+
+  const [
+    discordVisible,
+    setDiscordVisible,
+  ] = useState(false);
 
   useEffect(() => {
-    const rawMode = Array.isArray(params.mode) ? params.mode[0] : params.mode;
-    const rawEmail = Array.isArray(params.email) ? params.email[0] : params.email;
-    const normalizedEmail = String(rawEmail || "").trim().toLowerCase();
+    const rawMode = Array.isArray(
+      params.mode
+    )
+      ? params.mode[0]
+      : params.mode;
+
+    const rawEmail = Array.isArray(
+      params.email
+    )
+      ? params.email[0]
+      : params.email;
+
+    const normalizedEmail =
+      normalizeEmail(
+        String(rawEmail || "")
+      );
 
     if (rawMode === "login") {
       setMode("login");
-    } else if (rawMode === "register" || rawMode === "signup") {
+    } else if (
+      rawMode === "register" ||
+      rawMode === "signup"
+    ) {
       setMode("signup");
     }
 
@@ -71,43 +148,110 @@ export default function SignInScreen() {
     }
   }, [params.email, params.mode]);
 
-  // Discord modal
-  const [discordVisible, setDiscordVisible] = useState(false);
-
   const hapticTap = async () => {
     if (Platform.OS !== "web") {
       try {
-        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      } catch {
-        // ignore haptic errors
-      }
+        await Haptics.impactAsync(
+          Haptics
+            .ImpactFeedbackStyle
+            .Medium
+        );
+      } catch {}
     }
   };
 
-  const switchMode = async (next: "signup" | "login") => {
-    if (mode === next || loading) return;
+  const switchMode = async (
+    next: Mode
+  ) => {
+    if (
+      mode === next ||
+      loading
+    ) {
+      return;
+    }
+
     await hapticTap();
     setMode(next);
   };
 
   const goToMainTabs = () => {
+    (router as any).replace(
+      "/(tabs)/ask"
+    );
+  };
+
+  const goToLoginWithEmail = (
+    email: string
+  ) => {
+    setLiEmail(
+      normalizeEmail(email)
+    );
+    setLiPassword("");
+    setMode("login");
+  };
+
+  const sendResetEmail = async (
+    emailValue: string
+  ) => {
+    const email =
+      normalizeEmail(emailValue);
+
+    if (!email) {
+      Alert.alert(
+        "Enter your email",
+        "Enter the account email first."
+      );
+      return;
+    }
+
     try {
-      router.replace("/(tabs)/ask");
-    } catch {
-      router.replace("/");
+      await resetPassword(email);
+
+      Alert.alert(
+        "Check your email",
+        `We sent password-reset instructions to:\n\n${email}`
+      );
+    } catch (error: any) {
+      Alert.alert(
+        "Could not send reset email",
+        errorMessage(error) ||
+          "Please try again."
+      );
     }
   };
 
   const handleSignUp = async () => {
     if (loading) return;
 
-    const username = suUsername.trim();
-    const email = suEmail.trim().toLowerCase();
+    const username =
+      suUsername.trim();
+    const email =
+      normalizeEmail(suEmail);
     const password = suPassword;
-    const confirmPassword = suConfirmPassword;
+    const confirmPassword =
+      suConfirmPassword;
 
-    if (!username || !email || !password || !confirmPassword) {
-      Alert.alert("Missing info", "Please fill out all fields.");
+    if (
+      !username ||
+      !email ||
+      !password ||
+      !confirmPassword
+    ) {
+      Alert.alert(
+        "Missing info",
+        "Please fill out all fields."
+      );
+      return;
+    }
+
+    if (
+      !email.includes("@") ||
+      !email.includes(".")
+    ) {
+      Alert.alert(
+        "Invalid email",
+        "Enter a valid email address."
+      );
       return;
     }
 
@@ -127,7 +271,11 @@ export default function SignInScreen() {
       return;
     }
 
-    if (!/^[A-Za-z0-9_]+$/.test(username)) {
+    if (
+      !/^[A-Za-z0-9_]+$/.test(
+        username
+      )
+    ) {
       Alert.alert(
         "Invalid username",
         "Use only letters, numbers, and underscores."
@@ -143,73 +291,163 @@ export default function SignInScreen() {
       return;
     }
 
-    if (password !== confirmPassword) {
+    if (
+      password !==
+      confirmPassword
+    ) {
       Alert.alert(
         "Passwords do not match",
-        "Make sure your password and confirm password are the same."
+        "Make sure both password fields match."
       );
       return;
     }
 
     setLoading(true);
+
     try {
       await hapticTap();
 
-      // IMPORTANT: UserContext expects (username, email, password)
-      const result = await signUpWithEmailPassword(
-        username,
-        email,
-        password
-      );
+      const result =
+        await signUpWithEmailPassword(
+          username,
+          email,
+          password
+        );
 
       const confirmationEmail =
-        String(result?.email || email).trim().toLowerCase();
-
-      console.log("[SIGNUP RESULT]", result);
-
-      // Nova requires email confirmation, so every successful
-      // registration stays in the confirmation flow.
-      await AsyncStorage.setItem(
-        PENDING_CONFIRMATION_EMAIL_KEY,
-        confirmationEmail
-      );
-
-      showToast("Account created! Check your email for the code.");
-
-      (router as any).replace({
-        pathname: "/confirm-email",
-        params: {
-          email: confirmationEmail,
-        },
-      });
-
-      return;
-    } catch (e: any) {
-      console.log("signUp error:", e);
-      const code = e?.code || "";
-      const msg = e?.message ? String(e.message) : String(e ?? "");
+        normalizeEmail(
+          String(
+            result?.email ||
+              email
+          )
+        );
 
       if (
-        code === "USERNAME_TAKEN" ||
-        msg.toLowerCase().includes("already taken")
+        result
+          ?.needsEmailConfirmation
+      ) {
+        await AsyncStorage.setItem(
+          PENDING_CONFIRMATION_EMAIL_KEY,
+          confirmationEmail
+        );
+
+        showToast(
+          "Account created! Check your email for the code."
+        );
+
+        (router as any).replace({
+          pathname:
+            "/confirm-email",
+          params: {
+            email:
+              confirmationEmail,
+          },
+        });
+
+        return;
+      }
+
+      await AsyncStorage.removeItem(
+        PENDING_CONFIRMATION_EMAIL_KEY
+      );
+
+      await new Promise(
+        (resolve) =>
+          setTimeout(resolve, 150)
+      );
+
+      showToast(
+        "Account created! You’re signed in."
+      );
+      goToMainTabs();
+    } catch (error: any) {
+      console.log(
+        "signUp error:",
+        error
+      );
+
+      const code =
+        errorCode(error);
+      const message =
+        errorMessage(error);
+      const lower =
+        message.toLowerCase();
+
+      if (
+        code ===
+          "EMAIL_ALREADY_REGISTERED" ||
+        lower.includes(
+          "email is already in use"
+        ) ||
+        lower.includes(
+          "account with this email"
+        )
+      ) {
+        await AsyncStorage.removeItem(
+          PENDING_CONFIRMATION_EMAIL_KEY
+        ).catch(() => {});
+
+        Alert.alert(
+          "Email already in use",
+          "An account already exists with this email. Log in or reset the password instead.",
+          [
+            {
+              text: "Cancel",
+              style: "cancel",
+            },
+            {
+              text:
+                "Reset Password",
+              onPress: () => {
+                void sendResetEmail(
+                  email
+                );
+              },
+            },
+            {
+              text: "Go to Login",
+              onPress: () =>
+                goToLoginWithEmail(
+                  email
+                ),
+            },
+          ]
+        );
+      } else if (
+        code ===
+          "USERNAME_TAKEN" ||
+        lower.includes(
+          "already taken"
+        )
       ) {
         Alert.alert(
           "Username already taken",
           "That username is already taken. Please choose another."
         );
       } else if (
-        code === "over_email_send_rate_limit" ||
-        msg.toLowerCase().includes("rate limit") ||
-        msg.toLowerCase().includes("rate-limit") ||
-        msg.toLowerCase().includes("too many") ||
-        msg.toLowerCase().includes("email rate")
+        code.includes(
+          "RATE_LIMIT"
+        ) ||
+        lower.includes(
+          "rate limit"
+        ) ||
+        lower.includes(
+          "too many"
+        ) ||
+        lower.includes(
+          "email rate"
+        )
       ) {
         Alert.alert(
           "Too many emails",
-          "We’ve sent too many emails recently. Please wait a little while and then try again."
+          "We’ve sent too many emails recently. Please wait a little while and try again."
         );
       } else {
-        Alert.alert("Sign up error", msg || "Could not sign up right now.");
+        Alert.alert(
+          "Sign up error",
+          message ||
+            "Could not sign up right now."
+        );
       }
     } finally {
       setLoading(false);
@@ -219,33 +457,63 @@ export default function SignInScreen() {
   const handleLogin = async () => {
     if (loading) return;
 
-    const email = liEmail.trim().toLowerCase();
+    const email =
+      normalizeEmail(liEmail);
     const password = liPassword;
 
-    if (!email || !password) {
-      Alert.alert("Missing info", "Please enter your email and password.");
+    if (
+      !email ||
+      !password
+    ) {
+      Alert.alert(
+        "Missing info",
+        "Please enter your email and password."
+      );
       return;
     }
 
     setLoading(true);
+
     try {
       await hapticTap();
 
-      await loginWithEmailPassword(email, password);
+      await loginWithEmailPassword(
+        email,
+        password
+      );
 
-      await AsyncStorage.removeItem(PENDING_CONFIRMATION_EMAIL_KEY);
+      await AsyncStorage.removeItem(
+        PENDING_CONFIRMATION_EMAIL_KEY
+      );
 
-      // tiny buffer for downstream listeners
-      await new Promise((resolve) => setTimeout(resolve, 150));
+      await new Promise(
+        (resolve) =>
+          setTimeout(resolve, 150)
+      );
 
-      showToast("Welcome back! You’re signed in.");
+      showToast(
+        "Welcome back! You’re signed in."
+      );
       goToMainTabs();
-    } catch (e: any) {
-      console.log("login error:", e);
-      const msg = e?.message ? String(e.message) : String(e ?? "");
-      const lower = msg.toLowerCase();
+    } catch (error: any) {
+      console.log(
+        "login error:",
+        error
+      );
 
-      if (lower.includes("confirm your email")) {
+      const message =
+        errorMessage(error);
+      const lower =
+        message.toLowerCase();
+
+      if (
+        lower.includes(
+          "confirm your email"
+        ) ||
+        lower.includes(
+          "email not confirmed"
+        )
+      ) {
         await AsyncStorage.setItem(
           PENDING_CONFIRMATION_EMAIL_KEY,
           email
@@ -255,126 +523,173 @@ export default function SignInScreen() {
           "Email not confirmed",
           "Enter the code from your Nova Tutoring email, or resend the confirmation message.",
           [
-            { text: "Cancel", style: "cancel" },
             {
-              text: "Enter code",
+              text: "Cancel",
+              style: "cancel",
+            },
+            {
+              text: "Enter Code",
               onPress: () =>
-                router.replace({
-                  pathname: "/confirm-email",
-                  params: { email },
-                }),
+                (router as any).replace(
+                  {
+                    pathname:
+                      "/confirm-email",
+                    params: {
+                      email,
+                    },
+                  }
+                ),
             },
           ]
         );
       } else {
-        Alert.alert("Login error", msg || "Could not log you in right now.");
+        Alert.alert(
+          "Login error",
+          message ||
+            "Could not log you in right now."
+        );
       }
     } finally {
       setLoading(false);
     }
   };
 
-  const handleOpenDiscord = () => {
-    if (!DISCORD_INVITE_URL) {
-      Alert.alert(
-        "Discord link not set",
-        "Please update the Discord invite link in the app before opening."
-      );
-      return;
-    }
+  const handleOpenDiscord =
+    async () => {
+      if (
+        !DISCORD_INVITE_URL
+      ) {
+        Alert.alert(
+          "Discord link not configured",
+          "Create a permanent Discord invite and add EXPO_PUBLIC_DISCORD_INVITE_URL to the EAS environment."
+        );
+        return;
+      }
 
-    try {
-      Linking.openURL(DISCORD_INVITE_URL);
-    } catch (e) {
-      Alert.alert(
-        "Could not open Discord",
-        "Please check your internet connection or open the link from the App Store page."
-      );
-    }
-  };
+      try {
+        setDiscordVisible(false);
+        await Linking.openURL(
+          DISCORD_INVITE_URL
+        );
+      } catch {
+        Alert.alert(
+          "Could not open Discord",
+          "The Discord invite could not be opened. Please check that the invite is permanent and still valid."
+        );
+      }
+    };
 
-  const subtitle =
-    mode === "signup"
-      ? "Create an account to save your progress!"
-      : "Log in to see your saved progress!";
+  const isSignup =
+    mode === "signup";
 
-  const isSignup = mode === "signup";
+  const subtitle = isSignup
+    ? "Create an account to save your progress!"
+    : "Log in to see your saved progress!";
 
-  const inputBaseStyle = {
+  const inputStyle = {
     borderColor: tokens.border,
-    backgroundColor: tokens.card,
+    backgroundColor:
+      tokens.card,
     color: tokens.text,
   } as const;
 
-  const labelColor = { color: tokens.cardText } as const;
-  const subtitleColor = { color: tokens.cardText } as const;
-  const headerCardBg = {
-    backgroundColor: tokens.isDark
-      ? "rgba(0, 8, 16, 0.9)"
-      : "rgba(255,255,255,0.9)",
+  const cardBackground = {
+    backgroundColor:
+      tokens.isDark
+        ? "rgba(0, 8, 16, 0.92)"
+        : "rgba(255,255,255,0.94)",
   } as const;
 
   return (
-    <LinearGradient colors={tokens.gradient} style={{ flex: 1 }}>
+    <LinearGradient
+      colors={tokens.gradient}
+      style={styles.flex}
+    >
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={styles.flex}
+        behavior={
+          Platform.OS === "ios"
+            ? "padding"
+            : undefined
+        }
       >
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="always"
+          contentContainerStyle={
+            styles.scrollContent
+          }
+          keyboardShouldPersistTaps="handled"
         >
           <View
             style={[
               styles.card,
-              headerCardBg,
-              { borderColor: tokens.border },
+              cardBackground,
+              {
+                borderColor:
+                  tokens.border,
+              },
             ]}
           >
-            {/* Toggle header */}
             <View
               style={[
                 styles.headerRow,
-                { borderColor: tokens.border, backgroundColor: "transparent" },
+                {
+                  borderColor:
+                    tokens.border,
+                },
               ]}
             >
               <Pressable
                 style={[
                   styles.headerTab,
-                  isSignup && {
-                    backgroundColor: tokens.isDark
-                      ? "rgba(0,229,255,0.18)"
-                      : "rgba(0,120,200,0.18)",
-                  },
+                  isSignup &&
+                    styles.headerTabActive,
                 ]}
-                onPress={() => switchMode("signup")}
+                onPress={() =>
+                  void switchMode(
+                    "signup"
+                  )
+                }
                 disabled={loading}
               >
                 <Text
                   style={[
                     styles.headerTabText,
-                    isSignup && { color: tokens.text },
+                    {
+                      color:
+                        isSignup
+                          ? tokens.text
+                          : tokens
+                              .cardText,
+                    },
                   ]}
                 >
                   Sign Up
                 </Text>
               </Pressable>
+
               <Pressable
                 style={[
                   styles.headerTab,
-                  !isSignup && {
-                    backgroundColor: tokens.isDark
-                      ? "rgba(0,229,255,0.18)"
-                      : "rgba(0,120,200,0.18)",
-                  },
+                  !isSignup &&
+                    styles.headerTabActive,
                 ]}
-                onPress={() => switchMode("login")}
+                onPress={() =>
+                  void switchMode(
+                    "login"
+                  )
+                }
                 disabled={loading}
               >
                 <Text
                   style={[
                     styles.headerTabText,
-                    !isSignup && { color: tokens.text },
+                    {
+                      color:
+                        !isSignup
+                          ? tokens.text
+                          : tokens
+                              .cardText,
+                    },
                   ]}
                 >
                   Log In
@@ -382,399 +697,605 @@ export default function SignInScreen() {
               </Pressable>
             </View>
 
-            <Text style={[styles.subtitle, subtitleColor]}>{subtitle}</Text>
+            <Text
+              style={[
+                styles.subtitle,
+                {
+                  color:
+                    tokens.cardText,
+                },
+              ]}
+            >
+              {subtitle}
+            </Text>
 
-            {/* Optional tiny status so you know when profile is syncing */}
-            {!ready && (
+            {!ready ? (
               <Text
                 style={[
-                  styles.subtitle,
-                  { fontSize: 11, opacity: 0.8, color: tokens.cardText },
+                  styles.syncText,
+                  {
+                    color:
+                      tokens.cardText,
+                  },
                 ]}
               >
-                Syncing profile… you can still fill this out.
+                Syncing account
+                services…
               </Text>
-            )}
+            ) : null}
 
-            {/* SIGN UP FORM */}
             {isSignup ? (
-              <View style={styles.form}>
-                <Text style={[styles.label, labelColor]}>Username</Text>
+              <View
+                style={styles.form}
+              >
+                <Text
+                  style={[
+                    styles.label,
+                    {
+                      color:
+                        tokens.cardText,
+                    },
+                  ]}
+                >
+                  Username
+                </Text>
+
                 <TextInput
                   value={suUsername}
-                  onChangeText={setSuUsername}
-                  placeholder="NovaUser"
-                  placeholderTextColor={
-                    tokens.isDark ? "#6b7685" : "#607080"
+                  onChangeText={
+                    setSuUsername
                   }
-                  style={[styles.input, inputBaseStyle]}
+                  placeholder="NovaUser"
+                  placeholderTextColor="#6b7685"
+                  style={[
+                    styles.input,
+                    inputStyle,
+                  ]}
                   autoCapitalize="none"
                   autoCorrect={false}
                   maxLength={8}
                   editable={!loading}
                 />
 
-                <Text style={[styles.label, labelColor]}>Email</Text>
+                <Text
+                  style={[
+                    styles.label,
+                    {
+                      color:
+                        tokens.cardText,
+                    },
+                  ]}
+                >
+                  Email
+                </Text>
+
                 <TextInput
                   value={suEmail}
-                  onChangeText={setSuEmail}
+                  onChangeText={
+                    setSuEmail
+                  }
                   placeholder="you@example.com"
+                  placeholderTextColor="#6b7685"
+                  style={[
+                    styles.input,
+                    inputStyle,
+                  ]}
                   autoCapitalize="none"
-                  keyboardType={
-                    Platform.OS === "web" ? "default" : "email-address"
-                  }
-                  placeholderTextColor={
-                    tokens.isDark ? "#6b7685" : "#607080"
-                  }
-                  style={[styles.input, inputBaseStyle]}
                   autoCorrect={false}
+                  keyboardType="email-address"
+                  textContentType="emailAddress"
                   editable={!loading}
                 />
 
-                <Text style={[styles.label, labelColor]}>Password</Text>
+                <Text
+                  style={[
+                    styles.label,
+                    {
+                      color:
+                        tokens.cardText,
+                    },
+                  ]}
+                >
+                  Password
+                </Text>
+
                 <TextInput
                   value={suPassword}
-                  onChangeText={setSuPassword}
-                  placeholder="••••••••"
-                  secureTextEntry
-                  placeholderTextColor={
-                    tokens.isDark ? "#6b7685" : "#607080"
+                  onChangeText={
+                    setSuPassword
                   }
-                  style={[styles.input, inputBaseStyle]}
+                  placeholder="••••••••"
+                  placeholderTextColor="#6b7685"
+                  style={[
+                    styles.input,
+                    inputStyle,
+                  ]}
+                  secureTextEntry
+                  autoCapitalize="none"
                   autoCorrect={false}
+                  textContentType="newPassword"
                   editable={!loading}
                 />
 
-                <Text style={[styles.label, labelColor]}>
+                <Text
+                  style={[
+                    styles.label,
+                    {
+                      color:
+                        tokens.cardText,
+                    },
+                  ]}
+                >
                   Confirm Password
                 </Text>
+
                 <TextInput
-                  value={suConfirmPassword}
-                  onChangeText={setSuConfirmPassword}
-                  placeholder="••••••••"
-                  secureTextEntry
-                  placeholderTextColor={
-                    tokens.isDark ? "#6b7685" : "#607080"
+                  value={
+                    suConfirmPassword
                   }
-                  style={[styles.input, inputBaseStyle]}
+                  onChangeText={
+                    setSuConfirmPassword
+                  }
+                  placeholder="••••••••"
+                  placeholderTextColor="#6b7685"
+                  style={[
+                    styles.input,
+                    inputStyle,
+                  ]}
+                  secureTextEntry
+                  autoCapitalize="none"
                   autoCorrect={false}
+                  textContentType="newPassword"
                   editable={!loading}
+                  onSubmitEditing={() => {
+                    if (!loading) {
+                      void handleSignUp();
+                    }
+                  }}
                 />
 
                 <Pressable
-                  onPress={handleSignUp}
+                  onPress={() =>
+                    void handleSignUp()
+                  }
+                  disabled={loading}
                   style={({ pressed }) => [
                     styles.primaryBtn,
                     {
-                      backgroundColor: tokens.accent,
+                      backgroundColor:
+                        tokens.accent,
                     },
-                    pressed && { opacity: 0.8 },
-                    loading && { opacity: 0.7 },
+                    pressed &&
+                      styles.pressed,
+                    loading &&
+                      styles.disabled,
                   ]}
-                  disabled={loading}
                 >
                   <Text
-                    style={[
-                      styles.primaryBtnText,
-                      {
-                        color: "#001018",
-                      },
-                    ]}
+                    style={
+                      styles.primaryBtnText
+                    }
                   >
-                    {loading ? "Creating account..." : "Create Account"}
+                    {loading
+                      ? "Creating account…"
+                      : "Create Account"}
                   </Text>
                 </Pressable>
               </View>
             ) : (
-              /* LOGIN FORM */
-              <View style={styles.form}>
-                {/* Email wrapped & raised with zIndex so it can’t be covered */}
-                <View style={styles.loginEmailWrapper}>
-                  <Text style={[styles.label, labelColor]}>Email</Text>
-                  <TextInput
-                    value={liEmail}
-                    onChangeText={setLiEmail}
-                    placeholder="you@example.com"
-                    autoCapitalize="none"
-                    keyboardType={
-                      Platform.OS === "web" ? "default" : "email-address"
-                    }
-                    placeholderTextColor={
-                      tokens.isDark ? "#6b7685" : "#607080"
-                    }
-                    style={[
-                      styles.input,
-                      inputBaseStyle,
-                      styles.loginEmailInput,
-                    ]}
-                    autoCorrect={false}
-                    editable={!loading}
-                    onPressIn={() => {
-                      console.log("LOGIN EMAIL PRESSED");
-                    }}
-                  />
-                </View>
+              <View
+                style={styles.form}
+              >
+                <Text
+                  style={[
+                    styles.label,
+                    {
+                      color:
+                        tokens.cardText,
+                    },
+                  ]}
+                >
+                  Email
+                </Text>
 
-                <Text style={[styles.label, labelColor]}>Password</Text>
                 <TextInput
-                  value={liPassword}
-                  onChangeText={setLiPassword}
-                  placeholder="••••••••"
-                  secureTextEntry
-                  placeholderTextColor={
-                    tokens.isDark ? "#6b7685" : "#607080"
+                  value={liEmail}
+                  onChangeText={
+                    setLiEmail
                   }
-                  style={[styles.input, inputBaseStyle]}
+                  placeholder="you@example.com"
+                  placeholderTextColor="#6b7685"
+                  style={[
+                    styles.input,
+                    inputStyle,
+                  ]}
+                  autoCapitalize="none"
                   autoCorrect={false}
+                  keyboardType="email-address"
+                  textContentType="emailAddress"
                   editable={!loading}
                 />
 
+                <Text
+                  style={[
+                    styles.label,
+                    {
+                      color:
+                        tokens.cardText,
+                    },
+                  ]}
+                >
+                  Password
+                </Text>
+
+                <TextInput
+                  value={liPassword}
+                  onChangeText={
+                    setLiPassword
+                  }
+                  placeholder="••••••••"
+                  placeholderTextColor="#6b7685"
+                  style={[
+                    styles.input,
+                    inputStyle,
+                  ]}
+                  secureTextEntry
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  textContentType="password"
+                  editable={!loading}
+                  onSubmitEditing={() => {
+                    if (!loading) {
+                      void handleLogin();
+                    }
+                  }}
+                />
+
                 <Pressable
-                  onPress={handleLogin}
+                  onPress={() =>
+                    void handleLogin()
+                  }
+                  disabled={loading}
                   style={({ pressed }) => [
                     styles.primaryBtn,
                     {
-                      backgroundColor: tokens.accent,
+                      backgroundColor:
+                        tokens.accent,
                     },
-                    pressed && { opacity: 0.8 },
-                    loading && { opacity: 0.7 },
+                    pressed &&
+                      styles.pressed,
+                    loading &&
+                      styles.disabled,
                   ]}
-                  disabled={loading}
                 >
                   <Text
-                    style={[
-                      styles.primaryBtnText,
-                      {
-                        color: "#001018",
-                      },
-                    ]}
+                    style={
+                      styles.primaryBtnText
+                    }
                   >
-                    {loading ? "Logging in..." : "Log In"}
+                    {loading
+                      ? "Logging in…"
+                      : "Log In"}
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  disabled={loading}
+                  onPress={() =>
+                    void sendResetEmail(
+                      liEmail
+                    )
+                  }
+                  style={
+                    styles.linkButton
+                  }
+                >
+                  <Text
+                    style={
+                      styles.linkText
+                    }
+                  >
+                    Forgot Password?
                   </Text>
                 </Pressable>
               </View>
             )}
 
-            {/* Discord link */}
-            <View style={{ marginTop: 16, alignItems: "center" }}>
-              <Pressable
-                onPress={() => setDiscordVisible(true)}
-                disabled={loading}
+            <Pressable
+              onPress={() =>
+                setDiscordVisible(
+                  true
+                )
+              }
+              disabled={loading}
+              style={
+                styles.discordButton
+              }
+            >
+              <Text
+                style={
+                  styles.discordText
+                }
               >
-                <Text style={styles.discordLinkText}>
-                  💬 Join the Nova Tutoring Discord
+                💬 Join the Nova
+                Tutoring Discord
+              </Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() =>
+                (router as any).replace(
+                  "/"
+                )
+              }
+              disabled={loading}
+              style={styles.backButton}
+            >
+              <Text
+                style={styles.backText}
+              >
+                ← Back to Home
+              </Text>
+            </Pressable>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+
+      <Modal
+        visible={discordVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() =>
+          setDiscordVisible(false)
+        }
+      >
+        <View
+          style={
+            styles.modalBackdrop
+          }
+        >
+          <View
+            style={
+              styles.modalCard
+            }
+          >
+            <Text
+              style={
+                styles.modalTitle
+              }
+            >
+              Join the Nova
+              Tutoring Discord
+            </Text>
+
+            <Text
+              style={styles.modalBody}
+            >
+              Get study tips,
+              updates, sneak peeks,
+              and help from the Nova
+              community.
+            </Text>
+
+            <View
+              style={
+                styles.modalButtons
+              }
+            >
+              <Pressable
+                onPress={() =>
+                  setDiscordVisible(
+                    false
+                  )
+                }
+                style={[
+                  styles.modalButton,
+                  styles
+                    .secondaryModalButton,
+                ]}
+              >
+                <Text
+                  style={
+                    styles
+                      .secondaryModalText
+                  }
+                >
+                  Close
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() =>
+                  void handleOpenDiscord()
+                }
+                style={[
+                  styles.modalButton,
+                  styles
+                    .primaryModalButton,
+                ]}
+              >
+                <Text
+                  style={
+                    styles
+                      .primaryModalText
+                  }
+                >
+                  Open Discord
                 </Text>
               </Pressable>
             </View>
-
-            {/* Back to home */}
-            <Pressable
-              style={styles.backRow}
-              onPress={() => router.replace("/")}
-              disabled={loading}
-            >
-              <Text style={styles.backText}>← Back to Home</Text>
-            </Pressable>
           </View>
-
-          {/* Discord modal */}
-          <Modal
-            visible={discordVisible}
-            transparent
-            animationType="fade"
-            onRequestClose={() => setDiscordVisible(false)}
-          >
-            <View style={styles.modalBackdrop}>
-              <View style={styles.modalCard}>
-                <Text style={styles.modalTitle}>
-                  Join the Nova Tutoring Discord
-                </Text>
-                <Text style={styles.modalBody}>
-                  • Get study tips, updates, and sneak peeks{"\n"}
-                  • Share wins and get help from others{"\n"}
-                  • Hang out with the Nova community
-                </Text>
-
-                <View style={styles.modalBtnRow}>
-                  <Pressable
-                    style={[styles.modalBtn, styles.modalBtnSecondary]}
-                    onPress={() => setDiscordVisible(false)}
-                  >
-                    <Text style={styles.modalBtnSecondaryText}>Close</Text>
-                  </Pressable>
-
-                  <Pressable
-                    style={[styles.modalBtn, styles.modalBtnPrimary]}
-                    onPress={handleOpenDiscord}
-                  >
-                    <Text style={styles.modalBtnPrimaryText}>
-                      Open Discord
-                    </Text>
-                  </Pressable>
-                </View>
-              </View>
-            </View>
-          </Modal>
-        </ScrollView>
-      </KeyboardAvoidingView>
+        </View>
+      </Modal>
     </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
+  flex: {
+    flex: 1,
+  },
   scrollContent: {
     flexGrow: 1,
+    justifyContent: "center",
     paddingHorizontal: 16,
     paddingVertical: 40,
-    justifyContent: "center",
-  },
-  loadingCenter: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  loadingText: {
-    fontSize: 16,
-    fontWeight: "600",
   },
   card: {
-    borderRadius: 18,
-    padding: 18,
     borderWidth: 1.5,
+    borderRadius: 20,
+    padding: 18,
   },
   headerRow: {
     flexDirection: "row",
-    marginBottom: 8,
-    borderRadius: 999,
-    overflow: "hidden",
     borderWidth: 1,
+    borderRadius: 14,
+    overflow: "hidden",
   },
   headerTab: {
     flex: 1,
-    paddingVertical: 10,
+    paddingVertical: 12,
     alignItems: "center",
-    backgroundColor: "transparent",
+  },
+  headerTabActive: {
+    backgroundColor:
+      "rgba(0,229,255,0.16)",
   },
   headerTabText: {
-    color: "#7ea3b8",
-    fontWeight: "700",
-    fontSize: 14,
+    fontSize: 16,
+    fontWeight: "800",
   },
   subtitle: {
-    marginTop: 4,
-    marginBottom: 10,
-    fontSize: 13,
+    marginTop: 18,
     textAlign: "center",
+    fontSize: 15,
+  },
+  syncText: {
+    marginTop: 8,
+    textAlign: "center",
+    fontSize: 11,
+    opacity: 0.75,
   },
   form: {
-    marginTop: 4,
+    marginTop: 20,
   },
   label: {
-    fontSize: 13,
-    marginTop: 10,
-    marginBottom: 4,
+    marginTop: 12,
+    marginBottom: 7,
+    fontSize: 14,
+    fontWeight: "700",
   },
   input: {
-    borderWidth: 1.3,
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: Platform.OS === "ios" ? 10 : 8,
-    fontSize: 14,
+    minHeight: 50,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    fontSize: 16,
   },
   primaryBtn: {
-    marginTop: 18,
-    borderRadius: 999,
-    paddingVertical: 12,
+    marginTop: 22,
+    minHeight: 52,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
   },
   primaryBtnText: {
-    fontWeight: "800",
+    color: "#001018",
     fontSize: 16,
+    fontWeight: "900",
   },
-  backRow: {
-    marginTop: 16,
-    alignItems: "center",
+  linkButton: {
+    alignSelf: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+  },
+  linkText: {
+    color: "#70dfff",
+    fontWeight: "800",
+  },
+  discordButton: {
+    marginTop: 18,
+    alignSelf: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+  },
+  discordText: {
+    color: "#79e7ff",
+    fontSize: 15,
+    fontWeight: "800",
+    textAlign: "center",
+  },
+  backButton: {
+    alignSelf: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 10,
   },
   backText: {
-    color: "#9ad8ff",
-    fontSize: 13,
-    textDecorationLine: "underline",
+    color: "#9aa5b1",
+    fontWeight: "700",
   },
-  discordLinkText: {
-    color: "#9ad8ff",
-    fontSize: 13,
-    fontWeight: "600",
-    textDecorationLine: "underline",
+  pressed: {
+    opacity: 0.8,
+  },
+  disabled: {
+    opacity: 0.6,
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.55)",
     alignItems: "center",
     justifyContent: "center",
-    padding: 24,
+    padding: 22,
+    backgroundColor:
+      "rgba(0,0,0,0.72)",
   },
   modalCard: {
     width: "100%",
-    maxWidth: 360,
-    borderRadius: 18,
-    borderWidth: 1.5,
-    borderColor: "#3da9ff",
-    padding: 18,
-    backgroundColor: "rgba(0, 10, 20, 0.96)",
+    maxWidth: 420,
+    padding: 22,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor:
+      "rgba(0,229,255,0.55)",
+    backgroundColor: "#11131c",
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: "800",
-    marginBottom: 8,
+    color: "#ffffff",
+    fontSize: 21,
+    fontWeight: "900",
     textAlign: "center",
-    color: "#e6f7ff",
   },
   modalBody: {
-    fontSize: 13,
-    lineHeight: 18,
-    color: "#c3e4ff",
-    marginBottom: 14,
-    textAlign: "left",
+    marginTop: 14,
+    color: "#c7ccd4",
+    fontSize: 15,
+    lineHeight: 22,
+    textAlign: "center",
   },
-  modalBtnRow: {
+  modalButtons: {
+    marginTop: 22,
     flexDirection: "row",
-    gap: 10,
+    gap: 12,
   },
-  modalBtn: {
+  modalButton: {
     flex: 1,
-    paddingVertical: 10,
-    borderRadius: 999,
+    minHeight: 46,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
   },
-  modalBtnSecondary: {
-    borderWidth: 1.2,
-    borderColor: "#5f7b8b",
-    backgroundColor: "rgba(0,0,0,0.2)",
+  secondaryModalButton: {
+    borderWidth: 1,
+    borderColor: "#59606d",
   },
-  modalBtnPrimary: {
-    borderWidth: 1.2,
-    borderColor: "#3da9ff",
-    backgroundColor: "#3da9ff",
+  primaryModalButton: {
+    backgroundColor: "#00e5ff",
   },
-  modalBtnSecondaryText: {
-    color: "#d7ecff",
-    fontWeight: "700",
-    fontSize: 13,
-  },
-  modalBtnPrimaryText: {
-    color: "#001018",
+  secondaryModalText: {
+    color: "#ffffff",
     fontWeight: "800",
-    fontSize: 13,
   },
-  // 🔼 raise the login email field above any stray overlays
-  loginEmailWrapper: {
-    position: "relative",
-    zIndex: 50,
-  },
-  loginEmailInput: {
-    position: "relative",
-    zIndex: 51,
+  primaryModalText: {
+    color: "#001018",
+    fontWeight: "900",
   },
 });

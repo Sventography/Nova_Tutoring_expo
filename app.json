@@ -18,7 +18,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.sventography.novatutoring.ios",
-      "buildNumber": "92"
+      "buildNumber": "95"
     },
     "android": {
       "package": "com.sventography.novatutoring",
@@ -45,7 +45,6 @@
       [
         "@stripe/stripe-react-native",
         {
-          "merchantIdentifier": "merchant.com.sventography.novatutoring",
           "enableGooglePay": false
         }
       ],

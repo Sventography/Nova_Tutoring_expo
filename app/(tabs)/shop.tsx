@@ -424,19 +424,19 @@ function toThemeCtxId(id: string | null) {
   if (!id) return null;
   const cid = canonId(id);
   const map: Record<string, string> = {
-    "theme:neon": "neon",
+    "theme:neon": "theme:neon",
     "theme:starry": "theme:starry",
-    "theme:pink": "pink",
-    "theme:dark": "dark",
-    "theme:mint": "mint",
-    "theme:glitter": "glitter",
+    "theme:pink": "theme:pink",
+    "theme:dark": "theme:dark",
+    "theme:mint": "theme:mint",
+    "theme:glitter": "theme:glitter",
     "theme:blackgold": "theme:blackgold",
-    "theme:crimson": "crimson",
-    "theme:emerald": "emerald",
+    "theme:crimson": "theme:crimson",
+    "theme:emerald": "theme:emerald",
     "theme:neonpurple": "theme:neonpurple",
-    "theme:silver": "silver",
+    "theme:silver": "theme:silver",
   };
-  return map[cid] ?? (cid.startsWith("theme:") ? cid.slice(6) : cid);
+  return map[cid] ?? cid;
 }
 
 const track = (event: string, props?: Record<string, any>) => {
@@ -991,12 +991,16 @@ function OrderSuccessModal({
 function ItemDetailModal({
   visible,
   item,
+  owned = false,
+  equipped = false,
   onClose,
   onPrimaryAction,
   primaryLabel,
 }: {
   visible: boolean;
   item: any | null;
+  owned?: boolean;
+  equipped?: boolean;
   onClose: () => void;
   onPrimaryAction?: () => void;
   primaryLabel?: string;
@@ -1067,6 +1071,33 @@ function ItemDetailModal({
               {locked ? (
                 <View style={{ marginBottom: 12 }}>
                   <ComingSoonPill />
+                </View>
+              ) : null}
+
+              {owned && !locked ? (
+                <View
+                  style={{
+                    alignSelf: "center",
+                    marginBottom: 12,
+                    paddingHorizontal: 12,
+                    paddingVertical: 7,
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    borderColor: equipped ? "#FACC15" : "#22E5FF",
+                    backgroundColor: equipped
+                      ? "rgba(250,204,21,0.16)"
+                      : "rgba(34,229,255,0.13)",
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: equipped ? "#FDE68A" : "#BFFBFF",
+                      fontSize: 12,
+                      fontWeight: "900",
+                    }}
+                  >
+                    {equipped ? "EQUIPPED" : "OWNED"}
+                  </Text>
                 </View>
               ) : null}
 
@@ -1175,7 +1206,7 @@ function ItemDetailModal({
                 </Text>
               ) : null}
 
-              {(priceCoins || priceUSD) && !locked ? (
+              {(priceCoins || priceUSD) && !locked && !owned ? (
                 <View
                   style={{
                     marginTop: 8,
@@ -2812,8 +2843,7 @@ export default function Shop() {
   function unequipThemeImmediate(meta?: Record<string, any>) {
     const prev = themeId;
     if (typeof setThemeById === "function") {
-      const def = toThemeCtxId("theme_neon") ?? "neon";
-      setThemeById(def as any);
+      setThemeById("theme:dark" as any);
     }
     track("shop_unequip", { kind: "theme", id: prev, ...meta });
   }
@@ -2973,6 +3003,23 @@ export default function Shop() {
       }),
     [ownedCompanionIds, purchases, isOwnedAny]
   );
+
+  function isCompanionOwned(rawId: string | null | undefined): boolean {
+    if (!rawId) return false;
+    const cid = canonId(rawId);
+
+    return (
+      isOwnedAny(rawId) ||
+      (ownedCompanionIds || []).some(
+        (ownedId: string) => canonId(ownedId) === cid
+      )
+    );
+  }
+
+  function isCompanionEquipped(rawId: string | null | undefined): boolean {
+    if (!rawId || !equippedCompanionId) return false;
+    return canonId(rawId) === canonId(equippedCompanionId);
+  }
 
   function quickEquip(id: string, kind: "theme" | "cursor") {
     const cid = canonId(id);
@@ -4199,9 +4246,14 @@ export default function Shop() {
                     }}
                   >
                     <Pressable
-                      onPress={() => setDetailItem(it)}
-                      onLongPress={() => triggerCompanion(it.id)}
-                      delayLongPress={180}
+                      onPress={() => triggerCompanion(it.id)}
+                      onLongPress={() => setDetailItem(it)}
+                      delayLongPress={350}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${
+                        isActive ? "Equipped" : "Equip"
+                      } ${it.shortLabel || it.title}`}
+                      accessibilityHint="Tap to equip. Press and hold for details."
                       style={({ pressed }) => ({
                         width: 72,
                         height: 72,
@@ -4276,19 +4328,17 @@ export default function Shop() {
                       </Text>
                     )}
 
-                    {isActive && (
-                      <Text
-                        style={{
-                          color: "#FACC15",
-                          fontSize: 10,
-                          fontWeight: "800",
-                          marginTop: 2,
-                          textAlign: "center",
-                        }}
-                      >
-                        Equipped
-                      </Text>
-                    )}
+                    <Text
+                      style={{
+                        color: isActive ? "#FACC15" : "#9FEFFF",
+                        fontSize: 10,
+                        fontWeight: "800",
+                        marginTop: 2,
+                        textAlign: "center",
+                      }}
+                    >
+                      {isActive ? "Equipped" : "Tap to equip"}
+                    </Text>
                   </Animated.View>
                 );
               })}
@@ -4622,6 +4672,35 @@ export default function Shop() {
       <ItemDetailModal
         visible={!!detailItem}
         item={detailItem}
+        owned={
+          detailItem?.category === "companions"
+            ? isCompanionOwned(detailItem?.id)
+            : detailItem
+            ? isOwnedAny(detailItem.id)
+            : false
+        }
+        equipped={
+          detailItem?.category === "companions"
+            ? isCompanionEquipped(detailItem?.id)
+            : false
+        }
+        primaryLabel={
+          detailItem?.category === "companions" &&
+          isCompanionOwned(detailItem?.id) &&
+          !isCompanionEquipped(detailItem?.id)
+            ? "Equip Companion"
+            : undefined
+        }
+        onPrimaryAction={
+          detailItem?.category === "companions" &&
+          isCompanionOwned(detailItem?.id) &&
+          !isCompanionEquipped(detailItem?.id)
+            ? () => {
+                triggerCompanion(detailItem.id);
+                setDetailItem(null);
+              }
+            : undefined
+        }
         onClose={() => setDetailItem(null)}
       />
 

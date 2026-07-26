@@ -7,6 +7,7 @@ import React, {
   useState,
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { DeviceEventEmitter } from "react-native";
 import { supabase } from "../lib/supabase";
 import { useUser } from "./UserContext";
 
@@ -23,6 +24,7 @@ type PurchasesCtx = {
 
 const BASE_KEY = "@nova/purchases";
 const LEGACY_KEYS = ["@nova/purchases", "@nova/purchases.v2"];
+const SHOP_PURCHASE_INVENTORY_EVENT = "shop:purchase_inventory";
 
 function storageKey(userId: string | null): string {
   return userId ? `${BASE_KEY}/${userId}` : `${BASE_KEY}/guest`;
@@ -559,6 +561,34 @@ export function PurchasesProvider({
         console.warn("[PurchasesContext] sync purchases threw:", e);
       }
     })();
+  }, [purchases, supabaseUserId, hydrated]);
+
+  /* ---------------- achievement purchase inventory baseline ---------------- */
+
+  useEffect(() => {
+    if (!hydrated) return;
+
+    const normalized = normalizePurchases(purchases);
+    const total = Object.keys(normalized).length;
+
+    const emitInventory = () => {
+      DeviceEventEmitter.emit(SHOP_PURCHASE_INVENTORY_EVENT, {
+        total,
+        userId: supabaseUserId ?? null,
+      });
+    };
+
+    // Emit more than once because PurchasesProvider and AchievementsProvider
+    // hydrate independently during startup. The achievement listener ignores
+    // repeats after it has accepted its first non-zero baseline.
+    emitInventory();
+    const shortRetry = setTimeout(emitInventory, 250);
+    const longRetry = setTimeout(emitInventory, 1000);
+
+    return () => {
+      clearTimeout(shortRetry);
+      clearTimeout(longRetry);
+    };
   }, [purchases, supabaseUserId, hydrated]);
 
   /* ------------------ sync Ask memory tier on purchases change --------------- */

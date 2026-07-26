@@ -23,8 +23,12 @@ const STORAGE_BASE_ASK_COUNT = "@achieve/askCount.v1";
 const STORAGE_BASE_FLASHCARD_COUNT = "@achieve/flashcardCount.v1";
 const STORAGE_BASE_BRAIN_COUNT = "@achieve/brainteaserCount.v1";
 const STORAGE_BASE_RELAX_MIN = "@achieve/relaxMinutes.v1";
+const STORAGE_BASE_PURCHASE_COUNT = "@achieve/purchaseCount.v1";
+const STORAGE_BASE_PURCHASE_KEYS = "@achieve/purchaseKeys.v1";
 
 export const ACHIEVEMENT_EVENT = "ACHIEVEMENT_EVENT";
+export const SHOP_PURCHASE_COMPLETED_EVENT = "shop:purchase_completed";
+export const SHOP_PURCHASE_INVENTORY_EVENT = "shop:purchase_inventory";
 
 // ─────────────── TYPES ───────────────
 
@@ -102,6 +106,7 @@ const ASK_THRESHOLDS = [
 const FLASH_THRESHOLDS = [1, 5, 10, 25, 50, 100, 200];
 const BRAIN_THRESHOLDS = [1, 3, 5, 10, 20, 50, 100];
 const RELAX_THRESHOLDS = [5, 10, 20, 30, 60, 120];
+const PURCHASE_THRESHOLDS = [1, 3, 5, 10, 20];
 
 // ─────────────── HELPERS ───────────────
 
@@ -141,6 +146,10 @@ export function AchievementsProvider({
   const flashCountRef = useRef<number>(0);
   const brainCountRef = useRef<number>(0);
   const relaxMinutesRef = useRef<number>(0);
+  const purchaseCountRef = useRef<number>(0);
+  const purchaseKeysRef = useRef<Set<string>>(new Set());
+  const purchaseBaselineReadyRef = useRef(false);
+  const inventoryBaselineTotalRef = useRef(0);
   const [hydrated, setHydrated] = useState(false);
 
   const { addCoins } = useCoins();
@@ -197,6 +206,10 @@ export function AchievementsProvider({
         flashCountRef.current = 0;
         brainCountRef.current = 0;
         relaxMinutesRef.current = 0;
+        purchaseCountRef.current = 0;
+        purchaseKeysRef.current = new Set();
+        purchaseBaselineReadyRef.current = false;
+        inventoryBaselineTotalRef.current = 0;
         setUnlocked({});
 
         const uid = supabaseUserId ?? null;
@@ -208,6 +221,8 @@ export function AchievementsProvider({
           rawFlashCount,
           rawBrainCount,
           rawRelaxMin,
+          rawPurchaseCount,
+          rawPurchaseKeys,
         ] = await Promise.all([
           AsyncStorage.getItem(storageKey(STORAGE_BASE_UNLOCKED, uid)),
           AsyncStorage.getItem(storageKey(STORAGE_BASE_QUIZ_COUNT, uid)),
@@ -215,6 +230,8 @@ export function AchievementsProvider({
           AsyncStorage.getItem(storageKey(STORAGE_BASE_FLASHCARD_COUNT, uid)),
           AsyncStorage.getItem(storageKey(STORAGE_BASE_BRAIN_COUNT, uid)),
           AsyncStorage.getItem(storageKey(STORAGE_BASE_RELAX_MIN, uid)),
+          AsyncStorage.getItem(storageKey(STORAGE_BASE_PURCHASE_COUNT, uid)),
+          AsyncStorage.getItem(storageKey(STORAGE_BASE_PURCHASE_KEYS, uid)),
         ]);
 
         if (rawUnlocked) {
@@ -232,6 +249,23 @@ export function AchievementsProvider({
         flashCountRef.current = parseNum(rawFlashCount);
         brainCountRef.current = parseNum(rawBrainCount);
         relaxMinutesRef.current = parseNum(rawRelaxMin);
+        purchaseCountRef.current = parseNum(rawPurchaseCount);
+        purchaseBaselineReadyRef.current = rawPurchaseCount !== null;
+
+        if (rawPurchaseKeys) {
+          try {
+            const parsedKeys = JSON.parse(rawPurchaseKeys);
+            if (Array.isArray(parsedKeys)) {
+              purchaseKeysRef.current = new Set(
+                parsedKeys
+                  .map((value) => String(value || "").trim())
+                  .filter(Boolean)
+              );
+            }
+          } catch (e) {
+            console.warn("[Achievements] parse purchase keys failed", e);
+          }
+        }
       } catch (e) {
         console.warn("[Achievements] hydrate failed", e);
       } finally {
@@ -309,6 +343,30 @@ export function AchievementsProvider({
       );
     } catch (e) {
       console.warn("[Achievements] persist relax minutes failed", e);
+    }
+  }, [supabaseUserId]);
+
+  const persistPurchaseCount = useCallback(async () => {
+    try {
+      const uid = supabaseUserId ?? null;
+      await AsyncStorage.setItem(
+        storageKey(STORAGE_BASE_PURCHASE_COUNT, uid),
+        String(purchaseCountRef.current)
+      );
+    } catch (e) {
+      console.warn("[Achievements] persist purchase count failed", e);
+    }
+  }, [supabaseUserId]);
+
+  const persistPurchaseKeys = useCallback(async () => {
+    try {
+      const uid = supabaseUserId ?? null;
+      await AsyncStorage.setItem(
+        storageKey(STORAGE_BASE_PURCHASE_KEYS, uid),
+        JSON.stringify(Array.from(purchaseKeysRef.current))
+      );
+    } catch (e) {
+      console.warn("[Achievements] persist purchase keys failed", e);
     }
   }, [supabaseUserId]);
 
@@ -394,6 +452,145 @@ export function AchievementsProvider({
     },
     [addCoins, persistUnlocked, computeAchievementCoins]
   );
+
+  // ─────────────── SHOP PURCHASES ───────────────
+
+  const applyPurchaseThresholds = useCallback(
+    (total: number) => {
+      const safeTotal = Math.max(0, Math.floor(Number(total) || 0));
+
+      for (const n of PURCHASE_THRESHOLDS) {
+        const id = `purchase_${n}`;
+        if (safeTotal >= n && !unlockedRef.current[id]) {
+          unlock(id);
+        }
+      }
+    },
+    [unlock]
+  );
+
+  const recordCompletedPurchase = useCallback(
+    (payload: any = {}) => {
+      const rawKey =
+        payload?.purchaseKey ??
+        payload?.transactionId ??
+        payload?.orderId ??
+        payload?.id ??
+        "";
+
+      const purchaseKey = String(rawKey || "").trim();
+
+      if (purchaseKey && purchaseKeysRef.current.has(purchaseKey)) {
+        console.log(
+          "[Achievements] duplicate purchase event ignored:",
+          purchaseKey
+        );
+        return;
+      }
+
+      if (purchaseKey) {
+        purchaseKeysRef.current.add(purchaseKey);
+        void persistPurchaseKeys();
+      }
+
+      const delta = Math.max(
+        1,
+        Math.floor(Number(payload?.delta ?? 1) || 1)
+      );
+
+      const ownedCountBefore = Number(payload?.ownedCountBefore);
+      const inventoryBacked = payload?.inventoryBacked === true;
+      const baselineAlreadyIncludesPurchase =
+        inventoryBacked &&
+        Number.isFinite(ownedCountBefore) &&
+        inventoryBaselineTotalRef.current > ownedCountBefore;
+
+      purchaseBaselineReadyRef.current = true;
+
+      if (baselineAlreadyIncludesPurchase) {
+        console.log(
+          "[Achievements] inventory baseline already included purchase:",
+          purchaseKey || payload?.sku || null
+        );
+      } else {
+        purchaseCountRef.current += delta;
+      }
+
+      // The startup inventory baseline is only used to repair old installs.
+      // Once a real purchase event arrives, future purchases use transaction
+      // events and are not inferred from entitlement counts.
+      inventoryBaselineTotalRef.current = 0;
+
+      console.log("[Achievements] purchase total =", purchaseCountRef.current, {
+        purchaseKey: purchaseKey || null,
+        source: payload?.source ?? null,
+        sku: payload?.sku ?? null,
+      });
+
+      void persistPurchaseCount();
+      applyPurchaseThresholds(purchaseCountRef.current);
+    },
+    [applyPurchaseThresholds, persistPurchaseCount, persistPurchaseKeys]
+  );
+
+  const applyPurchaseInventoryBaseline = useCallback(
+    (payload: any = {}) => {
+      if (purchaseBaselineReadyRef.current) return;
+
+      const total = Math.max(
+        0,
+        Math.floor(Number(payload?.total ?? payload?.count ?? 0) || 0)
+      );
+
+      if (total <= 0) return;
+
+      purchaseCountRef.current = Math.max(
+        purchaseCountRef.current,
+        total
+      );
+      purchaseBaselineReadyRef.current = true;
+      inventoryBaselineTotalRef.current = purchaseCountRef.current;
+
+      console.log(
+        "[Achievements] purchase inventory baseline =",
+        purchaseCountRef.current
+      );
+
+      void persistPurchaseCount();
+      applyPurchaseThresholds(purchaseCountRef.current);
+    },
+    [applyPurchaseThresholds, persistPurchaseCount]
+  );
+
+  useEffect(() => {
+    if (!hydrated) return;
+
+    // Re-check stored totals after hydration. unlock() is idempotent, so this
+    // safely repairs users who already crossed a threshold before this fix.
+    if (purchaseCountRef.current > 0) {
+      applyPurchaseThresholds(purchaseCountRef.current);
+    }
+
+    const completedSub = DeviceEventEmitter.addListener(
+      SHOP_PURCHASE_COMPLETED_EVENT,
+      recordCompletedPurchase
+    );
+
+    const inventorySub = DeviceEventEmitter.addListener(
+      SHOP_PURCHASE_INVENTORY_EVENT,
+      applyPurchaseInventoryBaseline
+    );
+
+    return () => {
+      completedSub.remove();
+      inventorySub.remove();
+    };
+  }, [
+    hydrated,
+    applyPurchaseInventoryBaseline,
+    applyPurchaseThresholds,
+    recordCompletedPurchase,
+  ]);
 
   // ─────────────── QUIZ ───────────────
 

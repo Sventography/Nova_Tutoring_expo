@@ -24,8 +24,7 @@ import { useTheme } from "../context/ThemeContext";
 import { useCoins } from "../context/CoinsContext";
 import { useStreak } from "../context/StreakContext";
 import { showToast } from "../utils/toast";
-
-const DISCORD_INVITE_URL = "https://discord.gg/NR9PAjtrg";
+import { DISCORD_INVITE_URL } from "../constants/community";
 
 export default function AccountScreen() {
   const {
@@ -289,12 +288,26 @@ ${loginEmail}`
   }
 
   async function onJoinDiscord() {
+    if (!DISCORD_INVITE_URL) {
+      Alert.alert(
+        "Discord unavailable",
+        "The Nova Tutoring Discord invitation has not been configured."
+      );
+      return;
+    }
+
     try {
+      const supported = await Linking.canOpenURL(DISCORD_INVITE_URL);
+
+      if (!supported) {
+        throw new Error("The Discord invitation could not be opened.");
+      }
+
       await Linking.openURL(DISCORD_INVITE_URL);
     } catch {
       Alert.alert(
         "Unable to open Discord",
-        "Open https://discord.gg/NR9PAjtrg in your browser or Discord."
+        `Open ${DISCORD_INVITE_URL} in your browser or Discord.`
       );
     }
   }

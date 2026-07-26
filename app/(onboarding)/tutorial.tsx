@@ -1,22 +1,26 @@
 // app/(onboarding)/tutorial.tsx
 
-import React, { useMemo, useRef, useState } from "react";
+import React, {
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  Image,
-  Pressable,
   FlatList,
-  Dimensions,
+  Image,
   Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 
-const KEY = "onboarding.tutorial.done.v1";
-const { width, height } = Dimensions.get("window");
+const TUTORIAL_KEY =
+  "onboarding.tutorial.done.v2";
 
 type Slot = "top" | "center" | "bottom";
 
@@ -30,17 +34,33 @@ type Slide = {
   offsetY: number;
 };
 
+function justifyFor(
+  slot: Slot
+): "flex-start" | "center" | "flex-end" {
+  if (slot === "top") return "flex-start";
+  if (slot === "bottom") return "flex-end";
+  return "center";
+}
+
 export default function Tutorial() {
   const router = useRouter();
-  const listRef = useRef<FlatList<Slide> | null>(null);
+  const { width, height } =
+    useWindowDimensions();
+
+  const listRef =
+    useRef<FlatList<Slide> | null>(null);
+
   const [index, setIndex] = useState(0);
+  const [finishing, setFinishing] =
+    useState(false);
 
   const slides: Slide[] = useMemo(
     () => [
       {
         key: "welcome",
         title: "Welcome to Nova",
-        body: "Quick tour — and then you’ll never see this again.",
+        body:
+          "Here’s a quick tour. You can replay it later from the start screen.",
         image: require("../assets/tutorial/nova_welcome.png"),
         slot: "top",
         stageH: 0.58,
@@ -49,7 +69,8 @@ export default function Tutorial() {
       {
         key: "login",
         title: "Your Profile",
-        body: "Log in, register, set your name, and pick an avatar anytime.",
+        body:
+          "Log in, register, set your name, and pick an avatar anytime.",
         image: require("../assets/tutorial/nova_login.png"),
         slot: "center",
         stageH: 0.6,
@@ -58,7 +79,8 @@ export default function Tutorial() {
       {
         key: "tabs",
         title: "Tabs",
-        body: "Everything lives in tabs so it’s always easy to find.",
+        body:
+          "Everything lives in tabs so it’s always easy to find.",
         image: require("../assets/tutorial/nova_tabs.png"),
         slot: "center",
         stageH: 0.64,
@@ -67,7 +89,8 @@ export default function Tutorial() {
       {
         key: "ask",
         title: "Ask",
-        body: "Ask anything — voice or typing — and Nova answers.",
+        body:
+          "Ask anything by voice or typing, and Nova answers.",
         image: require("../assets/tutorial/nova_questions.png"),
         slot: "center",
         stageH: 0.62,
@@ -76,7 +99,8 @@ export default function Tutorial() {
       {
         key: "earn",
         title: "Earn Coins",
-        body: "Coins come from learning: quizzes, brainteasers, and more.",
+        body:
+          "Coins come from learning through quizzes, brainteasers, and more.",
         image: require("../assets/tutorial/nova_earn_coins.png"),
         slot: "center",
         stageH: 0.62,
@@ -85,7 +109,8 @@ export default function Tutorial() {
       {
         key: "usecoins",
         title: "Use Coins",
-        body: "Spend coins on themes, cursors, and items in the shop.",
+        body:
+          "Spend coins on themes, cursors, companions, and shop items.",
         image: require("../assets/tutorial/nova_use_coins.png"),
         slot: "center",
         stageH: 0.62,
@@ -94,7 +119,8 @@ export default function Tutorial() {
       {
         key: "shipping",
         title: "Checkout & Shipping",
-        body: "For tangible items, enter shipping info at checkout.",
+        body:
+          "For tangible items, enter and review your shipping information at checkout.",
         image: require("../assets/tutorial/nova_shipping_screen.png"),
         slot: "bottom",
         stageH: 0.68,
@@ -103,7 +129,8 @@ export default function Tutorial() {
       {
         key: "lunis",
         title: "Meet Lunis",
-        body: "Lunis helps guide your progress and rewards.",
+        body:
+          "Lunis helps guide your progress and rewards.",
         image: require("../assets/tutorial/nova_lunis_intro.png"),
         slot: "center",
         stageH: 0.62,
@@ -115,28 +142,55 @@ export default function Tutorial() {
 
   const buzz = async () => {
     if (Platform.OS !== "web") {
-      await Haptics.selectionAsync().catch(() => {});
+      await Haptics.selectionAsync().catch(
+        () => {}
+      );
     }
   };
 
   const finish = async () => {
-    await buzz();
-    await AsyncStorage.setItem(KEY, "1");
+    if (finishing) return;
 
-    // Return to the splash/start screen so the user sees
-    // Login / Register before choosing whether to continue as a guest.
-    router.replace("/");
+    setFinishing(true);
+    await buzz();
+
+    try {
+      await AsyncStorage.setItem(
+        TUTORIAL_KEY,
+        "1"
+      );
+    } catch (error) {
+      console.warn(
+        "[Tutorial] Could not save completion:",
+        error
+      );
+    }
+
+    (router as any).replace("/");
   };
 
-  const goTo = async (nextIndex: number) => {
-    const clamped = Math.max(0, Math.min(slides.length - 1, nextIndex));
-    const offset = clamped * width;
+  const goTo = async (
+    nextIndex: number
+  ) => {
+    const clamped = Math.max(
+      0,
+      Math.min(
+        slides.length - 1,
+        nextIndex
+      )
+    );
 
-    listRef.current?.scrollToOffset({ offset, animated: true });
+    listRef.current?.scrollToOffset({
+      offset: clamped * width,
+      animated: true,
+    });
+
     setIndex(clamped);
   };
 
   const next = async () => {
+    if (finishing) return;
+
     await buzz();
 
     if (index >= slides.length - 1) {
@@ -147,17 +201,11 @@ export default function Tutorial() {
     await goTo(index + 1);
   };
 
-  const justifyFor = (slot: Slot) => {
-    if (slot === "top") return "flex-start";
-    if (slot === "bottom") return "flex-end";
-    return "center";
-  };
-
   return (
-    <View style={s.screen}>
+    <View style={styles.screen}>
       <FlatList
-        ref={(r) => {
-          listRef.current = r;
+        ref={(ref) => {
+          listRef.current = ref;
         }}
         data={slides}
         horizontal
@@ -165,28 +213,46 @@ export default function Tutorial() {
         snapToInterval={width}
         decelerationRate="fast"
         disableIntervalMomentum
-        showsHorizontalScrollIndicator={false}
-        keyExtractor={(it) => it.key}
-        getItemLayout={(_, i) => ({
+        showsHorizontalScrollIndicator={
+          false
+        }
+        keyExtractor={(item) => item.key}
+        getItemLayout={(_, itemIndex) => ({
           length: width,
-          offset: width * i,
-          index: i,
+          offset: width * itemIndex,
+          index: itemIndex,
         })}
-        onMomentumScrollEnd={(e) => {
-          const i = Math.round(e.nativeEvent.contentOffset.x / width);
-          setIndex(i);
+        onMomentumScrollEnd={(event) => {
+          const nextIndex = Math.round(
+            event.nativeEvent.contentOffset.x /
+              width
+          );
+          setIndex(nextIndex);
         }}
         renderItem={({ item }) => (
-          <View style={[s.page, { width }]}>
-            <Text style={s.title}>{item.title}</Text>
-            <Text style={s.body}>{item.body}</Text>
+          <View
+            style={[
+              styles.page,
+              { width },
+            ]}
+          >
+            <Text style={styles.title}>
+              {item.title}
+            </Text>
+            <Text style={styles.body}>
+              {item.body}
+            </Text>
 
             <View
               style={[
-                s.stage,
+                styles.stage,
                 {
-                  justifyContent: justifyFor(item.slot),
-                  height: Math.floor(height * item.stageH),
+                  justifyContent: justifyFor(
+                    item.slot
+                  ),
+                  height: Math.floor(
+                    height * item.stageH
+                  ),
                 },
               ]}
             >
@@ -194,8 +260,15 @@ export default function Tutorial() {
                 source={item.image}
                 resizeMode="contain"
                 style={[
-                  s.image,
-                  { transform: [{ translateY: item.offsetY }] },
+                  styles.image,
+                  {
+                    transform: [
+                      {
+                        translateY:
+                          item.offsetY,
+                      },
+                    ],
+                  },
                 ]}
               />
             </View>
@@ -203,24 +276,55 @@ export default function Tutorial() {
         )}
       />
 
-      <View style={s.footer}>
-        <Pressable onPress={next} style={s.primaryBtn}>
-          <Text style={s.primaryText}>
-            {index === slides.length - 1
+      <View style={styles.footer}>
+        <View style={styles.dots}>
+          {slides.map(
+            (slide, dotIndex) => (
+              <View
+                key={slide.key}
+                style={[
+                  styles.dot,
+                  dotIndex === index &&
+                    styles.dotActive,
+                ]}
+              />
+            )
+          )}
+        </View>
+
+        <Pressable
+          onPress={next}
+          disabled={finishing}
+          style={[
+            styles.primaryBtn,
+            finishing && styles.disabled,
+          ]}
+        >
+          <Text style={styles.primaryText}>
+            {finishing
+              ? "Opening Nova…"
+              : index ===
+                slides.length - 1
               ? "Continue to Login / Register"
               : "Next"}
           </Text>
         </Pressable>
 
-        <Pressable onPress={finish}>
-          <Text style={s.skip}>Skip</Text>
+        <Pressable
+          onPress={finish}
+          disabled={finishing}
+          style={styles.skipButton}
+        >
+          <Text style={styles.skip}>
+            Skip
+          </Text>
         </Pressable>
       </View>
     </View>
   );
 }
 
-const s = StyleSheet.create({
+const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: "black",
@@ -258,6 +362,23 @@ const s = StyleSheet.create({
     paddingBottom: 22,
     gap: 12,
   },
+  dots: {
+    minHeight: 12,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 7,
+  },
+  dot: {
+    width: 7,
+    height: 7,
+    borderRadius: 999,
+    backgroundColor: "#3b3b48",
+  },
+  dotActive: {
+    width: 18,
+    backgroundColor: "#00e5ff",
+  },
   primaryBtn: {
     backgroundColor: "#00e5ff",
     paddingVertical: 14,
@@ -269,9 +390,15 @@ const s = StyleSheet.create({
     color: "black",
     fontSize: 16,
   },
+  skipButton: {
+    paddingVertical: 4,
+  },
   skip: {
     color: "#888",
     textAlign: "center",
     fontWeight: "700",
+  },
+  disabled: {
+    opacity: 0.6,
   },
 });

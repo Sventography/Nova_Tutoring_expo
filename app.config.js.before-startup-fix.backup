@@ -1,10 +1,6 @@
 // app.config.js
 
 export default ({ config }) => {
-  const backendUrl =
-    process.env.EXPO_PUBLIC_BACKEND_URL ||
-    "https://nove-tutoring-backend.onrender.com";
-
   return {
     ...config,
 
@@ -12,7 +8,7 @@ export default ({ config }) => {
     slug: "Nova_Tutoring_expo_3",
     scheme: "nova",
 
-    version: "1.0.1",
+    version: "1.0.0",
     orientation: "portrait",
     icon: "./app/assets/favicon.png",
     userInterfaceStyle: "dark",
@@ -29,7 +25,7 @@ export default ({ config }) => {
       ...(config.ios || {}),
       supportsTablet: true,
       bundleIdentifier: "com.sventography.novatutoring.ios",
-      buildNumber: "96",
+      buildNumber: "95",
     },
 
     android: {
@@ -55,12 +51,14 @@ export default ({ config }) => {
       "expo-router",
       "expo-web-browser",
       "expo-iap",
+
       [
         "@stripe/stripe-react-native",
         {
           enableGooglePay: false,
         },
       ],
+
       [
         "expo-build-properties",
         {
@@ -84,24 +82,16 @@ export default ({ config }) => {
       EXPO_PUBLIC_SUPABASE_ANON_KEY:
         process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || "",
 
-      EXPO_PUBLIC_BACKEND_URL: backendUrl,
-
-      backendBase: backendUrl,
-
-      EXPO_PUBLIC_AUTH_CONFIRMATION_URL:
-        process.env.EXPO_PUBLIC_AUTH_CONFIRMATION_URL ||
-        "https://confirm.sventographystudios.com/auth/confirmed",
-
-      EXPO_PUBLIC_PASSWORD_RECOVERY_URL:
-        process.env.EXPO_PUBLIC_PASSWORD_RECOVERY_URL ||
-        "https://confirm.sventographystudios.com/auth/confirmed",
-
-      EXPO_PUBLIC_DISCORD_INVITE_URL:
-        process.env.EXPO_PUBLIC_DISCORD_INVITE_URL ||
-        "https://discord.gg/dPKqhhz93Z",
+      EXPO_PUBLIC_BACKEND_URL:
+        process.env.EXPO_PUBLIC_BACKEND_URL ||
+        "https://nove-tutoring-backend.onrender.com",
 
       EXPO_PUBLIC_OPENAI_API_KEY:
         process.env.EXPO_PUBLIC_OPENAI_API_KEY || "dummy-key",
+
+      backendBase:
+        process.env.EXPO_PUBLIC_BACKEND_URL ||
+        "https://nove-tutoring-backend.onrender.com",
 
       eas: {
         projectId: "34a00115-306a-4cb6-b58b-97e26409a781",

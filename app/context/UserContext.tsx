@@ -231,8 +231,16 @@ function toFriendlyAuthError(error: any) {
     return new Error("Please confirm your email before logging in.");
   }
 
-  if (msg.includes("user already registered")) {
-    return new Error("An account with this email already exists.");
+  if (
+    msg.includes("email_already_registered") ||
+    msg.includes("user already registered") ||
+    msg.includes("already been registered")
+  ) {
+    const duplicateEmailError: any = new Error(
+      "This email is already in use."
+    );
+    duplicateEmailError.code = "EMAIL_ALREADY_REGISTERED";
+    return duplicateEmailError;
   }
 
   if (msg.includes("supabase configuration") || msg.includes("missing supabase")) {
@@ -788,7 +796,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       throw toFriendlyAuthError(error);
     }
 
-    return String(data || "error");
+    return String(data || "error").trim().toLowerCase();
   };
 
   const changeUsername = async (name: string) => {
@@ -1002,6 +1010,27 @@ export function UserProvider({ children }: { children: ReactNode }) {
       if (error) {
         console.log("[REAL SUPABASE SIGNUP ERROR]", error);
         throw error;
+      }
+
+      /*
+       * With email-confirmation enabled, Supabase may intentionally avoid
+       * returning an obvious duplicate-email error. In that case it can
+       * return a user object whose identities array is empty. Treat that as
+       * an existing account and do not send the user to the confirmation
+       * screen, because no new confirmation code was created.
+       */
+      const returnedIdentities = data.user?.identities;
+
+      if (
+        data.user &&
+        Array.isArray(returnedIdentities) &&
+        returnedIdentities.length === 0
+      ) {
+        const duplicateEmailError: any = new Error(
+          "This email is already in use."
+        );
+        duplicateEmailError.code = "EMAIL_ALREADY_REGISTERED";
+        throw duplicateEmailError;
       }
 
       const authUser = data.user ?? null;

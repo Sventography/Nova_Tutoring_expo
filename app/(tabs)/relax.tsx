@@ -51,25 +51,37 @@ export default function RelaxScreen() {
   const [timeLeft, setTimeLeft] = useState<number>(tech.inhale);
 
   const scale = useRef(new Animated.Value(0.7)).current;
+  const phaseAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
+
+  function phaseDuration(next: Phase): number {
+    if (next === "inhale") return tech.inhale;
+    if (next === "holdTop") return tech.holdTop;
+    if (next === "exhale") return tech.exhale;
+    return tech.holdBottom;
+  }
 
   function animateForPhase(next: Phase, durMs: number) {
-    if (next === "inhale") {
-      Animated.timing(scale, {
-        toValue: 1.25,
-        duration: durMs,
-        easing: Easing.inOut(Easing.quad),
-        useNativeDriver: false,
-      }).start();
-    } else if (next === "exhale") {
-      Animated.timing(scale, {
-        toValue: 0.7,
-        duration: durMs,
-        easing: Easing.inOut(Easing.quad),
-        useNativeDriver: false,
-      }).start();
-    } else {
-      scale.stopAnimation(); // holds: bubble pauses
+    phaseAnimationRef.current?.stop();
+    phaseAnimationRef.current = null;
+
+    if (next === "holdTop" || next === "holdBottom" || durMs <= 0) {
+      scale.stopAnimation();
+      return;
     }
+
+    const animation = Animated.timing(scale, {
+      toValue: next === "inhale" ? 1.25 : 0.7,
+      duration: durMs,
+      easing: Easing.inOut(Easing.quad),
+      useNativeDriver: false,
+    });
+
+    phaseAnimationRef.current = animation;
+    animation.start(({ finished }) => {
+      if (finished) {
+        phaseAnimationRef.current = null;
+      }
+    });
   }
 
   function nextPhase(curr: Phase): Phase {
@@ -80,42 +92,46 @@ export default function RelaxScreen() {
   }
 
   useEffect(() => {
-    if (!running) return;
-    const durMs =
-      (phase === "inhale"
-        ? tech.inhale
-        : phase === "holdTop"
-        ? tech.holdTop
-        : phase === "exhale"
-        ? tech.exhale
-        : tech.holdBottom) * 1000;
+    if (!running) {
+      phaseAnimationRef.current?.stop();
+      phaseAnimationRef.current = null;
+      scale.stopAnimation();
+      return;
+    }
 
-    animateForPhase(phase, durMs);
+    const seconds = Math.max(0, timeLeft);
+    animateForPhase(phase, seconds * 1000);
 
-    setTimeLeft(durMs / 1000);
-    const started = Date.now();
     const timer = setInterval(() => {
-      const elapsed = Math.floor((Date.now() - started) / 1000);
-      const left = Math.max(0, Math.round(durMs / 1000) - elapsed);
-      setTimeLeft(left);
-      if (elapsed >= durMs / 1000) {
-        clearInterval(timer);
-        setPhase(nextPhase(phase));
-      }
-    }, 250);
+      setTimeLeft((current) => Math.max(0, current - 1));
+    }, 1000);
 
-    return () => clearInterval(timer);
+    return () => {
+      clearInterval(timer);
+      phaseAnimationRef.current?.stop();
+      phaseAnimationRef.current = null;
+    };
+    // Restart only when running or the breathing phase changes.
+    // timeLeft is intentionally excluded so the animation does not restart
+    // on every countdown tick.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [running, phase, tech]);
+  }, [running, phase, techId]);
 
   useEffect(() => {
-    if (!running) return;
+    if (!running || timeLeft > 0) return;
+
+    const next = nextPhase(phase);
+    const nextSeconds = phaseDuration(next);
+
+    setPhase(next);
+    setTimeLeft(nextSeconds);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [running, timeLeft, phase, techId]);
+
+  useEffect(() => {
     setRunning(false);
-    const t = setTimeout(() => setRunning(true), 0);
-    return () => clearTimeout(t);
-  }, [phase, running]);
-
-  useEffect(() => {
+    phaseAnimationRef.current?.stop();
+    phaseAnimationRef.current = null;
     setPhase("inhale");
     setTimeLeft(tech.inhale);
     scale.setValue(0.7);
@@ -127,6 +143,8 @@ export default function RelaxScreen() {
 
   function reset() {
     setRunning(false);
+    phaseAnimationRef.current?.stop();
+    phaseAnimationRef.current = null;
     setPhase("inhale");
     setTimeLeft(tech.inhale);
     scale.setValue(0.7);
