@@ -24,6 +24,7 @@ try {
 type Mode =
   | "neon"
   | "purpleNeon"
+  | "monochrome"
   | "glitter"
   | "stars"
   | "petals"
@@ -57,6 +58,15 @@ const PURPLE_NEON_COLORS = [
   "#A855F7",
   "#8B5CF6",
   "#F0ABFC",
+];
+
+const MONOCHROME_COLORS = [
+  "#FFFFFF",
+  "#F8FAFC",
+  "#E5E7EB",
+  "#CBD5E1",
+  "#9CA3AF",
+  "#6B7280",
 ];
 
 const GLITTER_COLORS = [
@@ -114,6 +124,8 @@ export default function FxOverlay() {
       ? "sparks"
       : /mint|emerald|teal/i.test(themeId)
       ? "bubbles"
+      : /(^|:)dark$|dark.?nova/i.test(themeId)
+      ? "monochrome"
       : "neon";
 
   const color =
@@ -209,6 +221,18 @@ export default function FxOverlay() {
           sway: 10,
           sizeMin: 10,
           sizeMax: 18,
+          fadeSoft: true,
+        };
+
+      case "monochrome":
+        return {
+          count: base - 2,
+          durMin: 3600,
+          durMax: 5400,
+          rot: false,
+          sway: 2,
+          sizeMin: 13,
+          sizeMax: 28,
           fadeSoft: true,
         };
 
@@ -677,16 +701,37 @@ function Faller({
         outputRange: [0, 1, 1, 0],
       });
 
-  if (mode === "neon" || mode === "purpleNeon") {
+  if (
+    mode === "neon" ||
+    mode === "purpleNeon" ||
+    mode === "monochrome"
+  ) {
     const palette =
       mode === "purpleNeon"
         ? PURPLE_NEON_COLORS
+        : mode === "monochrome"
+        ? MONOCHROME_COLORS
         : NEON_COLORS;
 
     const neonColor =
       palette[cfg.colorIndex % palette.length];
 
-    const length = cfg.size + 20;
+    const length =
+      mode === "monochrome"
+        ? cfg.size + 12
+        : cfg.size + 20;
+
+    const streakWidth =
+      mode === "monochrome" ? 2 : 3;
+
+    const streakGlowOpacity =
+      mode === "monochrome" ? 0.62 : 0.9;
+
+    const streakGlowRadius =
+      mode === "monochrome" ? 7 : 10;
+
+    const orbSize =
+      mode === "monochrome" ? 5 : 7;
 
     return (
       <Animated.View
@@ -702,28 +747,30 @@ function Faller({
       >
         <View
           style={{
-            width: 3,
+            width: streakWidth,
             height: length,
             borderRadius: 3,
             backgroundColor: neonColor,
             shadowColor: neonColor,
-            shadowOpacity: 0.9,
-            shadowRadius: 10,
+            shadowOpacity: streakGlowOpacity,
+            shadowRadius: streakGlowRadius,
           }}
         />
 
         <View
           style={{
             position: "absolute",
-            left: -2,
+            left: mode === "monochrome" ? -1.5 : -2,
             bottom: -2,
-            width: 7,
-            height: 7,
+            width: orbSize,
+            height: orbSize,
             borderRadius: 999,
             backgroundColor: neonColor,
             shadowColor: neonColor,
-            shadowOpacity: 1,
-            shadowRadius: 9,
+            shadowOpacity:
+              mode === "monochrome" ? 0.75 : 1,
+            shadowRadius:
+              mode === "monochrome" ? 6 : 9,
           }}
         />
       </Animated.View>

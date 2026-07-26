@@ -13,6 +13,7 @@ import {
   Platform,
   Alert,
   UIManager,
+  DeviceEventEmitter,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -444,6 +445,33 @@ const track = (event: string, props?: Record<string, any>) => {
     (globalThis as any).novaTrack?.(event, props ?? {});
   } catch {}
 };
+
+const SHOP_PURCHASE_COMPLETED_EVENT = "shop:purchase_completed";
+
+function makeLocalPurchaseKey(source: string, sku: string) {
+  return `${source}:${sku}:${Date.now()}:${Math.random()
+    .toString(36)
+    .slice(2, 10)}`;
+}
+
+function emitShopPurchaseCompleted(payload: {
+  purchaseKey: string;
+  source: string;
+  sku?: string | null;
+  category?: string | null;
+  inventoryBacked?: boolean;
+  ownedCountBefore?: number;
+}) {
+  try {
+    DeviceEventEmitter.emit(SHOP_PURCHASE_COMPLETED_EVENT, {
+      ...payload,
+      delta: 1,
+      completedAt: Date.now(),
+    });
+  } catch (e) {
+    console.warn("[shop] purchase achievement event failed", e);
+  }
+}
 
 async function loadOrders(): Promise<Order[]> {
   const raw = (await AsyncStorage.getItem(ORDERS_KEY)) || "[]";
@@ -1846,7 +1874,6 @@ export default function Shop() {
   const cursorPulse = useRef(new Animated.Value(0)).current;
 
   const coinsRef = useRef<number>(coins ?? 0);
-  const devTapRef = useRef(0);
 
   const [stripActiveId, setStripActiveId] = useState<string | null>(null);
   const companionAnim = useRef(new Animated.Value(0)).current;
@@ -2019,39 +2046,6 @@ export default function Shop() {
       track("shop_unview", { duration_ms: durMs });
     };
   }, []);
-
-  const handleDevTitlePress = () => {
-    if (!__DEV__) return;
-
-    devTapRef.current += 1;
-    const taps = devTapRef.current;
-
-    if (taps % 5 === 0) {
-      const bonus = 1_000;
-      const cur = coinsRef.current ?? coins ?? 0;
-      const nextCoins = cur + bonus;
-
-      coinsRef.current = nextCoins;
-      setTimeout(() => {
-        void setCoins(nextCoins);
-      }, 0);
-
-      track("dev_shop_title_cheat", {
-        bonus,
-        taps,
-      });
-
-      try {
-        console.log(
-          `[DEV CHEAT] Granted ${
-            bonus.toLocaleString?.() ?? bonus
-          } coins from Shop title taps`
-        );
-      } catch {
-        console.log("[DEV CHEAT] Granted 1,000 coins from Shop title taps");
-      }
-    }
-  };
 
   const initialAddressValues = useMemo<Partial<AddressPayload>>(
     () => ({
@@ -2500,6 +2494,26 @@ export default function Shop() {
           processedPurchaseIdsRef.current.add(transactionId);
           await markIapTransactionProcessed(transactionId);
         }
+
+        const fallbackPurchaseStamp = String(
+          purchase?.transactionDate ??
+            purchase?.purchaseTime ??
+            purchase?.purchaseDate ??
+            purchase?.purchaseToken ??
+            purchase?.originalTransactionIdentifierIOS ??
+            Date.now()
+        );
+
+        emitShopPurchaseCompleted({
+          purchaseKey: transactionId
+            ? `iap:${transactionId}`
+            : `iap:${productId}:${fallbackPurchaseStamp}`,
+          source: "iap",
+          sku: (item as any)?.id || productId,
+          category: (item as any)?.category || null,
+          inventoryBacked: (item as any)?.category !== "coin_pack",
+          ownedCountBefore: Object.keys(purchases || {}).length,
+        });
       } else {
         console.log("[IAP DEBUG] duplicate transaction ignored", {
           transactionId,
@@ -2816,6 +2830,15 @@ export default function Shop() {
         void saveOrders(next);
         track("shop_order_created", { sku: it.id, title: it.title });
         return next;
+      });
+
+      emitShopPurchaseCompleted({
+        purchaseKey: `stripe:${event.url}`,
+        source: "stripe",
+        sku: it.id,
+        category: it.category,
+        inventoryBacked: false,
+        ownedCountBefore: Object.keys(purchases || {}).length,
       });
 
       setLastOrderTitle(it.title);
@@ -3187,6 +3210,15 @@ export default function Shop() {
             grants: normalized,
           });
 
+          emitShopPurchaseCompleted({
+            purchaseKey: makeLocalPurchaseKey("coins", it.id),
+            source: "coins",
+            sku: it.id,
+            category: "bundle",
+            inventoryBacked: true,
+            ownedCountBefore: Object.keys(purchases || {}).length,
+          });
+
           const firstTheme = normalized.find((x) =>
             String(x).startsWith("theme:")
           );
@@ -3216,6 +3248,15 @@ export default function Shop() {
         note: "bundleGrants missing",
       });
 
+      emitShopPurchaseCompleted({
+        purchaseKey: makeLocalPurchaseKey("coins", fallbackId),
+        source: "coins",
+        sku: fallbackId,
+        category: "bundle",
+        inventoryBacked: true,
+        ownedCountBefore: Object.keys(purchases || {}).length,
+      });
+
       return;
     }
 
@@ -3231,6 +3272,15 @@ export default function Shop() {
       category: it.category,
       mode: "coins",
       price,
+    });
+
+    emitShopPurchaseCompleted({
+      purchaseKey: makeLocalPurchaseKey("coins", grantId),
+      source: "coins",
+      sku: grantId,
+      category: it.category,
+      inventoryBacked: true,
+      ownedCountBefore: Object.keys(purchases || {}).length,
     });
 
     if (it.category === "theme")
@@ -3392,6 +3442,15 @@ export default function Shop() {
           via: "coins",
         });
         return next;
+      });
+
+      emitShopPurchaseCompleted({
+        purchaseKey: `coin-order:${order.id}`,
+        source: "coin_order",
+        sku: it.id,
+        category: it.category,
+        inventoryBacked: true,
+        ownedCountBefore: Object.keys(purchases || {}).length,
       });
 
       setLastOrderTitle(it.title);
@@ -4154,24 +4213,22 @@ export default function Shop() {
             justifyContent: "space-between",
           }}
         >
-          <Pressable onPress={handleDevTitlePress} hitSlop={10}>
-            <Text
-              style={{
-                color: tokens.titleText as any,
-                fontSize: 24,
-                fontWeight: "800",
-                textShadowColor: tokens.isDark
-                  ? "transparent"
-                  : (tokens.softShadow as any),
-                textShadowOffset: tokens.isDark
-                  ? undefined
-                  : ({ width: 0, height: 1 } as any),
-                textShadowRadius: tokens.isDark ? 0 : 2,
-              }}
-            >
-              Shop
-            </Text>
-          </Pressable>
+          <Text
+            style={{
+              color: tokens.titleText as any,
+              fontSize: 24,
+              fontWeight: "800",
+              textShadowColor: tokens.isDark
+                ? "transparent"
+                : (tokens.softShadow as any),
+              textShadowOffset: tokens.isDark
+                ? undefined
+                : ({ width: 0, height: 1 } as any),
+              textShadowRadius: tokens.isDark ? 0 : 2,
+            }}
+          >
+            Shop
+          </Text>
 
           <View
             style={{
@@ -4722,16 +4779,16 @@ export default function Shop() {
 
       <AddressSheet
         visible={addressVisible}
-        loading={addressSubmitting}
+        submitting={addressSubmitting}
         initialValues={initialAddressValues}
-        coinBalance={coinsRef.current ?? coins ?? 0}
+        primaryLabel="Place order"
         onClose={() => {
           if (addressSubmitting) return;
           setAddressVisible(false);
           setPendingItem(null);
           setPendingSize(null);
         }}
-        onSubmit={handleAddressConfirm}
+        onConfirm={handleAddressConfirm}
       />
 
       {floatingCompanion && (

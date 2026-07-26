@@ -21,7 +21,6 @@ import { useRouter } from "expo-router";
 
 import { useUser } from "../context/UserContext";
 import { useTheme } from "../context/ThemeContext";
-import { useCoins } from "../context/CoinsContext";
 import { useStreak } from "../context/StreakContext";
 import { showToast } from "../utils/toast";
 import { DISCORD_INVITE_URL } from "../constants/community";
@@ -32,14 +31,12 @@ export default function AccountScreen() {
     ready,
     session,
     setAvatar,
-    updateProfile,
     resetPassword,
     signOut,
     deleteAccount,
   } = useUser() as any;
 
   const { tokens } = useTheme();
-  const { setCoins } = useCoins();
   const { resetStreak } = useStreak();
   const router = useRouter();
 
@@ -116,14 +113,9 @@ export default function AccountScreen() {
     });
 
   async function saveAvatarEverywhere(uri: string | null) {
-    await updateProfile?.({
-      avatarUri: uri,
-      avatarUrl: uri,
-      avatar: uri,
-      photoURL: uri,
-      imageUrl: uri,
-    });
-
+    // setAvatar already writes every supported avatar field through
+    // UserContext.updateProfile(). Calling both functions duplicated the same
+    // image save and could race two profile upserts.
     await setAvatar?.(uri ?? null);
   }
 
@@ -194,7 +186,8 @@ export default function AccountScreen() {
       console.warn("[Account] signOut warning:", error);
     });
 
-    setCoins?.(0);
+    // Never persist a zero balance while this account is still signed in.
+    // CoinsContext will load the guest balance after the auth state changes.
     setAvatarLocal(null);
     showToast("Signed out");
     (router as any).replace("/");
@@ -214,8 +207,6 @@ export default function AccountScreen() {
 
     try {
       await deleteAccount?.(deletePassword);
-
-      setCoins?.(0);
 
       try {
         await Promise.resolve(resetStreak?.());

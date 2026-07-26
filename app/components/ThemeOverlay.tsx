@@ -1,145 +1,256 @@
 // app/components/ThemeOverlay.tsx
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { View, StyleSheet, Animated, Easing } from "react-native";
+import React, { useEffect, useMemo, useRef } from "react";
+import {
+  Animated,
+  Easing,
+  Platform,
+  StyleSheet,
+  View,
+  useWindowDimensions,
+} from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 
-let useThemeSafe: any = null;
+import { useTheme } from "../context/ThemeContext";
+import { useFx } from "../context/FxProvider";
 
-try {
-  useThemeSafe = require("../context/ThemeContext").useTheme;
-} catch {
-  // The fallback below is used if ThemeContext is not ready.
+const NEON_COLORS = [
+  "#00F5FF", // cyan
+  "#FF2BD6", // hot pink
+  "#8B5CFF", // electric violet
+  "#39FF88", // neon green
+  "#FFE94A", // electric yellow
+  "#FF5A36", // neon orange
+];
+
+type DropConfig = {
+  id: number;
+  leftRatio: number;
+  width: number;
+  height: number;
+  duration: number;
+  delay: number;
+  drift: number;
+  color: string;
+  opacity: number;
+};
+
+type WavePalette = {
+  colors: string[];
+  opacity: number;
+  duration: number;
+};
+
+function normalizeThemeId(value: unknown): string {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/_/g, ":")
+    .replace(/-/g, ":")
+    .replace(/:+/g, ":");
+}
+
+function isNeonNovaTheme(value: unknown): boolean {
+  const id = normalizeThemeId(value);
+
+  return id === "neon" || id === "theme:neon";
+}
+
+function isGlitterTheme(value: unknown): boolean {
+  const id = normalizeThemeId(value);
+  return id === "glitter" || id === "theme:glitter";
 }
 
 /**
- * Theme-specific page gradients.
- *
- * Neon Nova:
- * - vivid cyan, pink, violet, and deep-blue foundation
- *
- * Glitter:
- * - neutral dark iridescent foundation
- * - animated soft shimmer sweep
- *
- * The visible particles themselves are handled by FxOverlay.tsx.
+ * Every equipped theme except Glitter receives a clearly visible,
+ * theme-colored shimmer wave. Glitter keeps its richer shimmer in
+ * FxOverlay.tsx so the two systems do not stack on top of each other.
  */
-function colorsFor(themeId: string, accent?: string): string[] {
-  const id = String(themeId || "").trim().toLowerCase();
+function wavePaletteFor(
+  themeId: unknown,
+  accent?: string
+): WavePalette {
+  const id = normalizeThemeId(themeId);
 
-  if (/glitter/i.test(id)) {
-    return ["#07080d", "#15121a", "#0b1016", "#120f16"];
+  if (id === "theme:starry" || id === "starry") {
+    return {
+      colors: [
+        "rgba(255,255,255,0)",
+        "rgba(162,200,255,0.64)",
+        "rgba(89,126,255,0.52)",
+        "rgba(228,237,255,0.66)",
+        "rgba(255,255,255,0)",
+      ],
+      opacity: 0.34,
+      duration: 6100,
+    };
   }
 
-  if (/neon.?purple/i.test(id)) {
-    return ["#08030f", "#18072d", "#2c0c4c", "#0d0617"];
+  if (id === "theme:pink" || id === "pink") {
+    return {
+      colors: [
+        "rgba(255,255,255,0)",
+        "rgba(255,79,160,0.52)",
+        "rgba(255,183,218,0.70)",
+        "rgba(255,255,255,0.76)",
+        "rgba(255,255,255,0)",
+      ],
+      opacity: 0.34,
+      duration: 6400,
+    };
   }
 
-  if (/theme:neon$|^neon$/i.test(id)) {
-    return ["#01040b", "#071a32", "#25083d", "#00343b"];
+  if (id === "theme:dark" || id === "dark") {
+    return {
+      colors: [
+        "rgba(255,255,255,0)",
+        "rgba(255,255,255,0.64)",
+        "rgba(156,163,175,0.56)",
+        "rgba(226,232,240,0.68)",
+        "rgba(255,255,255,0)",
+      ],
+      opacity: 0.38,
+      duration: 5900,
+    };
   }
 
-  if (/starry/i.test(id)) {
-    return ["#0a0f2d", "#0b1645", "#0f225f"];
+  if (id === "theme:mint" || id === "mint") {
+    return {
+      colors: [
+        "rgba(255,255,255,0)",
+        "rgba(62,211,162,0.54)",
+        "rgba(158,246,208,0.70)",
+        "rgba(255,255,255,0.74)",
+        "rgba(255,255,255,0)",
+      ],
+      opacity: 0.34,
+      duration: 6500,
+    };
   }
 
-  if (/pink|rose|blush/i.test(id)) {
-    return ["#2b0a1d", "#3b0f2b", "#5d1844"];
+  if (
+    id === "theme:blackgold" ||
+    id === "theme:black:gold" ||
+    id === "blackgold"
+  ) {
+    return {
+      colors: [
+        "rgba(255,255,255,0)",
+        "rgba(242,194,0,0.58)",
+        "rgba(255,232,143,0.74)",
+        "rgba(255,249,230,0.64)",
+        "rgba(255,255,255,0)",
+      ],
+      opacity: 0.36,
+      duration: 6000,
+    };
   }
 
-  if (/silver|frost|ice|snow/i.test(id)) {
-    return ["#0a0f12", "#0e1820", "#0f1f2a"];
+  if (
+    id === "theme:neonpurple" ||
+    id === "theme:neon:purple" ||
+    id === "neonpurple"
+  ) {
+    return {
+      colors: [
+        "rgba(255,255,255,0)",
+        "rgba(192,132,252,0.62)",
+        "rgba(168,85,247,0.70)",
+        "rgba(240,171,252,0.64)",
+        "rgba(255,255,255,0)",
+      ],
+      opacity: 0.37,
+      duration: 5800,
+    };
   }
 
-  if (/black.?gold/i.test(id)) {
-    return ["#0a0a0a", "#101010", "#17130a"];
+  if (id === "theme:silver" || id === "silver") {
+    return {
+      colors: [
+        "rgba(255,255,255,0)",
+        "rgba(92,122,153,0.48)",
+        "rgba(199,216,235,0.72)",
+        "rgba(255,255,255,0.86)",
+        "rgba(255,255,255,0)",
+      ],
+      opacity: 0.35,
+      duration: 6200,
+    };
   }
 
-  if (/mint|emerald|teal/i.test(id)) {
-    return ["#061613", "#09211c", "#0b2b24"];
+  if (id === "theme:emerald" || id === "emerald") {
+    return {
+      colors: [
+        "rgba(255,255,255,0)",
+        "rgba(0,194,138,0.56)",
+        "rgba(0,230,168,0.72)",
+        "rgba(184,255,228,0.62)",
+        "rgba(255,255,255,0)",
+      ],
+      opacity: 0.36,
+      duration: 6000,
+    };
   }
 
-  if (/crimson/i.test(id)) {
-    return ["#170507", "#310a10", "#510f1b"];
+  if (id === "theme:crimson" || id === "crimson") {
+    return {
+      colors: [
+        "rgba(255,255,255,0)",
+        "rgba(255,81,98,0.58)",
+        "rgba(255,132,143,0.70)",
+        "rgba(255,222,226,0.62)",
+        "rgba(255,255,255,0)",
+      ],
+      opacity: 0.36,
+      duration: 6100,
+    };
   }
 
-  if (/dark/i.test(id)) {
-    return ["#020202", "#090909", "#000000"];
-  }
-
-  return ["#030a0d", accent || "#06131a", "#0a1e28"];
+  // Neon Nova and any future theme fallback.
+  return {
+    colors: [
+      "rgba(255,255,255,0)",
+      "rgba(0,245,255,0.62)",
+      "rgba(255,43,214,0.58)",
+      "rgba(139,92,255,0.58)",
+      "rgba(57,255,136,0.50)",
+      "rgba(255,255,255,0)",
+    ],
+    opacity: accent ? 0.35 : 0.34,
+    duration: 5700,
+  };
 }
 
-const START = { x: 0.1, y: 0.0 };
-const END = { x: 1.0, y: 1.0 };
-
-function ThemeOverlayInner() {
-  const useTheme =
-    useThemeSafe ||
-    (() => ({
-      themeId: "theme:neon",
-      tokens: { accent: "#00e5ff" },
-    }));
-
-  const theme = useTheme() || {};
-
-  /**
-   * Your ThemeContext exposes themeId, while some older files looked for id.
-   * Supporting both prevents every theme from silently falling back to default.
-   */
-  const themeId: string =
-    theme.themeId ??
-    theme.id ??
-    theme.tokens?.id ??
-    "theme:neon";
-
-  const tokens: any = theme.tokens ?? { accent: "#00e5ff" };
-  const accent = tokens?.accent as string | undefined;
-
-  // Double-buffered crossfade between theme backgrounds.
-  const [prevId, setPrevId] = useState(themeId);
-  const [currId, setCurrId] = useState(themeId);
-  const fade = useRef(new Animated.Value(1)).current;
-
-  // Glitter-only page shimmer.
-  const shimmer = useRef(new Animated.Value(0)).current;
+function ThemeShimmerWave({
+  width,
+  height,
+  palette,
+  delay,
+  widthMultiplier = 0.42,
+}: {
+  width: number;
+  height: number;
+  palette: WavePalette;
+  delay: number;
+  widthMultiplier?: number;
+}) {
+  const progress = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    if (themeId === currId) return;
-
-    setPrevId(currId);
-    setCurrId(themeId);
-
-    fade.setValue(0);
-
-    Animated.timing(fade, {
-      toValue: 1,
-      duration: 450,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: false,
-    }).start();
-  }, [themeId, currId, fade]);
-
-  const glitterActive = /glitter/i.test(currId);
-
-  useEffect(() => {
-    shimmer.stopAnimation();
-    shimmer.setValue(0);
-
-    if (!glitterActive) return;
+    progress.setValue(0);
 
     const animation = Animated.loop(
       Animated.sequence([
-        Animated.timing(shimmer, {
+        Animated.delay(delay),
+        Animated.timing(progress, {
           toValue: 1,
-          duration: 5200,
+          duration: palette.duration,
           easing: Easing.inOut(Easing.sin),
           useNativeDriver: true,
         }),
-        Animated.timing(shimmer, {
+        Animated.timing(progress, {
           toValue: 0,
-          duration: 5200,
-          easing: Easing.inOut(Easing.sin),
+          duration: 1,
           useNativeDriver: true,
         }),
       ])
@@ -149,137 +260,425 @@ function ThemeOverlayInner() {
 
     return () => {
       animation.stop();
-      shimmer.stopAnimation();
+      progress.stopAnimation();
     };
-  }, [glitterActive, shimmer]);
+  }, [delay, palette.duration, progress]);
 
-  const prevColors = useMemo(
-    () => colorsFor(prevId, accent),
-    [prevId, accent]
-  );
-
-  const currColors = useMemo(
-    () => colorsFor(currId, accent),
-    [currId, accent]
-  );
-
-  const shimmerTranslate = shimmer.interpolate({
+  const translateX = progress.interpolate({
     inputRange: [0, 1],
-    outputRange: [-460, 760],
+    outputRange: [-width * 0.8, width * 1.35],
   });
 
-  const shimmerOpacity = shimmer.interpolate({
-    inputRange: [0, 0.42, 0.58, 1],
-    outputRange: [0, 0.11, 0.2, 0],
+  const opacity = progress.interpolate({
+    inputRange: [0, 0.08, 0.28, 0.72, 0.92, 1],
+    outputRange: [
+      0,
+      palette.opacity * 0.55,
+      palette.opacity,
+      palette.opacity,
+      palette.opacity * 0.55,
+      0,
+    ],
   });
 
   return (
-    <View pointerEvents="none" style={S.wrap}>
-      {/* Previous theme frame, fading out. */}
-      <Animated.View
-        style={[
-          S.layer,
-          {
-            opacity: fade.interpolate({
-              inputRange: [0, 1],
-              outputRange: [1, 0],
-            }),
+    <Animated.View
+      pointerEvents="none"
+      style={[
+        styles.shimmerWave,
+        {
+          width: Math.max(150, width * widthMultiplier),
+          height: height * 1.55,
+          opacity,
+          transform: [
+            { translateX },
+            { translateY: -height * 0.24 },
+            { rotate: "-18deg" },
+          ],
+        },
+      ]}
+    >
+      <LinearGradient
+        colors={palette.colors}
+        locations={
+          palette.colors.length === 6
+            ? [0, 0.18, 0.39, 0.61, 0.82, 1]
+            : [0, 0.23, 0.5, 0.77, 1]
+        }
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={StyleSheet.absoluteFill}
+      />
+    </Animated.View>
+  );
+}
+
+function NeonDrop({
+  config,
+  width,
+  height,
+}: {
+  config: DropConfig;
+  width: number;
+  height: number;
+}) {
+  const progress = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.delay(config.delay),
+        Animated.timing(progress, {
+          toValue: 1,
+          duration: config.duration,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    progress.setValue(0);
+    animation.start();
+
+    return () => {
+      animation.stop();
+      progress.stopAnimation();
+    };
+  }, [config.delay, config.duration, progress]);
+
+  const translateY = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [
+      -config.height - 80,
+      height + config.height + 80,
+    ],
+  });
+
+  const translateX = progress.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [0, config.drift, 0],
+  });
+
+  const opacity = progress.interpolate({
+    inputRange: [0, 0.06, 0.82, 1],
+    outputRange: [0, config.opacity, config.opacity, 0],
+  });
+
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[
+        styles.dropWrap,
+        {
+          left:
+            config.leftRatio *
+            Math.max(1, width - 20),
+          opacity,
+          transform: [
+            { translateY },
+            { translateX },
+          ],
+        },
+      ]}
+    >
+      <View
+        style={{
+          width: config.width,
+          height: config.height,
+          borderRadius: 999,
+          backgroundColor: config.color,
+          shadowColor: config.color,
+          shadowOpacity:
+            Platform.OS === "ios" ? 0.95 : 0,
+          shadowRadius: 10,
+          shadowOffset: {
+            width: 0,
+            height: 0,
           },
-        ]}
-      >
-        <LinearGradient
-          colors={prevColors}
-          start={START}
-          end={END}
-          style={S.fill}
-        />
-      </Animated.View>
+          elevation:
+            Platform.OS === "android" ? 4 : 0,
+        }}
+      />
 
-      {/* Current theme frame, fading in. */}
-      <Animated.View style={[S.layer, { opacity: fade }]}>
-        <LinearGradient
-          colors={currColors}
-          start={START}
-          end={END}
-          style={S.fill}
-        />
+      <View
+        style={{
+          position: "absolute",
+          top: -6,
+          left: -(5 - config.width / 2),
+          width: 10,
+          height: 10,
+          borderRadius: 5,
+          backgroundColor: config.color,
+          opacity: 0.9,
+          shadowColor: config.color,
+          shadowOpacity:
+            Platform.OS === "ios" ? 1 : 0,
+          shadowRadius: 8,
+          shadowOffset: {
+            width: 0,
+            height: 0,
+          },
+        }}
+      />
+    </Animated.View>
+  );
+}
 
-        {glitterActive ? (
-          <>
-            {/* Soft iridescent surface tint. */}
-            <LinearGradient
-              colors={[
-                "rgba(255,255,255,0.025)",
-                "rgba(255,220,245,0.05)",
-                "rgba(205,238,255,0.04)",
-                "rgba(210,255,232,0.025)",
-                "rgba(255,255,255,0.015)",
-              ]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={S.glitterTint}
-            />
+export default function ThemeOverlay() {
+  const theme = useTheme() as any;
+  const { enabled: fxEnabled } = useFx();
+  const { width, height } =
+    useWindowDimensions();
 
-            {/* A slow glint that travels across the page. */}
-            <Animated.View
-              style={[
-                S.shimmerSweep,
-                {
-                  opacity: shimmerOpacity,
-                  transform: [
-                    { translateX: shimmerTranslate },
-                    { rotate: "-18deg" },
-                  ],
-                },
-              ]}
-            >
-              <LinearGradient
-                colors={[
-                  "rgba(255,255,255,0)",
-                  "rgba(255,232,190,0.72)",
-                  "rgba(231,211,255,0.58)",
-                  "rgba(195,238,255,0.68)",
-                  "rgba(206,255,229,0.56)",
-                  "rgba(255,255,255,0)",
-                ]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={S.fill}
-              />
-            </Animated.View>
-          </>
-        ) : null}
-      </Animated.View>
+  const themeId =
+    theme?.themeId ??
+    theme?.id ??
+    theme?.tokens?.id ??
+    theme?.theme ??
+    "";
+
+  const accent =
+    theme?.tokens?.accent ?? "#00F5FF";
+
+  const neonNovaActive =
+    isNeonNovaTheme(themeId);
+
+  const glitterActive =
+    isGlitterTheme(themeId);
+
+  const wavePalette = useMemo(
+    () => wavePaletteFor(themeId, accent),
+    [themeId, accent]
+  );
+
+  const drops = useMemo<DropConfig[]>(() => {
+    const count = width >= 768 ? 34 : 24;
+
+    return Array.from(
+      { length: count },
+      (_, index) => {
+        const lane =
+          (index * 47) % count;
+
+        const color =
+          NEON_COLORS[
+            index % NEON_COLORS.length
+          ];
+
+        return {
+          id: index,
+          leftRatio:
+            (lane + 0.5) / count,
+          width: 2 + (index % 3),
+          height:
+            24 + ((index * 13) % 42),
+          duration:
+            2600 +
+            ((index * 317) % 2500),
+          delay:
+            (index * 263) % 2300,
+          drift:
+            ((index % 5) - 2) * 8,
+          color,
+          opacity:
+            0.55 +
+            (index % 4) * 0.1,
+        };
+      }
+    );
+  }, [Math.round(width / 80)]);
+
+  return (
+    <View
+      pointerEvents="none"
+      style={styles.overlay}
+    >
+      {/*
+       * Glitter already owns its richer shimmer in FxOverlay.
+       * Every other active theme receives two softer sideways waves.
+       * These waves do not depend on the FX switch.
+       */}
+      {!glitterActive ? (
+        <>
+          <ThemeShimmerWave
+            width={width}
+            height={height}
+            palette={wavePalette}
+            delay={0}
+            widthMultiplier={0.46}
+          />
+
+          <ThemeShimmerWave
+            width={width}
+            height={height}
+            palette={{
+              ...wavePalette,
+              opacity:
+                wavePalette.opacity * 0.62,
+              duration:
+                wavePalette.duration + 1600,
+            }}
+            delay={2400}
+            widthMultiplier={0.28}
+          />
+        </>
+      ) : null}
+
+      {neonNovaActive ? (
+        <>
+          {/* Strong, unmistakably neon color treatment. */}
+          <LinearGradient
+            colors={[
+              "rgba(0,245,255,0.17)",
+              "rgba(7,8,28,0.03)",
+              "rgba(255,43,214,0.14)",
+              "rgba(139,92,255,0.12)",
+            ]}
+            locations={[
+              0,
+              0.38,
+              0.72,
+              1,
+            ]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={
+              StyleSheet.absoluteFill
+            }
+          />
+
+          <View
+            style={[
+              styles.glow,
+              styles.cyanGlow,
+            ]}
+          />
+
+          <View
+            style={[
+              styles.glow,
+              styles.pinkGlow,
+            ]}
+          />
+
+          <View
+            style={[
+              styles.glow,
+              styles.violetGlow,
+            ]}
+          />
+
+          <View
+            style={[
+              styles.glow,
+              styles.greenGlow,
+            ]}
+          />
+
+          <LinearGradient
+            colors={[
+              "rgba(0,245,255,0)",
+              "rgba(0,245,255,0.92)",
+              "rgba(255,43,214,0.92)",
+              "rgba(57,255,136,0.82)",
+              "rgba(0,245,255,0)",
+            ]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={
+              styles.topNeonLine
+            }
+          />
+
+          <LinearGradient
+            colors={[
+              "rgba(255,43,214,0)",
+              "rgba(255,43,214,0.78)",
+              "rgba(139,92,255,0.86)",
+              "rgba(0,245,255,0.8)",
+              "rgba(0,245,255,0)",
+            ]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={
+              styles.bottomNeonLine
+            }
+          />
+
+          {fxEnabled
+            ? drops.map((config) => (
+                <NeonDrop
+                  key={config.id}
+                  config={config}
+                  width={width}
+                  height={height}
+                />
+              ))
+            : null}
+        </>
+      ) : null}
     </View>
   );
 }
 
-export default React.memo(ThemeOverlayInner);
-
-const S = StyleSheet.create({
-  wrap: {
+const styles = StyleSheet.create({
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 9998,
+    overflow: "hidden",
+  },
+  shimmerWave: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+  },
+  glow: {
+    position: "absolute",
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+  },
+  cyanGlow: {
+    left: -135,
+    top: 30,
+    backgroundColor:
+      "rgba(0,245,255,0.16)",
+  },
+  pinkGlow: {
+    right: -150,
+    top: 170,
+    backgroundColor:
+      "rgba(255,43,214,0.15)",
+  },
+  violetGlow: {
+    left: "25%",
+    bottom: -170,
+    backgroundColor:
+      "rgba(139,92,255,0.16)",
+  },
+  greenGlow: {
+    right: -180,
+    bottom: 80,
+    backgroundColor:
+      "rgba(57,255,136,0.09)",
+  },
+  topNeonLine: {
     position: "absolute",
     left: 0,
     right: 0,
     top: 0,
-    bottom: 0,
-    zIndex: -1,
+    height: 3,
   },
-  layer: {
-    ...StyleSheet.absoluteFillObject,
-    overflow: "hidden",
-  },
-  fill: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  glitterTint: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  shimmerSweep: {
+  bottomNeonLine: {
     position: "absolute",
-    top: -180,
-    bottom: -180,
-    left: -180,
-    width: 180,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 3,
+  },
+  dropWrap: {
+    position: "absolute",
+    top: 0,
+    alignItems: "center",
   },
 });

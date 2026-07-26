@@ -4,6 +4,7 @@ import React, {
   createContext,
   useContext,
   useEffect,
+  useRef,
   useState,
   ReactNode,
 } from "react";
@@ -362,9 +363,19 @@ async function seedProfileIfNeeded(
 
 export function UserProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<LocalUserProfile | null>(null);
+  const profileRef = useRef<LocalUserProfile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [supabaseUserId, setSupabaseUserId] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    profileRef.current = profile;
+  }, [profile]);
+
+  const setProfileSnapshot = (next: LocalUserProfile | null) => {
+    profileRef.current = next;
+    setProfile(next);
+  };
 
   async function hydrateProfileFromSupabase(
     userId: string,
@@ -452,7 +463,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      setProfile(next);
+      setProfileSnapshot(next);
       await persistProfile(next);
     } catch (e) {
       console.warn("[UserContext] hydrateProfileFromSupabase error:", e);
@@ -478,7 +489,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
             const parsed = JSON.parse(stored);
 
             if (!cancelled) {
-              setProfile(parsed);
+              setProfileSnapshot(parsed);
             }
           } catch {}
         }
@@ -558,7 +569,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         setSupabaseUserId(authUser.id);
       } else {
         setSupabaseUserId(null);
-        setProfile(null);
+        setProfileSnapshot(null);
       }
 
       setReady(true);
@@ -613,7 +624,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
               );
               setSession(null);
               setSupabaseUserId(null);
-              setProfile(null);
+              setProfileSnapshot(null);
             }
           }
         })();
@@ -701,18 +712,21 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateProfile = async (patch: Partial<LocalUserProfile>) => {
-    setProfile((prev) => {
-      const next: LocalUserProfile = {
-        ...(prev || {
-          id: supabaseUserId || "local",
-        }),
-        ...patch,
+    // Build from the latest committed snapshot rather than a stale render.
+    const previous =
+      profileRef.current ||
+      profile || {
+        id: supabaseUserId || "local",
       };
 
-      void persistProfile(next);
+    const next: LocalUserProfile = {
+      ...previous,
+      ...patch,
+    };
 
-      return next;
-    });
+    // Update the UI immediately, then truly await the local write.
+    setProfileSnapshot(next);
+    await persistProfile(next);
 
     if (!supabaseUserId) return;
 
@@ -725,49 +739,38 @@ export function UserProvider({ children }: { children: ReactNode }) {
     // Username changes use change_username(); login email changes use Supabase Auth.
 
     const avatarCandidate =
-      patch.avatar ??
-      patch.avatarUrl ??
-      patch.avatarUri ??
-      patch.photoURL ??
-      patch.imageUrl ??
-      profile?.avatar ??
-      profile?.avatarUrl ??
-      profile?.avatarUri ??
-      profile?.photoURL ??
-      profile?.imageUrl;
+      next.avatar ??
+      next.avatarUrl ??
+      next.avatarUri ??
+      next.photoURL ??
+      next.imageUrl;
 
-    if (typeof avatarCandidate === "string") {
+    if (
+      typeof avatarCandidate === "string" ||
+      avatarCandidate === null
+    ) {
       row.avatar_url = avatarCandidate;
     }
 
-    const askPersonalityCandidate =
-      patch.askPersonality ?? profile?.askPersonality;
-
     if (
-      typeof askPersonalityCandidate === "string" &&
-      askPersonalityCandidate.trim()
+      typeof next.askPersonality === "string" &&
+      next.askPersonality.trim()
     ) {
-      row.ask_personality = askPersonalityCandidate;
+      row.ask_personality = next.askPersonality;
     }
 
-    const askMemoryTierCandidate =
-      patch.askMemoryTier ?? profile?.askMemoryTier;
-
     if (
-      typeof askMemoryTierCandidate === "string" &&
-      askMemoryTierCandidate.trim()
+      typeof next.askMemoryTier === "string" &&
+      next.askMemoryTier.trim()
     ) {
-      row.ask_memory_tier = askMemoryTierCandidate;
+      row.ask_memory_tier = next.askMemoryTier;
     }
 
-    const askMemoryLimitCandidate =
-      patch.askMemoryLimit ?? profile?.askMemoryLimit;
-
     if (
-      typeof askMemoryLimitCandidate === "number" &&
-      Number.isFinite(askMemoryLimitCandidate)
+      typeof next.askMemoryLimit === "number" &&
+      Number.isFinite(next.askMemoryLimit)
     ) {
-      row.ask_memory_limit = askMemoryLimitCandidate;
+      row.ask_memory_limit = next.askMemoryLimit;
     }
 
     try {
@@ -779,6 +782,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
         console.warn("[UserContext] updateProfile upsert error:", error);
         throw toFriendlyAuthError(error);
       }
+
+      // Keep the local cache aligned with the completed remote save.
+      await persistProfile(next);
     } catch (e) {
       console.warn("[UserContext] updateProfile threw:", e);
       throw toFriendlyAuthError(e);
@@ -994,7 +1000,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
       setSession(null);
       setSupabaseUserId(null);
-      setProfile(null);
+      setProfileSnapshot(null);
 
       const { data, error } = await supabase.auth.signUp({
         email: normalizedEmail,
@@ -1075,13 +1081,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
           askMemoryLimit: 0,
         };
 
-        setProfile(next);
+        setProfileSnapshot(next);
         await persistProfile(next);
 
         await hydrateProfileFromSupabase(authUser.id, authUser);
       } else {
         setSupabaseUserId(null);
-        setProfile(null);
+        setProfileSnapshot(null);
         await persistProfile(null);
       }
 
@@ -1140,7 +1146,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         );
       } else {
         setSupabaseUserId(null);
-        setProfile(null);
+        setProfileSnapshot(null);
         setReady(true);
       }
 
@@ -1197,7 +1203,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     // Update the visible app state immediately.
     setSession(null);
     setSupabaseUserId(null);
-    setProfile(null);
+    setProfileSnapshot(null);
     setReady(true);
 
     // Supabase sign-out is best effort and must never trap the UI.
@@ -1339,7 +1345,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
      */
     setSession(null);
     setSupabaseUserId(null);
-    setProfile(null);
+    setProfileSnapshot(null);
     setReady(true);
 
     await Promise.allSettled([

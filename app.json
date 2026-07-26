@@ -2,7 +2,7 @@
   "expo": {
     "name": "Nova Tutoring",
     "slug": "Nova_Tutoring_expo_3",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "scheme": "nova",
     "userInterfaceStyle": "dark",
@@ -18,7 +18,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.sventography.novatutoring.ios",
-      "buildNumber": "95"
+      "buildNumber": "96"
     },
     "android": {
       "package": "com.sventography.novatutoring",
