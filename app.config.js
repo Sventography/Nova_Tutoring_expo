@@ -51,6 +51,7 @@ export default ({ config }) => {
     platforms: ["ios", "android", "web"],
 
     plugins: [
+      "expo-asset",
       "expo-mail-composer",
       "expo-router",
       "expo-web-browser",
