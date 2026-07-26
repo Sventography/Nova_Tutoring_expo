@@ -672,25 +672,269 @@ function CompanionEffectOverlay({
   );
 }
 
+type CommonCompanionDialogue = {
+  tap: string[];
+  pet: string[];
+  idle: string[];
+};
+
+const COMMON_COMPANION_DIALOGUE: Record<
+  string,
+  CommonCompanionDialogue
+> = {
+  nova_bunny: {
+    tap: [
+      "Boing! What are we learning next?",
+      "I found a study spark! ✨",
+      "One more question? I’m ready!",
+    ],
+    pet: [
+      "Ears officially scritched. 💜",
+      "That was the perfect little pat!",
+      "Okay… you may pet me again.",
+    ],
+    idle: [
+      "I’m keeping your study spot warm.",
+      "Tiny hop break?",
+      "I believe in you, human.",
+    ],
+  },
+  balloons: {
+    tap: [
+      "Up, up, and onward! 🎈",
+      "Your progress is lifting us!",
+      "That deserves a little float!",
+    ],
+    pet: [
+      "Gentle! I’m full of celebration.",
+      "Aww… friendship is lighter than air.",
+      "You made the balloons blush.",
+    ],
+    idle: [
+      "I’m just floating through the syllabus.",
+      "Goals look smaller from up here.",
+      "Waiting for the next celebration…",
+    ],
+  },
+  hearts: {
+    tap: [
+      "A little encouragement delivery! 💜",
+      "You’re doing better than you think.",
+      "Heart boost activated.",
+    ],
+    pet: [
+      "That one goes straight to my heart.",
+      "Friendship received. Sending it back!",
+      "You are officially appreciated.",
+    ],
+    idle: [
+      "Just a reminder: you’ve got this.",
+      "No pressure. One step at a time.",
+      "I saved a little kindness for you.",
+    ],
+  },
+  sleepy_moon: {
+    tap: [
+      "I’m awake… mostly. 🌙",
+      "One tiny lesson before nap time?",
+      "The stars say you can do it.",
+    ],
+    pet: [
+      "Mmm… cozy.",
+      "That was very moon-approved.",
+      "Five more seconds of petting, please.",
+    ],
+    idle: [
+      "Studying quietly beside you…",
+      "Wake me when there’s a hard question.",
+      "A small break is allowed, you know.",
+    ],
+  },
+  star_blow: {
+    tap: [
+      "Pfffft—stars everywhere! ✨",
+      "I blew you a study wish.",
+      "Catch that sparkle!",
+    ],
+    pet: [
+      "Careful, I’m ticklish!",
+      "You shook loose another star.",
+      "Sparkly friendship acquired.",
+    ],
+    idle: [
+      "Practicing my star-puff technique.",
+      "There is glitter in the homework now.",
+      "Quietly charging a sparkle…",
+    ],
+  },
+  star_explode: {
+    tap: [
+      "KABOOM! Study energy! 💥",
+      "A perfectly educational explosion.",
+      "Big spark for a big brain!",
+    ],
+    pet: [
+      "Soft pats prevent spontaneous combustion.",
+      "Friendship blast contained!",
+      "You found my calm little center.",
+    ],
+    idle: [
+      "Trying very hard not to explode.",
+      "Current status: dramatically stable.",
+      "Waiting for the next big idea…",
+    ],
+  },
+  star_throw: {
+    tap: [
+      "Catch! ⭐",
+      "Fastball of knowledge!",
+      "I tossed you a lucky star.",
+    ],
+    pet: [
+      "Nice catch—and nice pat.",
+      "My throwing arm feels appreciated.",
+      "Friendship landed safely.",
+    ],
+    idle: [
+      "Aiming at the next goal.",
+      "Practicing trick shots quietly.",
+      "Ready when you are, coach.",
+    ],
+  },
+  party_3d: {
+    tap: [
+      "That deserves confetti! 🎉",
+      "Party mode: educational edition!",
+      "Tiny celebration deployed!",
+    ],
+    pet: [
+      "Best party guest ever.",
+      "You just unlocked the friendship dance!",
+      "Pat received—encore activated!",
+    ],
+    idle: [
+      "Saving the confetti for your next win.",
+      "The party is respectfully on standby.",
+      "Quietly rehearsing a victory dance.",
+    ],
+  },
+  party_3d_2: {
+    tap: [
+      "Encore party mode! 🎊",
+      "Round two of celebration!",
+      "Extra hype has arrived!",
+    ],
+    pet: [
+      "VIP friendship confirmed.",
+      "That pat deserves an encore.",
+      "You are invited to every future party.",
+    ],
+    idle: [
+      "Preparing the sequel celebration.",
+      "Confetti reserves are fully stocked.",
+      "Waiting for a reason to go wild…",
+    ],
+  },
+  coins_rain: {
+    tap: [
+      "Shiny progress! 🪙",
+      "Cha-ching—but make it learning.",
+      "A little sparkle for your effort!",
+    ],
+    pet: [
+      "Friendship is the real treasure.",
+      "That pat was worth more than gold.",
+      "Premium-grade head pat received.",
+    ],
+    idle: [
+      "Counting your little victories.",
+      "Polishing the motivation coins.",
+      "Progress adds up, even slowly.",
+    ],
+  },
+  reading_buddy: {
+    tap: [
+      "One more page? 📚",
+      "I bookmarked our study spot.",
+      "Tell me what chapter we’re on!",
+    ],
+    pet: [
+      "A quiet little thank-you.",
+      "Best study partner behavior detected.",
+      "Friendship bookmark added.",
+    ],
+    idle: [
+      "Reading beside you counts as company.",
+      "I’ll hold our place.",
+      "No rush. Good learning takes time.",
+    ],
+  },
+};
+
+function commonCompanionKey(
+  rawId: string | null | undefined
+): string {
+  return String(rawId || "")
+    .trim()
+    .toLowerCase()
+    .replace(/^companion:/, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+function randomDialogueLine(
+  key: string,
+  kind: keyof CommonCompanionDialogue
+): string {
+  const dialogue =
+    COMMON_COMPANION_DIALOGUE[key] ??
+    COMMON_COMPANION_DIALOGUE.nova_bunny;
+
+  const lines = dialogue[kind];
+  return lines[
+    Math.floor(Math.random() * lines.length)
+  ];
+}
+
 /**
- * Global floating companion bubble that:
- * - Uses the currently equipped companion
- * - Is visible on every tab (shop can show its own if desired)
- * - Bobs gently
- * - Wiggles / hops / spins / shimmies / swirls on tap
- * - Shows the same FX as the Shop tab
- * - Can be dragged by holding and moving your finger
+ * Global floating companion bubble.
+ *
+ * Regular role="cosmetic" Nova companions now support:
+ * - Companion-specific tap animation, effect, and dialogue
+ * - Hold-to-pet interaction with heart effects
+ * - Persistent friendship levels through CompanionContext
+ * - Occasional quiet idle reactions
+ * - Existing drag behavior
+ *
+ * Legendary power/support companions intentionally keep their old behavior
+ * until their dedicated interaction pass.
  */
 function FloatingCompanionOverlay() {
-  const { activeCompanion } = useCompanion();
+  const {
+    activeCompanion,
+    getFriendshipLevel,
+    recordCompanionInteraction,
+  } = useCompanion();
 
-  const bob = useRef(new Animated.Value(0)).current;
-  const pan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const bob = useRef(
+    new Animated.Value(0)
+  ).current;
+  const pan = useRef(
+    new Animated.ValueXY({ x: 0, y: 0 })
+  ).current;
 
-  const floatScale = useRef(new Animated.Value(1)).current;
-  const floatHop = useRef(new Animated.Value(0)).current;
-  const floatShake = useRef(new Animated.Value(0)).current;
-  const floatRotate = useRef(new Animated.Value(0)).current;
+  const floatScale = useRef(
+    new Animated.Value(1)
+  ).current;
+  const floatHop = useRef(
+    new Animated.Value(0)
+  ).current;
+  const floatShake = useRef(
+    new Animated.Value(0)
+  ).current;
+  const floatRotate = useRef(
+    new Animated.Value(0)
+  ).current;
   const clickModeRef = useRef(0);
 
   const rotation = floatRotate.interpolate({
@@ -698,11 +942,123 @@ function FloatingCompanionOverlay() {
     outputRange: ["0deg", "360deg"],
   });
 
-  const [effectType, setEffectType] = useState<CompanionEffectType>("stars");
-  const [effectKey, setEffectKey] = useState(0);
+  const [effectType, setEffectType] =
+    useState<CompanionEffectType>("stars");
+  const [effectKey, setEffectKey] =
+    useState(0);
+  const [speech, setSpeech] =
+    useState<string | null>(null);
+  const [speechKind, setSpeechKind] =
+    useState<"tap" | "pet" | "idle">("tap");
+
+  const baseEffectRef =
+    useRef<CompanionEffectType>("stars");
+  const activeCompanionRef =
+    useRef<any>(activeCompanion);
+  const isCommonRef = useRef(false);
+  const commonKeyRef = useRef("");
+  const recordInteractionRef =
+    useRef(recordCompanionInteraction);
+
+  const speechTimerRef =
+    useRef<ReturnType<typeof setTimeout> | null>(
+      null
+    );
+  const effectRestoreTimerRef =
+    useRef<ReturnType<typeof setTimeout> | null>(
+      null
+    );
+  const longPressTimerRef =
+    useRef<ReturnType<typeof setTimeout> | null>(
+      null
+    );
+  const introducedRef =
+    useRef<Set<string>>(new Set());
+  const isDraggingRef = useRef(false);
+  const speechVisibleRef = useRef(false);
 
   const isTapRef = useRef(true);
+  const longPressTriggeredRef =
+    useRef(false);
   const offsetRef = useRef({ x: 0, y: 0 });
+
+  const handleTapRef =
+    useRef<() => void>(() => {});
+  const handlePetRef =
+    useRef<() => void>(() => {});
+
+  const isCommonCompanion =
+    activeCompanion?.role === "cosmetic";
+  const activeId =
+    (activeCompanion as any)?.canonId ||
+    (activeCompanion as any)?.id ||
+    "";
+  const activeCommonKey =
+    commonCompanionKey(activeId);
+  const friendshipLevel = isCommonCompanion
+    ? getFriendshipLevel(activeId)
+    : 1;
+
+  activeCompanionRef.current =
+    activeCompanion;
+  isCommonRef.current =
+    isCommonCompanion;
+  commonKeyRef.current =
+    activeCommonKey;
+  recordInteractionRef.current =
+    recordCompanionInteraction;
+
+  const clearSpeechTimer = () => {
+    if (speechTimerRef.current) {
+      clearTimeout(speechTimerRef.current);
+      speechTimerRef.current = null;
+    }
+  };
+
+  const showSpeech = (
+    text: string,
+    kind: "tap" | "pet" | "idle" = "tap",
+    duration = 2900
+  ) => {
+    clearSpeechTimer();
+
+    speechVisibleRef.current = true;
+    setSpeechKind(kind);
+    setSpeech(text);
+
+    speechTimerRef.current = setTimeout(() => {
+      speechVisibleRef.current = false;
+      setSpeech(null);
+      speechTimerRef.current = null;
+    }, duration);
+  };
+
+  const clearLongPressTimer = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  const triggerCompanionEffect = (
+    type: CompanionEffectType
+  ) => {
+    if (effectRestoreTimerRef.current) {
+      clearTimeout(effectRestoreTimerRef.current);
+      effectRestoreTimerRef.current = null;
+    }
+
+    setEffectType(type);
+    setEffectKey((key) => key + 1);
+
+    if (type !== baseEffectRef.current) {
+      effectRestoreTimerRef.current =
+        setTimeout(() => {
+          setEffectType(baseEffectRef.current);
+          effectRestoreTimerRef.current = null;
+        }, 1500);
+    }
+  };
 
   useEffect(() => {
     const loop = Animated.loop(
@@ -721,13 +1077,17 @@ function FloatingCompanionOverlay() {
         }),
       ])
     );
+
     loop.start();
+
     return () => loop.stop();
   }, [bob]);
 
   useEffect(() => {
     if (!activeCompanion) {
+      baseEffectRef.current = "stars";
       setEffectType("stars");
+      setSpeech(null);
       return;
     }
 
@@ -735,13 +1095,117 @@ function FloatingCompanionOverlay() {
       (activeCompanion as any).canonId ||
       (activeCompanion as any).id ||
       "";
-    const eff = getCompanionEffect(id);
-    setEffectType(eff);
-    setEffectKey((k) => k + 1);
+    const nextEffect = getCompanionEffect(id);
+
+    baseEffectRef.current = nextEffect;
+    setEffectType(nextEffect);
+    setEffectKey((key) => key + 1);
+    setSpeech(null);
+    speechVisibleRef.current = false;
+    clearSpeechTimer();
+
+    const key = commonCompanionKey(id);
+
+    if (
+      activeCompanion.role === "cosmetic" &&
+      !introducedRef.current.has(key)
+    ) {
+      introducedRef.current.add(key);
+
+      const introTimer = setTimeout(() => {
+        showSpeech(
+          "Tap me for a reaction—or hold me to give me a little pet. 💜",
+          "idle",
+          3900
+        );
+      }, 850);
+
+      return () => clearTimeout(introTimer);
+    }
   }, [activeCompanion]);
+
+  useEffect(() => {
+    if (!isCommonCompanion || !activeCommonKey) {
+      return;
+    }
+
+    let cancelled = false;
+    let idleTimer:
+      | ReturnType<typeof setTimeout>
+      | null = null;
+
+    const scheduleIdleReaction = () => {
+      const delay =
+        42000 + Math.floor(Math.random() * 26000);
+
+      idleTimer = setTimeout(() => {
+        if (
+          !cancelled &&
+          !isDraggingRef.current &&
+          !speechVisibleRef.current
+        ) {
+          showSpeech(
+            randomDialogueLine(
+              activeCommonKey,
+              "idle"
+            ),
+            "idle",
+            2600
+          );
+
+          floatScale.setValue(1);
+
+          Animated.sequence([
+            Animated.timing(floatScale, {
+              toValue: 1.06,
+              duration: 180,
+              useNativeDriver: false,
+            }),
+            Animated.timing(floatScale, {
+              toValue: 1,
+              duration: 220,
+              useNativeDriver: false,
+            }),
+          ]).start();
+        }
+
+        if (!cancelled) {
+          scheduleIdleReaction();
+        }
+      }, delay);
+    };
+
+    scheduleIdleReaction();
+
+    return () => {
+      cancelled = true;
+
+      if (idleTimer) {
+        clearTimeout(idleTimer);
+      }
+    };
+  }, [
+    activeCommonKey,
+    floatScale,
+    isCommonCompanion,
+  ]);
+
+  useEffect(() => {
+    return () => {
+      clearSpeechTimer();
+      clearLongPressTimer();
+
+      if (effectRestoreTimerRef.current) {
+        clearTimeout(
+          effectRestoreTimerRef.current
+        );
+      }
+    };
+  }, []);
 
   function wiggleAction() {
     floatScale.setValue(1);
+
     Animated.sequence([
       Animated.timing(floatScale, {
         toValue: 1.18,
@@ -768,6 +1232,7 @@ function FloatingCompanionOverlay() {
 
   function hopAction() {
     floatHop.setValue(0);
+
     Animated.sequence([
       Animated.timing(floatHop, {
         toValue: -14,
@@ -782,12 +1247,45 @@ function FloatingCompanionOverlay() {
     ]).start();
   }
 
+  function bigHopAction() {
+    floatHop.setValue(0);
+    floatScale.setValue(1);
+
+    Animated.parallel([
+      Animated.sequence([
+        Animated.timing(floatHop, {
+          toValue: -24,
+          duration: 150,
+          useNativeDriver: false,
+        }),
+        Animated.spring(floatHop, {
+          toValue: 0,
+          friction: 4,
+          useNativeDriver: false,
+        }),
+      ]),
+      Animated.sequence([
+        Animated.timing(floatScale, {
+          toValue: 1.12,
+          duration: 120,
+          useNativeDriver: false,
+        }),
+        Animated.timing(floatScale, {
+          toValue: 1,
+          duration: 220,
+          useNativeDriver: false,
+        }),
+      ]),
+    ]).start();
+  }
+
   function spinAction() {
     floatRotate.setValue(0);
+
     Animated.sequence([
       Animated.timing(floatRotate, {
         toValue: 1,
-        duration: 260,
+        duration: 300,
         useNativeDriver: false,
       }),
       Animated.timing(floatRotate, {
@@ -800,25 +1298,31 @@ function FloatingCompanionOverlay() {
 
   function shimmyAction() {
     floatShake.setValue(0);
+
     Animated.sequence([
       Animated.timing(floatShake, {
-        toValue: 1,
+        toValue: 7,
         duration: 70,
         useNativeDriver: false,
       }),
       Animated.timing(floatShake, {
-        toValue: -1,
+        toValue: -7,
         duration: 70,
         useNativeDriver: false,
       }),
       Animated.timing(floatShake, {
-        toValue: 0.5,
+        toValue: 5,
+        duration: 60,
+        useNativeDriver: false,
+      }),
+      Animated.timing(floatShake, {
+        toValue: -5,
         duration: 60,
         useNativeDriver: false,
       }),
       Animated.timing(floatShake, {
         toValue: 0,
-        duration: 60,
+        duration: 70,
         useNativeDriver: false,
       }),
     ]).start();
@@ -827,6 +1331,7 @@ function FloatingCompanionOverlay() {
   function swirlAction() {
     floatScale.setValue(1);
     floatRotate.setValue(0);
+
     Animated.parallel([
       Animated.sequence([
         Animated.timing(floatScale, {
@@ -860,14 +1365,140 @@ function FloatingCompanionOverlay() {
     ]).start();
   }
 
+  function sleepyAction() {
+    floatScale.setValue(1);
+    floatRotate.setValue(0);
+
+    Animated.parallel([
+      Animated.sequence([
+        Animated.timing(floatScale, {
+          toValue: 0.9,
+          duration: 200,
+          useNativeDriver: false,
+        }),
+        Animated.timing(floatScale, {
+          toValue: 1.04,
+          duration: 250,
+          useNativeDriver: false,
+        }),
+        Animated.timing(floatScale, {
+          toValue: 1,
+          duration: 180,
+          useNativeDriver: false,
+        }),
+      ]),
+      Animated.sequence([
+        Animated.timing(floatRotate, {
+          toValue: 0.04,
+          duration: 240,
+          useNativeDriver: false,
+        }),
+        Animated.timing(floatRotate, {
+          toValue: 0,
+          duration: 240,
+          useNativeDriver: false,
+        }),
+      ]),
+    ]).start();
+  }
+
+  function performCommonTapAction(key: string) {
+    if (key === "nova_bunny") {
+      bigHopAction();
+      return;
+    }
+
+    if (key === "balloons") {
+      swirlAction();
+      return;
+    }
+
+    if (key === "hearts") {
+      wiggleAction();
+      return;
+    }
+
+    if (key === "sleepy_moon") {
+      sleepyAction();
+      return;
+    }
+
+    if (key === "star_blow") {
+      wiggleAction();
+      return;
+    }
+
+    if (key === "star_explode") {
+      bigHopAction();
+      return;
+    }
+
+    if (key === "star_throw") {
+      spinAction();
+      return;
+    }
+
+    if (
+      key === "party_3d" ||
+      key === "party_3d_2"
+    ) {
+      shimmyAction();
+      return;
+    }
+
+    if (key === "coins_rain") {
+      hopAction();
+      return;
+    }
+
+    if (key === "reading_buddy") {
+      wiggleAction();
+      return;
+    }
+
+    wiggleAction();
+  }
+
   const handleTap = () => {
     try {
       if (Platform.OS !== "web") {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        Haptics.impactAsync(
+          Haptics.ImpactFeedbackStyle.Light
+        );
       }
     } catch {}
 
-    clickModeRef.current = (clickModeRef.current + 1) % 5;
+    if (isCommonRef.current) {
+      const key = commonKeyRef.current;
+
+      performCommonTapAction(key);
+      triggerCompanionEffect(
+        baseEffectRef.current
+      );
+
+      showSpeech(
+        randomDialogueLine(key, "tap"),
+        "tap"
+      );
+
+      const id =
+        (activeCompanionRef.current as any)
+          ?.canonId ||
+        (activeCompanionRef.current as any)?.id;
+
+      if (id) {
+        void recordInteractionRef.current(
+          id,
+          "tap"
+        );
+      }
+
+      return;
+    }
+
+    // Preserve the existing generic interaction cycle for legends.
+    clickModeRef.current =
+      (clickModeRef.current + 1) % 5;
     const mode = clickModeRef.current;
 
     switch (mode) {
@@ -889,38 +1520,151 @@ function FloatingCompanionOverlay() {
         break;
     }
 
-    setEffectKey((k) => k + 1);
+    triggerCompanionEffect(
+      baseEffectRef.current
+    );
+  };
+
+  const handlePet = async () => {
+    if (!isCommonRef.current) {
+      return;
+    }
+
+    try {
+      if (Platform.OS !== "web") {
+        Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Success
+        );
+      }
+    } catch {}
+
+    wiggleAction();
+    triggerCompanionEffect("hearts");
+
+    const companion =
+      activeCompanionRef.current;
+    const id =
+      (companion as any)?.canonId ||
+      (companion as any)?.id ||
+      "";
+    const key = commonKeyRef.current;
+
+    const result =
+      await recordInteractionRef.current(
+        id,
+        "pet"
+      );
+
+    const friendshipMessage =
+      result.leveledUp
+        ? `Friendship Level ${result.level} reached! 💜`
+        : `Friendship +3 · Level ${result.level}`;
+
+    showSpeech(
+      `${randomDialogueLine(
+        key,
+        "pet"
+      )}\n${friendshipMessage}`,
+      "pet",
+      3400
+    );
+  };
+
+  handleTapRef.current = handleTap;
+  handlePetRef.current = () => {
+    void handlePet();
   };
 
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
+
       onPanResponderGrant: () => {
         isTapRef.current = true;
-      },
-      onPanResponderMove: (_evt, gesture) => {
-        if (Math.abs(gesture.dx) > 8 || Math.abs(gesture.dy) > 8) {
-          isTapRef.current = false;
+        isDraggingRef.current = false;
+        longPressTriggeredRef.current = false;
+        clearLongPressTimer();
+
+        if (isCommonRef.current) {
+          longPressTimerRef.current =
+            setTimeout(() => {
+              longPressTriggeredRef.current = true;
+              isTapRef.current = false;
+              handlePetRef.current();
+            }, 540);
         }
-        const nx = offsetRef.current.x + gesture.dx;
-        const ny = offsetRef.current.y + gesture.dy;
-        pan.setValue({ x: nx, y: ny });
       },
+
+      onPanResponderMove: (_event, gesture) => {
+        if (
+          Math.abs(gesture.dx) > 8 ||
+          Math.abs(gesture.dy) > 8
+        ) {
+          isTapRef.current = false;
+          isDraggingRef.current = true;
+          clearLongPressTimer();
+        }
+
+        const nextX =
+          offsetRef.current.x + gesture.dx;
+        const nextY =
+          offsetRef.current.y + gesture.dy;
+
+        pan.setValue({
+          x: nextX,
+          y: nextY,
+        });
+      },
+
       onPanResponderRelease: () => {
-        if (isTapRef.current) {
-          handleTap();
-        } else {
-          const current: { x: number; y: number } =
-            (pan as any).__getValue?.() ?? { x: 0, y: 0 };
+        clearLongPressTimer();
+
+        if (
+          isTapRef.current &&
+          !longPressTriggeredRef.current
+        ) {
+          handleTapRef.current();
+        } else if (
+          isDraggingRef.current
+        ) {
+          const current: {
+            x: number;
+            y: number;
+          } =
+            (pan as any).__getValue?.() ?? {
+              x: 0,
+              y: 0,
+            };
+
           offsetRef.current = current;
         }
+
+        isDraggingRef.current = false;
+        longPressTriggeredRef.current = false;
       },
-      onPanResponderTerminationRequest: () => false,
+
+      onPanResponderTerminate: () => {
+        clearLongPressTimer();
+        isDraggingRef.current = false;
+        longPressTriggeredRef.current = false;
+      },
+
+      onPanResponderTerminationRequest:
+        () => false,
     })
   ).current;
 
-  if (!activeCompanion) return null;
+  if (!activeCompanion) {
+    return null;
+  }
+
+  const speechAccent =
+    speechKind === "pet"
+      ? "#f472b6"
+      : speechKind === "idle"
+      ? "#a78bfa"
+      : "#22d3ee";
 
   return (
     <Animated.View
@@ -930,10 +1674,16 @@ function FloatingCompanionOverlay() {
         {
           transform: [
             {
-              translateX: Animated.add(pan.x, floatShake),
+              translateX: Animated.add(
+                pan.x,
+                floatShake
+              ),
             },
             {
-              translateY: Animated.add(Animated.add(bob, pan.y), floatHop),
+              translateY: Animated.add(
+                Animated.add(bob, pan.y),
+                floatHop
+              ),
             },
             { scale: floatScale },
             { rotate: rotation },
@@ -941,9 +1691,52 @@ function FloatingCompanionOverlay() {
         },
       ]}
     >
+      {isCommonCompanion && speech ? (
+        <View
+          pointerEvents="none"
+          style={[
+            S.companionSpeechBubble,
+            {
+              borderColor: speechAccent,
+            },
+          ]}
+        >
+          <Text
+            style={[
+              S.companionSpeechTitle,
+              { color: speechAccent },
+            ]}
+          >
+            {(activeCompanion as any)
+              .shortLabel ||
+              (activeCompanion as any).title ||
+              "Nova Companion"}
+          </Text>
+
+          <Text style={S.companionSpeechText}>
+            {speech}
+          </Text>
+
+          <View
+            style={[
+              S.companionSpeechArrow,
+              {
+                borderTopColor: speechAccent,
+              },
+            ]}
+          />
+        </View>
+      ) : null}
+
       <View style={S.companionBadge}>
-        <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
-          <CompanionEffectOverlay type={effectType} effectKey={effectKey} />
+        <View
+          pointerEvents="none"
+          style={StyleSheet.absoluteFillObject}
+        >
+          <CompanionEffectOverlay
+            type={effectType}
+            effectKey={effectKey}
+          />
         </View>
 
         <Image
@@ -951,6 +1744,21 @@ function FloatingCompanionOverlay() {
           style={S.companionImage}
           resizeMode="contain"
         />
+
+        {isCommonCompanion ? (
+          <View
+            pointerEvents="none"
+            style={S.companionFriendshipBadge}
+          >
+            <Text
+              style={
+                S.companionFriendshipText
+              }
+            >
+              💜 {friendshipLevel}
+            </Text>
+          </View>
+        ) : null}
       </View>
     </Animated.View>
   );
@@ -1341,6 +2149,70 @@ export const S = StyleSheet.create({
   companionImage: {
     width: 48,
     height: 48,
+  },
+  companionSpeechBubble: {
+    position: "absolute",
+    right: 0,
+    bottom: 78,
+    width: 218,
+    borderRadius: 15,
+    borderWidth: 1.5,
+    backgroundColor: "rgba(2,8,23,0.96)",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    shadowColor: "#000",
+    shadowOpacity: 0.42,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 8,
+  },
+  companionSpeechTitle: {
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 0.45,
+    textTransform: "uppercase",
+    marginBottom: 4,
+  },
+  companionSpeechText: {
+    color: "#f8fafc",
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: "700",
+  },
+  companionSpeechArrow: {
+    position: "absolute",
+    right: 20,
+    bottom: -9,
+    width: 0,
+    height: 0,
+    borderLeftWidth: 8,
+    borderRightWidth: 8,
+    borderTopWidth: 9,
+    borderLeftColor: "transparent",
+    borderRightColor: "transparent",
+  },
+  companionFriendshipBadge: {
+    position: "absolute",
+    right: -8,
+    bottom: -8,
+    minWidth: 32,
+    height: 22,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(244,114,182,0.92)",
+    backgroundColor: "rgba(76,5,25,0.96)",
+    paddingHorizontal: 6,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#f472b6",
+    shadowOpacity: 0.5,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  companionFriendshipText: {
+    color: "#fce7f3",
+    fontSize: 9,
+    fontWeight: "900",
   },
   companionLabel: {
     marginTop: 4,
