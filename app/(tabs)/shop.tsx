@@ -338,7 +338,21 @@ function showIapUnavailableAlert(
 
 const COMING_SOON_TEXT = "Coming in the next update!";
 
+function isAskUpgradeItem(it: any): boolean {
+  return (
+    it?.category === "ask_memory" ||
+    it?.category === "ask_personality"
+  );
+}
+
 function isComingSoon(it: any): boolean {
+  /**
+   * Ask memory and teaching styles are now active. Their older catalog
+   * entries may still contain meta.comingSoon from the v1 launch lock, so
+   * the Shop intentionally ignores that legacy flag for these categories.
+   */
+  if (isAskUpgradeItem(it)) return false;
+
   return !!(it && it.meta && it.meta.comingSoon);
 }
 
@@ -590,6 +604,45 @@ function resolveAskPersonalityFromItem(it: CatalogItem): string | null {
     return pid ? String(pid) : null;
   }
   return null;
+}
+
+type PersonalityExperienceMeta = {
+  tagline: string | null;
+  bullets: string[];
+  previewQuestion: string | null;
+  previewAnswer: string | null;
+  accent: string;
+};
+
+function getPersonalityExperienceMeta(
+  item: any
+): PersonalityExperienceMeta | null {
+  if (!item || item.category !== "ask_personality") {
+    return null;
+  }
+
+  const meta = item.meta ?? {};
+  const bullets = Array.isArray(meta.experienceBullets)
+    ? meta.experienceBullets
+        .map((value: any) => String(value || "").trim())
+        .filter(Boolean)
+    : [];
+
+  return {
+    tagline: meta.experienceTagline
+      ? String(meta.experienceTagline)
+      : null,
+    bullets,
+    previewQuestion: meta.previewQuestion
+      ? String(meta.previewQuestion)
+      : null,
+    previewAnswer: meta.previewAnswer
+      ? String(meta.previewAnswer)
+      : null,
+    accent: meta.personalityAccent
+      ? String(meta.personalityAccent)
+      : CATEGORY_BORDER.ask_personality,
+  };
 }
 
 async function updateAskMemoryProfile(
@@ -1058,6 +1111,8 @@ function ItemDetailModal({
 
   const abilityShort = getCompanionAbilityShort(item.id);
   const abilityNote = item.ability?.note ?? abilityShort ?? null;
+  const personalityExperience =
+    getPersonalityExperienceMeta(item);
 
   const isWhiteLegendDetail =
     item.category === "companions" && isWhiteLegendId(item.id);
@@ -1217,6 +1272,138 @@ function ItemDetailModal({
                 >
                   {item.desc}
                 </Text>
+              ) : null}
+
+              {personalityExperience ? (
+                <View
+                  style={{
+                    marginTop: 4,
+                    marginBottom: 14,
+                    borderRadius: 15,
+                    borderWidth: 1,
+                    borderColor: personalityExperience.accent,
+                    backgroundColor: tokens.isDark
+                      ? "rgba(2,6,23,0.72)"
+                      : "rgba(248,250,252,0.92)",
+                    padding: 13,
+                  }}
+                >
+                  {personalityExperience.tagline ? (
+                    <Text
+                      style={{
+                        color: personalityExperience.accent,
+                        fontSize: 15,
+                        lineHeight: 20,
+                        fontWeight: "900",
+                        marginBottom: 9,
+                      }}
+                    >
+                      {personalityExperience.tagline}
+                    </Text>
+                  ) : null}
+
+                  {personalityExperience.bullets.length ? (
+                    <View style={{ gap: 7, marginBottom: 13 }}>
+                      {personalityExperience.bullets.map(
+                        (bullet) => (
+                          <View
+                            key={bullet}
+                            style={{
+                              flexDirection: "row",
+                              alignItems: "flex-start",
+                              gap: 8,
+                            }}
+                          >
+                            <Text
+                              style={{
+                                color:
+                                  personalityExperience.accent,
+                                fontSize: 13,
+                                fontWeight: "900",
+                              }}
+                            >
+                              ✦
+                            </Text>
+                            <Text
+                              style={{
+                                flex: 1,
+                                color: tokens.text as any,
+                                fontSize: 12,
+                                lineHeight: 17,
+                                fontWeight: "700",
+                              }}
+                            >
+                              {bullet}
+                            </Text>
+                          </View>
+                        )
+                      )}
+                    </View>
+                  ) : null}
+
+                  {personalityExperience.previewQuestion &&
+                  personalityExperience.previewAnswer ? (
+                    <View
+                      style={{
+                        borderTopWidth: 1,
+                        borderTopColor:
+                          "rgba(148,163,184,0.28)",
+                        paddingTop: 12,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: tokens.cardText as any,
+                          fontSize: 10,
+                          fontWeight: "900",
+                          letterSpacing: 0.5,
+                          textTransform: "uppercase",
+                          marginBottom: 5,
+                        }}
+                      >
+                        Experience preview
+                      </Text>
+
+                      <Text
+                        style={{
+                          color: tokens.text as any,
+                          fontSize: 12,
+                          lineHeight: 17,
+                          fontWeight: "800",
+                          marginBottom: 9,
+                        }}
+                      >
+                        You: {personalityExperience.previewQuestion}
+                      </Text>
+
+                      <View
+                        style={{
+                          borderLeftWidth: 3,
+                          borderLeftColor:
+                            personalityExperience.accent,
+                          borderRadius: 10,
+                          backgroundColor: tokens.isDark
+                            ? "rgba(255,255,255,0.04)"
+                            : "rgba(15,23,42,0.04)",
+                          padding: 10,
+                        }}
+                      >
+                        <Text
+                          selectable
+                          style={{
+                            color: tokens.text as any,
+                            fontSize: 12,
+                            lineHeight: 18,
+                          }}
+                        >
+                          {
+                            personalityExperience.previewAnswer
+                          }
+                        </Text>
+                      </View>
+                    </View>
+                  ) : null}
+                </View>
               ) : null}
 
               {abilityNote ? (
@@ -1830,7 +2017,11 @@ export default function Shop() {
   const { coins, setCoins } = useCoins();
   const { tokens, setThemeById, themeId } = useTheme();
   const { cursorId, setCursorById } = useCursor();
-  const { user: currentUser } = useUser() as any;
+  const {
+    user: currentUser,
+    setAskPersonality,
+    setAskMemoryConfig,
+  } = useUser() as any;
   const { purchases, isOwned, grant } = usePurchases();
   const {
     activeCompanionId: equippedCompanionId,
@@ -2437,18 +2628,40 @@ export default function Shop() {
 
     if (it.category === "ask_memory") {
       const cfg = resolveAskMemoryConfigFromItem(it);
-      await updateAskMemoryProfile((currentUser as any)?.id ?? null, cfg);
-      if (!cfg)
-        console.warn("[shop] ask_memory purchased but meta missing tier/limit");
+
+      if (!cfg) {
+        console.warn(
+          "[shop] ask_memory purchased but meta is missing tier/limit"
+        );
+      } else if (typeof setAskMemoryConfig === "function") {
+        await setAskMemoryConfig(cfg.tier, cfg.limit);
+      } else {
+        await updateAskMemoryProfile(
+          (currentUser as any)?.id ?? null,
+          cfg
+        );
+      }
     }
 
     if (it.category === "ask_personality") {
       const pid = resolveAskPersonalityFromItem(it);
-      await updateAskPersonalityProfile((currentUser as any)?.id ?? null, pid);
-      if (!pid)
+
+      if (!pid) {
         console.warn(
-          "[shop] ask_personality purchased but meta missing personalityId"
+          "[shop] ask_personality purchased but meta is missing personalityId"
         );
+      } else if (typeof setAskPersonality === "function") {
+        /**
+         * Newly purchased teaching styles become selected immediately.
+         * The Ask dropdown can switch to any other owned style afterward.
+         */
+        await Promise.resolve(setAskPersonality(pid));
+      } else {
+        await updateAskPersonalityProfile(
+          (currentUser as any)?.id ?? null,
+          pid
+        );
+      }
     }
   };
 
@@ -3778,7 +3991,20 @@ export default function Shop() {
     onOpenDetail: ((item: any) => void) | undefined,
     tokensArg: any
   ) => {
-    const owned = isOwnedAny(it.id);
+    const itemMemoryConfig = resolveAskMemoryConfigFromItem(it);
+    const currentMemoryLimit = Number(
+      (currentUser as any)?.askMemoryLimit ?? 0
+    );
+
+    const ownedByMemoryLevel =
+      it.category === "ask_memory" &&
+      !!itemMemoryConfig &&
+      Number.isFinite(currentMemoryLimit) &&
+      currentMemoryLimit >= itemMemoryConfig.limit;
+
+    const owned =
+      isOwnedAny(it.id) || ownedByMemoryLevel;
+
     const src =
       it.image || (it.altImageKey && altImages[it.altImageKey]) || null;
 
@@ -3866,7 +4092,7 @@ export default function Shop() {
               paddingHorizontal: 8,
               opacity: locked ? 0.8 : 1,
             }}
-            numberOfLines={3}
+            numberOfLines={isAskPersonality ? 4 : 3}
           >
             {it.desc}
           </Text>
@@ -3905,7 +4131,37 @@ export default function Shop() {
 
         <View style={{ height: 8 }} />
 
-        {(isAskMemory || isAskPersonality) && locked ? <ComingSoonPill /> : null}
+        {(isAskMemory || isAskPersonality) && locked ? (
+          <ComingSoonPill />
+        ) : null}
+
+        {isAskPersonality && onOpenDetail ? (
+          <Pressable
+            onPress={() => onOpenDetail(it)}
+            style={({ pressed }) => ({
+              alignItems: "center",
+              paddingVertical: 9,
+              paddingHorizontal: 10,
+              marginBottom: 8,
+              borderRadius: 10,
+              borderWidth: 1,
+              borderColor: color,
+              backgroundColor: pressed
+                ? "rgba(236,72,153,0.20)"
+                : "rgba(236,72,153,0.09)",
+            })}
+          >
+            <Text
+              style={{
+                color,
+                fontWeight: "900",
+                fontSize: 12,
+              }}
+            >
+              Preview the experience
+            </Text>
+          </Pressable>
+        ) : null}
 
         {equipable === "theme" ? (
           owned ? (
@@ -4701,7 +4957,23 @@ export default function Shop() {
           )}
         </Section>
 
-        <Section title="Ask Personalities">
+        <View style={{ marginBottom: 8 }}>
+          <Text
+            style={{
+              color: tokens.text as any,
+              fontSize: 13,
+              lineHeight: 19,
+              fontWeight: "700",
+              opacity: 0.88,
+            }}
+          >
+            These are complete conversation experiences—not just
+            different wording. Tap Preview to compare how each Nova
+            explains, structures, and continues the same lesson.
+          </Text>
+        </View>
+
+        <Section title="Nova AI Experiences">
           {groups.ask_personality.map((it) =>
             renderItem(
               it,
@@ -4746,6 +5018,11 @@ export default function Shop() {
           isCompanionOwned(detailItem?.id) &&
           !isCompanionEquipped(detailItem?.id)
             ? "Equip Companion"
+            : detailItem?.category === "ask_personality" &&
+              !isOwnedAny(detailItem?.id)
+            ? `Unlock for $${Number(
+                detailItem?.priceUSD ?? 0
+              ).toFixed(2)}`
             : undefined
         }
         onPrimaryAction={
@@ -4755,6 +5032,13 @@ export default function Shop() {
             ? () => {
                 triggerCompanion(detailItem.id);
                 setDetailItem(null);
+              }
+            : detailItem?.category === "ask_personality" &&
+              !isOwnedAny(detailItem?.id)
+            ? () => {
+                const itemToBuy = detailItem;
+                setDetailItem(null);
+                void moneyBuy(itemToBuy);
               }
             : undefined
         }

@@ -113,8 +113,8 @@ const img = {
   ask_personality_storyteller: require("../assets/shop/ask/ask_personality_storyteller.png"),
 };
 
-// v1 locks (App Store build)
-const V1_LOCK_ASK_UPGRADES = true;
+// Ask upgrades are active in the current build.
+const V1_LOCK_ASK_UPGRADES = false;
 
 export const catalog: CatalogItem[] = [
   // Plushies
@@ -497,14 +497,14 @@ export const catalog: CatalogItem[] = [
     },
   },
 
-  // Ask Memory (locked for v1)
+  // Ask Memory (IAP)
   {
     id: "ask_memory_tier1",
     title: "Ask Memory: Tier I",
     category: "ask_memory",
     priceUSD: 2,
     image: img.ask_memory_tier1_nova_notes,
-    desc: "Unlock a larger short-term memory for Ask. Great for regular study chats.",
+    desc: "Nova remembers up to 20 previous messages—great for regular study chats.",
     askMemoryTier: "tier1",
     askMemoryLimit: 20,
     meta: {
@@ -521,7 +521,7 @@ export const catalog: CatalogItem[] = [
     category: "ask_memory",
     priceUSD: 4,
     image: img.ask_memory_tier2_nova_journal,
-    desc: "Nova remembers longer sessions. Perfect for deep dives and projects.",
+    desc: "Nova remembers up to 50 previous messages—perfect for deep dives and projects.",
     askMemoryTier: "tier2",
     askMemoryLimit: 50,
     meta: {
@@ -538,7 +538,7 @@ export const catalog: CatalogItem[] = [
     category: "ask_memory",
     priceUSD: 6,
     image: img.ask_memory_tier3_nova_vault,
-    desc: "Maximum Ask memory for long-running sessions and big study arcs.",
+    desc: "Nova remembers up to 100 previous messages for long study sessions.",
     askMemoryTier: "tier3",
     askMemoryLimit: 100,
     meta: {
@@ -555,7 +555,7 @@ export const catalog: CatalogItem[] = [
     category: "ask_memory",
     priceUSD: 8,
     image: img.ask_memory_tier4_nova_galaxy_archive,
-    desc: "Galaxy-level Ask memory for huge projects and long-term study arcs.",
+    desc: "Nova remembers up to 250 previous messages for huge projects and study arcs.",
     askMemoryTier: "tier4",
     askMemoryLimit: 250,
     meta: {
@@ -567,65 +567,109 @@ export const catalog: CatalogItem[] = [
     },
   },
 
-  // Ask Personalities (locked for v1)
+  // Nova AI Experiences (IAP)
   {
     id: "ask_personality_calm_focus",
-    title: "Ask Personality: Calm Focus",
+    title: "Nova Experience: Calm Focus",
     category: "ask_personality",
     priceUSD: 2,
     image: img.ask_personality_calm_focus,
-    desc: "Slow, steady, and very focused explanations.",
+    desc: "A quiet, low-distraction tutor with concise steps, no jokes, and one clear next action.",
     askPersonalityKey: "calm_focus",
     meta: {
       comingSoon: V1_LOCK_ASK_UPGRADES,
       iapProductId: "ask_personality_calm_focus",
       personalityId: "calm_focus",
       grantId: "ask_personality_calm_focus",
+      experienceTagline: "A quiet study room in your pocket",
+      experienceBullets: [
+        "No jokes, hype, or clutter",
+        "Up to four concise steps",
+        "One clear next action",
+      ],
+      previewQuestion: "Why do objects fall?",
+      previewAnswer:
+        "FOCUS\nGravity pulls objects toward Earth.\n\nSTEPS\n1. Earth has mass.\n2. Mass creates gravitational attraction.\n3. Nearby objects accelerate toward Earth.\n\nNEXT STEP\nPicture one dropped object and identify the direction of its acceleration.",
+      personalityAccent: "#60a5fa",
+      personalityIcon: "moon-outline",
     },
   },
   {
     id: "ask_personality_coach",
-    title: "Ask Personality: Coach",
+    title: "Nova Experience: Coach",
     category: "ask_personality",
     priceUSD: 2,
     image: img.ask_personality_coach,
-    desc: "High-energy coach vibes, cheering you through tough problems.",
+    desc: "A goal-driven tutor with punchy game plans, specific motivation, and a challenge to finish.",
     askPersonalityKey: "coach",
     meta: {
       comingSoon: V1_LOCK_ASK_UPGRADES,
       iapProductId: "ask_personality_coach",
       personalityId: "coach",
       grantId: "ask_personality_coach",
+      experienceTagline: "Turn every question into forward motion",
+      experienceBullets: [
+        "A concrete goal",
+        "A punchy game plan",
+        "A practical “Your Move”",
+      ],
+      previewQuestion: "Why do objects fall?",
+      previewAnswer:
+        "GOAL\nUnderstand gravity well enough to explain it in one sentence.\n\nGAME PLAN\nEarth’s mass creates gravity. That force pulls nearby objects toward Earth, so a dropped object accelerates downward.\n\nYOUR MOVE\nSay it back without using the word “down.” You’ve got this. ⚡",
+      personalityAccent: "#fb923c",
+      personalityIcon: "flash-outline",
     },
   },
   {
     id: "ask_personality_playful",
-    title: "Ask Personality: Playful",
+    title: "Nova Experience: Playful",
     category: "ask_personality",
     priceUSD: 2,
     image: img.ask_personality_playful,
-    desc: "Light, playful tone with plenty of jokes and positive vibes.",
+    desc: "A game-like tutor using silly metaphors, memorable examples, emojis, and quick challenges.",
     askPersonalityKey: "playful",
     meta: {
       comingSoon: V1_LOCK_ASK_UPGRADES,
       iapProductId: "ask_personality_playful",
       personalityId: "playful",
       grantId: "ask_personality_playful",
+      experienceTagline: "Learning with games and weird examples",
+      experienceBullets: [
+        "Funny, relevant metaphors",
+        "Game-like explanations",
+        "A playful quick challenge",
+      ],
+      previewQuestion: "Why do objects fall?",
+      previewAnswer:
+        "THE FUN VERSION\nEarth is a giant cosmic magnet for anything with mass—except it uses gravity instead of magnetism. Drop a sandwich, and Earth says, “Mine now.” 🥪🌍\n\nWHAT IT REALLY MEANS\nEarth’s mass creates a gravitational force that accelerates objects toward its center.\n\nQUICK CHALLENGE\nWhich falls because of gravity: a bowling ball, a feather, or both?",
+      personalityAccent: "#f472b6",
+      personalityIcon: "game-controller-outline",
     },
   },
   {
     id: "ask_personality_storyteller",
-    title: "Ask Personality: Storyteller",
+    title: "Nova Experience: Storyteller",
     category: "ask_personality",
     priceUSD: 2,
     image: img.ask_personality_storyteller,
-    desc: "Explains concepts through stories and little narratives.",
+    desc: "A narrative tutor that builds vivid scenes, decodes every metaphor, and ends with the plain answer.",
     askPersonalityKey: "storyteller",
     meta: {
       comingSoon: V1_LOCK_ASK_UPGRADES,
       iapProductId: "ask_personality_storyteller",
       personalityId: "storyteller",
       grantId: "ask_personality_storyteller",
+      experienceTagline: "Learn it as a world you can picture",
+      experienceBullets: [
+        "A vivid mini-story",
+        "Story-to-concept mapping",
+        "A plain-language takeaway",
+      ],
+      previewQuestion: "Why do objects fall?",
+      previewAnswer:
+        "THE STORY\nImagine Earth as a queen whose invisible invitation reaches every object nearby. The closer they are, the more strongly they are drawn toward her castle at the center.\n\nWHAT THE STORY REPRESENTS\nThe queen is Earth’s mass, the invitation is gravity, and the castle is Earth’s center.\n\nTHE TAKEAWAY\nObjects fall because Earth’s gravity accelerates them toward its center.",
+      personalityAccent: "#a78bfa",
+      personalityIcon: "book-outline",
     },
   },
 
