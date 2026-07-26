@@ -4,6 +4,7 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -13,9 +14,21 @@ import { useUser } from "./UserContext";
 
 type PurchaseMap = Record<string, true>;
 
+export type AskPersonalityKey =
+  | "encouraging"
+  | "calm_focus"
+  | "coach"
+  | "playful"
+  | "storyteller";
+
 type PurchasesCtx = {
   purchases: PurchaseMap;
+  purchasesReady: boolean;
   isOwned: (id: string | null | undefined) => boolean;
+  ownedAskPersonalities: AskPersonalityKey[];
+  isAskPersonalityOwned: (
+    personality: AskPersonalityKey | string | null | undefined
+  ) => boolean;
   grant: (id: string | string[]) => Promise<void>;
   revoke: (id: string) => Promise<void>;
   reload: () => Promise<void>;
@@ -50,6 +63,7 @@ function canonId(raw: string | null | undefined): string {
     v === "ask_memory_tier2" ||
     v === "ask_memory_tier3" ||
     v === "ask_memory_tier4" ||
+    v === "ask_personality_encouraging" ||
     v === "ask_personality_calm_focus" ||
     v === "ask_personality_coach" ||
     v === "ask_personality_playful" ||
@@ -180,11 +194,11 @@ const MEMORY_TIER_SKUS: Record<Exclude<AskMemoryTierId, "free">, string> = {
 // How many messages (or roughly how much history) each tier grants.
 // You can freely tweak these numbers later as you tune the product.
 const MEMORY_TIER_LIMITS: Record<AskMemoryTierId, number> = {
-  free: 4,
-  tier1: 12,
-  tier2: 24,
-  tier3: 48,
-  tier4: 96,
+  free: 5,
+  tier1: 20,
+  tier2: 50,
+  tier3: 100,
+  tier4: 250,
 };
 
 function computeHighestMemoryTier(purchases: PurchaseMap): AskMemoryTierId {
@@ -193,6 +207,79 @@ function computeHighestMemoryTier(purchases: PurchaseMap): AskMemoryTierId {
   if (purchases[MEMORY_TIER_SKUS.tier2]) return "tier2";
   if (purchases[MEMORY_TIER_SKUS.tier1]) return "tier1";
   return "free";
+}
+
+/* --------------------- Ask personality ownership helpers -------------------- */
+
+const ASK_PERSONALITY_SKUS: Record<
+  Exclude<AskPersonalityKey, "encouraging">,
+  string
+> = {
+  calm_focus: canonId("ask_personality_calm_focus"),
+  coach: canonId("ask_personality_coach"),
+  playful: canonId("ask_personality_playful"),
+  storyteller: canonId("ask_personality_storyteller"),
+};
+
+const ASK_PERSONALITY_ORDER: AskPersonalityKey[] = [
+  "encouraging",
+  "calm_focus",
+  "coach",
+  "playful",
+  "storyteller",
+];
+
+function normalizeAskPersonalityKey(
+  value: AskPersonalityKey | string | null | undefined
+): AskPersonalityKey {
+  const raw = String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/-/g, "_")
+    .replace(/\s+/g, "_");
+
+  const aliases: Record<string, AskPersonalityKey> = {
+    default: "encouraging",
+    classic: "encouraging",
+    classic_tutor: "encouraging",
+    calm: "calm_focus",
+    focused: "calm_focus",
+    focus: "calm_focus",
+    motivational_coach: "coach",
+    hype_coach: "coach",
+    fun: "playful",
+    chill: "playful",
+    story: "storyteller",
+    story_mode: "storyteller",
+  };
+
+  const normalized = aliases[raw] || raw;
+
+  return ASK_PERSONALITY_ORDER.includes(
+    normalized as AskPersonalityKey
+  )
+    ? (normalized as AskPersonalityKey)
+    : "encouraging";
+}
+
+function ownsAskPersonality(
+  purchases: PurchaseMap,
+  personality: AskPersonalityKey | string | null | undefined
+): boolean {
+  const normalized = normalizeAskPersonalityKey(personality);
+
+  if (normalized === "encouraging") return true;
+
+  const sku = ASK_PERSONALITY_SKUS[normalized];
+  return !!purchases[sku];
+}
+
+function computeOwnedAskPersonalities(
+  purchases: PurchaseMap
+): AskPersonalityKey[] {
+  return ASK_PERSONALITY_ORDER.filter((personality) =>
+    ownsAskPersonality(purchases, personality)
+  );
 }
 
 /* ------------------------- normalize + (de)serialize ------------------------ */
@@ -283,9 +370,18 @@ export function PurchasesProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const { supabaseUserId } = useUser();
+  const {
+    supabaseUserId,
+    askPersonality,
+    setAskPersonality,
+  } = useUser();
   const [purchases, setPurchases] = useState<PurchaseMap>({});
+  const purchasesRef = useRef<PurchaseMap>({});
   const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    purchasesRef.current = purchases;
+  }, [purchases]);
 
   console.log("[PurchasesContext DEBUG] supabaseUserId =", supabaseUserId);
   console.log("[PurchasesContext DEBUG] purchases =", purchases);
@@ -636,6 +732,31 @@ export function PurchasesProvider({
     })();
   }, [purchases, supabaseUserId, hydrated]);
 
+  /* ------------- keep the selected teaching style valid after restore -------- */
+
+  useEffect(() => {
+    if (!hydrated) return;
+
+    const selected = normalizeAskPersonalityKey(askPersonality);
+
+    if (
+      selected !== "encouraging" &&
+      !ownsAskPersonality(purchases, selected)
+    ) {
+      void Promise.resolve(setAskPersonality("encouraging")).catch((error) => {
+        console.warn(
+          "[PurchasesContext] could not reset unavailable teaching style:",
+          error
+        );
+      });
+    }
+  }, [
+    askPersonality,
+    hydrated,
+    purchases,
+    setAskPersonality,
+  ]);
+
   /* ------------------------------ public helpers ----------------------------- */
 
   const isOwned = useCallback(
@@ -647,30 +768,101 @@ export function PurchasesProvider({
     [purchases]
   );
 
-  const grant = useCallback(async (id: string | string[]) => {
-    console.log("[PurchasesContext] grant called with", id);
-    setPurchases((prev) => {
-      const next: PurchaseMap = { ...prev };
+  const isAskPersonalityOwned = useCallback(
+    (
+      personality: AskPersonalityKey | string | null | undefined
+    ) => ownsAskPersonality(purchases, personality),
+    [purchases]
+  );
+
+  const ownedAskPersonalities = useMemo(
+    () => computeOwnedAskPersonalities(purchases),
+    [purchases]
+  );
+
+  const grant = useCallback(
+    async (id: string | string[]) => {
+      console.log("[PurchasesContext] grant called with", id);
+
+      const next: PurchaseMap = {
+        ...purchasesRef.current,
+      };
       const arr = Array.isArray(id) ? id : [id];
-      for (const k of arr) {
-        const cid = canonId(k);
+
+      for (const rawId of arr) {
+        const cid = canonId(rawId);
         if (!cid) continue;
         next[cid] = true;
       }
-      return next;
-    });
-  }, []);
 
-  const revoke = useCallback(async (id: string) => {
-    console.log("[PurchasesContext] revoke called with", id);
-    const cid = canonId(id);
-    if (!cid) return;
-    setPurchases((prev) => {
-      const next = { ...prev };
+      purchasesRef.current = next;
+      setPurchases(next);
+
+      const key = storageKey(supabaseUserId);
+      await AsyncStorage.setItem(key, JSON.stringify(next));
+
+      /*
+       * Write the profile mirror before resolving. Shop waits for grant(), so
+       * the backend can verify a newly purchased teaching style immediately
+       * even before the normal purchases-table synchronization effect runs.
+       */
+      if (supabaseUserId) {
+        const { error } = await supabase
+          .from("profiles")
+          .update({
+            purchases: toRemotePayload(next),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", supabaseUserId);
+
+        if (error) {
+          console.warn(
+            "[PurchasesContext] immediate grant profile mirror error:",
+            error
+          );
+        }
+      }
+    },
+    [supabaseUserId]
+  );
+
+  const revoke = useCallback(
+    async (id: string) => {
+      console.log("[PurchasesContext] revoke called with", id);
+
+      const cid = canonId(id);
+      if (!cid) return;
+
+      const next: PurchaseMap = {
+        ...purchasesRef.current,
+      };
       delete next[cid];
-      return next;
-    });
-  }, []);
+
+      purchasesRef.current = next;
+      setPurchases(next);
+
+      const key = storageKey(supabaseUserId);
+      await AsyncStorage.setItem(key, JSON.stringify(next));
+
+      if (supabaseUserId) {
+        const { error } = await supabase
+          .from("profiles")
+          .update({
+            purchases: toRemotePayload(next),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", supabaseUserId);
+
+        if (error) {
+          console.warn(
+            "[PurchasesContext] immediate revoke profile mirror error:",
+            error
+          );
+        }
+      }
+    },
+    [supabaseUserId]
+  );
 
   const reload = useCallback(
     async () => {
@@ -803,6 +995,7 @@ export function PurchasesProvider({
       const key = storageKey(supabaseUserId);
       console.log("[PurchasesContext] clearAll called for", key);
       const empty: PurchaseMap = {};
+      purchasesRef.current = empty;
       setPurchases(empty);
       await AsyncStorage.setItem(key, JSON.stringify(empty));
 
@@ -848,8 +1041,28 @@ export function PurchasesProvider({
   );
 
   const value = useMemo(
-    () => ({ purchases, isOwned, grant, revoke, reload, clearAll }),
-    [purchases, isOwned, grant, revoke, reload, clearAll]
+    () => ({
+      purchases,
+      purchasesReady: hydrated,
+      isOwned,
+      ownedAskPersonalities,
+      isAskPersonalityOwned,
+      grant,
+      revoke,
+      reload,
+      clearAll,
+    }),
+    [
+      purchases,
+      hydrated,
+      isOwned,
+      ownedAskPersonalities,
+      isAskPersonalityOwned,
+      grant,
+      revoke,
+      reload,
+      clearAll,
+    ]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

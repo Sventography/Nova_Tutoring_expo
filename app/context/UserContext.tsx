@@ -36,6 +36,52 @@ type LocalUserProfile = {
   askMemoryLimit?: number | null;
 };
 
+export type AskPersonalityKey =
+  | "encouraging"
+  | "calm_focus"
+  | "coach"
+  | "playful"
+  | "storyteller";
+
+const ASK_PERSONALITY_KEYS = new Set<AskPersonalityKey>([
+  "encouraging",
+  "calm_focus",
+  "coach",
+  "playful",
+  "storyteller",
+]);
+
+function normalizeAskPersonality(
+  value: string | null | undefined
+): AskPersonalityKey {
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/-/g, "_")
+    .replace(/\s+/g, "_");
+
+  const aliases: Record<string, AskPersonalityKey> = {
+    default: "encouraging",
+    classic: "encouraging",
+    classic_tutor: "encouraging",
+    calm: "calm_focus",
+    focused: "calm_focus",
+    focus: "calm_focus",
+    motivational_coach: "coach",
+    hype_coach: "coach",
+    fun: "playful",
+    chill: "playful",
+    story: "storyteller",
+    story_mode: "storyteller",
+  };
+
+  const resolved = aliases[normalized] || normalized;
+
+  return ASK_PERSONALITY_KEYS.has(resolved as AskPersonalityKey)
+    ? (resolved as AskPersonalityKey)
+    : "encouraging";
+}
+
 type SignUpResult = {
   needsEmailConfirmation: boolean;
   email: string;
@@ -62,11 +108,12 @@ type UserContextValue = {
   photoURL: string | null;
   imageUrl: string | null;
 
-  askPersonality: string | null;
-  setAskPersonality: (p: string) => Promise<void> | void;
+  askPersonality: AskPersonalityKey;
+  setAskPersonality: (p: AskPersonalityKey | string) => Promise<void>;
 
   askMemoryTier: string | null;
   askMemoryLimit: number | null;
+  setAskMemoryConfig: (tier: string, limit: number) => Promise<void>;
 
   setUsername: (name: string) => Promise<void> | void;
   checkUsername: (name: string) => Promise<string>;
@@ -343,7 +390,7 @@ async function seedProfileIfNeeded(
       username,
       contact_email: email,
       avatar_url: null,
-      ask_personality: null,
+      ask_personality: "encouraging",
       ask_memory_tier: "free",
       ask_memory_limit: 0,
       updated_at: new Date().toISOString(),
@@ -437,7 +484,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         photoURL: row?.avatar_url ?? null,
         imageUrl: row?.avatar_url ?? null,
 
-        askPersonality: row?.ask_personality ?? null,
+        askPersonality: normalizeAskPersonality(row?.ask_personality),
         askMemoryTier: row?.ask_memory_tier ?? "free",
         askMemoryLimit,
       };
@@ -966,9 +1013,51 @@ export function UserProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const setAskPersonality = async (p: string) => {
+  const setAskPersonality = async (
+    p: AskPersonalityKey | string
+  ) => {
+    const normalized = normalizeAskPersonality(p);
+
     await updateProfile({
-      askPersonality: p,
+      askPersonality: normalized,
+    });
+  };
+
+  const setAskMemoryConfig = async (
+    tier: string,
+    limit: number
+  ) => {
+    const normalizedTier =
+      String(tier || "free").trim().toLowerCase() || "free";
+
+    const parsedLimit = Number(limit);
+
+    if (!Number.isFinite(parsedLimit) || parsedLimit < 0) {
+      throw new Error("Nova received an invalid Ask memory limit.");
+    }
+
+    const requestedLimit = Math.floor(parsedLimit);
+    const currentLimit = Number(
+      profileRef.current?.askMemoryLimit ?? 0
+    );
+
+    /**
+     * A lower tier can never overwrite a higher memory purchase.
+     * This also protects users who restore multiple tiers out of order.
+     */
+    const nextLimit = Math.max(
+      Number.isFinite(currentLimit) ? currentLimit : 0,
+      requestedLimit
+    );
+
+    const nextTier =
+      nextLimit > requestedLimit
+        ? profileRef.current?.askMemoryTier || normalizedTier
+        : normalizedTier;
+
+    await updateProfile({
+      askMemoryTier: nextTier,
+      askMemoryLimit: nextLimit,
     });
   };
 
@@ -1076,7 +1165,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
           photoURL: null,
           imageUrl: null,
 
-          askPersonality: null,
+          askPersonality: "encouraging",
           askMemoryTier: "free",
           askMemoryLimit: 0,
         };
@@ -1395,11 +1484,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
     photoURL: profile?.photoURL ?? null,
     imageUrl: profile?.imageUrl ?? null,
 
-    askPersonality: profile?.askPersonality ?? null,
+    askPersonality: normalizeAskPersonality(profile?.askPersonality),
     setAskPersonality,
 
-    askMemoryTier: profile?.askMemoryTier ?? null,
-    askMemoryLimit: profile?.askMemoryLimit ?? null,
+    askMemoryTier: profile?.askMemoryTier ?? "free",
+    askMemoryLimit: profile?.askMemoryLimit ?? 5,
+    setAskMemoryConfig,
 
     setUsername,
     checkUsername,
