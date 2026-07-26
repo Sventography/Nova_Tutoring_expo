@@ -1,7 +1,7 @@
-# 🔥🔥 RUNNING FIXED SERVER VERSION v11-ASK-MEMORY-PERSONALITY
+# 🔥🔥 RUNNING FIXED SERVER VERSION v12-AI-PERSONALITIES
 # (CHECKOUT + ASK MEMORY + COIN ORDER EMAILS via RESEND HTTP ONLY) 🔥🔥
 print(
-  "🔥🔥 RUNNING FIXED SERVER VERSION v11-ASK-MEMORY-PERSONALITY "
+  "🔥🔥 RUNNING FIXED SERVER VERSION v12-AI-PERSONALITIES "
   "(CHECKOUT + ASK MEMORY + COIN ORDER EMAILS via RESEND HTTP ONLY) 🔥🔥"
 )
 
@@ -39,7 +39,7 @@ except Exception:
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
-print("🔥🔥 FLASK APP INITIALIZED (v11-ASK-MEMORY-PERSONALITY) 🔥🔥")
+print("🔥🔥 FLASK APP INITIALIZED (v12-AI-PERSONALITIES) 🔥🔥")
 
 # -------------------------------------------------
 # Load environment (prefers server/env/.env.server, else server/.env)
@@ -178,6 +178,56 @@ ASK_PERSONALITY_SKU_MAP: dict[str, str] = {
 
 # The free baseline personality everyone gets
 ASK_PERSONALITY_FREE = "encouraging"
+
+ASK_PERSONALITY_ALIASES: dict[str, str] = {
+  "encouraging": "encouraging",
+  "default": "encouraging",
+  "classic": "encouraging",
+  "classic_tutor": "encouraging",
+  "calm": "calm_focus",
+  "calm_focus": "calm_focus",
+  "calm-focus": "calm_focus",
+  "focused": "calm_focus",
+  "focus": "calm_focus",
+  "coach": "coach",
+  "hype_coach": "coach",
+  "motivational_coach": "coach",
+  "playful": "playful",
+  "fun": "playful",
+  "chill": "playful",
+  "story": "storyteller",
+  "story_mode": "storyteller",
+  "storyteller": "storyteller",
+}
+
+ASK_PERSONALITY_SYSTEM_PROMPTS: dict[str, str] = {
+  "encouraging": (
+    "You are Nova, a warm, patient, encouraging tutor. Explain ideas clearly, "
+    "celebrate genuine progress, and help the learner recover from mistakes "
+    "without shame. Ask a brief follow-up question when it would improve "
+    "understanding."
+  ),
+  "calm_focus": (
+    "You are Nova in Calm Focus mode. Teach in a steady, reassuring, "
+    "low-distraction style. Use short sections, clear steps, and concise "
+    "wording. Keep the learner focused on one idea at a time."
+  ),
+  "coach": (
+    "You are Nova in Coach mode. Be energetic, direct, and motivating while "
+    "remaining kind. Break work into achievable goals, encourage effort, and "
+    "give the learner a clear next action."
+  ),
+  "playful": (
+    "You are Nova in Playful mode. Make learning lively with light humor, "
+    "imaginative examples, and fun comparisons, while keeping every "
+    "explanation accurate and easy to follow."
+  ),
+  "storyteller": (
+    "You are Nova in Storyteller mode. Explain difficult ideas through "
+    "memorable stories, analogies, and mini-scenarios, then finish with a "
+    "plain-language summary of the real concept."
+  ),
+}
 
 # -------------------------------------------------
 # Small helpers
@@ -872,86 +922,226 @@ def send_coin_order_emails(
 
 def _extract_owned_from_purchases(purchases: object) -> dict:
   """
-  Given the 'purchases' jsonb column (which might be shaped like
-  { "owned": { "sku": true, ... }, "version": 1 } or in some other
-  form), try to return a simple { sku: bool } dict.
+  Normalize the profiles.purchases JSON mirror into {sku: bool}.
   """
   if not isinstance(purchases, dict):
     return {}
 
-  # Preferred schema: { owned: { "sku": true }, version: 1 }
   owned = purchases.get("owned")
   if isinstance(owned, dict):
+    return {
+      str(key): bool(value)
+      for key, value in owned.items()
+      if value and str(key or "").strip()
+    }
+
+  return {
+    str(key): bool(value)
+    for key, value in purchases.items()
+    if isinstance(value, bool) and value and str(key or "").strip()
+  }
+
+
+def _normalize_purchase_token(value) -> str:
+  """
+  Compare entitlement IDs safely across underscore, hyphen, and colon forms.
+  """
+  return re.sub(r"[^a-z0-9]", "", str(value or "").strip().lower())
+
+
+def _normalize_ask_personality(value) -> str:
+  raw = str(value or "").strip().lower().replace(" ", "_")
+  return ASK_PERSONALITY_ALIASES.get(raw, ASK_PERSONALITY_FREE)
+
+
+def fetch_owned_purchase_skus(
+  user_id: str,
+  profile_purchases: object = None,
+) -> set[str]:
+  """
+  Merge digital entitlements from:
+    1. profiles.purchases JSON mirror
+    2. purchases.item_id (newer schema)
+    3. purchases.sku (older schema)
+
+  Physical-order metadata is not treated as a digital entitlement.
+  """
+  owned: set[str] = set()
+
+  for sku, enabled in _extract_owned_from_purchases(
+    profile_purchases
+  ).items():
+    if enabled:
+      owned.add(str(sku))
+
+  if not (
+    SUPABASE_URL
+    and SUPABASE_SERVICE_ROLE_KEY
+    and user_id
+  ):
     return owned
 
-  # Fallback: maybe the whole object is already a flat { sku: bool }
-  flat = {}
-  for k, v in purchases.items():
-    if isinstance(v, bool):
-      flat[k] = v
-  return flat
+  url = supabase_rest_url("purchases")
+  headers = supabase_headers()
+
+  for column in ("item_id", "sku"):
+    try:
+      response = requests.get(
+        url,
+        headers=headers,
+        params={
+          "user_id": f"eq.{user_id}",
+          "select": column,
+        },
+        timeout=10,
+      )
+    except Exception as error:
+      print(
+        f"[ask] purchases entitlement lookup exception "
+        f"for {column}:",
+        error,
+      )
+      continue
+
+    if response.status_code != 200:
+      print(
+        f"[ask] purchases entitlement lookup skipped "
+        f"for {column}:",
+        response.status_code,
+        response.text[:500],
+      )
+      continue
+
+    try:
+      rows = response.json()
+    except Exception as error:
+      print(
+        f"[ask] purchases entitlement parse error "
+        f"for {column}:",
+        error,
+      )
+      continue
+
+    if not isinstance(rows, list):
+      continue
+
+    found_value = False
+
+    for row in rows:
+      if not isinstance(row, dict):
+        continue
+
+      value = row.get(column)
+      if value:
+        owned.add(str(value))
+        found_value = True
+
+    # The active purchases schema has been identified.
+    if found_value:
+      break
+
+  return owned
 
 
-def fetch_profile_ask_settings(user_id: str):
+def fetch_profile_ask_settings(
+  user_id: str,
+  requested_personality=None,
+):
   """
-  Returns (memory_limit, memory_tier_code, personality_code) for this user_id.
+  Return:
+    (memory_limit, memory_tier_code, personality_code)
 
-  memory_limit is derived from *purchased* ask memory tiers:
-    - tier4 (if owned) → 250
-    - tier3 (if owned) → 100
-    - tier2 (if owned) →  50
-    - tier1 (if owned) →  20
-    - otherwise        →   5  (free baseline)
-
-  memory_tier_code is a short string used by the client:
-    - "tier4", "tier3", "tier2", "tier1", or "free"
-
-  personality_code is derived from:
-    - row.ask_personality (string),
-    - clamped to {encouraging} + any purchased personalities.
+  The free style is always available. A paid style is accepted only when its
+  matching entitlement is present in the user's purchase records.
   """
-  if not (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY and user_id):
-    print("[ask] fetch_profile_ask_settings skipped (missing config or user_id)")
-    return ASK_FREE_MEMORY_LIMIT, "free", ASK_PERSONALITY_FREE
+  if not (
+    SUPABASE_URL
+    and SUPABASE_SERVICE_ROLE_KEY
+    and user_id
+  ):
+    print(
+      "[ask] fetch_profile_ask_settings skipped "
+      "(missing config or user_id)"
+    )
+    return (
+      ASK_FREE_MEMORY_LIMIT,
+      "free",
+      ASK_PERSONALITY_FREE,
+    )
 
   url = supabase_rest_url("profiles")
   params = {
     "id": f"eq.{user_id}",
-    "select": "ask_memory_limit,ask_memory_tier,ask_personality,purchases",
+    "select": (
+      "ask_memory_limit,ask_memory_tier,"
+      "ask_personality,purchases"
+    ),
     "limit": 1,
   }
   headers = supabase_headers()
 
   try:
-    resp = requests.get(url, headers=headers, params=params, timeout=10)
-    if resp.status_code >= 400:
-      print("[ask] profile fetch error:", resp.status_code, resp.text)
-      return ASK_FREE_MEMORY_LIMIT, "free", ASK_PERSONALITY_FREE
+    response = requests.get(
+      url,
+      headers=headers,
+      params=params,
+      timeout=10,
+    )
 
-    rows = resp.json()
+    if response.status_code >= 400:
+      print(
+        "[ask] profile fetch error:",
+        response.status_code,
+        response.text,
+      )
+      return (
+        ASK_FREE_MEMORY_LIMIT,
+        "free",
+        ASK_PERSONALITY_FREE,
+      )
+
+    rows = response.json()
+
     if not rows:
-      print("[ask] profile fetch: no profile row for user", user_id)
-      return ASK_FREE_MEMORY_LIMIT, "free", ASK_PERSONALITY_FREE
+      print(
+        "[ask] profile fetch: no profile row for user",
+        user_id,
+      )
+      return (
+        ASK_FREE_MEMORY_LIMIT,
+        "free",
+        ASK_PERSONALITY_FREE,
+      )
 
     row = rows[0]
+    owned_skus = fetch_owned_purchase_skus(
+      user_id,
+      row.get("purchases"),
+    )
+    owned_tokens = {
+      _normalize_purchase_token(value)
+      for value in owned_skus
+    }
 
-    # --- owned SKUs from purchases jsonb ---
-    purchases = row.get("purchases") or {}
-    owned = _extract_owned_from_purchases(purchases)
-    print(f"[ask] profile purchases owned keys for {user_id}:", list(owned.keys()))
+    print(
+      f"[ask] merged owned entitlement keys for {user_id}:",
+      sorted(owned_skus),
+    )
 
-    # --- memory_limit + memory_tier from SKUs (highest tier wins) ---
+    # ---------------- Memory ----------------
     memory_limit = ASK_FREE_MEMORY_LIMIT
     memory_tier_code = "free"
     memory_sku_used = None
 
-    # Sort by limit descending so highest tier wins
     for sku, limit in sorted(
-      ASK_MEMORY_TIERS.items(), key=lambda kv: kv[1], reverse=True
+      ASK_MEMORY_TIERS.items(),
+      key=lambda item: item[1],
+      reverse=True,
     ):
-      if owned.get(sku):
+      if _normalize_purchase_token(sku) in owned_tokens:
         memory_limit = limit
         memory_sku_used = sku
+
         if sku == "ask_memory_tier4":
           memory_tier_code = "tier4"
         elif sku == "ask_memory_tier3":
@@ -960,67 +1150,84 @@ def fetch_profile_ask_settings(user_id: str):
           memory_tier_code = "tier2"
         elif sku == "ask_memory_tier1":
           memory_tier_code = "tier1"
+
         break
 
-    # Optionally respect legacy ask_memory_limit but never *lower* the limit
-    legacy_limit = int(row.get("ask_memory_limit") or 0)
-    legacy_tier = (row.get("ask_memory_tier") or "").strip() or None
+    # Preserve compatibility with profiles written by earlier Nova builds.
+    try:
+      legacy_limit = int(row.get("ask_memory_limit") or 0)
+    except Exception:
+      legacy_limit = 0
+
+    legacy_tier = (
+      str(row.get("ask_memory_tier") or "").strip()
+      or None
+    )
 
     if legacy_limit > memory_limit:
       print(
-        "[ask] legacy ask_memory_limit higher than purchased tiers; "
-        "using legacy for now:",
+        "[ask] using higher legacy ask_memory_limit:",
         legacy_limit,
       )
       memory_limit = legacy_limit
       if legacy_tier:
         memory_tier_code = legacy_tier
 
-    # --- personalities ---
-    raw_personality = (row.get("ask_personality") or ASK_PERSONALITY_FREE).strip().lower()
-    raw_personality = raw_personality.replace("-", "_")
-
-    # Backwards-compatible alias map (older codes → new ones)
-    personality_aliases = {
-      "focused": "calm_focus",
-      "focus": "calm_focus",
-      "chill": "playful",       # old "chill" → playful/creative
-      "hype_coach": "coach",
-    }
-    if raw_personality in personality_aliases:
-      print(
-        f"[ask] mapping legacy personality {raw_personality!r} "
-        f"→ {personality_aliases[raw_personality]!r}"
-      )
-      raw_personality = personality_aliases[raw_personality]
-
-    # Everyone always has at least the free baseline
+    # ---------------- Teaching style ----------------
     allowed_personalities = {ASK_PERSONALITY_FREE}
 
-    # Add any purchased personalities based on SKUs
-    for sku, code in ASK_PERSONALITY_SKU_MAP.items():
-      if owned.get(sku):
-        allowed_personalities.add(code)
+    for sku, personality_code in (
+      ASK_PERSONALITY_SKU_MAP.items()
+    ):
+      if _normalize_purchase_token(sku) in owned_tokens:
+        allowed_personalities.add(personality_code)
 
-    if raw_personality not in allowed_personalities:
-      print(
-        f"[ask] personality {raw_personality!r} not owned; "
-        f"falling back to {ASK_PERSONALITY_FREE!r}"
-      )
-      personality_code = ASK_PERSONALITY_FREE
+    requested_code = _normalize_ask_personality(
+      requested_personality
+    )
+    saved_code = _normalize_ask_personality(
+      row.get("ask_personality")
+    )
+
+    if requested_code in allowed_personalities:
+      personality_code = requested_code
+    elif saved_code in allowed_personalities:
+      personality_code = saved_code
     else:
-      personality_code = raw_personality
+      personality_code = ASK_PERSONALITY_FREE
+
+    if (
+      requested_personality
+      and requested_code not in allowed_personalities
+    ):
+      print(
+        f"[ask] requested personality {requested_code!r} "
+        "is not owned; using",
+        repr(personality_code),
+      )
 
     print(
       f"[ask] profile ask settings for {user_id}: "
-      f"memory_limit={memory_limit}, memory_tier={memory_tier_code!r}, "
-      f"memory_sku={memory_sku_used!r}, personality={personality_code!r}, "
-      f"allowed={allowed_personalities}"
+      f"memory_limit={memory_limit}, "
+      f"memory_tier={memory_tier_code!r}, "
+      f"memory_sku={memory_sku_used!r}, "
+      f"personality={personality_code!r}, "
+      f"allowed={sorted(allowed_personalities)}"
     )
-    return memory_limit, memory_tier_code, personality_code
-  except Exception as e:
-    print("[ask] profile fetch exception:", e)
-    return ASK_FREE_MEMORY_LIMIT, "free", ASK_PERSONALITY_FREE
+
+    return (
+      memory_limit,
+      memory_tier_code,
+      personality_code,
+    )
+
+  except Exception as error:
+    print("[ask] profile fetch exception:", error)
+    return (
+      ASK_FREE_MEMORY_LIMIT,
+      "free",
+      ASK_PERSONALITY_FREE,
+    )
 
 
 def fetch_memory_messages(user_id: str, memory_limit: int):
@@ -1034,8 +1241,8 @@ def fetch_memory_messages(user_id: str, memory_limit: int):
   url = supabase_rest_url("ask_messages")
   params = {
     "user_id": f"eq.{user_id}",
-    "select": "role,content",
-    "order": "created_at.asc",
+    "select": "role,content,created_at",
+    "order": "created_at.desc",
     "limit": memory_limit,
   }
   headers = supabase_headers()
@@ -1047,7 +1254,18 @@ def fetch_memory_messages(user_id: str, memory_limit: int):
       return []
 
     rows = resp.json()
-    print(f"[ask] fetched {len(rows)} memory messages for user {user_id}")
+
+    if not isinstance(rows, list):
+      return []
+
+    # The query selects the newest rows. Reverse them so the model receives
+    # the conversation in chronological order.
+    rows.reverse()
+
+    print(
+      f"[ask] fetched {len(rows)} recent memory messages "
+      f"for user {user_id}"
+    )
     return rows
   except Exception as e:
     print("[ask] memory fetch exception:", e)
@@ -1484,102 +1702,249 @@ ASK_TONE_LABELS: dict[str, str] = {
 
 def _ask_logic():
   if not openai_client:
-    return jsonify(ok=False, error="OpenAI not configured on server"), 500
+    return jsonify(
+      ok=False,
+      error="OpenAI not configured on server",
+    ), 500
 
   body = request.get_json(silent=True) or {}
+
   question = (
-    (body.get("question") or "")
-    or (body.get("prompt") or "")
-    or (body.get("q") or "")
+    body.get("question")
+    or body.get("prompt")
+    or body.get("q")
+    or ""
   )
   question = str(question).strip()
-  user_id = body.get("user_id")  # Supabase auth user id (string UUID)
-  history = body.get("history") or []  # optional client-side history fallback
-
-  print("[server] /ask body:", body)
 
   if not question:
-    return jsonify(ok=False, error="missing question"), 400
+    return jsonify(
+      ok=False,
+      error="missing question",
+    ), 400
 
-  memory_limit = 0
+  history = body.get("history") or []
+  requested_personality = body.get("personality")
+
+  print(
+    "[server] /ask request:",
+    {
+      "has_question": bool(question),
+      "history_count": (
+        len(history)
+        if isinstance(history, list)
+        else 0
+      ),
+      "requested_personality": requested_personality,
+      "has_authorization": bool(
+        request.headers.get("Authorization")
+      ),
+    },
+  )
+
+  # Resolve identity only from a verified Supabase bearer token.
+  # A caller cannot unlock another account by changing body.user_id.
+  user_id = None
+  access_token = _extract_bearer_token()
+
+  if request.headers.get("Authorization") and not access_token:
+    return jsonify(
+      ok=False,
+      error="A valid signed-in session is required.",
+    ), 401
+
+  if access_token:
+    try:
+      verified_user = _verify_supabase_access_token(
+        access_token
+      )
+    except Exception as error:
+      print(
+        "[ask] token verification exception:",
+        repr(error),
+      )
+      return jsonify(
+        ok=False,
+        error="Nova could not verify the signed-in account.",
+      ), 503
+
+    user_id = norm((verified_user or {}).get("id"))
+
+    if not user_id:
+      return jsonify(
+        ok=False,
+        error="The signed-in account could not be verified.",
+      ), 401
+
+  body_user_id = norm(body.get("user_id"))
+
+  if body_user_id and body_user_id != user_id:
+    print(
+      "[ask] ignored unverified body user_id:",
+      body_user_id,
+    )
+
+  memory_limit = ASK_FREE_MEMORY_LIMIT
   memory_tier = "free"
   personality_code = ASK_PERSONALITY_FREE
   memory_messages: list[dict] = []
 
-  if SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY and user_id:
-    # New: returns (limit, tier_code, personality_code)
-    memory_limit, memory_tier, personality_code = fetch_profile_ask_settings(user_id)
+  if user_id:
+    (
+      memory_limit,
+      memory_tier,
+      personality_code,
+    ) = fetch_profile_ask_settings(
+      user_id,
+      requested_personality,
+    )
+
     if memory_limit > 0:
-      memory_messages = fetch_memory_messages(user_id, memory_limit)
-
-  # If no stored memory yet, we can fall back to a slice of client history.
-  # We still clamp it to the tier's memory_limit or the free baseline.
-  if not memory_messages and isinstance(history, list):
-    max_items = memory_limit if (memory_limit and memory_limit > 0) else ASK_FREE_MEMORY_LIMIT
-    tail = history[-max_items:]
-    print(f"[ask] using {len(tail)} client-side history items as fallback")
+      memory_messages = fetch_memory_messages(
+        user_id,
+        memory_limit,
+      )
   else:
-    tail = []
+    # Guests receive the free style and current-device history only.
+    personality_code = ASK_PERSONALITY_FREE
 
-  tone_text = ASK_TONE_LABELS.get(
-    personality_code,
-    ASK_TONE_LABELS[ASK_PERSONALITY_FREE],
-  )
+  # Use client history only when server-side memory is unavailable.
+  tail: list[dict] = []
 
-  system_prompt = (
-    "You are Nova, a kind tutor for the Nova Tutoring app.\n"
-    f"Tone: {tone_text}.\n"
-    "Explain things clearly, step by step, and keep answers concise but helpful. "
-    "Focus on teaching, clarity, and encouragement for students of all ages.\n"
-    "Avoid making promises about grades or guarantees; focus on skills and understanding."
-  )
+  if not memory_messages and isinstance(history, list):
+    max_items = (
+      memory_limit
+      if memory_limit > 0
+      else ASK_FREE_MEMORY_LIMIT
+    )
 
-  messages = [{"role": "system", "content": system_prompt}]
+    for item in history[-max_items:]:
+      if not isinstance(item, dict):
+        continue
 
-  for m in memory_messages:
-    role = m.get("role") or "user"
-    content = m.get("content") or ""
-    if content:
-      messages.append({"role": role, "content": content})
+      role = str(
+        item.get("role") or "user"
+      ).strip().lower()
 
-  if not memory_messages:
-    for m in tail:
-      role = m.get("role") or "user"
-      content = m.get("content") or ""
+      if role not in ("user", "assistant"):
+        continue
+
+      content = str(
+        item.get("content") or ""
+      ).strip()
+
       if content:
-        messages.append({"role": role, "content": content})
+        tail.append({
+          "role": role,
+          "content": content,
+        })
 
-  messages.append({"role": "user", "content": question})
+    print(
+      f"[ask] using {len(tail)} client-side "
+      "history items as fallback"
+    )
+
+  system_prompt = ASK_PERSONALITY_SYSTEM_PROMPTS.get(
+    personality_code,
+    ASK_PERSONALITY_SYSTEM_PROMPTS[
+      ASK_PERSONALITY_FREE
+    ],
+  )
+
+  system_prompt += (
+    "\nTeach clearly and accurately for students of all ages. "
+    "Break down difficult ideas when useful. Avoid promises about "
+    "grades or guaranteed outcomes; focus on skills and understanding."
+  )
+
+  messages = [
+    {
+      "role": "system",
+      "content": system_prompt,
+    }
+  ]
+
+  source_messages = (
+    memory_messages
+    if memory_messages
+    else tail
+  )
+
+  for message in source_messages:
+    role = str(
+      message.get("role") or "user"
+    ).strip().lower()
+
+    if role not in ("user", "assistant"):
+      continue
+
+    content = str(
+      message.get("content") or ""
+    ).strip()
+
+    if content:
+      messages.append({
+        "role": role,
+        "content": content,
+      })
+
+  messages.append({
+    "role": "user",
+    "content": question,
+  })
 
   try:
     completion = openai_client.chat.completions.create(
       model=OPENAI_MODEL,
       messages=messages,
+      temperature=0.55,
     )
 
-    choice = completion.choices[0]
-    answer = (choice.message.content or "").strip()
+    answer = (
+      completion.choices[0].message.content
+      or ""
+    ).strip()
 
-    if SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY and user_id and memory_limit > 0:
-      insert_memory_messages(user_id, question, answer)
-      trim_memory_non_pinned(user_id, memory_limit)
+    if not answer:
+      return jsonify(
+        ok=False,
+        error="The AI returned an empty answer.",
+      ), 502
+
+    if user_id and memory_limit > 0:
+      insert_memory_messages(
+        user_id,
+        question,
+        answer,
+      )
+      trim_memory_non_pinned(
+        user_id,
+        memory_limit,
+      )
     else:
-      print("[ask] skipping memory insert/trim (no supabase config, user_id, or memory_limit)")
+      print(
+        "[ask] skipping memory insert/trim "
+        "(guest or unavailable profile)"
+      )
 
-    # Return both legacy 'memory_limit' and new ask_memory_* fields
     return jsonify(
       ok=True,
       answer=answer,
       model=OPENAI_MODEL,
       personality=personality_code,
-      memory_limit=memory_limit,       # legacy
-      ask_memory_tier=memory_tier,     # "free" | "tier1" | "tier2" | "tier3" | "tier4"
-      ask_memory_limit=memory_limit,   # numeric cap for non-pinned msgs
+      ask_personality=personality_code,
+      memory_limit=memory_limit,
+      ask_memory_tier=memory_tier,
+      ask_memory_limit=memory_limit,
     )
 
-  except Exception as e:
-    print("[server] OpenAI error:", e)
-    return jsonify(ok=False, error=str(e)), 500
+  except Exception as error:
+    print("[server] OpenAI error:", error)
+    return jsonify(
+      ok=False,
+      error=str(error),
+    ), 500
+
 
 # -------------------------------------------------
 # Routes
