@@ -11,6 +11,7 @@ import {
   Text,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { usePathname } from "expo-router";
 import { useFx } from "../context/FxProvider";
 
 let useThemeSafe: any = null;
@@ -31,6 +32,23 @@ type Mode =
   | "snow"
   | "sparks"
   | "bubbles";
+
+function isFreeDefaultTheme(
+  value: unknown
+): boolean {
+  const id = String(value || "")
+    .trim()
+    .toLowerCase();
+
+  return (
+    id === "default" ||
+    id === "free" ||
+    id === "classic" ||
+    id === "theme:default" ||
+    id === "theme:free" ||
+    id === "theme:classic"
+  );
+}
 
 type Drop = {
   left: number;
@@ -80,6 +98,7 @@ const GLITTER_COLORS = [
 
 export default function FxOverlay() {
   const { enabled } = useFx();
+  const pathname = usePathname();
   const dims = useWindowDimensions();
 
   const themeCtx = useThemeSafe
@@ -100,7 +119,14 @@ export default function FxOverlay() {
     themeCtx?.themeId ||
     themeCtx?.id ||
     themeCtx?.tokens?.id ||
-    "theme:neon";
+    "theme:default";
+
+  const freeDefaultActive =
+    isFreeDefaultTheme(themeId);
+
+  const suppressOnSplash =
+    pathname === "/" ||
+    pathname === "";
 
   const tokens = themeCtx?.tokens || {};
   const accent = tokens.accent || "#00e5ff";
@@ -313,10 +339,48 @@ export default function FxOverlay() {
     }
   }, [enabled, mode, themeId]);
 
+  /*
+   * The splash owns its own brand treatment:
+   * a plain black background with only the soft white shimmer sweep.
+   * It is intentionally independent from the equipped shop theme and from
+   * the normal in-app FX toggle.
+   */
+  if (suppressOnSplash) {
+    return (
+      <View
+        pointerEvents="none"
+        style={S.wrap}
+      >
+        <ShimmerSweep
+          width={dims.width}
+          height={dims.height}
+          duration={6200}
+          delay={0}
+          opacity={0.16}
+        />
+
+        <ShimmerSweep
+          width={dims.width}
+          height={dims.height}
+          duration={8200}
+          delay={1800}
+          opacity={0.1}
+        />
+      </View>
+    );
+  }
+
+  if (
+    !enabled ||
+    freeDefaultActive
+  ) {
+    return null;
+  }
+
   return (
     <View
       pointerEvents="none"
-      style={[S.wrap, { opacity: enabled ? 1 : 0 }]}
+      style={S.wrap}
     >
       {mode === "glitter" ? (
         <GlitterField

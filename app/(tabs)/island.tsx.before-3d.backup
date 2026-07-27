@@ -22,10 +22,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 
-import NovaIsland3DScene, {
-  type Island3DDiscovery,
-} from "../components/island3d/NovaIsland3DScene";
-
 import {
   ISLAND_MILESTONES,
   type IslandMilestone,
@@ -912,23 +908,6 @@ export default function IslandScreen() {
       islandLevel,
     ]);
 
-  const sceneDiscoveries =
-    useMemo<Island3DDiscovery[]>(
-      () =>
-        friendshipDiscoveries.map(
-          (item) => ({
-            key: item.key,
-            kind: item.kind,
-            title: item.title,
-            accent: item.accent,
-            zone: item.zone,
-            companionId:
-              item.companionId,
-          })
-        ),
-      [friendshipDiscoveries]
-    );
-
   const latestUnlockedId = useMemo(
     () =>
       [...ISLAND_MILESTONES]
@@ -943,16 +922,6 @@ export default function IslandScreen() {
     selectedDiscoveryKey,
     setSelectedDiscoveryKey,
   ] = useState<string | null>(null);
-
-  /*
-   * The 3D viewport reports every touch immediately. While it is active,
-   * the surrounding page may not scroll or steal a vertical orbit gesture.
-   */
-  const [
-    sceneInteracting,
-    setSceneInteracting,
-  ] = useState(false);
-
   const gainAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -1039,16 +1008,6 @@ export default function IslandScreen() {
       <ScrollView
         contentContainerStyle={[styles.content, { width: contentWidth }]}
         showsVerticalScrollIndicator={false}
-        scrollEnabled={
-          !sceneInteracting
-        }
-        bounces={
-          !sceneInteracting
-        }
-        directionalLockEnabled
-        disableScrollViewPanResponder={
-          sceneInteracting
-        }
       >
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
@@ -1111,62 +1070,27 @@ export default function IslandScreen() {
             />
             <Text style={styles.nextText}>
               {nextUnlock
-                ? `A mystery discovery awakens at Level ${nextUnlock.level}`
+                ? `${nextUnlock.title} awakens at Level ${nextUnlock.level}`
                 : "Every foundation landmark is awake"}
             </Text>
           </View>
         </View>
 
         <View style={styles.sceneCard}>
-          <NovaIsland3DScene
-            height={
-              contentWidth >= 560
-                ? 520
-                : 460
-            }
+          <IslandScene
+            width={contentWidth - 2}
             level={islandLevel}
-            selectedMilestoneId={
-              selectedId
+            selectedId={selectedId}
+            onSelect={inspect}
+            friendshipDiscoveries={
+              friendshipDiscoveries
             }
             selectedDiscoveryKey={
               selectedDiscoveryKey
             }
-            discoveries={
-              sceneDiscoveries
+            onSelectDiscovery={
+              inspectDiscovery
             }
-            onInteractionChange={
-              setSceneInteracting
-            }
-            onSelectMilestone={(
-              milestoneId
-            ) => {
-              const milestone =
-                ISLAND_MILESTONES.find(
-                  (item) =>
-                    item.id ===
-                    milestoneId
-                );
-
-              if (milestone) {
-                inspect(milestone);
-              }
-            }}
-            onSelectDiscovery={(
-              discoveryKey
-            ) => {
-              const discovery =
-                friendshipDiscoveries.find(
-                  (item) =>
-                    item.key ===
-                    discoveryKey
-                );
-
-              if (discovery) {
-                inspectDiscovery(
-                  discovery
-                );
-              }
-            }}
           />
 
           <Animated.View
@@ -1327,12 +1251,12 @@ export default function IslandScreen() {
                 name={
                   selectedUnlocked
                     ? (selected.icon as any)
-                    : "help-circle-outline"
+                    : "lock-closed-outline"
                 }
                 color={
                   selectedUnlocked
                     ? "#67e8f9"
-                    : "#c4b5fd"
+                    : "#94a3b8"
                 }
                 size={25}
               />
@@ -1349,9 +1273,7 @@ export default function IslandScreen() {
                     styles.detailTitle
                   }
                 >
-                  {selectedUnlocked
-                    ? selected.title
-                    : "Unknown Discovery"}
+                  {selected.title}
                 </Text>
                 <View
                   style={
@@ -1378,9 +1300,7 @@ export default function IslandScreen() {
               <Text
                 style={styles.detailBody}
               >
-                {selectedUnlocked
-                  ? selected.description
-                  : `Reach Island Level ${selected.level} to reveal what is waiting here.`}
+                {selected.description}
               </Text>
             </View>
           </View>
@@ -1610,9 +1530,10 @@ export default function IslandScreen() {
           <Text style={styles.eyebrow}>ISLAND ROADMAP</Text>
           <Text style={styles.roadmapTitle}>The world is ready to grow</Text>
           <Text style={styles.roadmapBody}>
-            Nova Island now expands as your learning level rises. New land,
-            landmarks, companions, and habitats remain hidden until the moment
-            they awaken, so every major level can reveal a genuine surprise.
+            The Island now has one shared XP engine, persistent progress,
+            daily source tracking, responsive landmarks, and safe loading
+            states. Buildings, companions, habitats, and XP Surge can now be
+            layered onto this foundation.
           </Text>
 
           <View style={styles.milestones}>
@@ -1635,7 +1556,7 @@ export default function IslandScreen() {
                     name={
                       unlocked
                         ? (milestone.icon as any)
-                        : "help-circle-outline"
+                        : "lock-closed-outline"
                     }
                     color={unlocked ? "#67e8f9" : "#64748b"}
                     size={15}
@@ -1646,10 +1567,7 @@ export default function IslandScreen() {
                       { color: unlocked ? "#e0f2fe" : "#94a3b8" },
                     ]}
                   >
-                    Lv {milestone.level} ·{" "}
-                    {unlocked
-                      ? milestone.shortTitle
-                      : "???"}
+                    Lv {milestone.level} · {milestone.shortTitle}
                   </Text>
                 </Pressable>
               );

@@ -26,20 +26,12 @@ export type IslandMilestone = {
 };
 
 export const ISLAND_MILESTONES: IslandMilestone[] = [
-  /*
-   * CENTRAL ISLAND
-   *
-   * The original island fills completely before any new land grows outward.
-   * Locked names are hidden by the Island screen, but the IDs remain stable
-   * so future quests, companions, and interactions can target each location.
-   */
   {
     id: "study_grove",
     level: 1,
     title: "Study Grove",
     shortTitle: "Grove",
-    description:
-      "The first living patch of every Nova Island.",
+    description: "The first living patch of every Nova Island.",
     icon: "leaf-outline",
   },
   {
@@ -47,8 +39,7 @@ export const ISLAND_MILESTONES: IslandMilestone[] = [
     level: 2,
     title: "Starlight Garden",
     shortTitle: "Garden",
-    description:
-      "A glowing garden that brightens as you keep learning.",
+    description: "A glowing garden that brightens as you keep learning.",
     icon: "flower-outline",
   },
   {
@@ -56,44 +47,23 @@ export const ISLAND_MILESTONES: IslandMilestone[] = [
     level: 3,
     title: "Nova Library",
     shortTitle: "Library",
-    description:
-      "A luminous home for lessons, flashcards, and collections.",
+    description: "A future home for lessons, flashcards, and collections.",
     icon: "library-outline",
-  },
-  {
-    id: "whisperwind_mill",
-    level: 4,
-    title: "Whisperwind Mill",
-    shortTitle: "Windmill",
-    description:
-      "Its enchanted sails gather learning energy from the sky.",
-    icon: "sync-circle-outline",
   },
   {
     id: "learning_falls",
     level: 5,
     title: "Learning Falls",
     shortTitle: "Waterfall",
-    description:
-      "A luminous waterfall powered by steady learning XP.",
+    description: "A luminous waterfall powered by steady learning XP.",
     icon: "water-outline",
-  },
-  {
-    id: "moonwell",
-    level: 6,
-    title: "Moonwell",
-    shortTitle: "Well",
-    description:
-      "A wishing well whose water reflects distant constellations.",
-    icon: "sparkles-outline",
   },
   {
     id: "sky_observatory",
     level: 7,
     title: "Sky Observatory",
     shortTitle: "Observatory",
-    description:
-      "A tower for goals, statistics, and discoveries among the stars.",
+    description: "A tower for future goals, statistics, and discoveries.",
     icon: "planet-outline",
   },
   {
@@ -101,52 +71,8 @@ export const ISLAND_MILESTONES: IslandMilestone[] = [
     level: 10,
     title: "Companion Habitat",
     shortTitle: "Habitat",
-    description:
-      "A living home where bonded companions can eventually roam.",
+    description: "A living home where equipped companions will eventually roam.",
     icon: "paw-outline",
-  },
-
-  /*
-   * OUTER REALMS
-   *
-   * These landmarks and their landmasses do not exist visually until the
-   * required level is reached.
-   */
-  {
-    id: "castle_reach",
-    level: 12,
-    title: "Castle Reach",
-    shortTitle: "Castle",
-    description:
-      "A fortified dream-castle protected by a luminous moat and bridge.",
-    icon: "business-outline",
-  },
-  {
-    id: "starport_dock",
-    level: 15,
-    title: "Starport Dock",
-    shortTitle: "Starport",
-    description:
-      "A sky-facing dock where a Nova spacecraft rests between journeys.",
-    icon: "rocket-outline",
-  },
-  {
-    id: "crystal_wilds",
-    level: 18,
-    title: "Crystal Wilds",
-    shortTitle: "Crystals",
-    description:
-      "An untamed floating wilderness filled with singing crystals.",
-    icon: "diamond-outline",
-  },
-  {
-    id: "moon_temple",
-    level: 21,
-    title: "Moon Temple",
-    shortTitle: "Temple",
-    description:
-      "A quiet celestial sanctuary built around an ancient moon gate.",
-    icon: "moon-outline",
   },
 ];
 
@@ -227,7 +153,7 @@ type IslandContextValue = {
   setCollapsed: (next: boolean) => Promise<void>;
   setPositionY: (y: number) => Promise<void>;
   refreshIsland: () => Promise<void>;
-  grantDailyLoginXpIfNeeded: () => Promise<boolean>;
+  grantDailyLoginXpIfNeeded: () => Promise<void>;
 };
 
 const IslandContext = createContext<IslandContextValue | undefined>(undefined);
@@ -315,10 +241,7 @@ function prettyReason(source: XpSource, reason?: string): string {
 }
 
 function stageForLevel(level: number): string {
-  if (level >= 21) return "Celestial Dominion";
-  if (level >= 18) return "Crystal Frontier";
-  if (level >= 15) return "Starfaring Haven";
-  if (level >= 12) return "Enchanted Realm";
+  if (level >= 12) return "Nova Realm";
   if (level >= 8) return "Starlit Sanctuary";
   if (level >= 5) return "Cascading Campus";
   if (level >= 2) return "Sprouting Haven";
@@ -327,17 +250,6 @@ function stageForLevel(level: number): string {
 
 function storageKey(userId: string | null): string {
   return `${STATE_PREFIX}:${userId || "guest"}`;
-}
-
-function isProgressAhead(
-  candidate: Pick<ProgressSnapshot, "xp" | "level">,
-  baseline: Pick<ProgressSnapshot, "xp" | "level">
-): boolean {
-  if (candidate.level !== baseline.level) {
-    return candidate.level > baseline.level;
-  }
-
-  return candidate.xp > baseline.xp;
 }
 
 function storedState(
@@ -384,14 +296,6 @@ export function IslandProvider({ children }: { children: ReactNode }) {
     reason: "",
     at: null as number | null,
   });
-
-  /*
-   * React effects can briefly call the daily-login function more than once
-   * while providers finish hydrating. Sharing one in-flight promise prevents
-   * duplicate reads and duplicate rewards.
-   */
-  const dailyLoginGrantRef =
-    useRef<Promise<boolean> | null>(null);
 
   const xpToNext = xpForNextLevel(level);
   const progress = Math.max(0, Math.min(1, xp / xpToNext));
@@ -511,7 +415,6 @@ export function IslandProvider({ children }: { children: ReactNode }) {
 
       let nextXp = local.xp;
       let nextLevel = local.level;
-      let shouldSyncLocalProgressToRemote = false;
 
       if (userId) {
         const { data, error } = await supabase
@@ -521,31 +424,8 @@ export function IslandProvider({ children }: { children: ReactNode }) {
           .maybeSingle();
 
         if (!error && data) {
-          const remoteProgress = {
-            xp: safeXp(data.island_xp),
-            level: safeLevel(data.island_level),
-          };
-
-          const localProgress = {
-            xp: local.xp,
-            level: local.level,
-          };
-
-          /*
-           * Keep whichever snapshot is farther ahead. This prevents a newer
-           * local reward—such as the daily-login grant—from being erased when
-           * Supabase is briefly stale or a prior remote write was delayed.
-           */
-          if (isProgressAhead(remoteProgress, localProgress)) {
-            nextXp = remoteProgress.xp;
-            nextLevel = remoteProgress.level;
-          } else {
-            nextXp = localProgress.xp;
-            nextLevel = localProgress.level;
-
-            shouldSyncLocalProgressToRemote =
-              isProgressAhead(localProgress, remoteProgress);
-          }
+          nextXp = safeXp(data.island_xp);
+          nextLevel = safeLevel(data.island_level);
         } else if (error) {
           console.warn("[IslandContext] Supabase load error", error);
         }
@@ -574,24 +454,13 @@ export function IslandProvider({ children }: { children: ReactNode }) {
       setLastGainAt(gain.at);
 
       await persistLocal(snapshot, gain);
-
-      if (shouldSyncLocalProgressToRemote) {
-        await persistRemote(
-          snapshot.xp,
-          snapshot.level
-        );
-      }
     } catch (error) {
       console.warn("[IslandContext] refresh error", error);
     } finally {
       setLoading(false);
       setReady(true);
     }
-  }, [
-    persistLocal,
-    persistRemote,
-    userId,
-  ]);
+  }, [persistLocal, userId]);
 
   useEffect(() => {
     void refreshIsland();
@@ -678,90 +547,20 @@ export function IslandProvider({ children }: { children: ReactNode }) {
     [persistLocal, persistRemote]
   );
 
-  const grantDailyLoginXpIfNeeded =
-    useCallback(async (): Promise<boolean> => {
-      /*
-       * Never award against the temporary pre-hydration snapshot. The caller
-       * also waits for ready, but this guard protects every future call site.
-       */
-      if (!ready) {
-        return false;
-      }
+  const grantDailyLoginXpIfNeeded = useCallback(async () => {
+    try {
+      const todayKey = dateKey();
+      const key = `${DAILY_XP_KEY}:${userId || "guest"}`;
+      const lastDate = await AsyncStorage.getItem(key);
 
-      if (dailyLoginGrantRef.current) {
-        return dailyLoginGrantRef.current;
-      }
+      if (lastDate === todayKey) return;
 
-      const task = (async (): Promise<boolean> => {
-        try {
-          const todayKey = dateKey();
-          const key =
-            `${DAILY_XP_KEY}:${userId || "guest"}`;
-          const lastDate =
-            await AsyncStorage.getItem(key);
-
-          const currentToday =
-            normalizeToday(
-              progressRef.current.today
-            );
-
-          /*
-           * Older builds could write today's date and then lose the XP when
-           * hydration finished. Treat the reward as complete only when both
-           * the date marker and today's login breakdown confirm the grant.
-           */
-          if (
-            lastDate === todayKey &&
-            currentToday.login > 0
-          ) {
-            return false;
-          }
-
-          /*
-           * Save the XP first. The date marker is written only after the XP
-           * operation completes, so a failed grant cannot permanently consume
-           * that day's reward.
-           */
-          await addIslandXp(
-            5,
-            "daily_login",
-            {
-              date: todayKey,
-            }
-          );
-
-          await AsyncStorage.setItem(
-            key,
-            todayKey
-          );
-
-          return true;
-        } catch (error) {
-          console.warn(
-            "[IslandContext] daily XP error",
-            error
-          );
-
-          return false;
-        }
-      })();
-
-      dailyLoginGrantRef.current = task;
-
-      try {
-        return await task;
-      } finally {
-        if (
-          dailyLoginGrantRef.current === task
-        ) {
-          dailyLoginGrantRef.current = null;
-        }
-      }
-    }, [
-      addIslandXp,
-      ready,
-      userId,
-    ]);
+      await addIslandXp(5, "daily_login", { date: todayKey });
+      await AsyncStorage.setItem(key, todayKey);
+    } catch (error) {
+      console.warn("[IslandContext] daily XP error", error);
+    }
+  }, [addIslandXp, userId]);
 
   const setCollapsed = useCallback(async (next: boolean) => {
     setCollapsedState(next);

@@ -1,7 +1,6 @@
 // app/sign-in.tsx
 
 import React, {
-  useEffect,
   useState,
 } from "react";
 import {
@@ -83,8 +82,33 @@ export default function SignInScreen() {
     ready,
   } = useUser() as any;
 
+  /*
+   * Route values are read once as initial state only.
+   * They can never overwrite a field while the user is typing.
+   */
+  const rawInitialMode = Array.isArray(
+    params.mode
+  )
+    ? params.mode[0]
+    : params.mode;
+
+  const rawInitialEmail = Array.isArray(
+    params.email
+  )
+    ? params.email[0]
+    : params.email;
+
+  const initialLoginEmail =
+    normalizeEmail(
+      String(rawInitialEmail || "")
+    );
+
   const [mode, setMode] =
-    useState<Mode>("signup");
+    useState<Mode>(() =>
+      rawInitialMode === "login"
+        ? "login"
+        : "signup"
+    );
 
   const [
     suUsername,
@@ -102,7 +126,7 @@ export default function SignInScreen() {
   ] = useState("");
 
   const [liEmail, setLiEmail] =
-    useState("");
+    useState(initialLoginEmail);
   const [
     liPassword,
     setLiPassword,
@@ -115,38 +139,6 @@ export default function SignInScreen() {
     discordVisible,
     setDiscordVisible,
   ] = useState(false);
-
-  useEffect(() => {
-    const rawMode = Array.isArray(
-      params.mode
-    )
-      ? params.mode[0]
-      : params.mode;
-
-    const rawEmail = Array.isArray(
-      params.email
-    )
-      ? params.email[0]
-      : params.email;
-
-    const normalizedEmail =
-      normalizeEmail(
-        String(rawEmail || "")
-      );
-
-    if (rawMode === "login") {
-      setMode("login");
-    } else if (
-      rawMode === "register" ||
-      rawMode === "signup"
-    ) {
-      setMode("signup");
-    }
-
-    if (normalizedEmail) {
-      setLiEmail(normalizedEmail);
-    }
-  }, [params.email, params.mode]);
 
   const hapticTap = async () => {
     if (Platform.OS !== "web") {
@@ -898,23 +890,57 @@ export default function SignInScreen() {
                   Email
                 </Text>
 
-                <TextInput
-                  value={liEmail}
-                  onChangeText={
-                    setLiEmail
-                  }
-                  placeholder="you@example.com"
-                  placeholderTextColor="#6b7685"
+                <View
                   style={[
-                    styles.input,
-                    inputStyle,
+                    styles.loginEmailShell,
+                    {
+                      borderColor:
+                        tokens.border,
+                      backgroundColor:
+                        tokens.card,
+                    },
                   ]}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  keyboardType="email-address"
-                  textContentType="emailAddress"
-                  editable={!loading}
-                />
+                >
+                  <Text
+                    pointerEvents="none"
+                    numberOfLines={1}
+                    style={[
+                      styles.loginEmailMirror,
+                      {
+                        color: liEmail
+                          ? tokens.text
+                          : "#6b7685",
+                      },
+                    ]}
+                  >
+                    {liEmail ||
+                      "you@example.com"}
+                  </Text>
+
+                  <TextInput
+                    value={liEmail}
+                    onChangeText={
+                      setLiEmail
+                    }
+                    style={
+                      styles.loginEmailNativeInput
+                    }
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    spellCheck={false}
+                    keyboardType="email-address"
+                    inputMode="email"
+                    autoComplete="off"
+                    textContentType="none"
+                    importantForAutofill="no"
+                    editable={!loading}
+                    returnKeyType="next"
+                    selectionColor={
+                      tokens.accent
+                    }
+                    accessibilityLabel="Login email"
+                  />
+                </View>
 
                 <Text
                   style={[
@@ -942,7 +968,9 @@ export default function SignInScreen() {
                   secureTextEntry
                   autoCapitalize="none"
                   autoCorrect={false}
-                  textContentType="password"
+                  autoComplete="off"
+                  textContentType="none"
+                  importantForAutofill="no"
                   editable={!loading}
                   onSubmitEditing={() => {
                     if (!loading) {
@@ -1191,6 +1219,29 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 14,
     fontSize: 16,
+  },
+  loginEmailShell: {
+    minHeight: 50,
+    borderWidth: 1,
+    borderRadius: 12,
+    overflow: "hidden",
+    justifyContent: "center",
+  },
+  loginEmailMirror: {
+    position: "absolute",
+    left: 14,
+    right: 14,
+    fontSize: 16,
+    lineHeight: 22,
+    zIndex: 1,
+  },
+  loginEmailNativeInput: {
+    minHeight: 50,
+    paddingHorizontal: 14,
+    fontSize: 16,
+    color: "transparent",
+    backgroundColor: "transparent",
+    zIndex: 2,
   },
   primaryBtn: {
     marginTop: 22,

@@ -120,6 +120,59 @@ type FriendshipSummary = {
   residentUnlocked: boolean;
 };
 
+type IslandDevRewardMode =
+  | "real"
+  | "none"
+  | "keepsakes"
+  | "residents"
+  | "all"
+  | "single";
+
+const DEV_ISLAND_LEVELS = [
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  10,
+  12,
+  15,
+  18,
+  21,
+] as const;
+
+const DEV_REWARD_MODES: Array<{
+  key: IslandDevRewardMode;
+  label: string;
+}> = [
+  {
+    key: "real",
+    label: "Real rewards",
+  },
+  {
+    key: "none",
+    label: "No rewards",
+  },
+  {
+    key: "keepsakes",
+    label: "Keepsakes",
+  },
+  {
+    key: "residents",
+    label: "Residents",
+  },
+  {
+    key: "all",
+    label: "Everything",
+  },
+  {
+    key: "single",
+    label: "One at a time",
+  },
+];
+
 function isIslandRequirementUnlocked(
   requirement: string | null | undefined,
   islandLevel: number
@@ -762,6 +815,34 @@ export default function IslandScreen() {
 
   const contentWidth = Math.min(Math.max(width - 24, 300), 720);
 
+  /*
+   * This panel exists only in development builds. Every value below is a
+   * temporary visual override; none of it writes to IslandContext,
+   * CompanionContext, AsyncStorage, or Supabase.
+   */
+  const [
+    devPanelVisible,
+    setDevPanelVisible,
+  ] = useState(false);
+  const [
+    devPreviewEnabled,
+    setDevPreviewEnabled,
+  ] = useState(false);
+  const [
+    devIslandLevel,
+    setDevIslandLevel,
+  ] = useState<number>(21);
+  const [
+    devRewardMode,
+    setDevRewardMode,
+  ] =
+    useState<IslandDevRewardMode>(
+      "all"
+    );
+  const [
+    devSingleRewardIndex,
+    setDevSingleRewardIndex,
+  ] = useState(0);
 
   const friendshipSummaries =
     useMemo<FriendshipSummary[]>(() => {
@@ -912,10 +993,217 @@ export default function IslandScreen() {
       islandLevel,
     ]);
 
+  const devAllFriendshipDiscoveries =
+    useMemo<FriendshipDiscovery[]>(() => {
+      if (!__DEV__) {
+        return [];
+      }
+
+      const discoveries:
+        FriendshipDiscovery[] = [];
+
+      for (const companion of COMPANIONS) {
+        if (
+          companion.role !==
+          "cosmetic"
+        ) {
+          continue;
+        }
+
+        const profile =
+          getCommonCompanionFriendshipProfile(
+            companion.id
+          );
+
+        if (!profile) {
+          continue;
+        }
+
+        const points = 120;
+        const friendship =
+          getFriendshipProgress(
+            points
+          );
+        const keepsake =
+          getIslandKeepsakeForCompanion(
+            profile.id,
+            points
+          );
+        const resident =
+          getIslandResidentForCompanion(
+            profile.id,
+            points
+          );
+
+        if (keepsake) {
+          discoveries.push({
+            key:
+              `dev:${profile.id}:keepsake`,
+            kind: "keepsake",
+            companionId:
+              profile.id,
+            companionTitle:
+              profile.title,
+            friendshipLevel:
+              friendship.level,
+            title:
+              keepsake.title,
+            description:
+              keepsake.description,
+            accent:
+              profile.accent,
+            icon:
+              keepsake.icon,
+            image: null,
+            zone:
+              resolvedDiscoveryZone(
+                keepsake,
+                devIslandLevel
+              ),
+          });
+        }
+
+        if (resident) {
+          const residentZone =
+            profile.id.includes(
+              "reading_buddy"
+            ) &&
+            isIslandRequirementUnlocked(
+              "study_grove",
+              devIslandLevel
+            )
+              ? "grove"
+              : resolvedDiscoveryZone(
+                  resident,
+                  devIslandLevel
+                );
+
+          discoveries.push({
+            key:
+              `dev:${profile.id}:resident`,
+            kind: "resident",
+            companionId:
+              profile.id,
+            companionTitle:
+              profile.title,
+            friendshipLevel:
+              friendship.level,
+            title:
+              resident.title,
+            description:
+              resident.description,
+            accent:
+              profile.accent,
+            icon:
+              "paw-outline",
+            image:
+              companion.image,
+            zone:
+              residentZone,
+          });
+        }
+      }
+
+      return discoveries;
+    }, [devIslandLevel]);
+
+  const devKeepsakes =
+    useMemo(
+      () =>
+        devAllFriendshipDiscoveries.filter(
+          (item) =>
+            item.kind ===
+            "keepsake"
+        ),
+      [devAllFriendshipDiscoveries]
+    );
+
+  const devResidents =
+    useMemo(
+      () =>
+        devAllFriendshipDiscoveries.filter(
+          (item) =>
+            item.kind ===
+            "resident"
+        ),
+      [devAllFriendshipDiscoveries]
+    );
+
+  const devSingleReward =
+    devAllFriendshipDiscoveries.length
+      ? devAllFriendshipDiscoveries[
+          devSingleRewardIndex %
+            devAllFriendshipDiscoveries.length
+        ]
+      : null;
+
+  const effectiveIslandLevel =
+    __DEV__ &&
+    devPreviewEnabled
+      ? devIslandLevel
+      : islandLevel;
+
+  const effectiveFriendshipDiscoveries =
+    useMemo<FriendshipDiscovery[]>(() => {
+      if (
+        !__DEV__ ||
+        !devPreviewEnabled
+      ) {
+        return friendshipDiscoveries;
+      }
+
+      if (
+        devRewardMode ===
+        "real"
+      ) {
+        return friendshipDiscoveries;
+      }
+
+      if (
+        devRewardMode ===
+        "none"
+      ) {
+        return [];
+      }
+
+      if (
+        devRewardMode ===
+        "keepsakes"
+      ) {
+        return devKeepsakes;
+      }
+
+      if (
+        devRewardMode ===
+        "residents"
+      ) {
+        return devResidents;
+      }
+
+      if (
+        devRewardMode ===
+        "single"
+      ) {
+        return devSingleReward
+          ? [devSingleReward]
+          : [];
+      }
+
+      return devAllFriendshipDiscoveries;
+    }, [
+      devAllFriendshipDiscoveries,
+      devKeepsakes,
+      devPreviewEnabled,
+      devResidents,
+      devRewardMode,
+      devSingleReward,
+      friendshipDiscoveries,
+    ]);
+
   const sceneDiscoveries =
     useMemo<Island3DDiscovery[]>(
       () =>
-        friendshipDiscoveries.map(
+        effectiveFriendshipDiscoveries.map(
           (item) => ({
             key: item.key,
             kind: item.kind,
@@ -926,16 +1214,22 @@ export default function IslandScreen() {
               item.companionId,
           })
         ),
-      [friendshipDiscoveries]
+      [
+        effectiveFriendshipDiscoveries,
+      ]
     );
 
   const latestUnlockedId = useMemo(
     () =>
       [...ISLAND_MILESTONES]
         .reverse()
-        .find((milestone) => islandLevel >= milestone.level)?.id ??
+        .find(
+          (milestone) =>
+            effectiveIslandLevel >=
+            milestone.level
+        )?.id ??
       ISLAND_MILESTONES[0].id,
-    [islandLevel]
+    [effectiveIslandLevel]
   );
 
   const [selectedId, setSelectedId] = useState(latestUnlockedId);
@@ -961,11 +1255,62 @@ export default function IslandScreen() {
         (milestone) => milestone.id === current
       );
 
-      return selected && selected.level <= islandLevel
+      return (
+        selected &&
+        selected.level <=
+          effectiveIslandLevel
+      )
         ? current
         : latestUnlockedId;
     });
-  }, [islandLevel, latestUnlockedId]);
+  }, [
+    effectiveIslandLevel,
+    latestUnlockedId,
+  ]);
+
+  useEffect(() => {
+    if (
+      !selectedDiscoveryKey
+    ) {
+      return;
+    }
+
+    const stillVisible =
+      effectiveFriendshipDiscoveries.some(
+        (item) =>
+          item.key ===
+          selectedDiscoveryKey
+      );
+
+    if (!stillVisible) {
+      setSelectedDiscoveryKey(
+        null
+      );
+    }
+  }, [
+    effectiveFriendshipDiscoveries,
+    selectedDiscoveryKey,
+  ]);
+
+  useEffect(() => {
+    if (
+      !__DEV__ ||
+      !devPreviewEnabled ||
+      devRewardMode !==
+        "single" ||
+      !devSingleReward
+    ) {
+      return;
+    }
+
+    setSelectedDiscoveryKey(
+      devSingleReward.key
+    );
+  }, [
+    devPreviewEnabled,
+    devRewardMode,
+    devSingleReward,
+  ]);
 
   useEffect(() => {
     if (!lastGain || lastGainToken <= 0) return;
@@ -991,11 +1336,11 @@ export default function IslandScreen() {
     ISLAND_MILESTONES.find((milestone) => milestone.id === selectedId) ??
     ISLAND_MILESTONES[0];
 
-  const selectedUnlocked = islandLevel >= selected.level;
+  const selectedUnlocked = effectiveIslandLevel >= selected.level;
 
 
   const selectedDiscovery =
-    friendshipDiscoveries.find(
+    effectiveFriendshipDiscoveries.find(
       (item) =>
         item.key ===
         selectedDiscoveryKey
@@ -1031,6 +1376,83 @@ export default function IslandScreen() {
     );
   };
 
+  const toggleDevPanel = () => {
+    if (!__DEV__) {
+      return;
+    }
+
+    try {
+      if (
+        Platform.OS !== "web"
+      ) {
+        void Haptics
+          .impactAsync(
+            Haptics
+              .ImpactFeedbackStyle
+              .Medium
+          );
+      }
+    } catch {}
+
+    setDevPanelVisible(
+      (current) => !current
+    );
+  };
+
+  const setDevLevel = (
+    nextLevel: number
+  ) => {
+    setDevPreviewEnabled(true);
+    setDevIslandLevel(
+      nextLevel
+    );
+    setSelectedDiscoveryKey(
+      null
+    );
+
+    const newest =
+      [...ISLAND_MILESTONES]
+        .reverse()
+        .find(
+          (milestone) =>
+            nextLevel >=
+            milestone.level
+        );
+
+    if (newest) {
+      setSelectedId(
+        newest.id
+      );
+    }
+  };
+
+  const cycleSingleReward = (
+    direction: -1 | 1
+  ) => {
+    if (
+      !devAllFriendshipDiscoveries.length
+    ) {
+      return;
+    }
+
+    setDevPreviewEnabled(true);
+    setDevRewardMode(
+      "single"
+    );
+    setDevSingleRewardIndex(
+      (current) => {
+        const length =
+          devAllFriendshipDiscoveries.length;
+
+        return (
+          current +
+          direction +
+          length
+        ) % length;
+      }
+    );
+  };
+
   return (
     <LinearGradient
       colors={["#020617", "#07142a", "#03111f"]}
@@ -1056,7 +1478,27 @@ export default function IslandScreen() {
               <View style={styles.onlineDot} />
               <Text style={styles.onlineText}>ISLAND FOUNDATION ONLINE</Text>
             </View>
-            <Text style={styles.title}>Nova Island</Text>
+            <Pressable
+              onLongPress={
+                toggleDevPanel
+              }
+              delayLongPress={650}
+              disabled={!__DEV__}
+              accessibilityRole="button"
+              accessibilityHint={
+                __DEV__
+                  ? "Long press to open Island testing controls"
+                  : undefined
+              }
+            >
+              <Text
+                style={
+                  styles.title
+                }
+              >
+                Nova Island
+              </Text>
+            </Pressable>
             <Text style={styles.subtitle}>
               Your real learning is shaping a world in the sky.
             </Text>
@@ -1078,13 +1520,433 @@ export default function IslandScreen() {
           </Pressable>
         </View>
 
+        {__DEV__ &&
+        devPanelVisible ? (
+          <View
+            style={
+              styles.devPanel
+            }
+          >
+            <View
+              style={
+                styles.devPanelHeader
+              }
+            >
+              <View
+                style={{
+                  flex: 1,
+                }}
+              >
+                <Text
+                  style={
+                    styles.devEyebrow
+                  }
+                >
+                  DEVELOPMENT ONLY
+                </Text>
+                <Text
+                  style={
+                    styles.devTitle
+                  }
+                >
+                  Island Test Mode
+                </Text>
+              </View>
+
+              <Pressable
+                onPress={
+                  toggleDevPanel
+                }
+                style={({
+                  pressed,
+                }) => [
+                  styles.devClose,
+                  {
+                    opacity:
+                      pressed
+                        ? 0.62
+                        : 1,
+                  },
+                ]}
+              >
+                <Ionicons
+                  name="close"
+                  color="#f8fafc"
+                  size={18}
+                />
+              </Pressable>
+            </View>
+
+            <Text
+              style={
+                styles.devBody
+              }
+            >
+              Temporary visual
+              previews only. Your
+              real XP, friendship,
+              unlocks, and saved
+              Island are never
+              changed.
+            </Text>
+
+            <View
+              style={
+                styles.devToggleRow
+              }
+            >
+              <Pressable
+                onPress={() => {
+                  setDevPreviewEnabled(
+                    false
+                  );
+                  setSelectedDiscoveryKey(
+                    null
+                  );
+                }}
+                style={({
+                  pressed,
+                }) => [
+                  styles.devToggle,
+                  !devPreviewEnabled &&
+                    styles.devToggleActive,
+                  {
+                    opacity:
+                      pressed
+                        ? 0.72
+                        : 1,
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.devToggleText,
+                    !devPreviewEnabled &&
+                      styles.devToggleTextActive,
+                  ]}
+                >
+                  Real save
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() =>
+                  setDevPreviewEnabled(
+                    true
+                  )
+                }
+                style={({
+                  pressed,
+                }) => [
+                  styles.devToggle,
+                  devPreviewEnabled &&
+                    styles.devToggleActive,
+                  {
+                    opacity:
+                      pressed
+                        ? 0.72
+                        : 1,
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.devToggleText,
+                    devPreviewEnabled &&
+                      styles.devToggleTextActive,
+                  ]}
+                >
+                  Test preview
+                </Text>
+              </Pressable>
+            </View>
+
+            {devPreviewEnabled ? (
+              <>
+                <Text
+                  style={
+                    styles.devLabel
+                  }
+                >
+                  LANDMARK LEVEL
+                </Text>
+
+                <View
+                  style={
+                    styles.devChipWrap
+                  }
+                >
+                  {DEV_ISLAND_LEVELS.map(
+                    (levelOption) => {
+                      const active =
+                        devIslandLevel ===
+                        levelOption;
+
+                      return (
+                        <Pressable
+                          key={
+                            levelOption
+                          }
+                          onPress={() =>
+                            setDevLevel(
+                              levelOption
+                            )
+                          }
+                          style={({
+                            pressed,
+                          }) => [
+                            styles.devChip,
+                            active &&
+                              styles.devChipActive,
+                            {
+                              opacity:
+                                pressed
+                                  ? 0.68
+                                  : 1,
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.devChipText,
+                              active &&
+                                styles.devChipTextActive,
+                            ]}
+                          >
+                            Lv{" "}
+                            {
+                              levelOption
+                            }
+                          </Text>
+                        </Pressable>
+                      );
+                    }
+                  )}
+                </View>
+
+                <Text
+                  style={
+                    styles.devLabel
+                  }
+                >
+                  FRIENDSHIP REWARDS
+                </Text>
+
+                <View
+                  style={
+                    styles.devChipWrap
+                  }
+                >
+                  {DEV_REWARD_MODES.map(
+                    (mode) => {
+                      const active =
+                        devRewardMode ===
+                        mode.key;
+
+                      return (
+                        <Pressable
+                          key={
+                            mode.key
+                          }
+                          onPress={() => {
+                            setDevRewardMode(
+                              mode.key
+                            );
+                            setDevPreviewEnabled(
+                              true
+                            );
+
+                            if (
+                              mode.key !==
+                              "single"
+                            ) {
+                              setSelectedDiscoveryKey(
+                                null
+                              );
+                            }
+                          }}
+                          style={({
+                            pressed,
+                          }) => [
+                            styles.devRewardChip,
+                            active &&
+                              styles.devRewardChipActive,
+                            {
+                              opacity:
+                                pressed
+                                  ? 0.68
+                                  : 1,
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.devRewardChipText,
+                              active &&
+                                styles.devRewardChipTextActive,
+                            ]}
+                          >
+                            {
+                              mode.label
+                            }
+                          </Text>
+                        </Pressable>
+                      );
+                    }
+                  )}
+                </View>
+
+                {devRewardMode ===
+                  "single" &&
+                devSingleReward ? (
+                  <View
+                    style={
+                      styles.devSingleRow
+                    }
+                  >
+                    <Pressable
+                      onPress={() =>
+                        cycleSingleReward(
+                          -1
+                        )
+                      }
+                      style={
+                        styles.devArrow
+                      }
+                    >
+                      <Ionicons
+                        name="chevron-back"
+                        color="#cffafe"
+                        size={18}
+                      />
+                    </Pressable>
+
+                    <View
+                      style={
+                        styles.devSingleTextWrap
+                      }
+                    >
+                      <Text
+                        style={
+                          styles.devSingleTitle
+                        }
+                        numberOfLines={
+                          1
+                        }
+                      >
+                        {
+                          devSingleReward.title
+                        }
+                      </Text>
+                      <Text
+                        style={
+                          styles.devSingleMeta
+                        }
+                      >
+                        {
+                          devSingleReward.kind ===
+                          "keepsake"
+                            ? "Keepsake"
+                            : "Resident"
+                        }{" "}
+                        ·{" "}
+                        {
+                          devSingleReward.companionTitle
+                        }
+                      </Text>
+                    </View>
+
+                    <Pressable
+                      onPress={() =>
+                        cycleSingleReward(
+                          1
+                        )
+                      }
+                      style={
+                        styles.devArrow
+                      }
+                    >
+                      <Ionicons
+                        name="chevron-forward"
+                        color="#cffafe"
+                        size={18}
+                      />
+                    </Pressable>
+                  </View>
+                ) : null}
+
+                <View
+                  style={
+                    styles.devStatusRow
+                  }
+                >
+                  <Ionicons
+                    name="construct-outline"
+                    color="#67e8f9"
+                    size={15}
+                  />
+                  <Text
+                    style={
+                      styles.devStatusText
+                    }
+                  >
+                    Previewing Level{" "}
+                    {
+                      effectiveIslandLevel
+                    }{" "}
+                    ·{" "}
+                    {
+                      effectiveFriendshipDiscoveries.length
+                    }{" "}
+                    reward
+                    {
+                      effectiveFriendshipDiscoveries.length ===
+                      1
+                        ? ""
+                        : "s"
+                    }
+                  </Text>
+                </View>
+              </>
+            ) : (
+              <View
+                style={
+                  styles.devStatusRow
+                }
+              >
+                <Ionicons
+                  name="shield-checkmark-outline"
+                  color="#6ee7b7"
+                  size={15}
+                />
+                <Text
+                  style={
+                    styles.devStatusText
+                  }
+                >
+                  Showing your real
+                  Level{" "}
+                  {islandLevel} Island
+                  and real friendship
+                  rewards.
+                </Text>
+              </View>
+            )}
+          </View>
+        ) : null}
+
         <View style={styles.progressCard}>
           <View style={styles.progressHeader}>
             <View>
               <Text style={styles.stage}>
                 {ready ? islandStage : "Waking your island…"}
               </Text>
-              <Text style={styles.level}>Island Level {islandLevel}</Text>
+              <Text style={styles.level}>
+                {__DEV__ &&
+                devPreviewEnabled
+                  ? `Preview Level ${effectiveIslandLevel} · Real Level ${islandLevel}`
+                  : `Island Level ${islandLevel}`}
+              </Text>
             </View>
             <Text style={styles.xp}>
               {islandXp} / {xpToNext} XP
@@ -1124,7 +1986,7 @@ export default function IslandScreen() {
                 ? 520
                 : 460
             }
-            level={islandLevel}
+            level={effectiveIslandLevel}
             selectedMilestoneId={
               selectedId
             }
@@ -1155,7 +2017,7 @@ export default function IslandScreen() {
               discoveryKey
             ) => {
               const discovery =
-                friendshipDiscoveries.find(
+                effectiveFriendshipDiscoveries.find(
                   (item) =>
                     item.key ===
                     discoveryKey
@@ -1454,7 +2316,7 @@ export default function IslandScreen() {
 
             <View style={styles.discoveryCountPill}>
               <Text style={styles.discoveryCountText}>
-                {friendshipDiscoveries.length} placed
+                {effectiveFriendshipDiscoveries.length} placed
               </Text>
             </View>
           </View>
@@ -1617,7 +2479,7 @@ export default function IslandScreen() {
 
           <View style={styles.milestones}>
             {ISLAND_MILESTONES.map((milestone) => {
-              const unlocked = islandLevel >= milestone.level;
+              const unlocked = effectiveIslandLevel >= milestone.level;
 
               return (
                 <Pressable
@@ -1727,6 +2589,217 @@ const styles = StyleSheet.create({
     backgroundColor: "#0891b221",
     alignItems: "center",
     justifyContent: "center",
+  },
+  devPanel: {
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor:
+      "rgba(244,114,182,0.66)",
+    backgroundColor:
+      "rgba(35,9,35,0.96)",
+    padding: 14,
+    marginBottom: 13,
+    shadowColor: "#f472b6",
+    shadowOpacity: 0.22,
+    shadowRadius: 12,
+    shadowOffset: {
+      width: 0,
+      height: 0,
+    },
+  },
+  devPanelHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  devEyebrow: {
+    color: "#f9a8d4",
+    fontSize: 9.5,
+    fontWeight: "900",
+    letterSpacing: 0.9,
+  },
+  devTitle: {
+    color: "#fdf4ff",
+    fontSize: 19,
+    fontWeight: "900",
+    marginTop: 2,
+  },
+  devClose: {
+    width: 34,
+    height: 34,
+    borderRadius: 11,
+    borderWidth: 1,
+    borderColor:
+      "rgba(249,168,212,0.42)",
+    backgroundColor:
+      "rgba(131,24,67,0.32)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  devBody: {
+    color: "#f5d0fe",
+    fontSize: 11,
+    lineHeight: 16,
+    marginTop: 7,
+  },
+  devToggleRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 12,
+  },
+  devToggle: {
+    flex: 1,
+    minHeight: 38,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor:
+      "rgba(148,163,184,0.32)",
+    backgroundColor:
+      "rgba(15,23,42,0.5)",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 8,
+  },
+  devToggleActive: {
+    borderColor:
+      "rgba(103,232,249,0.78)",
+    backgroundColor:
+      "rgba(8,145,178,0.24)",
+  },
+  devToggleText: {
+    color: "#94a3b8",
+    fontSize: 11,
+    fontWeight: "900",
+  },
+  devToggleTextActive: {
+    color: "#cffafe",
+  },
+  devLabel: {
+    color: "#e9d5ff",
+    fontSize: 9.5,
+    fontWeight: "900",
+    letterSpacing: 0.72,
+    marginTop: 14,
+    marginBottom: 7,
+  },
+  devChipWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 7,
+  },
+  devChip: {
+    minWidth: 49,
+    minHeight: 32,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor:
+      "rgba(148,163,184,0.28)",
+    backgroundColor:
+      "rgba(15,23,42,0.56)",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 10,
+  },
+  devChipActive: {
+    borderColor:
+      "rgba(103,232,249,0.82)",
+    backgroundColor:
+      "rgba(8,145,178,0.32)",
+  },
+  devChipText: {
+    color: "#94a3b8",
+    fontSize: 10,
+    fontWeight: "900",
+  },
+  devChipTextActive: {
+    color: "#cffafe",
+  },
+  devRewardChip: {
+    minHeight: 34,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor:
+      "rgba(148,163,184,0.28)",
+    backgroundColor:
+      "rgba(15,23,42,0.56)",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  devRewardChipActive: {
+    borderColor:
+      "rgba(244,114,182,0.78)",
+    backgroundColor:
+      "rgba(190,24,93,0.26)",
+  },
+  devRewardChipText: {
+    color: "#94a3b8",
+    fontSize: 10,
+    fontWeight: "900",
+  },
+  devRewardChipTextActive: {
+    color: "#fce7f3",
+  },
+  devSingleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 9,
+    borderRadius: 13,
+    borderWidth: 1,
+    borderColor:
+      "rgba(103,232,249,0.34)",
+    backgroundColor:
+      "rgba(2,6,23,0.48)",
+    padding: 8,
+    marginTop: 10,
+  },
+  devArrow: {
+    width: 34,
+    height: 34,
+    borderRadius: 11,
+    borderWidth: 1,
+    borderColor:
+      "rgba(103,232,249,0.35)",
+    backgroundColor:
+      "rgba(8,145,178,0.18)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  devSingleTextWrap: {
+    flex: 1,
+    alignItems: "center",
+  },
+  devSingleTitle: {
+    color: "#f8fafc",
+    fontSize: 11.5,
+    fontWeight: "900",
+    textAlign: "center",
+  },
+  devSingleMeta: {
+    color: "#c4b5fd",
+    fontSize: 9.5,
+    fontWeight: "700",
+    textAlign: "center",
+    marginTop: 2,
+  },
+  devStatusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    borderRadius: 11,
+    backgroundColor:
+      "rgba(2,6,23,0.48)",
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    marginTop: 11,
+  },
+  devStatusText: {
+    flex: 1,
+    color: "#dbeafe",
+    fontSize: 10.5,
+    lineHeight: 15,
+    fontWeight: "800",
   },
   progressCard: {
     borderRadius: 18,

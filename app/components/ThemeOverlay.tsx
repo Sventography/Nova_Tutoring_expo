@@ -10,6 +10,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { usePathname } from "expo-router";
 
 import { useTheme } from "../context/ThemeContext";
 import { useFx } from "../context/FxProvider";
@@ -48,6 +49,19 @@ function normalizeThemeId(value: unknown): string {
     .replace(/_/g, ":")
     .replace(/-/g, ":")
     .replace(/:+/g, ":");
+}
+
+function isFreeDefaultTheme(value: unknown): boolean {
+  const id = normalizeThemeId(value);
+
+  return (
+    id === "default" ||
+    id === "free" ||
+    id === "classic" ||
+    id === "theme:default" ||
+    id === "theme:free" ||
+    id === "theme:classic"
+  );
 }
 
 function isNeonNovaTheme(value: unknown): boolean {
@@ -425,6 +439,7 @@ function NeonDrop({
 }
 
 export default function ThemeOverlay() {
+  const pathname = usePathname();
   const theme = useTheme() as any;
   const { enabled: fxEnabled } = useFx();
   const { width, height } =
@@ -445,6 +460,13 @@ export default function ThemeOverlay() {
 
   const glitterActive =
     isGlitterTheme(themeId);
+
+  const freeDefaultActive =
+    isFreeDefaultTheme(themeId);
+
+  const suppressOverlay =
+    pathname === "/" ||
+    pathname === "";
 
   const wavePalette = useMemo(
     () => wavePaletteFor(themeId, accent),
@@ -487,6 +509,13 @@ export default function ThemeOverlay() {
       }
     );
   }, [Math.round(width / 80)]);
+
+  if (
+    suppressOverlay ||
+    freeDefaultActive
+  ) {
+    return null;
+  }
 
   return (
     <View

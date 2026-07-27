@@ -2729,34 +2729,7 @@ export default function TabsLayout() {
 
 function InnerTabsLayout() {
   const insets = useSafeAreaInsets();
-
-  /*
-   * HeaderBar calculates its own safe-area padding, so a separate hard-coded
-   * 56-point offset can be taller than the rendered header and expose a
-   * blank strip beneath the cyan divider. Start with a close estimate, then
-   * replace it with the HeaderBar's real measured height.
-   */
-  const estimatedHeaderHeight = useMemo(
-    () =>
-      (Platform.OS === "web"
-        ? 64
-        : 44) +
-      (insets?.top ?? 0),
-    [insets?.top]
-  );
-
-  const [
-    headerHeight,
-    setHeaderHeight,
-  ] = useState(
-    estimatedHeaderHeight
-  );
-
-  useEffect(() => {
-    setHeaderHeight(
-      estimatedHeaderHeight
-    );
-  }, [estimatedHeaderHeight]);
+  const HEADER_HEIGHT = (Platform.OS === "web" ? 64 : 56) + (insets?.top ?? 0);
 
   const [p, setP] = useState<Pt>({ x: -1, y: -1 });
   const [down, setDown] = useState(false);
@@ -2793,11 +2766,7 @@ function InnerTabsLayout() {
 
   return (
     <View
-      style={{
-        flex: 1,
-        position: "relative",
-        backgroundColor: "#06121a",
-      }}
+      style={{ flex: 1, position: "relative" }}
       onTouchStartCapture={
         Platform.OS === "web"
           ? undefined
@@ -2829,31 +2798,12 @@ function InnerTabsLayout() {
       <AchievementCelebrationOverlay />
 
       <View
-        onLayout={(event) => {
-          const measuredHeight =
-            Math.ceil(
-              event.nativeEvent
-                .layout.height
-            );
-
-          if (
-            measuredHeight > 0 &&
-            measuredHeight !==
-              headerHeight
-          ) {
-            setHeaderHeight(
-              measuredHeight
-            );
-          }
-        }}
         style={{
           position: "absolute",
           top: 0,
           left: 0,
           right: 0,
           zIndex: 1000,
-          backgroundColor:
-            "#06121a",
         }}
       >
         <HeaderBar />
@@ -2876,9 +2826,8 @@ function InnerTabsLayout() {
             shadowOpacity: 0,
           },
           sceneStyle: {
-            backgroundColor: "#000000",
-            paddingTop:
-              headerHeight,
+            backgroundColor: "transparent",
+            paddingTop: HEADER_HEIGHT,
           },
           tabBarLabelStyle: {
             fontSize: 11,

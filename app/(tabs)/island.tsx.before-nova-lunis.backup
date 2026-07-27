@@ -922,8 +922,6 @@ export default function IslandScreen() {
             title: item.title,
             accent: item.accent,
             zone: item.zone,
-            companionId:
-              item.companionId,
           })
         ),
       [friendshipDiscoveries]
@@ -943,16 +941,6 @@ export default function IslandScreen() {
     selectedDiscoveryKey,
     setSelectedDiscoveryKey,
   ] = useState<string | null>(null);
-
-  /*
-   * The 3D viewport reports every touch immediately. While it is active,
-   * the surrounding page may not scroll or steal a vertical orbit gesture.
-   */
-  const [
-    sceneInteracting,
-    setSceneInteracting,
-  ] = useState(false);
-
   const gainAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -1039,16 +1027,6 @@ export default function IslandScreen() {
       <ScrollView
         contentContainerStyle={[styles.content, { width: contentWidth }]}
         showsVerticalScrollIndicator={false}
-        scrollEnabled={
-          !sceneInteracting
-        }
-        bounces={
-          !sceneInteracting
-        }
-        directionalLockEnabled
-        disableScrollViewPanResponder={
-          sceneInteracting
-        }
       >
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
@@ -1133,9 +1111,6 @@ export default function IslandScreen() {
             }
             discoveries={
               sceneDiscoveries
-            }
-            onInteractionChange={
-              setSceneInteracting
             }
             onSelectMilestone={(
               milestoneId
