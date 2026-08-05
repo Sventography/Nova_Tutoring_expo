@@ -11,8 +11,7 @@ import React, {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useUser } from "./UserContext";
 import { supabase } from "../lib/supabase";
-import { useCompanion } from "./CompanionContext";
-import { canonId } from "../_lib/canonId";
+import { useLegendaryCompanions } from "../hooks/useLegendaryCompanions";
 import { AchieveEmitter, ACHIEVEMENT_EVENT } from "./AchievementsContext";
 
 // All streak logic is anchored to Eastern Time (America/New_York)
@@ -48,6 +47,24 @@ type State = {
   markToday: () => Promise<void>;
   resetStreak: () => Promise<void>;
   reload: () => Promise<void>;
+
+  /**
+   * Development-only helpers for testing the Axolotl Oracle shield.
+   * They are omitted from production behavior.
+   */
+  devPreviewAxolotlShield?: (
+    previousCount?: number
+  ) => Promise<{
+    hasAxolotl: boolean;
+    cooldownReady: boolean;
+    previousCount: number;
+    nextCount: number;
+    shieldUsed: boolean;
+    lastUsed: string | null;
+    activeCompanionToken: string;
+    activeAbilityType: string | null;
+  }>;
+  devResetAxolotlCooldown?: () => Promise<void>;
 };
 
 const C = createContext<State | null>(null);
@@ -261,7 +278,11 @@ async function syncStreakToSupabase(
 
 export function StreakProvider({ children }: { children: ReactNode }) {
   const { supabaseUserId } = useUser() as any;
-  const { activeCompanionId } = useCompanion();
+  const {
+    hasAxolotlOracle:
+      hasAxolotl,
+    ownedLegendaryTokens,
+  } = useLegendaryCompanions();
 
   const [loaded, setLoaded] = useState(false);
   const [meta, setMeta] = useState<StreakMeta>({
@@ -289,11 +310,17 @@ export function StreakProvider({ children }: { children: ReactNode }) {
     [supabaseUserId]
   );
 
-  const activeCompanionCid = useMemo(
-    () => (activeCompanionId ? canonId(activeCompanionId) : null),
-    [activeCompanionId]
-  );
-  const hasAxolotl = activeCompanionCid === "companion:axolotl_oracle";
+  /*
+   * Keep the old debug field names so the existing hidden
+   * development test screen continues to work.
+   */
+  const activeCompanionToken =
+    ownedLegendaryTokens.join("|");
+
+  const activeAbilityType =
+    hasAxolotl
+      ? "streak_shield"
+      : null;
 
   const hydrate = useCallback(async () => {
     setLoaded(false);
@@ -483,6 +510,89 @@ export function StreakProvider({ children }: { children: ReactNode }) {
     await hydrate();
   }, [hydrate]);
 
+  const devPreviewAxolotlShield =
+    useCallback(
+      async (
+        previousCount = 5
+      ) => {
+        const safeCount = Math.max(
+          1,
+          Math.floor(
+            Number(previousCount) || 5
+          )
+        );
+
+        const nowId =
+          getEasternDayId();
+
+        const lastUsed =
+          await AsyncStorage.getItem(
+            axolotlKey
+          );
+
+        const daysSinceUse =
+          lastUsed
+            ? daysBetween(
+                lastUsed,
+                nowId
+              )
+            : null;
+
+        const cooldownReady =
+          !lastUsed ||
+          daysSinceUse === null ||
+          daysSinceUse >= 7;
+
+        const shieldUsed =
+          hasAxolotl &&
+          cooldownReady;
+
+        return {
+          hasAxolotl,
+          cooldownReady,
+          previousCount:
+            safeCount,
+          nextCount:
+            shieldUsed
+              ? safeCount + 1
+              : 1,
+          shieldUsed,
+          lastUsed,
+          activeCompanionToken,
+          activeAbilityType,
+        };
+      },
+      [
+        axolotlKey,
+        hasAxolotl,
+        activeCompanionToken,
+        activeAbilityType,
+      ]
+    );
+
+  const devResetAxolotlCooldown =
+    useCallback(async () => {
+      if (!__DEV__) return;
+
+      await AsyncStorage.removeItem(
+        axolotlKey
+      );
+
+      console.log(
+        "[StreakContext] DEV Axolotl cooldown reset",
+        {
+          activeCompanionToken,
+          activeAbilityType,
+          hasAxolotl,
+        }
+      );
+    }, [
+      axolotlKey,
+      activeCompanionToken,
+      activeAbilityType,
+      hasAxolotl,
+    ]);
+
   const value: State = useMemo(
     () => ({
       loaded,
@@ -493,8 +603,25 @@ export function StreakProvider({ children }: { children: ReactNode }) {
       markToday,
       resetStreak,
       reload,
+      devPreviewAxolotlShield:
+        __DEV__
+          ? devPreviewAxolotlShield
+          : undefined,
+      devResetAxolotlCooldown:
+        __DEV__
+          ? devResetAxolotlCooldown
+          : undefined,
     }),
-    [loaded, meta, todayChecked, markToday, resetStreak, reload]
+    [
+      loaded,
+      meta,
+      todayChecked,
+      markToday,
+      resetStreak,
+      reload,
+      devPreviewAxolotlShield,
+      devResetAxolotlCooldown,
+    ]
   );
 
   return <C.Provider value={value}>{children}</C.Provider>;

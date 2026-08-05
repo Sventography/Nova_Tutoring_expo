@@ -1,5 +1,4 @@
 // app/(tabs)/quiz/[topic].tsx
-import { reportQuizFinished } from "../../utils/report-quiz-finish";
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import {
   View,
@@ -12,6 +11,7 @@ import {
   BackHandler,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 
 import { buildQuiz } from "../../_lib/quiz";
@@ -28,20 +28,30 @@ import { useToast } from "../../context/ToastContext";
 import { useUser } from "../../context/UserContext";
 import { createCertificate } from "../../utils/certificates";
 import { useIsland } from "../../context/IslandContext";
+import { useLegendaryCompanions } from "../../hooks/useLegendaryCompanions";
 
 type QItem = { question: string; choices: string[]; answer: string };
 
 const QUIZ_LEN = 20;
-const TOTAL_TIME = 300; // 5 min
+const BASE_TOTAL_TIME = 300; // 5 min
 const ADVANCE_DELAY = 650;
+
+const ASTRAL_TOPIC_BONUS_KEY_PREFIX =
+  "@nova/astral-topic-certificate-bonus:v1";
+
+function storageToken(value: unknown): string {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, "_")
+    .replace(/^_+|_+$/g, "") || "unknown";
+}
 
 const CYAN = "#00E5FF";
 const BLUE = "#0B2239";
 const BLACK = "#000000";
 const NEON = "#39FF14"; // neon green
 
-// 🔧 Dev-only UI. MUST stay false for TestFlight / App Store builds.
-const SHOW_DEV_QUIZ_CHEAT = false;
 
 export default function TopicQuiz() {
   const { id = "", title = "" } =
@@ -52,6 +62,33 @@ export default function TopicQuiz() {
   const { show: showToast } = useToast();
   const { user } = useUser() as any;
   const { addIslandXp } = useIsland();
+  const {
+    hasChronoFox,
+    hasAstralNova,
+    chronoExtraMinutes,
+    calculateCoinReward,
+  } = useLegendaryCompanions();
+
+  const certificateReward = useMemo(
+    () =>
+      calculateCoinReward(
+        0,
+        "certificate"
+      ),
+    [calculateCoinReward]
+  );
+
+  const astralCertificateBonus =
+    certificateReward.totalCoins;
+
+  const quizTotalTime = useMemo(
+    () =>
+      BASE_TOTAL_TIME +
+      Math.round(
+        chronoExtraMinutes * 60
+      ),
+    [chronoExtraMinutes]
+  );
 
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<QItem[]>([]);
@@ -61,16 +98,21 @@ export default function TopicQuiz() {
   const [locked, setLocked] = useState(false);
   const [noData, setNoData] = useState(false);
 
-  const [totalLeft, setTotalLeft] = useState(TOTAL_TIME);
+  const [totalLeft, setTotalLeft] = useState(quizTotalTime);
   const [done, setDone] = useState(false);
   const autoRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const totalTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const loggedRef = useRef(false);
   const notifiedRef = useRef(false);
+  const certificateCreatedRef =
+    useRef(false);
+  const astralBonusGivenRef = useRef(false);
 
   const [showCongrats, setShowCongrats] = useState(false);
   const [lastXp, setLastXp] = useState<number | null>(null); // 🌴 store last quiz XP for UI
+  const [legendaryNotice, setLegendaryNotice] =
+    useState<string | null>(null);
 
   const current = items[idx];
   const total = items.length;
@@ -79,6 +121,30 @@ export default function TopicQuiz() {
     () => (title ? String(title) : "Quiz"),
     [title]
   );
+
+  const astralTopicBonusStorageKey =
+    useMemo(() => {
+      const ownerToken =
+        storageToken(
+          user?.id ??
+            user?.user_id ??
+            user?.uid ??
+            "guest"
+        );
+
+      const topicToken =
+        storageToken(
+          String(id || headerTitle)
+        );
+
+      return `${ASTRAL_TOPIC_BONUS_KEY_PREFIX}:${ownerToken}:${topicToken}`;
+    }, [
+      user?.id,
+      user?.user_id,
+      user?.uid,
+      id,
+      headerTitle,
+    ]);
 
   const getDisplayName = useCallback(() => {
     const fromUser =
@@ -139,12 +205,15 @@ export default function TopicQuiz() {
           setSelected(null);
           setLocked(false);
           setDone(false);
-          setTotalLeft(TOTAL_TIME);
+          setTotalLeft(quizTotalTime);
           setNoData(false);
 
           loggedRef.current = false;
           notifiedRef.current = false;
+          certificateCreatedRef.current = false;
+          astralBonusGivenRef.current = false;
           setShowCongrats(false);
+          setLegendaryNotice(null);
           setLastXp(null); // reset XP display for a fresh run
         }
       } finally {
@@ -159,7 +228,10 @@ export default function TopicQuiz() {
       autoRef.current = null;
       totalTimerRef.current = null;
     };
-  }, [id]);
+  }, [
+    id,
+    quizTotalTime,
+  ]);
 
   // Total timer
   useEffect(() => {
@@ -194,26 +266,6 @@ export default function TopicQuiz() {
     setLocked(false);
   }
 
-  // DEV helper: force quiz to finish with target %
-  // (Hidden in production: SHOW_DEV_QUIZ_CHEAT = false)
-  function devForceFinish(targetPct: number) {
-    if (!total || done) return;
-    const clamped = Math.max(0, Math.min(100, targetPct));
-    const neededCorrect = Math.round((clamped / 100) * total);
-
-    console.log("[DEV] Forcing quiz finish", {
-      total,
-      targetPct: clamped,
-      neededCorrect,
-    });
-
-    setCorrect(neededCorrect);
-    setIdx(total - 1);
-    setSelected(null);
-    setLocked(true);
-    setDone(true);
-  }
-
   async function onPick(i: number) {
     if (locked || !current) return;
 
@@ -228,11 +280,30 @@ export default function TopicQuiz() {
 
       // Per-question coins (legit reward)
       try {
-        void addCoins(5, "quiz_correct", {
-          topicId: String(id),
-          questionIndex: idx,
-          question: current.question,
-        });
+        const reward =
+          calculateCoinReward(
+            5,
+            "quiz_correct"
+          );
+
+        void addCoins(
+          reward.totalCoins,
+          "quiz_correct",
+          {
+            topicId: String(id),
+            questionIndex: idx,
+            question:
+              current.question,
+            baseCoins:
+              reward.baseCoins,
+            specialistBonus:
+              reward.specialistBonus,
+            aetherwyrmBonus:
+              reward.aetherwyrmBonus,
+            appliedCompanions:
+              reward.appliedCompanions,
+          }
+        );
       } catch (e) {
         console.warn("[Quiz] addCoins failed", e);
       }
@@ -254,12 +325,7 @@ export default function TopicQuiz() {
       }
 
       try {
-        showToast({
-          title: "+5 coins",
-          message: "Correct answer!",
-          type: "success",
-          icon: "🪙",
-        });
+        showToast("+5 coins • Correct answer!");
       } catch (e) {
         console.warn("[Quiz] showToast failed", e);
       }
@@ -282,11 +348,14 @@ export default function TopicQuiz() {
     setSelected(null);
     setLocked(false);
     setDone(false);
-    setTotalLeft(TOTAL_TIME);
+    setTotalLeft(quizTotalTime);
 
     loggedRef.current = false;
     notifiedRef.current = false;
+    certificateCreatedRef.current = false;
+    astralBonusGivenRef.current = false;
     setShowCongrats(false);
+    setLegendaryNotice(null);
     setLastXp(null);
   }
 
@@ -308,10 +377,10 @@ export default function TopicQuiz() {
     const pct = total ? Math.round((correct / total) * 100) : 0;
     const topicId = String(id);
 
-    reportQuizFinished(pct, headerTitle || "Quiz").catch(() => {});
+    // The guarded direct certificate writer below is the single source of truth.
     loggedRef.current = true;
 
-    const durationSecRaw = TOTAL_TIME - totalLeft;
+    const durationSecRaw = quizTotalTime - totalLeft;
     const durationSec = durationSecRaw < 0 ? 0 : durationSecRaw;
 
     void safeLogQuiz({
@@ -398,24 +467,139 @@ export default function TopicQuiz() {
       // ignore island XP errors, but keep whatever lastXp we computed
     }
 
-    // 🔹 Local certificate: always attempt for ≥ 80%
-    if (pct >= 80) {
+    // 🔹 Create one certificate per quiz attempt.
+    if (
+      pct >= 80 &&
+      !certificateCreatedRef.current
+    ) {
+      certificateCreatedRef.current = true;
+
       (async () => {
+        let certificateCreated = false;
+
         try {
-          const name = getDisplayName();
+          const name =
+            getDisplayName();
+
           await createCertificate({
             name,
-            quizTitle: headerTitle,
+            quizTitle:
+              headerTitle,
             scorePct: pct,
           });
+
+          certificateCreated = true;
+
           console.log(
-            "[Quiz] Local certificate created from quiz finish",
+            "[Quiz] Local certificate created once for this attempt",
             headerTitle,
             pct,
             name
           );
-        } catch (e) {
-          console.warn("[Quiz] createCertificate failed", e);
+        } catch (error) {
+          certificateCreatedRef.current =
+            false;
+
+          console.warn(
+            "[Quiz] createCertificate failed",
+            error
+          );
+        }
+
+        if (
+          !certificateCreated ||
+          !hasAstralNova ||
+          astralCertificateBonus <=
+            0 ||
+          astralBonusGivenRef.current
+        ) {
+          return;
+        }
+
+        astralBonusGivenRef.current =
+          true;
+
+        let bonusAlreadyClaimed = false;
+
+        try {
+          bonusAlreadyClaimed =
+            !!(await AsyncStorage.getItem(
+              astralTopicBonusStorageKey
+            ));
+        } catch (error) {
+          console.warn(
+            "[Quiz] Could not verify Astral Nova topic bonus",
+            error
+          );
+
+          setLegendaryNotice(
+            "Astral Nova bonus could not be verified. No bonus was awarded."
+          );
+          return;
+        }
+
+        if (bonusAlreadyClaimed) {
+          setLegendaryNotice(
+            "Astral Nova's 500-coin bonus was already claimed for this topic."
+          );
+          return;
+        }
+
+        try {
+          // Reserve the topic before changing the balance so two finish paths
+          // cannot award the same bonus at the same time.
+          await AsyncStorage.setItem(
+            astralTopicBonusStorageKey,
+            JSON.stringify({
+              topicId,
+              title: headerTitle,
+              claimedAt: Date.now(),
+            })
+          );
+
+          await addCoins(
+            certificateReward.totalCoins,
+            "astral_nova_certificate_bonus",
+            {
+              topicId,
+              title: headerTitle,
+              percent: pct,
+              baseCoins:
+                certificateReward.baseCoins,
+              specialistBonus:
+                certificateReward.specialistBonus,
+              aetherwyrmBonus:
+                certificateReward.aetherwyrmBonus,
+              appliedCompanions:
+                certificateReward.appliedCompanions,
+            }
+          );
+
+          setLegendaryNotice(
+            certificateReward.aetherwyrmBonus > 0
+              ? `Astral Nova awakened · +${certificateReward.totalCoins} coins with Aetherwyrm`
+              : `Astral Nova awakened · +${certificateReward.totalCoins} bonus coins`
+          );
+
+          try {
+            showToast(
+              `Astral Nova activated • +${astralCertificateBonus} certificate coins`
+            );
+          } catch {}
+        } catch (error) {
+          astralBonusGivenRef.current =
+            false;
+
+          try {
+            await AsyncStorage.removeItem(
+              astralTopicBonusStorageKey
+            );
+          } catch {}
+
+          console.warn(
+            "[Quiz] Astral Nova certificate bonus failed",
+            error
+          );
         }
       })();
     }
@@ -434,6 +618,13 @@ export default function TopicQuiz() {
     ach,
     getDisplayName,
     addIslandXp,
+    quizTotalTime,
+    hasAstralNova,
+    astralCertificateBonus,
+    addCoins,
+    certificateReward,
+    showToast,
+    astralTopicBonusStorageKey,
   ]);
 
   // Render states
@@ -484,6 +675,17 @@ export default function TopicQuiz() {
           <Text style={S.xpText}>Island XP gained: +{lastXp}</Text>
         )}
 
+        {legendaryNotice ? (
+          <View style={S.legendaryResultCard}>
+            <Text style={S.legendaryResultTitle}>
+              ✦ Legendary ability activated
+            </Text>
+            <Text style={S.legendaryResultText}>
+              {legendaryNotice}
+            </Text>
+          </View>
+        ) : null}
+
         <View style={{ height: 12 }} />
         <View style={S.row}>
           <Pressable
@@ -511,6 +713,13 @@ export default function TopicQuiz() {
                   ? "You also unlocked a certificate for this quiz. Tap below to view it, or open the Achievements tab to see what you’ve unlocked."
                   : "Check the Achievements tab to see what you’ve unlocked and what’s next."}
               </Text>
+
+              {earnedCert && hasAstralNova ? (
+                <Text style={S.astralModalText}>
+                  ✦ Astral Nova grants +
+                  {astralCertificateBonus} certificate coins.
+                </Text>
+              ) : null}
 
               <View style={S.modalButtons}>
                 {earnedCert && (
@@ -567,6 +776,36 @@ export default function TopicQuiz() {
         Question {idx + 1} / {total}
       </Text>
 
+      {hasChronoFox ? (
+        <View style={S.chronoCard}>
+          <Text style={S.chronoTitle}>
+            ◷ CHRONO FOX ACTIVE
+          </Text>
+          <Text style={S.legendaryAbilityText}>
+            Timeline extended by +
+            {chronoExtraMinutes} minutes ·
+            starting time{" "}
+            {Math.floor(
+              quizTotalTime / 60
+            )}:00
+          </Text>
+        </View>
+      ) : null}
+
+      {hasAstralNova ? (
+        <View style={S.astralCard}>
+          <Text style={S.astralTitle}>
+            ✦ ASTRAL NOVA ACTIVE
+          </Text>
+          <Text style={S.legendaryAbilityText}>
+            Earn +
+            {astralCertificateBonus} bonus
+            coins when this quiz awards a
+            certificate.
+          </Text>
+        </View>
+      ) : null}
+
       <Text style={S.qText}>{current.question}</Text>
 
       <View style={{ height: 10 }} />
@@ -614,30 +853,6 @@ export default function TopicQuiz() {
           <Text style={S.btnTxt}>Finish</Text>
         </Pressable>
       </View>
-
-      {SHOW_DEV_QUIZ_CHEAT && (
-        <View style={[S.devRow, { marginTop: 16 }]}>
-          <Text style={S.devLabel}>DEV • Quiz Cheats</Text>
-          <View style={S.devButtonsRow}>
-            <Pressable
-              style={S.devBtn}
-              onPress={() => devForceFinish(80)}
-            >
-              <Text style={S.devBtnText}>Force 80% (cert)</Text>
-            </Pressable>
-            <Pressable
-              style={S.devBtn}
-              onPress={() => devForceFinish(100)}
-            >
-              <Text style={S.devBtnText}>Force 100%</Text>
-            </Pressable>
-          </View>
-          <Text style={S.devHint}>
-            Use in TestFlight to unlock certificates fast and check bleed across
-            accounts.
-          </Text>
-        </View>
-      )}
     </Shell>
   );
 }
@@ -742,6 +957,67 @@ export const S = StyleSheet.create({
     fontWeight: "800",
     color: NEON,
   },
+  chronoCard: {
+    marginTop: 10,
+    borderRadius: 13,
+    borderWidth: 1.5,
+    borderColor: "#F59E0B",
+    backgroundColor:
+      "rgba(120,53,15,0.30)",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  astralCard: {
+    marginTop: 10,
+    borderRadius: 13,
+    borderWidth: 1.5,
+    borderColor: "#E879F9",
+    backgroundColor:
+      "rgba(88,28,135,0.30)",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  chronoTitle: {
+    color: "#FDE68A",
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 0.8,
+  },
+  astralTitle: {
+    color: "#F5D0FE",
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 0.8,
+  },
+  legendaryAbilityText: {
+    marginTop: 4,
+    color: "#E2E8F0",
+    fontSize: 13,
+    fontWeight: "700",
+    lineHeight: 18,
+  },
+  legendaryResultCard: {
+    marginTop: 12,
+    borderRadius: 13,
+    borderWidth: 1.5,
+    borderColor: "#E879F9",
+    backgroundColor:
+      "rgba(88,28,135,0.28)",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  legendaryResultTitle: {
+    color: "#F5D0FE",
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 0.7,
+  },
+  legendaryResultText: {
+    marginTop: 4,
+    color: "#F8FAFC",
+    fontSize: 13,
+    fontWeight: "800",
+  },
 
   modalBackdrop: {
     position: "absolute",
@@ -774,52 +1050,19 @@ export const S = StyleSheet.create({
     lineHeight: 20,
     fontWeight: "700",
   },
+  astralModalText: {
+    marginTop: -4,
+    marginBottom: 14,
+    color: "#F5D0FE",
+    fontSize: 13,
+    fontWeight: "900",
+    lineHeight: 18,
+  },
   modalButtons: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
 
-  devRow: {
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: CYAN,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    marginBottom: 10,
-  },
-  devLabel: {
-    fontSize: 12,
-    fontWeight: "700",
-    textTransform: "uppercase",
-    letterSpacing: 0.6,
-    color: CYAN,
-    marginBottom: 6,
-  },
-  devButtonsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  devBtn: {
-    flex: 1,
-    paddingVertical: 6,
-    marginHorizontal: 3,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: CYAN,
-    alignItems: "center",
-    backgroundColor: "rgba(0, 229, 255, 0.16)",
-  },
-  devBtnText: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: CYAN,
-  },
-  devHint: {
-    fontSize: 11,
-    marginTop: 4,
-    color: "#CFEAF7",
-  },
+
 });

@@ -1,211 +1,180 @@
 // app/_lib/quiz.ts
 
-export type AnyCard =
-  | { question?: string; answer?: string; front?: string; back?: string }
-  | Record<string, any>;
+export type QuizItem = {
+  question: string;
+  answer: string;
+  choices: string[];
+};
 
-// Turn any card into a simple {question, answer} pair
-function qaFrom(card: AnyCard) {
-  const q = (card as any)?.question ?? (card as any)?.front;
-  const a = (card as any)?.answer ?? (card as any)?.back;
-  return q && a ? { question: String(q), answer: String(a) } : null;
-}
+type RawCard = {
+  question?: unknown;
+  answer?: unknown;
+  front?: unknown;
+  back?: unknown;
+  q?: unknown;
+  a?: unknown;
+  term?: unknown;
+  definition?: unknown;
+};
 
-const shuf = <T,>(arr: T[]) => [...arr].sort(() => Math.random() - 0.5);
-
-function uniqStrings(xs: string[]): string[] {
-  const out: string[] = [];
-  const seen = new Set<string>();
-  for (const x of xs) {
-    const k = String(x ?? "").trim();
-    if (!k) continue;
-    const kk = k.toLowerCase();
-    if (seen.has(kk)) continue;
-    seen.add(kk);
-    out.push(k);
-  }
-  return out;
-}
-
-/**
- * Global distractor bank so the wrong answers aren't just
- * "other real answers slightly shuffled".
- */
-const DISTRACTOR_BANK: string[] = [
-  "Incorrect transformation",
-  "Unrelated definition",
-  "Misapplied rule",
-  "Opposite relationship",
-  "Not defined in this context",
-  "Unverified assumption",
-  "Contradictory statement",
-  "Irrelevant detail",
-  "Incomplete explanation",
-  "Inconsistent example",
-  "Wrong comparison",
-  "Misread notation",
-  "False equivalence",
-  "Reversed cause and effect",
-  "Ignored key condition",
-  "Approximation only",
-  "Out of domain",
-  "Misaligned units",
-  "Calculation shortcut error",
-  "Reordered steps incorrectly",
-  "Confused variables",
-  "Swapped numerator and denominator",
-  "Used wrong operation",
-  "Misplaced decimal",
-  "Rounded too early",
-  "Ignored negative sign",
-  "Incorrect base case",
-  "Wrong boundary value",
-  "Overgeneralization",
-  "Special case only",
-  "Does not always hold",
-  "Ambiguous statement",
-  "Undefined for this input",
-  "Not supported by data",
-  "Uses the wrong symbol",
-  "Contradicts earlier step",
-  "Not logically necessary",
-  "Extra term added",
-  "Missing required term",
-  "Mixed up order of operations",
-  "Off by one error",
-  "Assumes symmetry incorrectly",
-  "Confuses correlation and causation",
-  "Reversed inequality",
-  "Treats estimate as exact",
-  "Uses outdated definition",
-  "Applies rule to wrong side",
-  "Combines unlike terms",
-  "Uses wrong reference point",
-  "Ignores direction",
-  "Not scaled correctly",
-  "Treats variable as constant",
-  "Mislabels the result",
-  "Incorrect simplification",
-  "Wrong domain assumption",
-  "Applies 2D rule to 3D case",
-  "Swapped independent and dependent",
-  "Not normalized",
-  "Missing justification",
-  "Conclusion does not follow",
-  "Reverses hypothesis and result",
-  "Applies rule backwards",
-  "Uses wrong formula family",
-  "Treats example as proof",
-  "Assumes linear when not",
-  "Incorrect sign convention",
-  "Misinterprets diagram",
-  "Partial result only",
-  "Leaves out constraints",
-  "Overlooks special values",
-  "Uses incompatible units",
-  "Ignores remainder",
-  "Not reduced to simplest form",
-  "Confuses area and perimeter",
-  "Incorrect factorization",
-  "Wrong substitution",
-  "Confuses mean and median",
-  "Misreads percentage",
-  "Uses sample as population",
-  "Wrong reference frame",
-  "Breaks conservation rule",
-  "Not invariant under change",
-  "Applies property to sum incorrectly",
-  "Drops absolute value",
-  "Flips fraction incorrectly",
-  "Assumes zero where not given",
-  "Treats discrete as continuous",
-  "Misreads exponent",
-  "Incorrect limit behavior",
-  "Chooses wrong axis",
-  "Out of order reasoning",
-  "Not enough information",
-  "Applies pattern where none exists",
-  "Forgets initial condition",
-  "Ignores edge cases",
-  "Treats guess as proof",
-  "Uses wrong coordinate system",
+const FALLBACK_DISTRACTORS = [
+  "None of these",
+  "Insufficient information",
+  "The opposite relationship",
+  "A different underlying process",
+  "An unrelated definition",
+  "A special case only",
+  "A reversed cause and effect",
+  "A different unit or scale",
+  "A false equivalence",
+  "A missing required condition",
+  "An outdated interpretation",
+  "A calculation using the wrong operation",
+  "A conclusion not supported by the evidence",
+  "A rule applied in the wrong direction",
+  "A result from a different topic",
+  "A partially correct but incomplete statement",
 ];
 
-function pickDistractors(
-  correct: string,
-  allAnswers: string[],
-  count: number
-): string[] {
-  const out: string[] = [];
-  const used = new Set<string>();
-  const correctNorm = String(correct || "").trim().toLowerCase();
-
-  if (correctNorm) used.add(correctNorm);
-
-  const pushIfFresh = (label: string) => {
-    const k = String(label || "").trim();
-    if (!k) return;
-    const kk = k.toLowerCase();
-    if (kk === correctNorm) return;
-    if (used.has(kk)) return;
-    used.add(kk);
-    out.push(k);
-  };
-
-  // 1) Other real answers from this topic
-  shuf(allAnswers).forEach((a) => {
-    if (out.length >= count) return;
-    pushIfFresh(a);
-  });
-
-  // 2) Global distractor bank
-  shuf(DISTRACTOR_BANK).forEach((label) => {
-    if (out.length >= count) return;
-    pushIfFresh(label);
-  });
-
-  // 3) Safety padding if still not enough
-  while (out.length < count) {
-    pushIfFresh(`Option ${out.length + 1}`);
-    if (out.length >= count) break;
-  }
-
-  return out.slice(0, count);
+function clean(value: unknown): string {
+  return String(value ?? "").trim();
 }
 
-export function buildQuiz(cards: AnyCard[], limit = 20) {
-  if (!Array.isArray(cards)) return [];
+function normalized(value: unknown): string {
+  return clean(value)
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
 
-  const qa = cards
-    .map(qaFrom)
-    .filter(Boolean) as { question: string; answer: string }[];
+function toPair(card: RawCard): {
+  question: string;
+  answer: string;
+} | null {
+  const question = clean(
+    card?.question ??
+      card?.front ??
+      card?.q ??
+      card?.term
+  );
 
-  if (!qa.length) return [];
+  const answer = clean(
+    card?.answer ??
+      card?.back ??
+      card?.a ??
+      card?.definition
+  );
 
-  const pool = shuf(qa);
-  const picked = pool.slice(0, Math.min(limit, pool.length));
+  return question && answer
+    ? { question, answer }
+    : null;
+}
 
-  const allAnswers = uniqStrings(pool.map((p) => p.answer));
+function shuffle<T>(items: readonly T[]): T[] {
+  const copy = [...items];
 
-  return picked.map((c) => {
-    const correct = c.answer;
-    const distractors = pickDistractors(correct, allAnswers, 3);
+  for (let index = copy.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(
+      Math.random() * (index + 1)
+    );
 
-    // ensure we keep everything unique and include the correct answer
-    let choices = uniqStrings([correct, ...distractors]);
+    [copy[index], copy[swapIndex]] = [
+      copy[swapIndex],
+      copy[index],
+    ];
+  }
 
-    // if something weird happens and correct fell out, force it in
-    if (!choices.some((x) => x.toLowerCase() === correct.toLowerCase())) {
-      choices = uniqStrings([correct, ...choices]);
-    }
+  return copy;
+}
 
-    // cap at 4 choices and shuffle
-    choices = shuf(choices).slice(0, 4);
+function uniqueStrings(values: readonly string[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+
+  for (const value of values) {
+    const display = clean(value);
+    const key = normalized(display);
+
+    if (!display || !key || seen.has(key)) continue;
+
+    seen.add(key);
+    result.push(display);
+  }
+
+  return result;
+}
+
+export function buildQuiz(
+  rawCards: readonly RawCard[],
+  requestedLength = 20
+): QuizItem[] {
+  const pairs = (Array.isArray(rawCards)
+    ? rawCards
+    : []
+  )
+    .map(toPair)
+    .filter(
+      (pair): pair is {
+        question: string;
+        answer: string;
+      } => !!pair
+    );
+
+  if (!pairs.length) return [];
+
+  const questionCount = Math.max(
+    1,
+    Math.min(
+      Math.floor(requestedLength) || 20,
+      pairs.length
+    )
+  );
+
+  const selectedQuestions = shuffle(pairs).slice(
+    0,
+    questionCount
+  );
+
+  const allTopicAnswers = uniqueStrings(
+    pairs.map((pair) => pair.answer)
+  );
+
+  return selectedQuestions.map((pair) => {
+    const correctKey = normalized(pair.answer);
+
+    // Every question gets a fresh shuffle of every other real answer in
+    // the selected topic. This prevents the old repeated three-answer set.
+    const realAnswerPool = shuffle(
+      allTopicAnswers.filter(
+        (answer) =>
+          normalized(answer) !== correctKey
+      )
+    );
+
+    const fallbackPool = shuffle(
+      FALLBACK_DISTRACTORS.filter(
+        (answer) =>
+          normalized(answer) !== correctKey
+      )
+    );
+
+    const distractors = uniqueStrings([
+      ...realAnswerPool,
+      ...fallbackPool,
+    ]).slice(0, 3);
+
+    const choices = shuffle(
+      uniqueStrings([
+        pair.answer,
+        ...distractors,
+      ])
+    );
 
     return {
-      question: c.question,
+      question: pair.question,
+      answer: pair.answer,
       choices,
-      answer: correct,
     };
   });
 }
+
+export default buildQuiz;

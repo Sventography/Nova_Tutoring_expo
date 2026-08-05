@@ -8,6 +8,7 @@ import {
   ScrollView,
   Modal,
   Alert,
+  DeviceEventEmitter,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -254,21 +255,71 @@ export default function QuizScreen() {
   const { addCoins } = useCoins();
   const { activeCompanion } = useCompanion();
 
-  // Legendary ability gating: must be EQUIPPED, not just owned
+  const activeCompanionToken = useMemo(
+    () =>
+      [
+        activeCompanion?.id,
+        activeCompanion?.canonId,
+        activeCompanion?.title,
+        activeCompanion?.meta?.iapProductId,
+      ]
+        .map((value) =>
+          String(value ?? "")
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "")
+        )
+        .filter(Boolean)
+        .join("|"),
+    [
+      activeCompanion?.id,
+      activeCompanion?.canonId,
+      activeCompanion?.title,
+      activeCompanion?.meta?.iapProductId,
+    ]
+  );
+
+  const activeAbilityType =
+    activeCompanion?.ability?.type ?? null;
+
+  // Legendary abilities must come from the EQUIPPED companion.
+  // Ability-first detection survives older colon/underscore/hyphen IDs.
   const hasChronoFox =
-    activeCompanion?.id === "companion:chrono_fox" ||
-    activeCompanion?.id === "chrono_fox" ||
-    activeCompanion?.id === "chrono-fox";
+    activeAbilityType === "quiz_time_bonus" ||
+    activeCompanionToken.includes("chronofox");
 
   const hasAstralNova =
-    activeCompanion?.id === "companion:astral_nova" ||
-    activeCompanion?.id === "astral_nova" ||
-    activeCompanion?.id === "astral-nova";
+    activeAbilityType === "quiz_certificate_bonus" ||
+    activeCompanionToken.includes("astralnova");
 
-  // Base quiz time becomes 7 minutes if Chrono Fox is equipped
+  const chronoExtraMinutes = hasChronoFox
+    ? Math.max(
+        0,
+        Number(
+          activeCompanion?.ability?.extraMinutes ??
+            2
+        )
+      )
+    : 0;
+
+  const astralCertificateBonus = hasAstralNova
+    ? Math.max(
+        0,
+        Math.round(
+          Number(
+            activeCompanion?.ability
+              ?.bonusCoinsFlat ??
+              ASTRAL_NOVA_CERT_BONUS
+          )
+        )
+      )
+    : 0;
+
   const quizTotalTime = useMemo(
-    () => (hasChronoFox ? DEFAULT_TOTAL_TIME + 120 : DEFAULT_TOTAL_TIME),
-    [hasChronoFox]
+    () =>
+      DEFAULT_TOTAL_TIME +
+      Math.round(chronoExtraMinutes * 60),
+    [chronoExtraMinutes]
   );
 
   const gradient = tokens.gradient;
@@ -300,6 +351,10 @@ export default function QuizScreen() {
   const [totalLeft, setTotalLeft] = useState(quizTotalTime);
   const [done, setDone] = useState(false);
   const [showCert, setShowCert] = useState(false);
+  const [
+    legendaryNotice,
+    setLegendaryNotice,
+  ] = useState<string | null>(null);
 
   // Discord prompt visibility
   const [showDiscordPrompt, setShowDiscordPrompt] = useState<boolean>(true);
@@ -415,11 +470,24 @@ export default function QuizScreen() {
     setTotalLeft(quizTotalTime);
     setNoData(false);
     setShowCert(false);
+    setLegendaryNotice(null);
     certBonusGivenRef.current = false;
     loggedRef.current = false;
 
+    if (hasChronoFox || hasAstralNova) {
+      DeviceEventEmitter.emit(
+        "companion:activity",
+        { activity: "quiz" }
+      );
+    }
+
     setLoading(false);
-  }, [topicId, quizTotalTime]);
+  }, [
+    topicId,
+    quizTotalTime,
+    hasChronoFox,
+    hasAstralNova,
+  ]);
 
   const logResultIfNeeded = async (reason: string) => {
     if (loggedRef.current) return;
@@ -479,21 +547,61 @@ export default function QuizScreen() {
     if (pct >= 80) {
       setShowCert(true);
 
-      // Astral Nova legendary: +500 coins whenever a certificate is earned
+      // Astral Nova: award the equipped companion's catalog bonus once.
       if (
         hasAstralNova &&
         !certBonusGivenRef.current &&
-        ASTRAL_NOVA_CERT_BONUS > 0
+        astralCertificateBonus > 0
       ) {
         certBonusGivenRef.current = true;
-        addCoins(ASTRAL_NOVA_CERT_BONUS, "astral_nova_certificate_bonus", {
-          topicId,
-          title: headerTitle,
-          pct,
-        }).catch(() => {});
+
+        void addCoins(
+          astralCertificateBonus,
+          "astral_nova_certificate_bonus",
+          {
+            topicId,
+            title: headerTitle,
+            pct,
+            companionId:
+              activeCompanion?.id ??
+              "companion:astral_nova",
+            abilityType:
+              activeAbilityType,
+            baseCoins:
+              astralCertificateBonus,
+          }
+        )
+          .then(() => {
+            setLegendaryNotice(
+              `Astral Nova awakened · +${astralCertificateBonus} bonus coins`
+            );
+
+            DeviceEventEmitter.emit(
+              "companion:activity",
+              { activity: "quiz" }
+            );
+          })
+          .catch((error) => {
+            console.warn(
+              "[Quiz] Astral Nova certificate bonus failed",
+              error
+            );
+            certBonusGivenRef.current = false;
+          });
       }
     }
-  }, [done, total, correct, hasAstralNova, addCoins, headerTitle, topicId]);
+  }, [
+    done,
+    total,
+    correct,
+    hasAstralNova,
+    astralCertificateBonus,
+    addCoins,
+    headerTitle,
+    topicId,
+    activeCompanion?.id,
+    activeAbilityType,
+  ]);
 
   function goNext() {
     if (idx + 1 >= total) {
@@ -528,6 +636,15 @@ export default function QuizScreen() {
   function finishNow() {
     setDone(true);
     void logResultIfNeeded("finish");
+  }
+
+  function devFinishPerfect() {
+    if (!__DEV__ || !total) return;
+
+    setCorrect(total);
+    setSelected(null);
+    setLocked(true);
+    setDone(true);
   }
 
   const mm = Math.floor(totalLeft / 60);
@@ -610,6 +727,34 @@ export default function QuizScreen() {
               ? "You’ve unlocked a certificate for this quiz."
               : "Score 80% or higher to unlock a certificate."}
           </Text>
+
+          {legendaryNotice ? (
+            <View
+              style={[
+                S.legendaryRewardNotice,
+                {
+                  borderColor:
+                    hasAstralNova
+                      ? "#e879f9"
+                      : accent,
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  S.legendaryRewardNoticeText,
+                  {
+                    color:
+                      hasAstralNova
+                        ? "#f5d0fe"
+                        : headerTextColor,
+                  },
+                ]}
+              >
+                ✦ {legendaryNotice}
+              </Text>
+            </View>
+          ) : null}
         </View>
 
         {passed ? (
@@ -671,6 +816,7 @@ export default function QuizScreen() {
               setDone(false);
               setTotalLeft(quizTotalTime);
               setShowCert(false);
+              setLegendaryNotice(null);
               certBonusGivenRef.current = false;
               loggedRef.current = false;
             }}
@@ -741,6 +887,18 @@ export default function QuizScreen() {
                 80% or higher! Your certificate is ready in the
                 Certificates tab.
               </Text>
+
+              {hasAstralNova ? (
+                <Text
+                  style={[
+                    S.astralModalBonus,
+                    { color: "#f5d0fe" },
+                  ]}
+                >
+                  ✦ Astral Nova grants +
+                  {astralCertificateBonus} bonus coins.
+                </Text>
+              ) : null}
 
               <View style={{ height: 12 }} />
 
@@ -813,6 +971,114 @@ export default function QuizScreen() {
       <Text style={[S.meta, { color: metaColor }]}>
         {idx + 1}/{total} • {mm}:{ss}
       </Text>
+
+      {hasChronoFox ? (
+        <View
+          style={[
+            S.legendaryAbilityCard,
+            {
+              borderColor: "#f59e0b",
+              backgroundColor:
+                "rgba(120,53,15,0.28)",
+            },
+          ]}
+        >
+          <Text
+            style={[
+              S.legendaryAbilityTitle,
+              { color: "#fde68a" },
+            ]}
+          >
+            ◷ CHRONO FOX ACTIVE
+          </Text>
+          <Text
+            style={[
+              S.legendaryAbilityBody,
+              { color: headerTextColor },
+            ]}
+          >
+            Timeline extended by +
+            {chronoExtraMinutes} minutes ·
+            starting time {Math.floor(
+              quizTotalTime / 60
+            )}:00
+          </Text>
+        </View>
+      ) : null}
+
+      {hasAstralNova ? (
+        <View
+          style={[
+            S.legendaryAbilityCard,
+            {
+              borderColor: "#e879f9",
+              backgroundColor:
+                "rgba(88,28,135,0.28)",
+            },
+          ]}
+        >
+          <Text
+            style={[
+              S.legendaryAbilityTitle,
+              { color: "#f5d0fe" },
+            ]}
+          >
+            ✦ ASTRAL NOVA ACTIVE
+          </Text>
+          <Text
+            style={[
+              S.legendaryAbilityBody,
+              { color: headerTextColor },
+            ]}
+          >
+            Earn +
+            {astralCertificateBonus} bonus
+            coins when this quiz awards a
+            certificate.
+          </Text>
+        </View>
+      ) : null}
+
+      {__DEV__ ? (
+        <View
+          style={[
+            S.devRow,
+            {
+              borderColor,
+              backgroundColor: cardBg,
+            },
+          ]}
+        >
+          <Text
+            style={[
+              S.devLabel,
+              { color: metaColor },
+            ]}
+          >
+            Legendary development test
+          </Text>
+          <Pressable
+            onPress={devFinishPerfect}
+            style={[
+              S.devBtn,
+              {
+                borderColor: accent,
+                backgroundColor:
+                  "rgba(34,211,238,0.12)",
+              },
+            ]}
+          >
+            <Text
+              style={[
+                S.devBtnText,
+                { color: headerTextColor },
+              ]}
+            >
+              Finish instantly at 100%
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
 
       <View
         style={[
@@ -1041,6 +1307,37 @@ export const S = StyleSheet.create({
     fontSize: 13,
     opacity: 0.9,
   },
+  legendaryRewardNotice: {
+    marginTop: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    backgroundColor:
+      "rgba(88,28,135,0.22)",
+    paddingHorizontal: 11,
+    paddingVertical: 9,
+  },
+  legendaryRewardNoticeText: {
+    fontSize: 13,
+    fontWeight: "900",
+  },
+  legendaryAbilityCard: {
+    marginTop: 10,
+    borderRadius: 13,
+    borderWidth: 1.5,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  legendaryAbilityTitle: {
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 0.9,
+  },
+  legendaryAbilityBody: {
+    marginTop: 4,
+    fontSize: 13,
+    fontWeight: "700",
+    lineHeight: 18,
+  },
 
   modalBackdrop: {
     position: "absolute",
@@ -1062,6 +1359,12 @@ export const S = StyleSheet.create({
   },
   modalTitle: { fontSize: 20, fontWeight: "800" },
   modalBody: { marginTop: 8 },
+  astralModalBonus: {
+    marginTop: 10,
+    fontSize: 13,
+    fontWeight: "900",
+    lineHeight: 18,
+  },
 
   // 🔧 Dev cheats styling (unused now, safe but can be pruned later)
   devRow: {

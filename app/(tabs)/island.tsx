@@ -737,8 +737,10 @@ function IslandScene({
 
 export default function IslandScreen() {
   const { width } = useWindowDimensions();
-  const { friendshipPoints } =
-    useCompanion();
+  const {
+    friendshipPoints,
+    ownedCompanions,
+  } = useCompanion();
   const {
     islandLevel,
     islandXp,
@@ -761,7 +763,6 @@ export default function IslandScreen() {
   } = useIsland();
 
   const contentWidth = Math.min(Math.max(width - 24, 300), 720);
-
 
   const friendshipSummaries =
     useMemo<FriendshipSummary[]>(() => {
@@ -1133,6 +1134,9 @@ export default function IslandScreen() {
             }
             discoveries={
               sceneDiscoveries
+            }
+            legendaryCompanionIds={
+              ownedCompanions
             }
             onInteractionChange={
               setSceneInteracting

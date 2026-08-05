@@ -9,7 +9,7 @@ type FxCtx = {
 const C = createContext<FxCtx | null>(null);
 
 export function FxProvider({ children }: { children: React.ReactNode }) {
-  const [enabled, setEnabled] = useState(true);
+  const [enabled, setEnabled] = useState(false);
 
   const toggle = useCallback(() => {
     setEnabled(v => {

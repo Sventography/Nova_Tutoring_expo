@@ -191,7 +191,7 @@ export const COMPANIONS: CompanionItem[] = [
     image: require("../assets/companions/aetherwyrm.png"),
     category: "companions",
     coinPrice: 0,
-    priceUSD: 7.99,
+    priceUSD: 14.99,
     role: "power",
     ability: {
       type: "global_coin_multiplier",

@@ -57,17 +57,6 @@ import type {
   CompanionInteractionResult,
 } from "../context/CompanionContext";
 
-// --------------------
-// DEV-ONLY imports
-// --------------------
-if (__DEV__) {
-  try {
-    require("../utils/_streak-autoboot");
-    require("../utils/streak-achievements-autoboot");
-    require("../utils/dev-expose");
-    require("../utils/achievements-smoketest");
-  } catch {}
-}
 
 type Pt = { x: number; y: number };
 
@@ -223,6 +212,412 @@ function getCompanionEffect(id: string | null | undefined): CompanionEffectType 
   if (!id) return "stars";
   const key = String(id);
   return COMPANION_EFFECT_MAP[key] ?? "stars";
+}
+
+type LegendaryPresentation = {
+  key:
+    | "mecha_owl"
+    | "chrono_fox"
+    | "celestra"
+    | "axolotl_oracle"
+    | "astral_nova"
+    | "aetherwyrm";
+  title: string;
+  accent: string;
+  accentSoft: string;
+  secondary: string;
+  background: string;
+  emblem: string;
+  abilityLabel: string;
+  arrivalLine: string;
+  activationLine: string;
+  tapLines: string[];
+  powerAnimation: CompanionAnimationKey;
+};
+
+function companionToken(value: unknown): string {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "");
+}
+
+function getLegendaryPresentation(
+  companion: any
+): LegendaryPresentation | null {
+  if (!companion) return null;
+
+  const token = [
+    companion?.id,
+    companion?.canonId,
+    companion?.title,
+    companion?.meta?.iapProductId,
+  ]
+    .map(companionToken)
+    .filter(Boolean)
+    .join("|");
+
+  if (
+    token.includes("mechaowl") ||
+    companion?.ability?.type ===
+      "achievement_reward_bonus"
+  ) {
+    return {
+      key: "mecha_owl",
+      title: "Mecha Owl",
+      accent: "#67E8F9",
+      accentSoft: "rgba(34,211,238,0.24)",
+      secondary: "#FDE047",
+      background: "rgba(3,18,32,0.96)",
+      emblem: "⌁",
+      abilityLabel: "+10% achievement coins",
+      arrivalLine:
+        "Systems online. Achievement rewards are now amplified.",
+      activationLine:
+        "Reward matrix amplified · +10%",
+      tapLines: [
+        "Scanning the horizon for your next victory.",
+        "Power cells stable. Focus levels rising.",
+        "Every achievement is worth more with me online.",
+      ],
+      powerAnimation: "light_show",
+    };
+  }
+
+  if (
+    token.includes("chronofox") ||
+    companion?.ability?.type ===
+      "quiz_time_bonus"
+  ) {
+    return {
+      key: "chrono_fox",
+      title: "Chrono Fox",
+      accent: "#F59E0B",
+      accentSoft: "rgba(245,158,11,0.24)",
+      secondary: "#FDE68A",
+      background: "rgba(31,16,3,0.96)",
+      emblem: "◷",
+      abilityLabel: "+2 minutes on quizzes",
+      arrivalLine:
+        "The timeline bends. Your quizzes now have more time.",
+      activationLine:
+        "Timeline extended · +2 minutes",
+      tapLines: [
+        "A second can become an eternity in the right paws.",
+        "Time is not running out. It is listening.",
+        "The next moment belongs to you.",
+      ],
+      powerAnimation: "star_arc",
+    };
+  }
+
+  if (
+    token.includes("celestra") ||
+    companion?.ability?.type ===
+      "streak_milestone_bonus"
+  ) {
+    return {
+      key: "celestra",
+      title: "Celestra",
+      accent: "#7DD3FC",
+      accentSoft: "rgba(56,189,248,0.23)",
+      secondary: "#C4B5FD",
+      background: "rgba(4,15,38,0.96)",
+      emblem: "✧",
+      abilityLabel: "+25% streak milestone coins",
+      arrivalLine:
+        "Starlight gathers around your daily momentum.",
+      activationLine:
+        "Streak energy amplified · +25%",
+      tapLines: [
+        "Your consistency shines brighter than any star.",
+        "Another day, another light in the constellation.",
+        "I can feel your momentum becoming celestial.",
+      ],
+      powerAnimation: "float_up",
+    };
+  }
+
+  if (
+    token.includes("axolotloracle") ||
+    token.includes("axolotl") ||
+    companion?.ability?.type ===
+      "streak_shield"
+  ) {
+    return {
+      key: "axolotl_oracle",
+      title: "Axolotl Oracle",
+      accent: "#60A5FA",
+      accentSoft: "rgba(96,165,250,0.24)",
+      secondary: "#F0ABFC",
+      background: "rgba(7,15,38,0.96)",
+      emblem: "◉",
+      abilityLabel: "Streak shield · once per 7 days",
+      arrivalLine:
+        "The Oracle awakens. Your streak is under protection.",
+      activationLine:
+        "Oracle shield awakened",
+      tapLines: [
+        "The currents whisper that you are exactly where you need to be.",
+        "A shield is strongest when protecting something precious.",
+        "Even missed days cannot erase how far you have come.",
+      ],
+      powerAnimation: "heart_pulse",
+    };
+  }
+
+  if (
+    token.includes("astralnova") ||
+    companion?.ability?.type ===
+      "quiz_certificate_bonus"
+  ) {
+    return {
+      key: "astral_nova",
+      title: "Astral Nova",
+      accent: "#E879F9",
+      accentSoft: "rgba(232,121,249,0.24)",
+      secondary: "#FDE047",
+      background: "rgba(27,7,39,0.96)",
+      emblem: "✦",
+      abilityLabel: "+500 coins per certificate",
+      arrivalLine:
+        "A new constellation has chosen to study beside you.",
+      activationLine:
+        "Certificate constellation awakened · +500",
+      tapLines: [
+        "Your work is becoming part of the stars.",
+        "Every lesson leaves a new light in the sky.",
+        "Let us make the next achievement unforgettable.",
+      ],
+      powerAnimation: "light_show",
+    };
+  }
+
+  if (
+    token.includes("aetherwyrm") ||
+    token.includes("wyrm") ||
+    companion?.ability?.type ===
+      "global_coin_multiplier"
+  ) {
+    return {
+      key: "aetherwyrm",
+      title: "Aetherwyrm",
+      accent: "#A78BFA",
+      accentSoft: "rgba(139,92,246,0.27)",
+      secondary: "#22D3EE",
+      background: "rgba(17,7,41,0.97)",
+      emblem: "◇",
+      abilityLabel: "+20% coins from all rewards",
+      arrivalLine:
+        "Aether energy floods every reward path.",
+      activationLine:
+        "Aether surge · all coin rewards +20%",
+      tapLines: [
+        "Power is not taken. It is awakened.",
+        "The aether remembers every step of your journey.",
+        "Your rewards now carry the strength of a wyrm.",
+      ],
+      powerAnimation: "party_spin",
+    };
+  }
+
+  return null;
+}
+
+function LegendaryAura({
+  presentation,
+  activationKey,
+}: {
+  presentation: LegendaryPresentation;
+  activationKey: number;
+}) {
+  const pulse = useRef(
+    new Animated.Value(0)
+  ).current;
+  const orbit = useRef(
+    new Animated.Value(0)
+  ).current;
+  const flash = useRef(
+    new Animated.Value(0)
+  ).current;
+
+  useEffect(() => {
+    const pulseLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, {
+          toValue: 1,
+          duration: 1650,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: false,
+        }),
+        Animated.timing(pulse, {
+          toValue: 0,
+          duration: 1650,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: false,
+        }),
+      ])
+    );
+
+    const orbitLoop = Animated.loop(
+      Animated.timing(orbit, {
+        toValue: 1,
+        duration: 7600,
+        easing: Easing.linear,
+        useNativeDriver: false,
+      })
+    );
+
+    pulseLoop.start();
+    orbitLoop.start();
+
+    return () => {
+      pulseLoop.stop();
+      orbitLoop.stop();
+    };
+  }, [orbit, pulse]);
+
+  useEffect(() => {
+    flash.setValue(0);
+
+    Animated.sequence([
+      Animated.timing(flash, {
+        toValue: 1,
+        duration: 220,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: false,
+      }),
+      Animated.timing(flash, {
+        toValue: 0,
+        duration: 820,
+        easing: Easing.inOut(Easing.quad),
+        useNativeDriver: false,
+      }),
+    ]).start();
+  }, [activationKey, flash]);
+
+  const outerScale = pulse.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.96, 1.12],
+  });
+
+  const innerScale = pulse.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1.06, 0.96],
+  });
+
+  const glowOpacity = Animated.add(
+    pulse.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0.2, 0.46],
+    }),
+    flash.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0, 0.46],
+    })
+  );
+
+  const orbitRotation = orbit.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0deg", "360deg"],
+  });
+
+  const reverseRotation = orbit.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0deg", "-360deg"],
+  });
+
+  const emblemOpacity = pulse.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.48, 0.9],
+  });
+
+  return (
+    <View
+      pointerEvents="none"
+      style={S.legendaryAuraRoot}
+    >
+      <Animated.View
+        style={[
+          S.legendaryAuraGlow,
+          {
+            backgroundColor:
+              presentation.accentSoft,
+            opacity: glowOpacity,
+            transform: [
+              { scale: outerScale },
+            ],
+          },
+        ]}
+      />
+
+      <Animated.View
+        style={[
+          S.legendaryOrbitRing,
+          {
+            borderColor:
+              presentation.accent,
+            transform: [
+              { rotate: orbitRotation },
+              { scale: outerScale },
+            ],
+          },
+        ]}
+      >
+        <View
+          style={[
+            S.legendaryOrbitDot,
+            S.legendaryOrbitDotTop,
+            {
+              backgroundColor:
+                presentation.secondary,
+              shadowColor:
+                presentation.secondary,
+            },
+          ]}
+        />
+        <View
+          style={[
+            S.legendaryOrbitDot,
+            S.legendaryOrbitDotBottom,
+            {
+              backgroundColor:
+                presentation.accent,
+              shadowColor:
+                presentation.accent,
+            },
+          ]}
+        />
+      </Animated.View>
+
+      <Animated.View
+        style={[
+          S.legendaryInnerRing,
+          {
+            borderColor:
+              presentation.secondary,
+            opacity: emblemOpacity,
+            transform: [
+              { rotate: reverseRotation },
+              { scale: innerScale },
+            ],
+          },
+        ]}
+      />
+
+      <Animated.Text
+        style={[
+          S.legendaryAuraEmblem,
+          {
+            color: presentation.secondary,
+            opacity: emblemOpacity,
+          },
+        ]}
+      >
+        {presentation.emblem}
+      </Animated.Text>
+    </View>
+  );
 }
 
 /* --------- Visual overlay for companion click effects (hearts/stars/etc) -- */
@@ -1317,6 +1712,9 @@ function FloatingCompanionOverlay() {
   const tilt = useRef(
     new Animated.Value(0)
   ).current;
+  const legendaryEntrance = useRef(
+    new Animated.Value(1)
+  ).current;
 
   const [legendEffect, setLegendEffect] =
     useState<CompanionEffectType>("stars");
@@ -1350,6 +1748,20 @@ function FloatingCompanionOverlay() {
   const isCommon =
     !!profile &&
     activeCompanion?.role === "cosmetic";
+  const legendaryPresentation = useMemo(
+    () =>
+      getLegendaryPresentation(
+        activeCompanion
+      ),
+    [
+      activeCompanion?.id,
+      activeCompanion?.canonId,
+      activeCompanion?.ability?.type,
+    ]
+  );
+  const isLegendary =
+    !!legendaryPresentation &&
+    !isCommon;
   const points = isCommon
     ? getFriendshipPoints(activeId)
     : 0;
@@ -1409,6 +1821,16 @@ function FloatingCompanionOverlay() {
         award: boolean
       ) => void
     >(() => {});
+  const legendaryPresentationRef =
+    useRef<LegendaryPresentation | null>(
+      legendaryPresentation
+    );
+  const legendaryPowerHandlerRef =
+    useRef<
+      (
+        activity: CompanionActivityKey
+      ) => void
+    >(() => {});
 
   activeRef.current = activeCompanion;
   profileRef.current = profile;
@@ -1417,6 +1839,8 @@ function FloatingCompanionOverlay() {
     recordCompanionInteraction;
   recordActivityRef.current =
     recordCompanionActivity;
+  legendaryPresentationRef.current =
+    legendaryPresentation;
 
   const rotation = rotate.interpolate({
     inputRange: [-1, 1],
@@ -1778,11 +2202,50 @@ function FloatingCompanionOverlay() {
     const companion = activeRef.current;
 
     if (!currentProfile || !companion) {
+      const legendary =
+        legendaryPresentationRef.current;
+
       clickModeRef.current =
         (clickModeRef.current + 1) % 5;
 
       const mode = clickModeRef.current;
-      if (mode === 0) {
+
+      if (legendary) {
+        const legendaryAnimations:
+          CompanionAnimationKey[] = [
+            legendary.powerAnimation,
+            "big_hop",
+            "victory_dance",
+            "light_show",
+            "party_spin",
+          ];
+
+        performAnimation(
+          legendaryAnimations[
+            mode %
+              legendaryAnimations.length
+          ]
+        );
+
+        showSpeech(
+          legendary.tapLines[
+            mode %
+              legendary.tapLines.length
+          ],
+          "tap",
+          2900
+        );
+
+        try {
+          if (Platform.OS !== "web") {
+            void Haptics.impactAsync(
+              Haptics
+                .ImpactFeedbackStyle
+                .Medium
+            );
+          }
+        } catch {}
+      } else if (mode === 0) {
         performAnimation("happy_bounce");
       } else if (mode === 1) {
         performAnimation("big_hop");
@@ -2047,6 +2510,68 @@ function FloatingCompanionOverlay() {
     );
   };
 
+  const triggerLegendaryPower = (
+    activity: CompanionActivityKey
+  ) => {
+    const companion =
+      activeRef.current;
+    const presentation =
+      legendaryPresentationRef.current;
+
+    if (!companion || !presentation) {
+      return;
+    }
+
+    const abilityType =
+      companion?.ability?.type;
+
+    const shouldActivate =
+      abilityType ===
+        "global_coin_multiplier" ||
+      (abilityType ===
+        "achievement_reward_bonus" &&
+        activity === "achievements") ||
+      (abilityType ===
+        "quiz_time_bonus" &&
+        activity === "quiz") ||
+      (abilityType ===
+        "streak_milestone_bonus" &&
+        activity === "daily_login") ||
+      (abilityType ===
+        "streak_shield" &&
+        activity === "daily_login") ||
+      (abilityType ===
+        "quiz_certificate_bonus" &&
+        activity === "quiz");
+
+    if (!shouldActivate) return;
+
+    performAnimation(
+      presentation.powerAnimation
+    );
+    setLegendEffectKey(
+      (key) => key + 1
+    );
+    showSpeech(
+      presentation.activationLine,
+      "activity",
+      3300
+    );
+
+    try {
+      if (Platform.OS !== "web") {
+        void Haptics.notificationAsync(
+          Haptics
+            .NotificationFeedbackType
+            .Success
+        );
+      }
+    } catch {}
+  };
+
+  legendaryPowerHandlerRef.current =
+    triggerLegendaryPower;
+
   activityHandlerRef.current = (
     activity,
     award
@@ -2109,11 +2634,18 @@ function FloatingCompanionOverlay() {
   };
 
   useEffect(() => {
+    bob.stopAnimation();
+    bob.setValue(0);
+
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(bob, {
-          toValue: -6,
-          duration: 900,
+          toValue: isLegendary
+            ? -10
+            : -6,
+          duration: isLegendary
+            ? 1450
+            : 900,
           easing: Easing.inOut(
             Easing.sin
           ),
@@ -2121,7 +2653,9 @@ function FloatingCompanionOverlay() {
         }),
         Animated.timing(bob, {
           toValue: 0,
-          duration: 900,
+          duration: isLegendary
+            ? 1450
+            : 900,
           easing: Easing.inOut(
             Easing.sin
           ),
@@ -2133,12 +2667,13 @@ function FloatingCompanionOverlay() {
     loop.start();
 
     return () => loop.stop();
-  }, [bob]);
+  }, [bob, isLegendary]);
 
   useEffect(() => {
     if (!activeCompanion) {
       setSpeech(null);
       setFriendshipOpen(false);
+      legendaryEntrance.setValue(1);
       return;
     }
 
@@ -2151,6 +2686,50 @@ function FloatingCompanionOverlay() {
     setSpeech(null);
     setFriendshipOpen(false);
     speechVisibleRef.current = false;
+
+    if (legendaryPresentation) {
+      legendaryEntrance.setValue(0);
+
+      Animated.spring(
+        legendaryEntrance,
+        {
+          toValue: 1,
+          friction: 5,
+          tension: 72,
+          useNativeDriver: false,
+        }
+      ).start();
+
+      const timer = setTimeout(() => {
+        performAnimation(
+          legendaryPresentation
+            .powerAnimation
+        );
+        setLegendEffectKey(
+          (key) => key + 1
+        );
+        showSpeech(
+          legendaryPresentation
+            .arrivalLine,
+          "idle",
+          4100
+        );
+
+        try {
+          if (Platform.OS !== "web") {
+            void Haptics.notificationAsync(
+              Haptics
+                .NotificationFeedbackType
+                .Success
+            );
+          }
+        } catch {}
+      }, 360);
+
+      return () => clearTimeout(timer);
+    }
+
+    legendaryEntrance.setValue(1);
 
     if (profile) {
       const timer = setTimeout(() => {
@@ -2173,6 +2752,8 @@ function FloatingCompanionOverlay() {
     activeCompanion,
     activeId,
     getFriendshipPoints,
+    legendaryEntrance,
+    legendaryPresentation,
     profile,
   ]);
 
@@ -2243,6 +2824,9 @@ function FloatingCompanionOverlay() {
               payload.activity,
               true
             );
+            legendaryPowerHandlerRef.current(
+              payload.activity
+            );
           }
         }
       );
@@ -2271,6 +2855,9 @@ function FloatingCompanionOverlay() {
         activityHandlerRef.current(
           "achievements",
           true
+        );
+        legendaryPowerHandlerRef.current(
+          "achievements"
         );
 
         if (
@@ -2493,20 +3080,38 @@ function FloatingCompanionOverlay() {
   if (!activeCompanion) return null;
 
   const speechAccent =
-    speechKind === "pet"
+    legendaryPresentation?.accent ||
+    (speechKind === "pet"
       ? "#f472b6"
       : speechKind === "activity"
       ? "#facc15"
       : speechKind === "idle"
       ? "#a78bfa"
-      : profile?.accent || "#22d3ee";
+      : profile?.accent || "#22d3ee");
+
+  const legendaryEntranceScale =
+    legendaryEntrance.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0.34, 1],
+    });
+
+  const legendaryEntranceOpacity =
+    legendaryEntrance.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0, 1],
+    });
 
   return (
     <>
       <Animated.View
         style={[
           S.companionWrap,
+          isLegendary &&
+            S.legendaryCompanionWrap,
           {
+            opacity: isLegendary
+              ? legendaryEntranceOpacity
+              : 1,
             transform: [
               {
                 translateX: Animated.add(
@@ -2527,6 +3132,11 @@ function FloatingCompanionOverlay() {
                 ),
               },
               { scale },
+              {
+                scale: isLegendary
+                  ? legendaryEntranceScale
+                  : 1,
+              },
               { rotate: rotation },
               {
                 rotate: tiltRotation,
@@ -2535,13 +3145,18 @@ function FloatingCompanionOverlay() {
           },
         ]}
       >
-        {profile && speech ? (
+        {(profile || isLegendary) &&
+        speech ? (
           <View
             pointerEvents="none"
             style={[
               S.companionSpeechBubble,
+              isLegendary &&
+                S.legendarySpeechBubble,
               {
                 borderColor:
+                  speechAccent,
+                shadowColor:
                   speechAccent,
               },
             ]}
@@ -2554,8 +3169,13 @@ function FloatingCompanionOverlay() {
                 },
               ]}
             >
-              {profile.shortLabel} ·{" "}
-              {friendshipProgress.stage}
+              {profile
+                ? `${profile.shortLabel} · ${friendshipProgress.stage}`
+                : `LEGENDARY · ${
+                    legendaryPresentation
+                      ?.title ||
+                    activeCompanion.title
+                  }`}
             </Text>
             <Text
               style={
@@ -2578,9 +3198,43 @@ function FloatingCompanionOverlay() {
 
         <View
           {...panResponder.panHandlers}
-          style={S.companionDragTarget}
+          style={[
+            S.companionDragTarget,
+            isLegendary &&
+              S.legendaryDragTarget,
+          ]}
         >
-          <View style={S.companionBadge}>
+          <View
+            style={[
+              S.companionBadge,
+              isLegendary &&
+                S.legendaryCompanionBadge,
+              legendaryPresentation
+                ? {
+                    borderColor:
+                      legendaryPresentation
+                        .accent,
+                    backgroundColor:
+                      legendaryPresentation
+                        .background,
+                    shadowColor:
+                      legendaryPresentation
+                        .accent,
+                  }
+                : null,
+            ]}
+          >
+            {legendaryPresentation ? (
+              <LegendaryAura
+                presentation={
+                  legendaryPresentation
+                }
+                activationKey={
+                  legendEffectKey
+                }
+              />
+            ) : null}
+
             <View
               pointerEvents="none"
               style={
@@ -2605,16 +3259,76 @@ function FloatingCompanionOverlay() {
               )}
             </View>
 
-            <Image
-              source={
-                (activeCompanion as any)
-                  .image
-              }
-              style={S.companionImage}
-              resizeMode="contain"
-            />
+            <View
+              style={[
+                S.companionPortraitMask,
+                isLegendary &&
+                  S.legendaryCompanionPortraitMask,
+              ]}
+            >
+              <Image
+                source={
+                  (activeCompanion as any)
+                    .image
+                }
+                style={[
+                  S.companionImage,
+                  isLegendary &&
+                    S.legendaryCompanionImage,
+                ]}
+                resizeMode="contain"
+              />
+            </View>
           </View>
         </View>
+
+        {legendaryPresentation ? (
+          <View
+            pointerEvents="none"
+            style={[
+              S.legendaryStatusPill,
+              {
+                borderColor:
+                  legendaryPresentation
+                    .accent,
+                shadowColor:
+                  legendaryPresentation
+                    .accent,
+                backgroundColor:
+                  legendaryPresentation
+                    .background,
+              },
+            ]}
+          >
+            <Text
+              style={[
+                S.legendaryStatusTitle,
+                {
+                  color:
+                    legendaryPresentation
+                      .secondary,
+                },
+              ]}
+            >
+              ✦ LEGENDARY ·{" "}
+              {
+                legendaryPresentation
+                  .title
+              }
+            </Text>
+            <Text
+              style={
+                S.legendaryStatusAbility
+              }
+              numberOfLines={1}
+            >
+              {
+                legendaryPresentation
+                  .abilityLabel
+              }
+            </Text>
+          </View>
+        ) : null}
 
         {profile ? (
           <Pressable
@@ -3082,6 +3796,13 @@ export const S = StyleSheet.create({
     justifyContent: "center",
     zIndex: 9998,
   },
+  legendaryCompanionWrap: {
+    right: 18,
+    bottom:
+      Platform.OS === "web"
+        ? 132
+        : 122,
+  },
   companionBadge: {
     width: 64,
     height: 64,
@@ -3097,13 +3818,149 @@ export const S = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     overflow: "visible",
   },
+  legendaryCompanionBadge: {
+    width: 86,
+    height: 86,
+    borderRadius: 43,
+    borderWidth: 2.5,
+    shadowOpacity: 0.9,
+    shadowRadius: 25,
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    elevation: 18,
+  },
+  companionPortraitMask: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(0,8,20,0.96)",
+  },
+  legendaryCompanionPortraitMask: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: "rgba(2,6,23,0.98)",
+  },
   companionImage: {
-    width: 48,
-    height: 48,
+    width: "100%",
+    height: "100%",
+  },
+  legendaryCompanionImage: {
+    width: "100%",
+    height: "100%",
   },
   companionDragTarget: {
     width: 64,
     height: 64,
+  },
+  legendaryDragTarget: {
+    width: 86,
+    height: 86,
+  },
+  legendaryAuraRoot: {
+    position: "absolute",
+    left: -15,
+    top: -15,
+    width: 116,
+    height: 116,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  legendaryAuraGlow: {
+    position: "absolute",
+    width: 108,
+    height: 108,
+    borderRadius: 54,
+  },
+  legendaryOrbitRing: {
+    position: "absolute",
+    width: 108,
+    height: 108,
+    borderRadius: 54,
+    borderWidth: 1.5,
+    borderStyle: "dashed",
+  },
+  legendaryInnerRing: {
+    position: "absolute",
+    width: 92,
+    height: 92,
+    borderRadius: 46,
+    borderWidth: 1,
+    borderStyle: "dotted",
+  },
+  legendaryOrbitDot: {
+    position: "absolute",
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    shadowOpacity: 0.95,
+    shadowRadius: 7,
+    shadowOffset: {
+      width: 0,
+      height: 0,
+    },
+    elevation: 12,
+  },
+  legendaryOrbitDotTop: {
+    left: "50%",
+    top: -4,
+    marginLeft: -3.5,
+  },
+  legendaryOrbitDotBottom: {
+    left: "50%",
+    bottom: -4,
+    marginLeft: -3.5,
+  },
+  legendaryAuraEmblem: {
+    position: "absolute",
+    right: 5,
+    top: 11,
+    fontSize: 17,
+    fontWeight: "900",
+    textShadowColor:
+      "rgba(255,255,255,0.7)",
+    textShadowOffset: {
+      width: 0,
+      height: 0,
+    },
+    textShadowRadius: 8,
+  },
+  legendaryStatusPill: {
+    position: "absolute",
+    top: 94,
+    right: -8,
+    minWidth: 174,
+    maxWidth: 210,
+    borderRadius: 999,
+    borderWidth: 1.5,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    alignItems: "center",
+    shadowOpacity: 0.72,
+    shadowRadius: 13,
+    shadowOffset: {
+      width: 0,
+      height: 5,
+    },
+    elevation: 15,
+  },
+  legendaryStatusTitle: {
+    fontSize: 9,
+    lineHeight: 12,
+    fontWeight: "900",
+    letterSpacing: 0.65,
+  },
+  legendaryStatusAbility: {
+    color: "#F8FAFC",
+    fontSize: 9,
+    lineHeight: 12,
+    fontWeight: "800",
+    marginTop: 1,
   },
   companionSpeechBubble: {
     position: "absolute",
@@ -3120,6 +3977,14 @@ export const S = StyleSheet.create({
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 7 },
     elevation: 9,
+  },
+  legendarySpeechBubble: {
+    bottom: 122,
+    width: 250,
+    borderWidth: 2,
+    shadowOpacity: 0.72,
+    shadowRadius: 18,
+    elevation: 16,
   },
   companionSpeechTitle: {
     fontSize: 10,

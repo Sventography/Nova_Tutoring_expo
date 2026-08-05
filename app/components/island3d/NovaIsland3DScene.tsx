@@ -28,6 +28,12 @@ import {
   type IslandMilestone,
 } from "../../context/IslandContext";
 
+import LegendarySatelliteIslands, {
+  getLegendaryIslandInfo,
+  type LegendaryIslandId,
+  type LegendaryIslandInfo,
+} from "./LegendarySatelliteIslands";
+
 export type Island3DZone =
   | "grove"
   | "garden"
@@ -57,6 +63,7 @@ type Props = {
   selectedMilestoneId: string;
   selectedDiscoveryKey: string | null;
   discoveries: Island3DDiscovery[];
+  legendaryCompanionIds?: string[];
   onSelectMilestone: (
     milestoneId: string
   ) => void;
@@ -2042,124 +2049,772 @@ function Library({
 }: {
   unlocked: boolean;
 }) {
-  const wall = unlocked
+  const floatingPages =
+    useRef<THREE.Group>(
+      null
+    );
+
+  useFrame(
+    ({ clock }) => {
+      if (!floatingPages.current) {
+        return;
+      }
+
+      floatingPages.current.rotation.y =
+        clock.elapsedTime * 0.22;
+
+      floatingPages.current.position.y =
+        1.94 +
+        Math.sin(
+          clock.elapsedTime * 1.35
+        ) *
+          0.045;
+    }
+  );
+
+  const stone = unlocked
     ? "#d8c9a7"
     : "#535963";
 
+  const stoneDark = unlocked
+    ? "#b9a984"
+    : "#454b55";
+
+  const trim = unlocked
+    ? "#e8ddc4"
+    : "#626a76";
+
   const roof = unlocked
-    ? "#516a8f"
+    ? "#425f86"
     : "#3e434b";
 
+  const wood = unlocked
+    ? "#5a3829"
+    : "#34383f";
+
+  const window = unlocked
+    ? "#7de7ff"
+    : "#424852";
+
+  const windowGlow = unlocked
+    ? "#38bdf8"
+    : "#000000";
+
+  const gold = unlocked
+    ? "#f6d66f"
+    : "#5c6169";
+
+  const bookColors = unlocked
+    ? [
+        "#f87171",
+        "#60a5fa",
+        "#fbbf24",
+        "#a78bfa",
+        "#34d399",
+        "#fb7185",
+      ]
+    : [
+        "#50555e",
+        "#50555e",
+        "#50555e",
+        "#50555e",
+        "#50555e",
+        "#50555e",
+      ];
+
   return (
-    <group>
+    <group scale={0.92}>
+      {/* Broad stone foundation makes the landmark read as civic architecture. */}
       <mesh
         position={[
           0,
-          0.58,
+          0.08,
           0,
         ]}
       >
         <boxGeometry
           args={[
-            1.6,
-            1.15,
-            1.35,
+            2.55,
+            0.18,
+            1.72,
           ]}
         />
         <meshStandardMaterial
-          color={wall}
+          color={stoneDark}
+          roughness={0.88}
+        />
+      </mesh>
+
+      {/* Main reading hall. */}
+      <mesh
+        position={[
+          0,
+          0.82,
+          -0.03,
+        ]}
+      >
+        <boxGeometry
+          args={[
+            1.55,
+            1.36,
+            1.34,
+          ]}
+        />
+        <meshStandardMaterial
+          color={stone}
           roughness={0.82}
         />
       </mesh>
 
-      <mesh
-        position={[
-          0,
-          1.42,
-          0,
-        ]}
-        rotation={[
-          0,
-          Math.PI / 4,
-          0,
-        ]}
-      >
-        <coneGeometry
-          args={[
-            1.25,
-            0.82,
-            4,
-          ]}
-        />
-        <meshStandardMaterial
-          color={roof}
-          roughness={0.76}
-        />
-      </mesh>
+      {/* Side archive wings keep it from looking like a small house. */}
+      {[-1.02, 1.02].map(
+        (x, index) => (
+          <group
+            key={`wing-${index}`}
+            position={[
+              x,
+              0,
+              0.02,
+            ]}
+          >
+            <mesh
+              position={[
+                0,
+                0.68,
+                0,
+              ]}
+            >
+              <boxGeometry
+                args={[
+                  0.58,
+                  1.08,
+                  1.18,
+                ]}
+              />
+              <meshStandardMaterial
+                color={stone}
+                roughness={0.84}
+              />
+            </mesh>
 
+            <mesh
+              position={[
+                0,
+                1.26,
+                0,
+              ]}
+            >
+              <boxGeometry
+                args={[
+                  0.7,
+                  0.16,
+                  1.32,
+                ]}
+              />
+              <meshStandardMaterial
+                color={roof}
+                roughness={0.72}
+              />
+            </mesh>
+
+            {/* Tall illuminated archive window. */}
+            <mesh
+              position={[
+                0,
+                0.78,
+                0.61,
+              ]}
+            >
+              <boxGeometry
+                args={[
+                  0.34,
+                  0.56,
+                  0.045,
+                ]}
+              />
+              <meshStandardMaterial
+                color={window}
+                emissive={windowGlow}
+                emissiveIntensity={
+                  unlocked ? 0.5 : 0
+                }
+              />
+            </mesh>
+
+            <mesh
+              position={[
+                0,
+                0.78,
+                0.64,
+              ]}
+            >
+              <boxGeometry
+                args={[
+                  0.035,
+                  0.57,
+                  0.025,
+                ]}
+              />
+              <meshStandardMaterial
+                color={trim}
+              />
+            </mesh>
+
+            {[-0.18, 0, 0.18].map(
+              (offset, shelfIndex) => (
+                <mesh
+                  key={`shelf-${shelfIndex}`}
+                  position={[
+                    0,
+                    0.78 + offset,
+                    0.645,
+                  ]}
+                >
+                  <boxGeometry
+                    args={[
+                      0.36,
+                      0.025,
+                      0.025,
+                    ]}
+                  />
+                  <meshStandardMaterial
+                    color={wood}
+                  />
+                </mesh>
+              )
+            )}
+          </group>
+        )
+      )}
+
+      {/* Flat civic roof and raised central archive tower. */}
       <mesh
         position={[
           0,
-          0.42,
-          0.69,
+          1.54,
+          -0.03,
         ]}
       >
         <boxGeometry
           args={[
-            0.38,
-            0.68,
-            0.08,
+            1.78,
+            0.18,
+            1.5,
           ]}
         />
         <meshStandardMaterial
-          color={
-            unlocked
-              ? "#5a3b2f"
-              : "#34383f"
-          }
+          color={roof}
+          roughness={0.7}
+        />
+      </mesh>
+
+      <mesh
+        position={[
+          0,
+          1.78,
+          -0.08,
+        ]}
+      >
+        <boxGeometry
+          args={[
+            0.9,
+            0.34,
+            0.92,
+          ]}
+        />
+        <meshStandardMaterial
+          color={stone}
+          roughness={0.8}
+        />
+      </mesh>
+
+      <mesh
+        position={[
+          0,
+          2.0,
+          -0.08,
+        ]}
+      >
+        <boxGeometry
+          args={[
+            1.02,
+            0.12,
+            1.02,
+          ]}
+        />
+        <meshStandardMaterial
+          color={roof}
+          roughness={0.7}
+        />
+      </mesh>
+
+      {/* Grand front portico. */}
+      <mesh
+        position={[
+          0,
+          1.36,
+          0.74,
+        ]}
+      >
+        <boxGeometry
+          args={[
+            1.42,
+            0.16,
+            0.18,
+          ]}
+        />
+        <meshStandardMaterial
+          color={trim}
+          roughness={0.72}
         />
       </mesh>
 
       {[
-        [-0.52, 0.76],
-        [0.52, 0.76],
-      ].map(
-        ([x, y], index) => (
+        -0.56,
+        -0.2,
+        0.2,
+        0.56,
+      ].map((x, index) => (
+        <group
+          key={`column-${index}`}
+          position={[
+            x,
+            0,
+            0.76,
+          ]}
+        >
           <mesh
-            key={index}
+            position={[
+              0,
+              0.72,
+              0,
+            ]}
+          >
+            <cylinderGeometry
+              args={[
+                0.075,
+                0.09,
+                1.18,
+                12,
+              ]}
+            />
+            <meshStandardMaterial
+              color={trim}
+              roughness={0.7}
+            />
+          </mesh>
+
+          <mesh
+            position={[
+              0,
+              0.12,
+              0,
+            ]}
+          >
+            <cylinderGeometry
+              args={[
+                0.12,
+                0.12,
+                0.1,
+                12,
+              ]}
+            />
+            <meshStandardMaterial
+              color={stoneDark}
+            />
+          </mesh>
+
+          <mesh
+            position={[
+              0,
+              1.34,
+              0,
+            ]}
+          >
+            <cylinderGeometry
+              args={[
+                0.12,
+                0.1,
+                0.1,
+                12,
+              ]}
+            />
+            <meshStandardMaterial
+              color={stoneDark}
+            />
+          </mesh>
+        </group>
+      ))}
+
+      {/* Wide double doors and glowing arch. */}
+      {[-0.17, 0.17].map(
+        (x, index) => (
+          <mesh
+            key={`door-${index}`}
             position={[
               x,
-              y,
-              0.7,
+              0.48,
+              0.69,
             ]}
           >
             <boxGeometry
               args={[
-                0.31,
-                0.32,
-                0.06,
+                0.3,
+                0.72,
+                0.075,
               ]}
             />
             <meshStandardMaterial
-              color={
-                unlocked
-                  ? "#7de7ff"
-                  : "#424852"
-              }
-              emissive={
-                unlocked
-                  ? "#38bdf8"
-                  : "#000000"
-              }
-              emissiveIntensity={
-                unlocked
-                  ? 0.45
-                  : 0
-              }
+              color={wood}
+              roughness={0.66}
             />
           </mesh>
         )
       )}
+
+      <mesh
+        position={[
+          0,
+          0.84,
+          0.705,
+        ]}
+      >
+        <torusGeometry
+          args={[
+            0.34,
+            0.055,
+            8,
+            28,
+            Math.PI,
+          ]}
+        />
+        <meshStandardMaterial
+          color={gold}
+          emissive={
+            unlocked
+              ? "#b98b22"
+              : "#000000"
+          }
+          emissiveIntensity={
+            unlocked ? 0.45 : 0
+          }
+          metalness={0.28}
+          roughness={0.4}
+        />
+      </mesh>
+
+      {/* Three broad entrance steps. */}
+      {[
+        [0.82, 0.06, 0.96],
+        [0.68, 0.12, 0.86],
+        [0.54, 0.18, 0.76],
+      ].map(
+        ([
+          width,
+          y,
+          z,
+        ], index) => (
+          <mesh
+            key={`step-${index}`}
+            position={[
+              0,
+              y,
+              z,
+            ]}
+          >
+            <boxGeometry
+              args={[
+                width,
+                0.1,
+                0.28,
+              ]}
+            />
+            <meshStandardMaterial
+              color={
+                index === 0
+                  ? stoneDark
+                  : trim
+              }
+              roughness={0.84}
+            />
+          </mesh>
+        )
+      )}
+
+      {/* Open-book crest above the entrance. */}
+      <group
+        position={[
+          0,
+          1.66,
+          0.78,
+        ]}
+      >
+        <mesh
+          position={[
+            -0.13,
+            0,
+            0,
+          ]}
+          rotation={[
+            0,
+            0,
+            -0.2,
+          ]}
+        >
+          <boxGeometry
+            args={[
+              0.26,
+              0.18,
+              0.045,
+            ]}
+          />
+          <meshStandardMaterial
+            color="#f8f1d4"
+            emissive={
+              unlocked
+                ? "#f6d66f"
+                : "#000000"
+            }
+            emissiveIntensity={
+              unlocked ? 0.28 : 0
+            }
+          />
+        </mesh>
+
+        <mesh
+          position={[
+            0.13,
+            0,
+            0,
+          ]}
+          rotation={[
+            0,
+            0,
+            0.2,
+          ]}
+        >
+          <boxGeometry
+            args={[
+              0.26,
+              0.18,
+              0.045,
+            ]}
+          />
+          <meshStandardMaterial
+            color="#f8f1d4"
+            emissive={
+              unlocked
+                ? "#f6d66f"
+                : "#000000"
+            }
+            emissiveIntensity={
+              unlocked ? 0.28 : 0
+            }
+          />
+        </mesh>
+
+        <mesh
+          position={[
+            0,
+            -0.02,
+            0.025,
+          ]}
+        >
+          <boxGeometry
+            args={[
+              0.025,
+              0.2,
+              0.035,
+            ]}
+          />
+          <meshStandardMaterial
+            color={gold}
+          />
+        </mesh>
+      </group>
+
+      {/* Exterior book displays make the purpose obvious even from a distance. */}
+      {[-0.98, 0.98].map(
+        (x, sideIndex) => (
+          <group
+            key={`bookcase-${sideIndex}`}
+            position={[
+              x,
+              0.4,
+              0.66,
+            ]}
+          >
+            <mesh>
+              <boxGeometry
+                args={[
+                  0.42,
+                  0.55,
+                  0.08,
+                ]}
+              />
+              <meshStandardMaterial
+                color={wood}
+                roughness={0.72}
+              />
+            </mesh>
+
+            {bookColors.map(
+              (color, bookIndex) => {
+                const column =
+                  bookIndex % 3;
+
+                const row =
+                  Math.floor(
+                    bookIndex / 3
+                  );
+
+                return (
+                  <mesh
+                    key={bookIndex}
+                    position={[
+                      -0.12 +
+                        column *
+                          0.12,
+                      -0.12 +
+                        row *
+                          0.25,
+                      0.055,
+                    ]}
+                    scale={[
+                      1,
+                      0.82 +
+                        (bookIndex %
+                          2) *
+                          0.18,
+                      1,
+                    ]}
+                  >
+                    <boxGeometry
+                      args={[
+                        0.075,
+                        0.18,
+                        0.035,
+                      ]}
+                    />
+                    <meshStandardMaterial
+                      color={color}
+                      emissive={
+                        unlocked
+                          ? color
+                          : "#000000"
+                      }
+                      emissiveIntensity={
+                        unlocked
+                          ? 0.12
+                          : 0
+                      }
+                    />
+                  </mesh>
+                );
+              }
+            )}
+          </group>
+        )
+      )}
+
+      {/* Warm reading lamps. */}
+      {[-0.78, 0.78].map(
+        (x, index) => (
+          <group
+            key={`lamp-${index}`}
+            position={[
+              x,
+              0.96,
+              0.78,
+            ]}
+          >
+            <mesh>
+              <sphereGeometry
+                args={[
+                  0.085,
+                  12,
+                  10,
+                ]}
+              />
+              <meshStandardMaterial
+                color="#fff4bd"
+                emissive={
+                  unlocked
+                    ? "#fbbf24"
+                    : "#000000"
+                }
+                emissiveIntensity={
+                  unlocked ? 1.1 : 0
+                }
+              />
+            </mesh>
+
+            {unlocked ? (
+              <pointLight
+                color="#ffd76a"
+                intensity={0.45}
+                distance={2.2}
+              />
+            ) : null}
+          </group>
+        )
+      )}
+
+      {/* A few enchanted pages orbit the roof after unlock. */}
+      {unlocked ? (
+        <group
+          ref={floatingPages}
+          position={[
+            0,
+            1.94,
+            -0.04,
+          ]}
+        >
+          {[
+            [0.46, 0.08, 0],
+            [-0.34, 0.16, 0.28],
+            [0.12, -0.02, -0.44],
+          ].map(
+            ([
+              x,
+              y,
+              z,
+            ], index) => (
+              <mesh
+                key={`page-${index}`}
+                position={[
+                  x,
+                  y,
+                  z,
+                ]}
+                rotation={[
+                  0.2 +
+                    index * 0.2,
+                  index * 0.9,
+                  -0.22 +
+                    index * 0.18,
+                ]}
+              >
+                <boxGeometry
+                  args={[
+                    0.16,
+                    0.11,
+                    0.012,
+                  ]}
+                />
+                <meshStandardMaterial
+                  color="#fff8dc"
+                  emissive="#fde68a"
+                  emissiveIntensity={0.42}
+                  side={
+                    THREE.DoubleSide
+                  }
+                />
+              </mesh>
+            )
+          )}
+        </group>
+      ) : null}
     </group>
   );
 }
@@ -2316,50 +2971,263 @@ function Observatory({
 }: {
   unlocked: boolean;
 }) {
+  const telescope =
+    useRef<THREE.Group>(
+      null
+    );
+  const starRing =
+    useRef<THREE.Group>(
+      null
+    );
+
+  useFrame(
+    ({ clock }, delta) => {
+      if (telescope.current) {
+        telescope.current.rotation.y +=
+          delta * 0.08;
+        telescope.current.rotation.x =
+          -0.48 +
+          Math.sin(
+            clock.elapsedTime *
+              0.45
+          ) *
+            0.08;
+      }
+
+      if (starRing.current) {
+        starRing.current.rotation.y +=
+          delta * 0.18;
+        starRing.current.position.y =
+          2.05 +
+          Math.sin(
+            clock.elapsedTime *
+              1.1
+          ) *
+            0.04;
+      }
+    }
+  );
+
+  const stone = unlocked
+    ? "#c8d5df"
+    : "#505761";
+  const stoneDark = unlocked
+    ? "#73869a"
+    : "#3f454e";
+  const metal = unlocked
+    ? "#58708c"
+    : "#454b54";
+  const glass = unlocked
+    ? "#8de8ff"
+    : "#4b535e";
+  const glow = unlocked
+    ? "#38bdf8"
+    : "#000000";
+  const gold = unlocked
+    ? "#f6d66f"
+    : "#60656d";
+
   return (
-    <group>
+    <group scale={0.9}>
+      {/* Raised circular terrace. */}
+      {[1.38, 1.16, 0.94].map(
+        (radius, index) => (
+          <mesh
+            key={`terrace-${index}`}
+            position={[
+              0,
+              0.08 +
+                index * 0.09,
+              0,
+            ]}
+          >
+            <cylinderGeometry
+              args={[
+                radius,
+                radius,
+                0.16,
+                32,
+              ]}
+            />
+            <meshStandardMaterial
+              color={
+                index === 0
+                  ? stoneDark
+                  : stone
+              }
+              roughness={0.78}
+            />
+          </mesh>
+        )
+      )}
+
+      {/* Observatory tower. */}
       <mesh
         position={[
           0,
-          0.65,
+          0.94,
           0,
         ]}
       >
         <cylinderGeometry
           args={[
             0.72,
-            0.88,
-            1.3,
-            18,
+            0.86,
+            1.42,
+            24,
           ]}
         />
         <meshStandardMaterial
-          color={
-            unlocked
-              ? "#c8d6e7"
-              : "#525965"
-          }
-          roughness={0.65}
+          color={stone}
+          roughness={0.74}
         />
       </mesh>
 
+      {/* Tall arched windows. */}
+      {[
+        0,
+        Math.PI / 2,
+        Math.PI,
+        -Math.PI / 2,
+      ].map((angle, index) => (
+        <group
+          key={`window-${index}`}
+          rotation={[
+            0,
+            angle,
+            0,
+          ]}
+        >
+          <mesh
+            position={[
+              0,
+              0.98,
+              0.755,
+            ]}
+          >
+            <boxGeometry
+              args={[
+                0.28,
+                0.48,
+                0.035,
+              ]}
+            />
+            <meshStandardMaterial
+              color={glass}
+              emissive={glow}
+              emissiveIntensity={
+                unlocked
+                  ? 0.52
+                  : 0
+              }
+            />
+          </mesh>
+
+          <mesh
+            position={[
+              0,
+              1.22,
+              0.755,
+            ]}
+          >
+            <circleGeometry
+              args={[
+                0.14,
+                18,
+                0,
+                Math.PI,
+              ]}
+            />
+            <meshStandardMaterial
+              color={glass}
+              emissive={glow}
+              emissiveIntensity={
+                unlocked
+                  ? 0.52
+                  : 0
+              }
+              side={THREE.DoubleSide}
+            />
+          </mesh>
+        </group>
+      ))}
+
+      {/* Observation balcony. */}
       <mesh
         position={[
           0,
-          1.45,
+          1.48,
           0,
         ]}
-        scale={[
-          1,
-          0.62,
-          1,
+      >
+        <cylinderGeometry
+          args={[
+            0.95,
+            0.95,
+            0.14,
+            32,
+          ]}
+        />
+        <meshStandardMaterial
+          color={metal}
+          metalness={0.32}
+          roughness={0.48}
+        />
+      </mesh>
+
+      {Array.from({ length: 12 }).map(
+        (_, index) => {
+          const angle =
+            (index / 12) *
+            Math.PI *
+            2;
+          return (
+            <mesh
+              key={`rail-${index}`}
+              position={[
+                Math.sin(angle) *
+                  0.88,
+                1.67,
+                Math.cos(angle) *
+                  0.88,
+              ]}
+            >
+              <cylinderGeometry
+                args={[
+                  0.025,
+                  0.025,
+                  0.35,
+                  8,
+                ]}
+              />
+              <meshStandardMaterial
+                color={gold}
+                metalness={0.6}
+                roughness={0.32}
+              />
+            </mesh>
+          );
+        }
+      )}
+
+      {/* Ribbed dome. */}
+      <mesh
+        position={[
+          0,
+          1.75,
+          0,
+        ]}
+        rotation={[
+          Math.PI,
+          0,
+          0,
         ]}
       >
         <sphereGeometry
           args={[
-            0.82,
-            20,
-            16,
+            0.78,
+            32,
+            18,
             0,
             Math.PI * 2,
             0,
@@ -2367,59 +3235,202 @@ function Observatory({
           ]}
         />
         <meshStandardMaterial
-          color={
-            unlocked
-              ? "#6daee8"
-              : "#3e4650"
-          }
-          metalness={
-            unlocked
-              ? 0.45
-              : 0
-          }
-          roughness={0.38}
-          emissive={
-            unlocked
-              ? "#1d4d87"
-              : "#000000"
-          }
-          emissiveIntensity={
-            unlocked
-              ? 0.28
-              : 0
-          }
+          color={metal}
+          metalness={0.42}
+          roughness={0.34}
         />
       </mesh>
 
-      <mesh
+      {Array.from({ length: 8 }).map(
+        (_, index) => (
+          <mesh
+            key={`dome-rib-${index}`}
+            position={[
+              0,
+              1.76,
+              0,
+            ]}
+            rotation={[
+              0,
+              (index / 8) *
+                Math.PI *
+                2,
+              0,
+            ]}
+          >
+            <torusGeometry
+              args={[
+                0.79,
+                0.02,
+                6,
+                34,
+                Math.PI,
+              ]}
+            />
+            <meshStandardMaterial
+              color={gold}
+              metalness={0.7}
+              roughness={0.28}
+            />
+          </mesh>
+        )
+      )}
+
+      {/* Articulated telescope. */}
+      <group
+        ref={telescope}
         position={[
-          0.26,
-          1.75,
           0,
-        ]}
-        rotation={[
+          1.82,
           0,
-          0,
-          -0.48,
         ]}
       >
-        <cylinderGeometry
-          args={[
-            0.08,
-            0.1,
-            1.25,
-            10,
+        <mesh
+          rotation={[
+            0,
+            0,
+            Math.PI / 2,
           ]}
-        />
-        <meshStandardMaterial
-          color={
-            unlocked
-              ? "#dce8f4"
-              : "#444b54"
-          }
-          metalness={0.4}
-        />
-      </mesh>
+        >
+          <cylinderGeometry
+            args={[
+              0.16,
+              0.22,
+              1.16,
+              18,
+            ]}
+          />
+          <meshStandardMaterial
+            color="#26384d"
+            metalness={0.65}
+            roughness={0.28}
+          />
+        </mesh>
+
+        <mesh
+          position={[
+            0.61,
+            0,
+            0,
+          ]}
+          rotation={[
+            0,
+            0,
+            Math.PI / 2,
+          ]}
+        >
+          <cylinderGeometry
+            args={[
+              0.23,
+              0.23,
+              0.12,
+              18,
+            ]}
+          />
+          <meshStandardMaterial
+            color={gold}
+            metalness={0.72}
+            roughness={0.25}
+          />
+        </mesh>
+
+        <mesh
+          position={[
+            0.68,
+            0,
+            0,
+          ]}
+          rotation={[
+            0,
+            0,
+            Math.PI / 2,
+          ]}
+        >
+          <circleGeometry
+            args={[
+              0.18,
+              22,
+            ]}
+          />
+          <meshStandardMaterial
+            color={glass}
+            emissive={glow}
+            emissiveIntensity={
+              unlocked ? 0.75 : 0
+            }
+          />
+        </mesh>
+
+        <mesh
+          position={[
+            0,
+            -0.58,
+            0,
+          ]}
+        >
+          <cylinderGeometry
+            args={[
+              0.06,
+              0.09,
+              0.9,
+              10,
+            ]}
+          />
+          <meshStandardMaterial
+            color={metal}
+            metalness={0.5}
+          />
+        </mesh>
+      </group>
+
+      {/* Floating constellation ring. */}
+      {unlocked ? (
+        <group
+          ref={starRing}
+          position={[
+            0,
+            2.05,
+            0,
+          ]}
+        >
+          {Array.from({ length: 7 }).map(
+            (_, index) => {
+              const angle =
+                (index / 7) *
+                Math.PI *
+                2;
+              return (
+                <mesh
+                  key={`star-${index}`}
+                  position={[
+                    Math.sin(angle) *
+                      1.06,
+                    Math.sin(
+                      angle * 2
+                    ) *
+                      0.12,
+                    Math.cos(angle) *
+                      1.06,
+                  ]}
+                >
+                  <sphereGeometry
+                    args={[
+                      0.045,
+                      10,
+                      8,
+                    ]}
+                  />
+                  <meshStandardMaterial
+                    color="#f8fafc"
+                    emissive="#7dd3fc"
+                    emissiveIntensity={1.2}
+                  />
+                </mesh>
+              );
+            }
+          )}
+        </group>
+      ) : null}
     </group>
   );
 }
@@ -2429,113 +3440,451 @@ function Habitat({
 }: {
   unlocked: boolean;
 }) {
-  const color = unlocked
-    ? "#a78bfa"
-    : "#4a505a";
+  const lanternRing =
+    useRef<THREE.Group>(
+      null
+    );
+
+  useFrame(
+    ({ clock }, delta) => {
+      if (!lanternRing.current) {
+        return;
+      }
+
+      lanternRing.current.rotation.y +=
+        delta * 0.12;
+      lanternRing.current.position.y =
+        1.72 +
+        Math.sin(
+          clock.elapsedTime *
+            1.2
+        ) *
+          0.035;
+    }
+  );
+
+  const stone = unlocked
+    ? "#cbbce8"
+    : "#525861";
+  const stoneDark = unlocked
+    ? "#7c6a9d"
+    : "#40464f";
+  const wood = unlocked
+    ? "#6b4634"
+    : "#393e45";
+  const canopy = unlocked
+    ? "#7c5ce2"
+    : "#474d56";
+  const glow = unlocked
+    ? "#c084fc"
+    : "#000000";
+  const mint = unlocked
+    ? "#6ee7b7"
+    : "#555b64";
 
   return (
-    <group>
+    <group scale={0.92}>
+      {/* Circular sanctuary terrace. */}
       <mesh
         position={[
-          -0.68,
-          0.46,
+          0,
+          0.08,
           0,
         ]}
       >
-        <boxGeometry
+        <cylinderGeometry
           args={[
-            0.22,
-            0.92,
-            0.22,
+            1.45,
+            1.58,
+            0.18,
+            32,
           ]}
         />
         <meshStandardMaterial
-          color={color}
-        />
-      </mesh>
-
-      <mesh
-        position={[
-          0.68,
-          0.46,
-          0,
-        ]}
-      >
-        <boxGeometry
-          args={[
-            0.22,
-            0.92,
-            0.22,
-          ]}
-        />
-        <meshStandardMaterial
-          color={color}
+          color={stoneDark}
+          roughness={0.8}
         />
       </mesh>
 
       <mesh
         position={[
           0,
-          0.86,
+          0.22,
+          0,
+        ]}
+      >
+        <cylinderGeometry
+          args={[
+            1.25,
+            1.35,
+            0.14,
+            32,
+          ]}
+        />
+        <meshStandardMaterial
+          color={stone}
+          roughness={0.76}
+        />
+      </mesh>
+
+      {/* Open pavilion columns. */}
+      {Array.from({ length: 8 }).map(
+        (_, index) => {
+          const angle =
+            (index / 8) *
+            Math.PI *
+            2;
+          return (
+            <group
+              key={`pillar-${index}`}
+              position={[
+                Math.sin(angle) *
+                  1.04,
+                0,
+                Math.cos(angle) *
+                  1.04,
+              ]}
+            >
+              <mesh
+                position={[
+                  0,
+                  0.84,
+                  0,
+                ]}
+              >
+                <cylinderGeometry
+                  args={[
+                    0.07,
+                    0.09,
+                    1.22,
+                    12,
+                  ]}
+                />
+                <meshStandardMaterial
+                  color={wood}
+                  roughness={0.66}
+                />
+              </mesh>
+
+              <mesh
+                position={[
+                  0,
+                  1.46,
+                  0,
+                ]}
+              >
+                <sphereGeometry
+                  args={[
+                    0.11,
+                    12,
+                    10,
+                  ]}
+                />
+                <meshStandardMaterial
+                  color={mint}
+                  emissive={
+                    unlocked
+                      ? "#34d399"
+                      : "#000000"
+                  }
+                  emissiveIntensity={
+                    unlocked ? 0.45 : 0
+                  }
+                />
+              </mesh>
+            </group>
+          );
+        }
+      )}
+
+      {/* Layered magical canopy. */}
+      <mesh
+        position={[
+          0,
+          1.55,
+          0,
+        ]}
+      >
+        <cylinderGeometry
+          args={[
+            1.28,
+            1.42,
+            0.18,
+            32,
+          ]}
+        />
+        <meshStandardMaterial
+          color={canopy}
+          metalness={0.18}
+          roughness={0.5}
+        />
+      </mesh>
+
+      <mesh
+        position={[
+          0,
+          1.73,
           0,
         ]}
         rotation={[
-          Math.PI / 2,
+          Math.PI,
           0,
           0,
         ]}
       >
-        <torusGeometry
+        <sphereGeometry
           args={[
-            0.69,
-            0.13,
-            10,
+            1.02,
             28,
-            Math.PI,
+            14,
+            0,
+            Math.PI * 2,
+            0,
+            Math.PI / 2,
           ]}
         />
         <meshStandardMaterial
-          color={color}
-          emissive={
-            unlocked
-              ? "#4c1d95"
-              : "#000000"
-          }
+          color={canopy}
+          emissive={glow}
           emissiveIntensity={
-            unlocked
-              ? 0.35
-              : 0
+            unlocked ? 0.12 : 0
           }
+          roughness={0.44}
         />
       </mesh>
 
+      {/* Central friendship tree. */}
       <mesh
         position={[
           0,
-          0.1,
-          0,
-        ]}
-        rotation={[
-          -Math.PI / 2,
-          0,
+          0.72,
           0,
         ]}
       >
-        <circleGeometry
+        <cylinderGeometry
           args={[
-            0.78,
-            24,
+            0.12,
+            0.18,
+            0.86,
+            12,
           ]}
         />
         <meshStandardMaterial
-          color={
-            unlocked
-              ? "#6d5b9f"
-              : "#424851"
-          }
-          roughness={0.88}
+          color={wood}
+          roughness={0.78}
         />
       </mesh>
+
+      {[
+        [-0.34, 1.05, 0.02],
+        [0.34, 1.08, 0],
+        [0, 1.25, -0.2],
+        [0, 1.2, 0.28],
+      ].map((position, index) => (
+        <mesh
+          key={`canopy-cluster-${index}`}
+          position={position as Vec3}
+        >
+          <sphereGeometry
+            args={[
+              index === 2
+                ? 0.36
+                : 0.3,
+              16,
+              12,
+            ]}
+          />
+          <meshStandardMaterial
+            color={
+              unlocked
+                ? index % 2 === 0
+                  ? "#6ee7b7"
+                  : "#86efac"
+                : "#545a63"
+            }
+            emissive={
+              unlocked
+                ? "#34d399"
+                : "#000000"
+            }
+            emissiveIntensity={
+              unlocked ? 0.12 : 0
+            }
+            roughness={0.75}
+          />
+        </mesh>
+      ))}
+
+      {/* Cozy companion beds around the sanctuary. */}
+      {[
+        [-0.7, 0.34, 0.42],
+        [0.72, 0.34, 0.38],
+        [-0.56, 0.34, -0.55],
+        [0.58, 0.34, -0.58],
+      ].map((position, index) => (
+        <group
+          key={`bed-${index}`}
+          position={position as Vec3}
+          rotation={[
+            0,
+            index * 0.72,
+            0,
+          ]}
+        >
+          <mesh>
+            <cylinderGeometry
+              args={[
+                0.27,
+                0.29,
+                0.08,
+                20,
+              ]}
+            />
+            <meshStandardMaterial
+              color={
+                unlocked
+                  ? index % 2 === 0
+                    ? "#f0abfc"
+                    : "#93c5fd"
+                  : "#565c65"
+              }
+              roughness={0.86}
+            />
+          </mesh>
+
+          <mesh
+            position={[
+              0,
+              0.07,
+              0,
+            ]}
+          >
+            <torusGeometry
+              args={[
+                0.19,
+                0.05,
+                8,
+                20,
+              ]}
+            />
+            <meshStandardMaterial
+              color="#f8fafc"
+              roughness={0.9}
+            />
+          </mesh>
+        </group>
+      ))}
+
+      {/* Paw crest. */}
+      <group
+        position={[
+          0,
+          1.74,
+          1.02,
+        ]}
+      >
+        <mesh>
+          <sphereGeometry
+            args={[
+              0.13,
+              14,
+              12,
+            ]}
+          />
+          <meshStandardMaterial
+            color="#f8fafc"
+            emissive={glow}
+            emissiveIntensity={
+              unlocked ? 0.7 : 0
+            }
+          />
+        </mesh>
+        {[-0.16, -0.055, 0.055, 0.16].map(
+          (x, index) => (
+            <mesh
+              key={`toe-${index}`}
+              position={[
+                x,
+                0.14 +
+                  Math.abs(x) *
+                    0.12,
+                0,
+              ]}
+            >
+              <sphereGeometry
+                args={[
+                  0.055,
+                  10,
+                  8,
+                ]}
+              />
+              <meshStandardMaterial
+                color="#f8fafc"
+                emissive={glow}
+                emissiveIntensity={
+                  unlocked ? 0.7 : 0
+                }
+              />
+            </mesh>
+          )
+        )}
+      </group>
+
+      {/* Orbiting sanctuary lanterns. */}
+      {unlocked ? (
+        <group
+          ref={lanternRing}
+          position={[
+            0,
+            1.72,
+            0,
+          ]}
+        >
+          {Array.from({ length: 6 }).map(
+            (_, index) => {
+              const angle =
+                (index / 6) *
+                Math.PI *
+                2;
+              return (
+                <mesh
+                  key={`lantern-${index}`}
+                  position={[
+                    Math.sin(angle) *
+                      1.42,
+                    Math.sin(
+                      angle * 2
+                    ) *
+                      0.08,
+                    Math.cos(angle) *
+                      1.42,
+                  ]}
+                >
+                  <octahedronGeometry
+                    args={[
+                      0.075,
+                      0,
+                    ]}
+                  />
+                  <meshStandardMaterial
+                    color={
+                      index % 2 === 0
+                        ? "#c084fc"
+                        : "#6ee7b7"
+                    }
+                    emissive={
+                      index % 2 === 0
+                        ? "#a855f7"
+                        : "#10b981"
+                    }
+                    emissiveIntensity={1.1}
+                  />
+                </mesh>
+              );
+            }
+          )}
+        </group>
+      ) : null}
     </group>
   );
 }
@@ -2545,12 +3894,29 @@ function Windmill() {
     useRef<THREE.Group>(
       null
     );
+  const lantern =
+    useRef<THREE.Mesh>(
+      null
+    );
 
   useFrame(
-    (_, delta) => {
+    ({ clock }, delta) => {
       if (blades.current) {
         blades.current.rotation.z -=
           delta * 0.72;
+      }
+
+      if (lantern.current) {
+        const pulse =
+          1 +
+          Math.sin(
+            clock.elapsedTime *
+              2.4
+          ) *
+            0.08;
+        lantern.current.scale.setScalar(
+          pulse
+        );
       }
     }
   );
@@ -2562,123 +3928,397 @@ function Windmill() {
         -0.38,
         0,
       ]}
-      scale={0.84}
+      scale={0.88}
     >
+      {/* Stone foundation and steps. */}
       <mesh
         position={[
           0,
-          0.82,
+          0.09,
           0,
         ]}
       >
         <cylinderGeometry
           args={[
-            0.46,
-            0.68,
-            1.65,
-            14,
+            0.86,
+            0.98,
+            0.18,
+            18,
           ]}
         />
         <meshStandardMaterial
-          color="#e7dac0"
-          roughness={0.9}
+          color="#7c8490"
+          roughness={0.88}
         />
       </mesh>
 
+      {[0, 1, 2].map(
+        (index) => (
+          <mesh
+            key={`step-${index}`}
+            position={[
+              0,
+              0.08 +
+                index * 0.07,
+              0.78 +
+                index * 0.1,
+            ]}
+          >
+            <boxGeometry
+              args={[
+                0.52 -
+                  index * 0.06,
+                0.1,
+                0.28,
+              ]}
+            />
+            <meshStandardMaterial
+              color="#a1a8b2"
+              roughness={0.86}
+            />
+          </mesh>
+        )
+      )}
+
+      {/* Tapered stone tower. */}
       <mesh
         position={[
           0,
-          1.86,
+          1.05,
+          0,
+        ]}
+      >
+        <cylinderGeometry
+          args={[
+            0.52,
+            0.72,
+            1.85,
+            18,
+          ]}
+        />
+        <meshStandardMaterial
+          color="#d4c8ad"
+          roughness={0.84}
+        />
+      </mesh>
+
+      {/* Timber bands. */}
+      {[0.38, 0.9, 1.42].map(
+        (y, index) => (
+          <mesh
+            key={`band-${index}`}
+            position={[
+              0,
+              y,
+              0,
+            ]}
+          >
+            <torusGeometry
+              args={[
+                0.64 -
+                  index * 0.06,
+                0.045,
+                8,
+                24,
+              ]}
+            />
+            <meshStandardMaterial
+              color="#6b4634"
+              roughness={0.72}
+            />
+          </mesh>
+        )
+      )}
+
+      {/* Door and windows. */}
+      <mesh
+        position={[
+          0,
+          0.52,
+          0.66,
+        ]}
+      >
+        <boxGeometry
+          args={[
+            0.34,
+            0.58,
+            0.07,
+          ]}
+        />
+        <meshStandardMaterial
+          color="#5a3829"
+          roughness={0.7}
+        />
+      </mesh>
+
+      {[
+        [0.42, 1.08, 0.43],
+        [-0.38, 1.34, 0.34],
+      ].map((position, index) => (
+        <group
+          key={`window-${index}`}
+          position={
+            position as Vec3
+          }
+        >
+          <mesh>
+            <boxGeometry
+              args={[
+                0.2,
+                0.28,
+                0.06,
+              ]}
+            />
+            <meshStandardMaterial
+              color="#8de8ff"
+              emissive="#38bdf8"
+              emissiveIntensity={0.42}
+            />
+          </mesh>
+          <mesh
+            position={[
+              0,
+              0,
+              0.04,
+            ]}
+          >
+            <boxGeometry
+              args={[
+                0.035,
+                0.29,
+                0.025,
+              ]}
+            />
+            <meshStandardMaterial
+              color="#6b4634"
+            />
+          </mesh>
+        </group>
+      ))}
+
+      {/* Wraparound balcony. */}
+      <mesh
+        position={[
+          0,
+          1.66,
+          0,
+        ]}
+      >
+        <cylinderGeometry
+          args={[
+            0.72,
+            0.72,
+            0.12,
+            20,
+          ]}
+        />
+        <meshStandardMaterial
+          color="#6b4634"
+          roughness={0.72}
+        />
+      </mesh>
+
+      {Array.from({ length: 10 }).map(
+        (_, index) => {
+          const angle =
+            (index / 10) *
+            Math.PI *
+            2;
+          return (
+            <mesh
+              key={`balcony-rail-${index}`}
+              position={[
+                Math.sin(angle) *
+                  0.66,
+                1.82,
+                Math.cos(angle) *
+                  0.66,
+              ]}
+            >
+              <cylinderGeometry
+                args={[
+                  0.022,
+                  0.022,
+                  0.28,
+                  8,
+                ]}
+              />
+              <meshStandardMaterial
+                color="#5a3829"
+              />
+            </mesh>
+          );
+        }
+      )}
+
+      {/* Copper cap. */}
+      <mesh
+        position={[
+          0,
+          2.03,
           0,
         ]}
       >
         <coneGeometry
           args={[
+            0.72,
             0.7,
-            0.82,
-            14,
+            20,
           ]}
         />
         <meshStandardMaterial
-          color="#526d85"
-          roughness={0.72}
+          color="#47786f"
+          metalness={0.25}
+          roughness={0.52}
         />
       </mesh>
 
+      {/* Detailed front blades. */}
       <group
         ref={blades}
         position={[
           0,
-          1.42,
-          0.5,
+          1.82,
+          0.72,
         ]}
       >
         <mesh>
           <cylinderGeometry
             args={[
-              0.12,
-              0.12,
-              0.34,
-              12,
+              0.14,
+              0.14,
+              0.18,
+              16,
             ]}
           />
           <meshStandardMaterial
-            color="#6b4b35"
+            color="#f6d66f"
+            metalness={0.45}
+            roughness={0.4}
           />
         </mesh>
 
         {[0, 1, 2, 3].map(
           (index) => (
             <group
-              key={index}
+              key={`blade-${index}`}
               rotation={[
                 0,
                 0,
-                index *
-                  (Math.PI / 2),
+                (index *
+                  Math.PI) /
+                  2,
               ]}
             >
               <mesh
                 position={[
                   0,
-                  0.62,
+                  0.72,
                   0,
                 ]}
               >
                 <boxGeometry
                   args={[
-                    0.16,
-                    1.12,
-                    0.07,
+                    0.11,
+                    1.28,
+                    0.08,
                   ]}
                 />
                 <meshStandardMaterial
-                  color="#f4ead5"
-                  emissive="#fff1c7"
-                  emissiveIntensity={0.12}
+                  color="#6b4634"
+                  roughness={0.72}
                 />
               </mesh>
+
+              {[0.3, 0.58, 0.86, 1.08].map(
+                (y, slatIndex) => (
+                  <mesh
+                    key={`slat-${slatIndex}`}
+                    position={[
+                      0.16,
+                      y,
+                      0.02,
+                    ]}
+                  >
+                    <boxGeometry
+                      args={[
+                        0.34,
+                        0.065,
+                        0.045,
+                      ]}
+                    />
+                    <meshStandardMaterial
+                      color="#d7c39b"
+                      roughness={0.8}
+                    />
+                  </mesh>
+                )
+              )}
             </group>
           )
         )}
       </group>
 
+      {/* Workshop props. */}
+      {[
+        [-0.82, 0.24, 0.38],
+        [0.8, 0.22, 0.3],
+      ].map((position, index) => (
+        <group
+          key={`prop-${index}`}
+          position={
+            position as Vec3
+          }
+        >
+          <mesh>
+            {index === 0 ? (
+              <boxGeometry
+                args={[
+                  0.32,
+                  0.3,
+                  0.32,
+                ]}
+              />
+            ) : (
+              <sphereGeometry
+                args={[
+                  0.2,
+                  12,
+                  10,
+                ]}
+              />
+            )}
+            <meshStandardMaterial
+              color={
+                index === 0
+                  ? "#7b5238"
+                  : "#c8b28d"
+              }
+              roughness={0.92}
+            />
+          </mesh>
+        </group>
+      ))}
+
       <mesh
+        ref={lantern}
         position={[
-          0,
-          0.42,
+          -0.48,
+          1.7,
           0.58,
         ]}
       >
-        <boxGeometry
+        <sphereGeometry
           args={[
-            0.28,
-            0.58,
             0.08,
+            12,
+            10,
           ]}
         />
         <meshStandardMaterial
-          color="#6a4631"
+          color="#fff4bd"
+          emissive="#f59e0b"
+          emissiveIntensity={1.05}
         />
       </mesh>
     </group>
@@ -2690,49 +4330,117 @@ function Moonwell() {
     useRef<THREE.Mesh>(
       null
     );
+  const runeRing =
+    useRef<THREE.Group>(
+      null
+    );
 
   useFrame(
-    ({ clock }) => {
-      if (!water.current) {
-        return;
+    ({ clock }, delta) => {
+      if (water.current) {
+        const pulse =
+          1 +
+          Math.sin(
+            clock.elapsedTime *
+              2.2
+          ) *
+            0.045;
+
+        water.current.scale.set(
+          pulse,
+          pulse,
+          pulse
+        );
       }
 
-      const pulse =
-        1 +
-        Math.sin(
-          clock.elapsedTime *
-            2.2
-        ) *
-          0.045;
-
-      water.current.scale.set(
-        pulse,
-        pulse,
-        pulse
-      );
+      if (runeRing.current) {
+        runeRing.current.rotation.y +=
+          delta * 0.18;
+        runeRing.current.position.y =
+          1.48 +
+          Math.sin(
+            clock.elapsedTime *
+              1.25
+          ) *
+            0.04;
+      }
     }
   );
 
   return (
-    <group scale={0.82}>
+    <group scale={0.92}>
+      {/* Lunar plaza. */}
+      {[1.26, 1.04, 0.82].map(
+        (radius, index) => (
+          <mesh
+            key={`step-${index}`}
+            position={[
+              0,
+              0.07 +
+                index * 0.08,
+              0,
+            ]}
+          >
+            <cylinderGeometry
+              args={[
+                radius,
+                radius,
+                0.14,
+                32,
+              ]}
+            />
+            <meshStandardMaterial
+              color={
+                index === 0
+                  ? "#59647a"
+                  : "#a9b7ca"
+              }
+              roughness={0.76}
+            />
+          </mesh>
+        )
+      )}
+
+      {/* Deep carved well body. */}
       <mesh
         position={[
           0,
-          0.34,
+          0.44,
           0,
         ]}
       >
         <cylinderGeometry
           args={[
-            0.66,
+            0.62,
             0.72,
-            0.58,
-            18,
+            0.46,
+            28,
           ]}
         />
         <meshStandardMaterial
-          color="#87909a"
-          roughness={0.96}
+          color="#8f9db3"
+          roughness={0.8}
+        />
+      </mesh>
+
+      <mesh
+        position={[
+          0,
+          0.69,
+          0,
+        ]}
+      >
+        <torusGeometry
+          args={[
+            0.59,
+            0.11,
+            10,
+            32,
+          ]}
+        />
+        <meshStandardMaterial
+          color="#d8e0eb"
+          roughness={0.62}
         />
       </mesh>
 
@@ -2740,7 +4448,7 @@ function Moonwell() {
         ref={water}
         position={[
           0,
-          0.66,
+          0.71,
           0,
         ]}
         rotation={[
@@ -2751,48 +4459,79 @@ function Moonwell() {
       >
         <circleGeometry
           args={[
-            0.48,
-            28,
+            0.5,
+            32,
           ]}
         />
         <meshStandardMaterial
-          color="#8be7ff"
-          emissive="#38bdf8"
-          emissiveIntensity={0.9}
+          color="#93c5fd"
+          emissive="#7c3aed"
+          emissiveIntensity={0.88}
           transparent
-          opacity={0.84}
+          opacity={0.86}
         />
       </mesh>
 
+      {/* Crescent arch. */}
       {[-0.72, 0.72].map(
-        (x) => (
-          <mesh
-            key={x}
+        (x, index) => (
+          <group
+            key={`column-${index}`}
             position={[
               x,
-              1.15,
+              0,
               0,
             ]}
           >
-            <cylinderGeometry
-              args={[
-                0.07,
-                0.09,
-                1.55,
-                10,
+            <mesh
+              position={[
+                0,
+                0.95,
+                0,
               ]}
-            />
-            <meshStandardMaterial
-              color="#6a4a35"
-            />
-          </mesh>
+            >
+              <cylinderGeometry
+                args={[
+                  0.085,
+                  0.12,
+                  1.45,
+                  12,
+                ]}
+              />
+              <meshStandardMaterial
+                color="#cbd5e1"
+                roughness={0.68}
+              />
+            </mesh>
+
+            <mesh
+              position={[
+                0,
+                1.67,
+                0,
+              ]}
+            >
+              <sphereGeometry
+                args={[
+                  0.13,
+                  14,
+                  12,
+                ]}
+              />
+              <meshStandardMaterial
+                color="#f8fafc"
+                emissive="#c4b5fd"
+                emissiveIntensity={0.8}
+              />
+            </mesh>
+          </group>
         )
       )}
 
       <mesh
         position={[
           0,
-          1.88,
+          1.62,
           0,
         ]}
         rotation={[
@@ -2801,54 +4540,325 @@ function Moonwell() {
           Math.PI / 2,
         ]}
       >
-        <cylinderGeometry
+        <torusGeometry
           args={[
-            0.07,
-            0.07,
-            1.65,
+            0.72,
+            0.075,
             10,
+            34,
+            Math.PI,
           ]}
         />
         <meshStandardMaterial
-          color="#6a4a35"
+          color="#e2e8f0"
+          emissive="#a78bfa"
+          emissiveIntensity={0.35}
+          metalness={0.28}
+          roughness={0.45}
+        />
+      </mesh>
+
+      {/* Hanging moon crystal. */}
+      <group
+        position={[
+          0,
+          1.58,
+          0,
+        ]}
+      >
+        <mesh>
+          <sphereGeometry
+            args={[
+              0.25,
+              24,
+              18,
+            ]}
+          />
+          <meshStandardMaterial
+            color="#f5f3ff"
+            emissive="#c4b5fd"
+            emissiveIntensity={0.95}
+          />
+        </mesh>
+
+        <mesh
+          position={[
+            0.09,
+            0.04,
+            0.18,
+          ]}
+        >
+          <sphereGeometry
+            args={[
+              0.22,
+              22,
+              16,
+            ]}
+          />
+          <meshStandardMaterial
+            color="#4c3c78"
+            transparent
+            opacity={0.86}
+          />
+        </mesh>
+      </group>
+
+      {/* Floating runes around the water. */}
+      <group
+        ref={runeRing}
+        position={[
+          0,
+          1.48,
+          0,
+        ]}
+      >
+        {Array.from({ length: 8 }).map(
+          (_, index) => {
+            const angle =
+              (index / 8) *
+              Math.PI *
+              2;
+            return (
+              <mesh
+                key={`rune-${index}`}
+                position={[
+                  Math.sin(angle) *
+                    0.94,
+                  Math.sin(
+                    angle * 2
+                  ) *
+                    0.08,
+                  Math.cos(angle) *
+                    0.94,
+                ]}
+                rotation={[
+                  0.2,
+                  -angle,
+                  index * 0.4,
+                ]}
+              >
+                <octahedronGeometry
+                  args={[
+                    0.055,
+                    0,
+                  ]}
+                />
+                <meshStandardMaterial
+                  color="#ddd6fe"
+                  emissive="#8b5cf6"
+                  emissiveIntensity={1.1}
+                />
+              </mesh>
+            );
+          }
+        )}
+      </group>
+
+      {/* Offering bowls. */}
+      {[-0.55, 0.55].map(
+        (x, index) => (
+          <group
+            key={`offering-${index}`}
+            position={[
+              x,
+              0.34,
+              0.72,
+            ]}
+          >
+            <mesh>
+              <cylinderGeometry
+                args={[
+                  0.15,
+                  0.1,
+                  0.11,
+                  16,
+                ]}
+              />
+              <meshStandardMaterial
+                color="#64748b"
+                metalness={0.25}
+              />
+            </mesh>
+            <mesh
+              position={[
+                0,
+                0.12,
+                0,
+              ]}
+            >
+              <sphereGeometry
+                args={[
+                  0.045,
+                  10,
+                  8,
+                ]}
+              />
+              <meshStandardMaterial
+                color={
+                  index === 0
+                    ? "#fde68a"
+                    : "#f0abfc"
+                }
+                emissive={
+                  index === 0
+                    ? "#f59e0b"
+                    : "#c026d3"
+                }
+                emissiveIntensity={0.9}
+              />
+            </mesh>
+          </group>
+        )
+      )}
+    </group>
+  );
+}
+
+function CastleReach() {
+  const banners =
+    useRef<THREE.Group>(
+      null
+    );
+
+  useFrame(
+    ({ clock }) => {
+      if (!banners.current) {
+        return;
+      }
+
+      banners.current.children.forEach(
+        (child, index) => {
+          child.rotation.y =
+            Math.sin(
+              clock.elapsedTime *
+                1.8 +
+                index
+            ) *
+            0.08;
+        }
+      );
+    }
+  );
+
+  const stone = "#b8c5d4";
+  const stoneDark = "#62748b";
+  const roof = "#4d55a8";
+  const gold = "#f6d66f";
+  const glow = "#67e8f9";
+
+  const tower = (
+    x: number,
+    z: number,
+    scale = 1
+  ) => (
+    <group
+      position={[
+        x,
+        0,
+        z,
+      ]}
+      scale={scale}
+    >
+      <mesh
+        position={[
+          0,
+          0.94,
+          0,
+        ]}
+      >
+        <cylinderGeometry
+          args={[
+            0.34,
+            0.4,
+            1.55,
+            16,
+          ]}
+        />
+        <meshStandardMaterial
+          color={stone}
+          roughness={0.78}
         />
       </mesh>
 
       <mesh
         position={[
           0,
-          2.08,
+          1.8,
           0,
-        ]}
-        rotation={[
-          0,
-          Math.PI / 4,
-          0,
-        ]}
-        scale={[
-          1.1,
-          0.42,
-          0.8,
         ]}
       >
         <coneGeometry
           args={[
-            0.96,
-            0.62,
-            4,
+            0.48,
+            0.72,
+            16,
           ]}
         />
         <meshStandardMaterial
-          color="#455b78"
+          color={roof}
+          metalness={0.18}
+          roughness={0.48}
+        />
+      </mesh>
+
+      {[0, 1, 2, 3].map(
+        (index) => (
+          <mesh
+            key={`crenel-${index}`}
+            position={[
+              Math.sin(
+                (index / 4) *
+                  Math.PI *
+                  2
+              ) * 0.3,
+              1.66,
+              Math.cos(
+                (index / 4) *
+                  Math.PI *
+                  2
+              ) * 0.3,
+            ]}
+          >
+            <boxGeometry
+              args={[
+                0.13,
+                0.18,
+                0.13,
+              ]}
+            />
+            <meshStandardMaterial
+              color={stoneDark}
+            />
+          </mesh>
+        )
+      )}
+
+      <mesh
+        position={[
+          0,
+          1.08,
+          0.34,
+        ]}
+      >
+        <boxGeometry
+          args={[
+            0.16,
+            0.3,
+            0.035,
+          ]}
+        />
+        <meshStandardMaterial
+          color={glow}
+          emissive="#0ea5e9"
+          emissiveIntensity={0.55}
         />
       </mesh>
     </group>
   );
-}
 
-function CastleReach() {
   return (
     <group scale={0.72}>
+      {/* Floating approach terrace and bridge. */}
       <mesh
         position={[
           0,
@@ -2864,19 +4874,17 @@ function CastleReach() {
         <ringGeometry
           args={[
             1.48,
-            2.05,
-            42,
+            2.12,
+            48,
           ]}
         />
         <meshStandardMaterial
           color="#59d8ff"
           emissive="#0ea5e9"
-          emissiveIntensity={0.44}
+          emissiveIntensity={0.28}
           transparent
-          opacity={0.78}
-          side={
-            THREE.DoubleSide
-          }
+          opacity={0.8}
+          side={THREE.DoubleSide}
         />
       </mesh>
 
@@ -2889,144 +4897,241 @@ function CastleReach() {
       >
         <boxGeometry
           args={[
-            0.68,
-            0.18,
-            1.62,
-          ]}
-        />
-        <meshStandardMaterial
-          color="#9b7950"
-          roughness={0.9}
-        />
-      </mesh>
-
-      <mesh
-        position={[
-          0,
-          1.02,
-          0,
-        ]}
-      >
-        <boxGeometry
-          args={[
+            0.72,
+            0.16,
             1.75,
-            1.72,
-            1.55,
           ]}
         />
         <meshStandardMaterial
-          color="#d7d5d2"
-          roughness={0.78}
+          color={stoneDark}
+          roughness={0.82}
         />
       </mesh>
 
-      {[
-        [-1.15, 0, -1.02],
-        [1.15, 0, -1.02],
-        [-1.15, 0, 1.02],
-        [1.15, 0, 1.02],
-      ].map(
-        ([
-          x,
-          _,
-          z,
-        ], index) => (
-          <group
-            key={index}
-            position={[
-              x,
-              0,
-              z,
-            ]}
-          >
-            <mesh
-              position={[
-                0,
-                1.15,
-                0,
-              ]}
-            >
-              <cylinderGeometry
-                args={[
-                  0.42,
-                  0.5,
-                  2.3,
-                  14,
-                ]}
-              />
-              <meshStandardMaterial
-                color="#cbd5e1"
-                roughness={0.75}
-              />
-            </mesh>
-
-            <mesh
-              position={[
-                0,
-                2.5,
-                0,
-              ]}
-            >
-              <coneGeometry
-                args={[
-                  0.62,
-                  0.88,
-                  14,
-                ]}
-              />
-              <meshStandardMaterial
-                color={
-                  index % 2
-                    ? "#6d5aa7"
-                    : "#506f9c"
-                }
-                emissive="#4338ca"
-                emissiveIntensity={0.18}
-              />
-            </mesh>
-          </group>
-        )
-      )}
-
-      <mesh
-        position={[
-          0,
-          2.18,
-          0,
-        ]}
-      >
-        <coneGeometry
-          args={[
-            1.2,
-            1.15,
-            4,
-          ]}
-        />
-        <meshStandardMaterial
-          color="#7560ad"
-          emissive="#4c1d95"
-          emissiveIntensity={0.22}
-        />
-      </mesh>
-
+      {/* Outer walls. */}
       <mesh
         position={[
           0,
           0.72,
-          0.8,
+          0,
         ]}
       >
         <boxGeometry
           args={[
-            0.48,
-            0.88,
-            0.08,
+            2.15,
+            1.08,
+            1.76,
           ]}
         />
         <meshStandardMaterial
-          color="#513729"
+          color={stone}
+          roughness={0.8}
         />
       </mesh>
+
+      {/* Inner keep. */}
+      <mesh
+        position={[
+          0,
+          1.35,
+          -0.12,
+        ]}
+      >
+        <boxGeometry
+          args={[
+            1.1,
+            1.65,
+            0.98,
+          ]}
+        />
+        <meshStandardMaterial
+          color="#d2dce7"
+          roughness={0.76}
+        />
+      </mesh>
+
+      <mesh
+        position={[
+          0,
+          2.22,
+          -0.12,
+        ]}
+      >
+        <coneGeometry
+          args={[
+            0.78,
+            0.75,
+            4,
+          ]}
+        />
+        <meshStandardMaterial
+          color={roof}
+          metalness={0.16}
+          roughness={0.45}
+        />
+      </mesh>
+
+      {/* Corner towers. */}
+      {tower(-1.0, -0.74, 1)}
+      {tower(1.0, -0.74, 1)}
+      {tower(-1.0, 0.74, 1)}
+      {tower(1.0, 0.74, 1)}
+
+      {/* Gatehouse. */}
+      <mesh
+        position={[
+          0,
+          0.85,
+          0.92,
+        ]}
+      >
+        <boxGeometry
+          args={[
+            0.94,
+            1.35,
+            0.34,
+          ]}
+        />
+        <meshStandardMaterial
+          color={stoneDark}
+          roughness={0.78}
+        />
+      </mesh>
+
+      <mesh
+        position={[
+          0,
+          0.58,
+          1.11,
+        ]}
+      >
+        <boxGeometry
+          args={[
+            0.44,
+            0.82,
+            0.06,
+          ]}
+        />
+        <meshStandardMaterial
+          color="#3c2a24"
+          roughness={0.7}
+        />
+      </mesh>
+
+      <mesh
+        position={[
+          0,
+          1.0,
+          1.13,
+        ]}
+      >
+        <torusGeometry
+          args={[
+            0.23,
+            0.055,
+            8,
+            24,
+            Math.PI,
+          ]}
+        />
+        <meshStandardMaterial
+          color={gold}
+          metalness={0.52}
+          roughness={0.32}
+        />
+      </mesh>
+
+      {/* Castle windows. */}
+      {[
+        [-0.27, 1.28, 0.39],
+        [0.27, 1.28, 0.39],
+        [-0.27, 1.68, 0.39],
+        [0.27, 1.68, 0.39],
+      ].map((position, index) => (
+        <mesh
+          key={`keep-window-${index}`}
+          position={position as Vec3}
+        >
+          <boxGeometry
+            args={[
+              0.13,
+              0.24,
+              0.035,
+            ]}
+          />
+          <meshStandardMaterial
+            color="#fde68a"
+            emissive="#f59e0b"
+            emissiveIntensity={0.6}
+          />
+        </mesh>
+      ))}
+
+      {/* Animated banners. */}
+      <group ref={banners}>
+        {[-0.48, 0.48].map(
+          (x, index) => (
+            <group
+              key={`banner-${index}`}
+              position={[
+                x,
+                1.7,
+                0.5,
+              ]}
+            >
+              <mesh
+                position={[
+                  0,
+                  0.22,
+                  0,
+                ]}
+              >
+                <cylinderGeometry
+                  args={[
+                    0.018,
+                    0.018,
+                    0.7,
+                    8,
+                  ]}
+                />
+                <meshStandardMaterial
+                  color={gold}
+                  metalness={0.7}
+                />
+              </mesh>
+
+              <mesh
+                position={[
+                  0.14,
+                  0.08,
+                  0,
+                ]}
+              >
+                <planeGeometry
+                  args={[
+                    0.28,
+                    0.48,
+                  ]}
+                />
+                <meshStandardMaterial
+                  color={
+                    index === 0
+                      ? "#7c3aed"
+                      : "#0ea5e9"
+                  }
+                  emissive={
+                    index === 0
+                      ? "#5b21b6"
+                      : "#0369a1"
+                  }
+                  emissiveIntensity={0.18}
+                  side={THREE.DoubleSide}
+                />
+              </mesh>
+            </group>
+          )
+        )}
+      </group>
     </group>
   );
 }
@@ -3036,20 +5141,29 @@ function StarportDock() {
     useRef<THREE.Group>(
       null
     );
+  const ring =
+    useRef<THREE.Group>(
+      null
+    );
 
   useFrame(
-    ({ clock }) => {
-      if (!ship.current) {
-        return;
+    ({ clock }, delta) => {
+      if (ship.current) {
+        ship.current.position.y =
+          1.34 +
+          Math.sin(
+            clock.elapsedTime *
+              1.35
+          ) *
+            0.08;
+        ship.current.rotation.y +=
+          delta * 0.08;
       }
 
-      ship.current.position.y =
-        1.18 +
-        Math.sin(
-          clock.elapsedTime *
-            1.35
-        ) *
-          0.08;
+      if (ring.current) {
+        ring.current.rotation.z +=
+          delta * 0.2;
+      }
     }
   );
 
@@ -3057,65 +5171,305 @@ function StarportDock() {
     <group
       rotation={[
         0,
-        -0.5,
+        0.3,
         0,
       ]}
       scale={0.78}
     >
+      {/* Main docking disk. */}
       <mesh
         position={[
-          -0.55,
-          0.3,
+          0,
+          0.18,
           0,
         ]}
       >
-        <boxGeometry
+        <cylinderGeometry
           args={[
-            2.9,
-            0.22,
-            1.3,
+            1.7,
+            1.9,
+            0.28,
+            40,
           ]}
         />
         <meshStandardMaterial
-          color="#64748b"
+          color="#2f4560"
           metalness={0.62}
-          roughness={0.4}
+          roughness={0.34}
         />
       </mesh>
 
-      {[-1.45, 0.25].map(
-        (x) => (
+      <mesh
+        position={[
+          0,
+          0.34,
+          0,
+        ]}
+      >
+        <cylinderGeometry
+          args={[
+            1.45,
+            1.45,
+            0.08,
+            40,
+          ]}
+        />
+        <meshStandardMaterial
+          color="#50708f"
+          metalness={0.5}
+          roughness={0.3}
+        />
+      </mesh>
+
+      {/* Luminous landing rings. */}
+      {[0.72, 1.12, 1.55].map(
+        (radius, index) => (
           <mesh
-            key={x}
+            key={`landing-ring-${index}`}
             position={[
-              x,
-              0.48,
-              0.48,
+              0,
+              0.4 +
+                index * 0.01,
+              0,
+            ]}
+            rotation={[
+              -Math.PI / 2,
+              0,
+              0,
             ]}
           >
-            <cylinderGeometry
+            <ringGeometry
               args={[
-                0.07,
-                0.07,
-                0.62,
-                10,
+                radius - 0.04,
+                radius,
+                48,
               ]}
             />
             <meshStandardMaterial
-              color="#a5f3fc"
-              emissive="#22d3ee"
-              emissiveIntensity={0.78}
+              color={
+                index % 2 === 0
+                  ? "#22d3ee"
+                  : "#a78bfa"
+              }
+              emissive={
+                index % 2 === 0
+                  ? "#0891b2"
+                  : "#7c3aed"
+              }
+              emissiveIntensity={0.85}
+              transparent
+              opacity={0.9}
+              side={THREE.DoubleSide}
             />
           </mesh>
         )
       )}
 
+      {/* Docking arms. */}
+      {[0, 1, 2, 3].map(
+        (index) => (
+          <group
+            key={`arm-${index}`}
+            rotation={[
+              0,
+              (index *
+                Math.PI) /
+                2,
+              0,
+            ]}
+          >
+            <mesh
+              position={[
+                0,
+                0.5,
+                1.74,
+              ]}
+            >
+              <boxGeometry
+                args={[
+                  0.42,
+                  0.22,
+                  0.95,
+                ]}
+              />
+              <meshStandardMaterial
+                color="#3b5875"
+                metalness={0.54}
+                roughness={0.36}
+              />
+            </mesh>
+
+            <mesh
+              position={[
+                0,
+                0.66,
+                2.15,
+              ]}
+            >
+              <boxGeometry
+                args={[
+                  0.54,
+                  0.12,
+                  0.18,
+                ]}
+              />
+              <meshStandardMaterial
+                color="#67e8f9"
+                emissive="#06b6d4"
+                emissiveIntensity={0.8}
+              />
+            </mesh>
+          </group>
+        )
+      )}
+
+      {/* Control tower. */}
+      <group
+        position={[
+          -1.15,
+          0,
+          -0.85,
+        ]}
+      >
+        <mesh
+          position={[
+            0,
+            0.9,
+            0,
+          ]}
+        >
+          <cylinderGeometry
+            args={[
+              0.24,
+              0.34,
+              1.25,
+              14,
+            ]}
+          />
+          <meshStandardMaterial
+            color="#425f7d"
+            metalness={0.48}
+            roughness={0.36}
+          />
+        </mesh>
+
+        <mesh
+          position={[
+            0,
+            1.58,
+            0,
+          ]}
+        >
+          <cylinderGeometry
+            args={[
+              0.46,
+              0.4,
+              0.24,
+              18,
+            ]}
+          />
+          <meshStandardMaterial
+            color="#8de8ff"
+            emissive="#38bdf8"
+            emissiveIntensity={0.55}
+            transparent
+            opacity={0.92}
+          />
+        </mesh>
+
+        <mesh
+          position={[
+            0,
+            1.78,
+            0,
+          ]}
+        >
+          <coneGeometry
+            args={[
+              0.42,
+              0.34,
+              18,
+            ]}
+          />
+          <meshStandardMaterial
+            color="#273d55"
+            metalness={0.6}
+          />
+        </mesh>
+      </group>
+
+      {/* Rotating portal ring. */}
+      <group
+        ref={ring}
+        position={[
+          1.15,
+          1.18,
+          -0.8,
+        ]}
+        rotation={[
+          0,
+          Math.PI / 2,
+          0,
+        ]}
+      >
+        <mesh>
+          <torusGeometry
+            args={[
+              0.48,
+              0.07,
+              10,
+              34,
+            ]}
+          />
+          <meshStandardMaterial
+            color="#a78bfa"
+            emissive="#7c3aed"
+            emissiveIntensity={0.72}
+            metalness={0.5}
+          />
+        </mesh>
+        {Array.from({ length: 8 }).map(
+          (_, index) => {
+            const angle =
+              (index / 8) *
+              Math.PI *
+              2;
+            return (
+              <mesh
+                key={`portal-node-${index}`}
+                position={[
+                  Math.sin(angle) *
+                    0.48,
+                  Math.cos(angle) *
+                    0.48,
+                  0,
+                ]}
+              >
+                <sphereGeometry
+                  args={[
+                    0.045,
+                    10,
+                    8,
+                  ]}
+                />
+                <meshStandardMaterial
+                  color="#f8fafc"
+                  emissive="#22d3ee"
+                  emissiveIntensity={1.2}
+                />
+              </mesh>
+            );
+          }
+        )}
+      </group>
+
+      {/* Hovering learning vessel. */}
       <group
         ref={ship}
         position={[
-          0.6,
-          1.18,
           0,
+          1.34,
+          0.18,
         ]}
       >
         <mesh
@@ -3127,110 +5481,99 @@ function StarportDock() {
         >
           <capsuleGeometry
             args={[
-              0.42,
-              1.45,
+              0.28,
+              1.15,
               8,
               18,
             ]}
           />
           <meshStandardMaterial
-            color="#e2e8f0"
-            metalness={0.72}
-            roughness={0.28}
+            color="#dbeafe"
+            metalness={0.52}
+            roughness={0.25}
           />
         </mesh>
 
         <mesh
           position={[
-            0.65,
+            0,
             0.18,
             0,
-          ]}
-          rotation={[
-            0,
-            0,
-            Math.PI / 2,
-          ]}
-          scale={[
-            0.72,
-            0.52,
-            0.72,
           ]}
         >
           <sphereGeometry
             args={[
-              0.48,
-              20,
-              16,
-            ]}
-          />
-          <meshStandardMaterial
-            color="#55d9ff"
-            emissive="#0284c7"
-            emissiveIntensity={0.55}
-            transparent
-            opacity={0.86}
-          />
-        </mesh>
-
-        {[-1, 1].map(
-          (side) => (
-            <mesh
-              key={side}
-              position={[
-                -0.15,
-                -0.05,
-                side * 0.72,
-              ]}
-              rotation={[
-                side * 0.16,
-                0,
-                0,
-              ]}
-            >
-              <boxGeometry
-                args={[
-                  1.05,
-                  0.08,
-                  0.8,
-                ]}
-              />
-              <meshStandardMaterial
-                color="#8b5cf6"
-                metalness={0.5}
-                roughness={0.38}
-              />
-            </mesh>
-          )
-        )}
-
-        <mesh
-          position={[
-            -0.92,
-            0,
-            0,
-          ]}
-          rotation={[
-            0,
-            0,
-            Math.PI / 2,
-          ]}
-        >
-          <coneGeometry
-            args={[
-              0.32,
-              0.78,
+              0.34,
               18,
+              14,
             ]}
           />
           <meshStandardMaterial
             color="#67e8f9"
-            emissive="#22d3ee"
-            emissiveIntensity={1.1}
+            emissive="#0891b2"
+            emissiveIntensity={0.45}
             transparent
-            opacity={0.86}
+            opacity={0.82}
           />
         </mesh>
+
+        {[-0.58, 0.58].map(
+          (x, index) => (
+            <group
+              key={`wing-${index}`}
+              position={[
+                x,
+                0,
+                0,
+              ]}
+            >
+              <mesh
+                rotation={[
+                  0,
+                  0,
+                  index === 0
+                    ? 0.32
+                    : -0.32,
+                ]}
+              >
+                <boxGeometry
+                  args={[
+                    0.7,
+                    0.08,
+                    0.34,
+                  ]}
+                />
+                <meshStandardMaterial
+                  color="#637fa0"
+                  metalness={0.5}
+                />
+              </mesh>
+
+              <mesh
+                position={[
+                  index === 0
+                    ? -0.34
+                    : 0.34,
+                  -0.08,
+                  0,
+                ]}
+              >
+                <sphereGeometry
+                  args={[
+                    0.09,
+                    12,
+                    10,
+                  ]}
+                />
+                <meshStandardMaterial
+                  color="#fde68a"
+                  emissive="#f59e0b"
+                  emissiveIntensity={1.1}
+                />
+              </mesh>
+            </group>
+          )
+        )}
       </group>
     </group>
   );
@@ -3342,132 +5685,334 @@ function MoonTemple() {
     useRef<THREE.Group>(
       null
     );
+  const glyphs =
+    useRef<THREE.Group>(
+      null
+    );
 
   useFrame(
     ({ clock }, delta) => {
-      if (!orb.current) {
-        return;
+      if (orb.current) {
+        orb.current.rotation.y +=
+          delta * 0.4;
+        orb.current.position.y =
+          2.0 +
+          Math.sin(
+            clock.elapsedTime *
+              1.4
+          ) *
+            0.11;
       }
 
-      orb.current.rotation.y +=
-        delta * 0.4;
-
-      orb.current.position.y =
-        1.75 +
-        Math.sin(
-          clock.elapsedTime *
-            1.4
-        ) *
-          0.11;
+      if (glyphs.current) {
+        glyphs.current.rotation.y -=
+          delta * 0.14;
+      }
     }
   );
 
   return (
     <group scale={0.78}>
-      <mesh
-        position={[
-          0,
-          0.12,
-          0,
-        ]}
-      >
-        <cylinderGeometry
-          args={[
-            1.55,
-            1.8,
-            0.24,
-            26,
-          ]}
-        />
-        <meshStandardMaterial
-          color="#9aa7ba"
-          roughness={0.68}
-        />
-      </mesh>
-
-      {[-0.9, 0.9].map(
-        (x) => (
+      {/* Broad temple staircase. */}
+      {[
+        [2.4, 0.08, 1.8],
+        [2.1, 0.18, 1.55],
+        [1.8, 0.28, 1.3],
+        [1.5, 0.38, 1.05],
+      ].map(
+        ([
+          width,
+          y,
+          depth,
+        ], index) => (
           <mesh
-            key={x}
+            key={`temple-step-${index}`}
             position={[
-              x,
-              1.12,
               0,
+              y,
+              0.7 -
+                index * 0.1,
             ]}
           >
-            <cylinderGeometry
+            <boxGeometry
               args={[
-                0.18,
-                0.22,
-                2.05,
-                14,
+                width,
+                0.16,
+                depth,
               ]}
             />
             <meshStandardMaterial
-              color="#dbe4f0"
-              roughness={0.62}
+              color={
+                index % 2 === 0
+                  ? "#8d93b5"
+                  : "#a7accb"
+              }
+              roughness={0.78}
             />
           </mesh>
         )
       )}
 
+      {/* Main sanctuary platform. */}
       <mesh
         position={[
           0,
-          2.05,
+          0.52,
+          -0.05,
+        ]}
+      >
+        <boxGeometry
+          args={[
+            2.35,
+            0.28,
+            1.85,
+          ]}
+        />
+        <meshStandardMaterial
+          color="#676f97"
+          roughness={0.72}
+        />
+      </mesh>
+
+      {/* Temple columns. */}
+      {[-0.82, -0.28, 0.28, 0.82].map(
+        (x, index) => (
+          <group
+            key={`column-${index}`}
+            position={[
+              x,
+              0,
+              0.12,
+            ]}
+          >
+            <mesh
+              position={[
+                0,
+                1.18,
+                0,
+              ]}
+            >
+              <cylinderGeometry
+                args={[
+                  0.1,
+                  0.13,
+                  1.4,
+                  14,
+                ]}
+              />
+              <meshStandardMaterial
+                color="#d8d7ea"
+                roughness={0.68}
+              />
+            </mesh>
+
+            <mesh
+              position={[
+                0,
+                0.47,
+                0,
+              ]}
+            >
+              <cylinderGeometry
+                args={[
+                  0.18,
+                  0.18,
+                  0.12,
+                  14,
+                ]}
+              />
+              <meshStandardMaterial
+                color="#7b82aa"
+              />
+            </mesh>
+
+            <mesh
+              position={[
+                0,
+                1.9,
+                0,
+              ]}
+            >
+              <cylinderGeometry
+                args={[
+                  0.18,
+                  0.15,
+                  0.12,
+                  14,
+                ]}
+              />
+              <meshStandardMaterial
+                color="#7b82aa"
+              />
+            </mesh>
+          </group>
+        )
+      )}
+
+      {/* Layered entablature and roof. */}
+      <mesh
+        position={[
           0,
+          1.98,
+          0.1,
+        ]}
+      >
+        <boxGeometry
+          args={[
+            2.35,
+            0.22,
+            1.38,
+          ]}
+        />
+        <meshStandardMaterial
+          color="#c8c8df"
+          roughness={0.66}
+        />
+      </mesh>
+
+      <mesh
+        position={[
+          0,
+          2.18,
+          0.08,
         ]}
         rotation={[
-          Math.PI / 2,
           0,
           0,
+          Math.PI / 4,
+        ]}
+      >
+        <boxGeometry
+          args={[
+            1.65,
+            1.65,
+            0.22,
+          ]}
+        />
+        <meshStandardMaterial
+          color="#5b4f9d"
+          metalness={0.18}
+          roughness={0.48}
+        />
+      </mesh>
+
+      {/* Moon gate behind the altar. */}
+      <mesh
+        position={[
+          0,
+          1.43,
+          -0.78,
         ]}
       >
         <torusGeometry
           args={[
-            1.02,
-            0.17,
-            14,
-            44,
-            Math.PI
+            0.72,
+            0.1,
+            12,
+            40,
           ]}
         />
         <meshStandardMaterial
-          color="#d8d4ff"
+          color="#e9d5ff"
           emissive="#8b5cf6"
-          emissiveIntensity={0.48}
+          emissiveIntensity={0.55}
+          metalness={0.25}
+          roughness={0.38}
         />
       </mesh>
 
+      <mesh
+        position={[
+          0.18,
+          1.48,
+          -0.69,
+        ]}
+      >
+        <sphereGeometry
+          args={[
+            0.61,
+            28,
+            20,
+          ]}
+        />
+        <meshStandardMaterial
+          color="#33245e"
+          transparent
+          opacity={0.88}
+        />
+      </mesh>
+
+      {/* Altar. */}
+      <mesh
+        position={[
+          0,
+          0.86,
+          -0.2,
+        ]}
+      >
+        <boxGeometry
+          args={[
+            0.92,
+            0.42,
+            0.62,
+          ]}
+        />
+        <meshStandardMaterial
+          color="#8d93b5"
+          roughness={0.72}
+        />
+      </mesh>
+
+      <mesh
+        position={[
+          0,
+          1.09,
+          -0.2,
+        ]}
+      >
+        <boxGeometry
+          args={[
+            1.05,
+            0.08,
+            0.72,
+          ]}
+        />
+        <meshStandardMaterial
+          color="#d8d7ea"
+          roughness={0.62}
+        />
+      </mesh>
+
+      {/* Floating lunar orb. */}
       <group
         ref={orb}
         position={[
           0,
-          1.75,
-          0,
+          2.0,
+          -0.2,
         ]}
       >
         <mesh>
           <sphereGeometry
             args={[
-              0.38,
-              24,
-              20,
+              0.32,
+              28,
+              22,
             ]}
           />
           <meshStandardMaterial
             color="#f5f3ff"
             emissive="#c4b5fd"
-            emissiveIntensity={0.9}
+            emissiveIntensity={1.0}
           />
         </mesh>
 
         <mesh scale={1.8}>
           <sphereGeometry
             args={[
-              0.38,
-              18,
-              14,
+              0.32,
+              20,
+              16,
             ]}
           />
           <meshBasicMaterial
@@ -3477,11 +6022,149 @@ function MoonTemple() {
             depthWrite={false}
           />
         </mesh>
+
+        {Array.from({ length: 3 }).map(
+          (_, index) => (
+            <mesh
+              key={`orb-ring-${index}`}
+              rotation={[
+                index * 0.65,
+                index * 0.75,
+                index * 0.4,
+              ]}
+            >
+              <torusGeometry
+                args={[
+                  0.46 +
+                    index * 0.08,
+                  0.018,
+                  6,
+                  32,
+                ]}
+              />
+              <meshStandardMaterial
+                color={
+                  index % 2 === 0
+                    ? "#fde68a"
+                    : "#67e8f9"
+                }
+                emissive={
+                  index % 2 === 0
+                    ? "#f59e0b"
+                    : "#0891b2"
+                }
+                emissiveIntensity={0.72}
+              />
+            </mesh>
+          )
+        )}
       </group>
+
+      {/* Orbiting glyph stones. */}
+      <group
+        ref={glyphs}
+        position={[
+          0,
+          1.35,
+          -0.2,
+        ]}
+      >
+        {Array.from({ length: 8 }).map(
+          (_, index) => {
+            const angle =
+              (index / 8) *
+              Math.PI *
+              2;
+            return (
+              <mesh
+                key={`glyph-${index}`}
+                position={[
+                  Math.sin(angle) *
+                    1.18,
+                  Math.sin(
+                    angle * 2
+                  ) *
+                    0.08,
+                  Math.cos(angle) *
+                    1.18,
+                ]}
+                rotation={[
+                  0.3,
+                  -angle,
+                  index * 0.3,
+                ]}
+              >
+                <octahedronGeometry
+                  args={[
+                    0.07,
+                    0,
+                  ]}
+                />
+                <meshStandardMaterial
+                  color="#e9d5ff"
+                  emissive="#7c3aed"
+                  emissiveIntensity={0.9}
+                />
+              </mesh>
+            );
+          }
+        )}
+      </group>
+
+      {/* Lanterns lining the stairs. */}
+      {[
+        [-0.95, 0.5, 0.95],
+        [0.95, 0.5, 0.95],
+        [-0.72, 0.72, 0.45],
+        [0.72, 0.72, 0.45],
+      ].map((position, index) => (
+        <group
+          key={`lantern-${index}`}
+          position={position as Vec3}
+        >
+          <mesh>
+            <cylinderGeometry
+              args={[
+                0.035,
+                0.045,
+                0.34,
+                8,
+              ]}
+            />
+            <meshStandardMaterial
+              color="#64748b"
+              metalness={0.4}
+            />
+          </mesh>
+          <mesh
+            position={[
+              0,
+              0.23,
+              0,
+            ]}
+          >
+            <sphereGeometry
+              args={[
+                0.07,
+                12,
+                10,
+              ]}
+            />
+            <meshStandardMaterial
+              color="#fff4bd"
+              emissive={
+                index % 2 === 0
+                  ? "#f59e0b"
+                  : "#a855f7"
+              }
+              emissiveIntensity={1.0}
+            />
+          </mesh>
+        </group>
+      ))}
     </group>
   );
 }
-
 
 function NovaPedestal() {
   const upperRing =
@@ -7606,8 +10289,11 @@ function IslandWorld({
   selectedMilestoneId,
   selectedDiscoveryKey,
   discoveries,
+  legendaryCompanionIds,
+  selectedLegendaryId,
   onSelectMilestone,
   onSelectDiscovery,
+  onSelectLegendary,
   controlsRef,
   velocityRef,
   onNovaProject,
@@ -7617,6 +10303,8 @@ function IslandWorld({
   selectedMilestoneId: string;
   selectedDiscoveryKey: string | null;
   discoveries: Island3DDiscovery[];
+  legendaryCompanionIds: string[];
+  selectedLegendaryId: LegendaryIslandId | null;
   onSelectMilestone: (
     milestoneId: string,
     position: Vec3
@@ -7624,6 +10312,9 @@ function IslandWorld({
   onSelectDiscovery: (
     discoveryKey: string,
     position: Vec3
+  ) => void;
+  onSelectLegendary: (
+    legendary: LegendaryIslandInfo
   ) => void;
   controlsRef: React.MutableRefObject<OrbitControlsState>;
   velocityRef: React.MutableRefObject<OrbitVelocityState>;
@@ -7794,6 +10485,18 @@ function IslandWorld({
           level={level}
         />
 
+        <LegendarySatelliteIslands
+          ownedCompanionIds={
+            legendaryCompanionIds
+          }
+          selectedLegendaryId={
+            selectedLegendaryId
+          }
+          onSelectLegendary={
+            onSelectLegendary
+          }
+        />
+
         {level >= 1 ? (
           <group
             position={
@@ -7828,7 +10531,8 @@ function IslandWorld({
               selected={
                 selectedMilestoneId ===
                   milestone.id &&
-                !selectedDiscoveryKey
+                !selectedDiscoveryKey &&
+                !selectedLegendaryId
               }
               onSelect={
                 onSelectMilestone
@@ -7849,7 +10553,8 @@ function IslandWorld({
               index={index}
               selected={
                 selectedDiscoveryKey ===
-                discovery.key
+                  discovery.key &&
+                !selectedLegendaryId
               }
               onSelect={
                 onSelectDiscovery
@@ -7877,6 +10582,7 @@ export default function NovaIsland3DScene({
   selectedMilestoneId,
   selectedDiscoveryKey,
   discoveries,
+  legendaryCompanionIds = [],
   onSelectMilestone,
   onSelectDiscovery,
   onInteractionChange,
@@ -7886,17 +10592,29 @@ export default function NovaIsland3DScene({
       () => new Date()
     );
 
+  const [
+    selectedLegendaryId,
+    setSelectedLegendaryId,
+  ] = useState<LegendaryIslandId | null>(
+    null
+  );
+
+  const fullViewDistance =
+    legendaryCompanionIds.length > 0
+      ? 21.4
+      : 17.2;
+
   const controlsRef =
     useRef<OrbitControlsState>({
       azimuth: 0.58,
       polar: 0.98,
-      distance: 17.2,
+      distance: fullViewDistance,
       desiredAzimuth: 0.58,
       desiredPolar: 0.98,
       desiredTarget: [
         ...DEFAULT_TARGET,
       ],
-      desiredDistance: 17.2,
+      desiredDistance: fullViewDistance,
     });
 
   const velocityRef =
@@ -7909,7 +10627,7 @@ export default function NovaIsland3DScene({
     useRef({
       azimuth: 0.58,
       polar: 0.98,
-      distance: 17.2,
+      distance: fullViewDistance,
       pinchDistance: 0,
     });
 
@@ -7995,6 +10713,18 @@ export default function NovaIsland3DScene({
       [now]
     );
 
+  useEffect(() => {
+    if (selectedLegendaryId) {
+      return;
+    }
+
+    controlsRef.current.desiredDistance =
+      fullViewDistance;
+  }, [
+    fullViewDistance,
+    selectedLegendaryId,
+  ]);
+
   const focusPosition =
     useCallback(
       (
@@ -8030,7 +10760,7 @@ export default function NovaIsland3DScene({
         ];
 
       controlsRef.current.desiredDistance =
-        17.2;
+        fullViewDistance;
 
       controlsRef.current.desiredAzimuth =
         0.58;
@@ -8042,7 +10772,7 @@ export default function NovaIsland3DScene({
         azimuth: 0,
         polar: 0,
       };
-    }, []);
+    }, [fullViewDistance]);
 
   const selectMilestone =
     useCallback(
@@ -8050,6 +10780,10 @@ export default function NovaIsland3DScene({
         milestoneId: string,
         position: Vec3
       ) => {
+        setSelectedLegendaryId(
+          null
+        );
+
         onSelectMilestone(
           milestoneId
         );
@@ -8071,6 +10805,10 @@ export default function NovaIsland3DScene({
         discoveryKey: string,
         position: Vec3
       ) => {
+        setSelectedLegendaryId(
+          null
+        );
+
         onSelectDiscovery(
           discoveryKey
         );
@@ -8084,6 +10822,23 @@ export default function NovaIsland3DScene({
         focusPosition,
         onSelectDiscovery,
       ]
+    );
+
+  const selectLegendary =
+    useCallback(
+      (
+        legendary: LegendaryIslandInfo
+      ) => {
+        setSelectedLegendaryId(
+          legendary.id
+        );
+
+        focusPosition(
+          legendary.position,
+          5.25
+        );
+      },
+      [focusPosition]
     );
 
   const panResponder =
@@ -8303,18 +11058,26 @@ export default function NovaIsland3DScene({
         selectedDiscoveryKey
     ) ?? null;
 
+  const selectedLegendary =
+    getLegendaryIslandInfo(
+      selectedLegendaryId
+    );
+
   const unlocked =
     level >=
     selectedMilestone.level;
 
   const selectedTitle =
+    selectedLegendary?.title ??
     selectedDiscovery?.title ??
     (unlocked
       ? selectedMilestone.title
       : "Unknown Discovery");
 
   const selectedLore =
-    selectedDiscovery
+    selectedLegendary
+      ? selectedLegendary.description
+      : selectedDiscovery
       ? selectedDiscovery.kind ===
         "resident"
         ? "A bonded companion now calls this island home."
@@ -8325,6 +11088,41 @@ export default function NovaIsland3DScene({
         ] ??
         selectedMilestone.description
       : `A hidden part of Nova Island will reveal itself at Level ${selectedMilestone.level}.`;
+
+  const selectedStatusLabel =
+    selectedLegendary
+      ? "LEGENDARY"
+      : selectedDiscovery
+      ? selectedDiscovery.kind ===
+        "resident"
+        ? "RESIDENT"
+        : "KEEPSAKE"
+      : unlocked
+      ? "AWAKE"
+      : `LEVEL ${selectedMilestone.level}`;
+
+  const selectedStatusBackground =
+    selectedLegendary
+      ? `${selectedLegendary.accent}33`
+      : selectedDiscovery
+      ? selectedDiscovery.kind ===
+        "resident"
+        ? "rgba(16,185,129,0.18)"
+        : "rgba(250,204,21,0.16)"
+      : unlocked
+      ? "rgba(34,211,238,0.16)"
+      : "rgba(100,116,139,0.3)";
+
+  const selectedStatusColor =
+    selectedLegendary?.accent ??
+    (selectedDiscovery
+      ? selectedDiscovery.kind ===
+        "resident"
+        ? "#6ee7b7"
+        : "#fde68a"
+      : unlocked
+      ? "#67e8f9"
+      : "#cbd5e1");
 
   return (
     <View
@@ -8401,11 +11199,20 @@ export default function NovaIsland3DScene({
           discoveries={
             discoveries
           }
+          legendaryCompanionIds={
+            legendaryCompanionIds
+          }
+          selectedLegendaryId={
+            selectedLegendaryId
+          }
           onSelectMilestone={
             selectMilestone
           }
           onSelectDiscovery={
             selectDiscovery
+          }
+          onSelectLegendary={
+            selectLegendary
           }
           controlsRef={
             controlsRef
@@ -8547,14 +11354,7 @@ export default function NovaIsland3DScene({
                 styles.statusPill,
                 {
                   backgroundColor:
-                    selectedDiscovery
-                      ? selectedDiscovery.kind ===
-                        "resident"
-                        ? "rgba(16,185,129,0.18)"
-                        : "rgba(250,204,21,0.16)"
-                      : unlocked
-                      ? "rgba(34,211,238,0.16)"
-                      : "rgba(100,116,139,0.3)",
+                    selectedStatusBackground,
                 },
               ]}
             >
@@ -8563,25 +11363,11 @@ export default function NovaIsland3DScene({
                   styles.statusText,
                   {
                     color:
-                      selectedDiscovery
-                        ? selectedDiscovery.kind ===
-                          "resident"
-                          ? "#6ee7b7"
-                          : "#fde68a"
-                        : unlocked
-                        ? "#67e8f9"
-                        : "#cbd5e1",
+                      selectedStatusColor,
                   },
                 ]}
               >
-                {selectedDiscovery
-                  ? selectedDiscovery.kind ===
-                    "resident"
-                    ? "RESIDENT"
-                    : "KEEPSAKE"
-                  : unlocked
-                  ? "AWAKE"
-                  : `LEVEL ${selectedMilestone.level}`}
+                {selectedStatusLabel}
               </Text>
             </View>
           </View>

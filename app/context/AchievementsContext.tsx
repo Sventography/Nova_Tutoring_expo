@@ -14,8 +14,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ACHIEVEMENT_LIST } from "../constants/achievements";
 import { useCoins } from "./CoinsContext";
 import { useUser } from "./UserContext";
-import { useCompanion } from "./CompanionContext";
-import { canonId } from "../_lib/canonId";
+import { useLegendaryCompanions } from "../hooks/useLegendaryCompanions";
 
 const STORAGE_BASE_UNLOCKED = "@achieve/unlocked.v1";
 const STORAGE_BASE_QUIZ_COUNT = "@achieve/quizCount.v1";
@@ -41,6 +40,29 @@ type AchievementsContextValue = {
   onFlashcardSaved?: () => void;
   onBrainPairCompleted?: () => void;
   onRelaxMinutes?: (deltaMinutes: number) => void;
+
+  /**
+   * Development-only helpers used by the hidden Dev Test screen.
+   * They are inert in production builds.
+   */
+  devUnlockAchievement?: (id: string) => void;
+  devResetAchievement?: (id: string) => Promise<void>;
+
+  /**
+   * Development diagnostics. These come from the exact provider that awards
+   * the coins, so they reveal whether Mecha Owl is being detected there.
+   */
+  devAchievementRewardPreview?: (
+    base: number,
+    id: string
+  ) => number;
+  devAchievementCompanionDebug?: {
+    activeCompanionId: string | null;
+    activeCompanionToken: string;
+    activeAbilityType: string | null;
+    activeBonusPercent: number;
+    mechaOwlDetected: boolean;
+  };
 };
 
 type Listener = (payload: any) => void;
@@ -57,7 +79,8 @@ type AchMeta = {
 // ─────────────── SIMPLE EMITTER ───────────────
 
 class SimpleEmitter {
-  private listeners: Record<string, Listener[]> = {};
+  private listeners: Record<string, Listener[
+    ]> = {};
 
   addListener(event: string, fn: Listener) {
     if (!this.listeners[event]) this.listeners[event] = [];
@@ -136,8 +159,16 @@ export function AchievementsProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const { supabaseUserId } = useUser();
-  const { activeCompanionId } = useCompanion();
+  const {
+    supabaseUserId,
+  } = useUser();
+
+  const {
+    hasMechaOwl,
+    hasCelestra,
+    hasAetherwyrm,
+    calculateCoinReward,
+  } = useLegendaryCompanions();
 
   const [unlocked, setUnlocked] = useState<UnlockedMap>({});
   const unlockedRef = useRef<UnlockedMap>({});
@@ -154,44 +185,26 @@ export function AchievementsProvider({
 
   const { addCoins } = useCoins();
 
-  // Active companion & legendary flags
-  const activeCompanionCid = useMemo(
-    () => (activeCompanionId ? canonId(activeCompanionId) : null),
-    [activeCompanionId]
-  );
+  // All owned legendary companion powers remain active passively.
+  const computeAchievementReward =
+    useCallback(
+      (
+        base: number,
+        id: string
+      ) => {
+        const rewardType =
+          ACH_MAP[id]?.group ===
+          "streaks"
+            ? "streak_achievement"
+            : "achievement";
 
-  const hasAetherwyrm = activeCompanionCid === "companion:aetherwyrm";
-  const hasMechaOwl = activeCompanionCid === "companion:mecha_owl";
-  const hasCelestra = activeCompanionCid === "companion:celestra";
-
-  // Companion-based coin multiplier for achievements
-  const computeAchievementCoins = useCallback(
-    (base: number, id: string): number => {
-      if (!base || base <= 0) return 0;
-      let amount = base;
-
-      const meta = ACH_MAP[id];
-
-      // Mecha Owl: +10% on all achievement rewards
-      if (hasMechaOwl) {
-        amount = Math.round(amount * 1.1);
-      }
-
-      // Celestra: +25% on streak achievements only
-      if (meta && meta.group === "streaks" && hasCelestra) {
-        amount = Math.round(amount * 1.25);
-      }
-
-      // Aetherwyrm: +20% on all achievements (global coin booster)
-      if (hasAetherwyrm) {
-        amount = Math.round(amount * 1.2);
-      }
-
-      if (amount < 1) amount = 1;
-      return amount;
-    },
-    [hasMechaOwl, hasCelestra, hasAetherwyrm]
-  );
+        return calculateCoinReward(
+          base,
+          rewardType
+        );
+      },
+      [calculateCoinReward]
+    );
 
   // ─────────────── HYDRATE PER USER ───────────────
 
@@ -387,8 +400,17 @@ export function AchievementsProvider({
 
         if (ach.coins && ach.coins > 0 && typeof addCoins === "function") {
           try {
-            const base = ach.coins;
-            coinsAwarded = computeAchievementCoins(base, id);
+            const base =
+              ach.coins;
+
+            const reward =
+              computeAchievementReward(
+                base,
+                id
+              );
+
+            coinsAwarded =
+              reward.totalCoins;
 
             if (coinsAwarded > 0) {
               console.log(
@@ -397,11 +419,25 @@ export function AchievementsProvider({
                 "for",
                 id
               );
-              // fire-and-forget; we don't need to await
-              void addCoins(coinsAwarded, "achievement", {
-                achievementId: id,
-                baseCoins: base,
-              });
+
+              void addCoins(
+                coinsAwarded,
+                "achievement",
+                {
+                  achievementId:
+                    id,
+                  baseCoins:
+                    reward.baseCoins,
+                  specialistBonus:
+                    reward.specialistBonus,
+                  aetherwyrmBonus:
+                    reward.aetherwyrmBonus,
+                  awardedCoins:
+                    reward.totalCoins,
+                  appliedCompanions:
+                    reward.appliedCompanions,
+                }
+              );
             }
           } catch (e) {
             console.warn("[Achievements] addCoins failed", e);
@@ -450,7 +486,39 @@ export function AchievementsProvider({
         console.warn("[Achievements] DeviceEventEmitter emit failed", e);
       }
     },
-    [addCoins, persistUnlocked, computeAchievementCoins]
+    [addCoins, persistUnlocked, computeAchievementReward]
+  );
+
+  // ─────────────── DEVELOPMENT TEST HELPERS ───────────────
+
+  const devUnlockAchievement = useCallback(
+    (id: string) => {
+      if (!__DEV__) return;
+      unlock(id);
+    },
+    [unlock]
+  );
+
+  const devResetAchievement = useCallback(
+    async (id: string) => {
+      if (!__DEV__) return;
+
+      const achievementId = String(id || "").trim();
+      if (!achievementId) return;
+
+      const next = { ...unlockedRef.current };
+      delete next[achievementId];
+
+      unlockedRef.current = next;
+      setUnlocked(next);
+      await persistUnlocked();
+
+      console.log(
+        "[Achievements] development reset:",
+        achievementId
+      );
+    },
+    [persistUnlocked]
   );
 
   // ─────────────── SHOP PURCHASES ───────────────
@@ -726,6 +794,12 @@ export function AchievementsProvider({
       onFlashcardSaved,
       onBrainPairCompleted,
       onRelaxMinutes,
+      devUnlockAchievement,
+      devResetAchievement,
+      devAchievementRewardPreview: computeAchievementReward,
+      devAchievementCompanionDebug: {
+                mechaOwlDetected: hasMechaOwl,
+      },
     }),
     [
       unlocked,
@@ -734,6 +808,9 @@ export function AchievementsProvider({
       onFlashcardSaved,
       onBrainPairCompleted,
       onRelaxMinutes,
+      devUnlockAchievement,
+      devResetAchievement,
+      computeAchievementReward,
     ]
   );
 

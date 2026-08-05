@@ -249,6 +249,14 @@ const ASC_PRODUCT_ALIASES: Record<string, string> = {
   companion_star_blow: "companion_star_blow",
   companion_star_explode: "companion_star_explode",
   companion_star_throw: "companion_star_throw",
+
+  // Legendary companions
+  companion_mecha_owl: "companion_mecha_owl",
+  companion_chrono_fox: "companion_chrono_fox",
+  companion_celestra: "companion_celestra",
+  companion_axolotl_oracle: "companion_axolotl_oracle",
+  companion_astral_nova: "companion_astral_nova",
+  companion_aetherwyrm: "companion_aetherwyrm",
 };
 
 function toUnderscoreId(raw: string | null | undefined) {
@@ -347,11 +355,23 @@ function isAskUpgradeItem(it: any): boolean {
 
 function isComingSoon(it: any): boolean {
   /**
-   * Ask memory and teaching styles are now active. Their older catalog
-   * entries may still contain meta.comingSoon from the v1 launch lock, so
-   * the Shop intentionally ignores that legacy flag for these categories.
+   * Ask upgrades and cash-only legendary companions are active.
+   * Ignore any legacy v1 comingSoon flags for those items.
    */
   if (isAskUpgradeItem(it)) return false;
+
+  const companionCoinPrice =
+    it?.coinPrice ?? it?.priceCoins ?? 0;
+  const companionUsdPrice =
+    it?.priceUSD ?? it?.usdPrice ?? 0;
+
+  if (
+    it?.category === "companions" &&
+    Number(companionCoinPrice) === 0 &&
+    Number(companionUsdPrice) > 0
+  ) {
+    return false;
+  }
 
   return !!(it && it.meta && it.meta.comingSoon);
 }
@@ -369,6 +389,125 @@ function getCompanionUsdPrice(it: any): number {
     (it as any)?.meta?.priceUSD ??
     (it as any)?.meta?.usdPrice ??
     3
+  );
+}
+
+
+type LegendaryPalette = {
+  primary: string;
+  secondary: string;
+  accent: string;
+  dark: string;
+  glow: string;
+  symbol: string;
+};
+
+function getLegendaryPalette(
+  rawId: string | null | undefined
+): LegendaryPalette {
+  const id = canonId(rawId ?? "").replace(/[^a-z0-9]+/g, "_");
+
+  if (id.includes("mecha_owl")) {
+    return {
+      primary: "#67E8F9",
+      secondary: "#FDE047",
+      accent: "#ECFEFF",
+      dark: "#07131C",
+      glow: "rgba(34,211,238,0.36)",
+      symbol: "⚡",
+    };
+  }
+
+  if (id.includes("chrono_fox")) {
+    return {
+      primary: "#FB923C",
+      secondary: "#F43F5E",
+      accent: "#FFF7ED",
+      dark: "#1C0B09",
+      glow: "rgba(251,146,60,0.36)",
+      symbol: "⌛",
+    };
+  }
+
+  if (id.includes("celestra")) {
+    return {
+      primary: "#A78BFA",
+      secondary: "#22D3EE",
+      accent: "#F5F3FF",
+      dark: "#100A24",
+      glow: "rgba(167,139,250,0.38)",
+      symbol: "✦",
+    };
+  }
+
+  if (id.includes("axolotl")) {
+    return {
+      primary: "#60A5FA",
+      secondary: "#F9A8D4",
+      accent: "#EFF6FF",
+      dark: "#07152A",
+      glow: "rgba(96,165,250,0.38)",
+      symbol: "◈",
+    };
+  }
+
+  if (id.includes("astral")) {
+    return {
+      primary: "#FACC15",
+      secondary: "#C084FC",
+      accent: "#FFFBEB",
+      dark: "#180E25",
+      glow: "rgba(250,204,21,0.34)",
+      symbol: "★",
+    };
+  }
+
+  return {
+    primary: "#818CF8",
+    secondary: "#22D3EE",
+    accent: "#EEF2FF",
+    dark: "#090B24",
+    glow: "rgba(129,140,248,0.40)",
+    symbol: "✧",
+  };
+}
+
+function LegendaryBadge({
+  palette,
+  compact = false,
+}: {
+  palette: LegendaryPalette;
+  compact?: boolean;
+}) {
+  return (
+    <LinearGradient
+      colors={[palette.primary, palette.secondary]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={{
+        alignSelf: "center",
+        borderRadius: 999,
+        paddingHorizontal: compact ? 10 : 14,
+        paddingVertical: compact ? 5 : 7,
+        marginBottom: compact ? 8 : 12,
+        shadowColor: palette.primary,
+        shadowOpacity: 0.65,
+        shadowRadius: 12,
+        shadowOffset: { width: 0, height: 0 },
+        elevation: 7,
+      }}
+    >
+      <Text
+        style={{
+          color: "#020617",
+          fontSize: compact ? 9 : 11,
+          fontWeight: "900",
+          letterSpacing: compact ? 1.1 : 1.5,
+        }}
+      >
+        {palette.symbol} LEGENDARY {palette.symbol}
+      </Text>
+    </LinearGradient>
   );
 }
 
@@ -503,36 +642,49 @@ async function saveOrders(list: Order[]) {
 async function persistOwnedPurchaseLocally(rawId: string | null | undefined) {
   if (!rawId) return;
 
-  const id = String(rawId);
-  const canon = canonId(id) || id;
-  const variants = Array.from(
-    new Set([
-      id,
-      canon,
-      id.replace(/_/g, "-"),
-      id.replace(/-/g, "_"),
-      canon.replace(/_/g, "-"),
-      canon.replace(/-/g, "_"),
-    ].filter(Boolean))
-  );
+  const canonicalId = canonId(String(rawId)) || String(rawId);
+  if (!canonicalId) return;
 
-  const arrayKeys = ["@nova/purchases", "@nova/purchases.v2"];
-
-  for (const key of arrayKeys) {
+  /*
+   * These are legacy/guest mirrors only. PurchasesContext.grant() is the
+   * authoritative writer for the signed-in user's per-account key and
+   * Supabase profile. Keep these mirrors as PurchaseMap objects; the previous
+   * array writer could overwrite an existing object and make ownership vanish
+   * after hydration.
+   */
+  for (const key of ["@nova/purchases", "@nova/purchases.v2"]) {
     try {
       const raw = await AsyncStorage.getItem(key);
-      const arr = Array.isArray(raw ? JSON.parse(raw) : null)
-        ? JSON.parse(raw as string)
-        : [];
-      let changed = false;
-      for (const v of variants) {
-        if (!arr.includes(v)) {
-          arr.push(v);
-          changed = true;
+      const parsed = raw ? JSON.parse(raw) : {};
+      const next: Record<string, true> = {};
+
+      if (Array.isArray(parsed)) {
+        for (const value of parsed) {
+          const cid = canonId(String(value || ""));
+          if (cid) next[cid] = true;
+        }
+      } else if (parsed && typeof parsed === "object") {
+        const source =
+          parsed.owned && typeof parsed.owned === "object"
+            ? parsed.owned
+            : parsed;
+
+        for (const [keyId, owned] of Object.entries(source)) {
+          if (!owned) continue;
+          const cid = canonId(keyId);
+          if (cid) next[cid] = true;
         }
       }
-      if (changed) await AsyncStorage.setItem(key, JSON.stringify(arr));
-    } catch {}
+
+      next[canonicalId] = true;
+      await AsyncStorage.setItem(key, JSON.stringify(next));
+    } catch (error) {
+      console.warn("[IAP] failed to update legacy purchase mirror", {
+        key,
+        canonicalId,
+        error,
+      });
+    }
   }
 }
 
@@ -554,27 +706,20 @@ function makeIsOwnedAny(isOwnedFn: (id: string) => boolean) {
   };
 }
 
-function makeGrantAny(grantFn: (id: string) => Promise<any> | any) {
+function makeGrantAny(
+  grantFn: (id: string | string[]) => Promise<any> | any
+) {
   return async (raw: string | null | undefined) => {
     if (!raw) return;
-    const a = String(raw);
-    const c = canonId(a);
 
-    const swapUnderscoreHyphen = (s: string) =>
-      s.includes("_") ? s.replace(/_/g, "-") : s.replace(/-/g, "_");
+    const canonicalId = canonId(String(raw)) || String(raw);
+    if (!canonicalId) return;
 
-    const v1 = a;
-    const v2 = c;
-    const v3 = swapUnderscoreHyphen(a);
-    const v4 = swapUnderscoreHyphen(c);
-
-    const seen = new Set<string>();
-    for (const v of [v2, v1, v4, v3]) {
-      if (!v) continue;
-      if (seen.has(v)) continue;
-      seen.add(v);
-      await grantFn(v);
-    }
+    /*
+     * PurchasesContext canonicalizes IDs itself. One awaited grant is safer
+     * than four sequential profile writes for underscore/hyphen variants.
+     */
+    await grantFn(canonicalId);
   };
 }
 
@@ -907,12 +1052,94 @@ function Card({
   children,
   color,
   comingSoon,
+  legendary = false,
+  legendaryPalette,
 }: {
   children: React.ReactNode;
   color: string;
   comingSoon?: boolean;
+  legendary?: boolean;
+  legendaryPalette?: LegendaryPalette;
 }) {
   const { tokens } = useTheme();
+
+  if (legendary) {
+    const palette =
+      legendaryPalette ?? getLegendaryPalette(null);
+
+    return (
+      <LinearGradient
+        colors={[
+          palette.dark,
+          "rgba(15,23,42,0.98)",
+          palette.dark,
+        ]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{
+          width: "48%",
+          borderRadius: 18,
+          padding: 3,
+          borderWidth: 1,
+          borderColor: palette.primary,
+          shadowColor: palette.primary,
+          shadowOpacity: 0.58,
+          shadowRadius: 17,
+          shadowOffset: { width: 0, height: 0 },
+          elevation: 9,
+        }}
+      >
+        <LinearGradient
+          colors={[
+            "rgba(255,255,255,0.08)",
+            palette.glow,
+            "rgba(2,6,23,0.96)",
+          ]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{
+            flex: 1,
+            borderRadius: 15,
+            padding: 11,
+            overflow: "hidden",
+          }}
+        >
+          <View
+            pointerEvents="none"
+            style={{
+              position: "absolute",
+              width: 110,
+              height: 110,
+              borderRadius: 55,
+              top: -50,
+              right: -45,
+              borderWidth: 2,
+              borderColor: `${palette.secondary}77`,
+              backgroundColor: palette.glow,
+            }}
+          />
+          <View
+            pointerEvents="none"
+            style={{
+              position: "absolute",
+              width: 80,
+              height: 80,
+              borderRadius: 40,
+              bottom: -38,
+              left: -30,
+              borderWidth: 1,
+              borderColor: `${palette.primary}66`,
+            }}
+          />
+
+          <View style={{ position: "relative" }}>
+            {children}
+          </View>
+        </LinearGradient>
+      </LinearGradient>
+    );
+  }
+
   return (
     <View
       style={{
@@ -1095,7 +1322,9 @@ function ItemDetailModal({
 
   if (!item) return null;
 
-  const locked = isComingSoon(item) || isLegendaryCompanion(item);
+  const isLegendaryDetail = isLegendaryCompanion(item);
+  const locked = isComingSoon(item);
+  const legendaryPalette = getLegendaryPalette(item.id);
 
   const hasAlt = !!(item.altImageKey && altImages[item.altImageKey]);
   const imgSrc =
@@ -1134,24 +1363,45 @@ function ItemDetailModal({
             maxWidth: 420,
             borderRadius: 18,
             overflow: "hidden",
-            borderWidth: 1,
-            borderColor: tokens.border as any,
-            backgroundColor: tokens.isDark
+            borderWidth: isLegendaryDetail ? 2 : 1,
+            borderColor: isLegendaryDetail
+              ? legendaryPalette.primary
+              : (tokens.border as any),
+            backgroundColor: isLegendaryDetail
+              ? legendaryPalette.dark
+              : tokens.isDark
               ? "rgba(15,23,42,0.98)"
               : "rgba(255,255,255,0.98)",
-            opacity: locked ? 0.92 : 1,
+            opacity: 1,
+            shadowColor: isLegendaryDetail
+              ? legendaryPalette.primary
+              : "#000",
+            shadowOpacity: isLegendaryDetail ? 0.68 : 0.18,
+            shadowRadius: isLegendaryDetail ? 24 : 10,
+            shadowOffset: { width: 0, height: 0 },
+            elevation: isLegendaryDetail ? 12 : 4,
           }}
         >
           <LinearGradient
             colors={
-              tokens.isDark ? ["#020617", "#020617"] : ["#EFF6FF", "#F9FAFB"]
+              isLegendaryDetail
+                ? [
+                    legendaryPalette.dark,
+                    "#111827",
+                    legendaryPalette.dark,
+                  ]
+                : tokens.isDark
+                ? ["#020617", "#020617"]
+                : ["#EFF6FF", "#F9FAFB"]
             }
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={{ padding: 16 }}
           >
             <ScrollView>
-              {locked ? (
+              {isLegendaryDetail ? (
+                <LegendaryBadge palette={legendaryPalette} />
+              ) : locked ? (
                 <View style={{ marginBottom: 12 }}>
                   <ComingSoonPill />
                 </View>
@@ -1191,10 +1441,14 @@ function ItemDetailModal({
                     height: 240,
                     borderRadius: 14,
                     overflow: "hidden",
-                    borderWidth: 1,
-                    borderColor: tokens.border as any,
+                    borderWidth: isLegendaryDetail ? 2 : 1,
+                    borderColor: isLegendaryDetail
+                      ? legendaryPalette.primary
+                      : (tokens.border as any),
                     marginBottom: 12,
-                    backgroundColor: isWhiteLegendDetail
+                    backgroundColor: isLegendaryDetail
+                      ? legendaryPalette.dark
+                      : isWhiteLegendDetail
                       ? "#000"
                       : tokens.isDark
                       ? "rgba(15,23,42,0.98)"
@@ -1206,7 +1460,10 @@ function ItemDetailModal({
                     style={{
                       width: "100%",
                       height: "100%",
-                      opacity: locked ? 0.72 : 1,
+                      opacity: locked && !isLegendaryDetail ? 0.72 : 1,
+                      transform: [
+                        { scale: isLegendaryDetail ? 1.06 : 1 },
+                      ],
                     }}
                     resizeMode="contain"
                   />
@@ -1249,11 +1506,18 @@ function ItemDetailModal({
 
               <Text
                 style={{
-                  color: tokens.titleText as any,
-                  fontSize: 18,
+                  color: isLegendaryDetail
+                    ? legendaryPalette.accent
+                    : (tokens.titleText as any),
+                  fontSize: isLegendaryDetail ? 22 : 18,
                   fontWeight: "900",
                   marginBottom: 8,
                   textAlign: "center",
+                  letterSpacing: isLegendaryDetail ? 0.8 : 0,
+                  textShadowColor: isLegendaryDetail
+                    ? legendaryPalette.primary
+                    : "transparent",
+                  textShadowRadius: isLegendaryDetail ? 12 : 0,
                 }}
               >
                 {item.title}
@@ -1407,18 +1671,58 @@ function ItemDetailModal({
               ) : null}
 
               {abilityNote ? (
-                <Text
-                  style={{
-                    color: tokens.text as any,
-                    fontSize: 13,
-                    lineHeight: 18,
-                    marginBottom: 10,
-                    fontStyle: "italic",
-                    opacity: locked ? 0.85 : 1,
-                  }}
-                >
-                  Ability: {abilityNote}
-                </Text>
+                isLegendaryDetail ? (
+                  <LinearGradient
+                    colors={[
+                      `${legendaryPalette.primary}33`,
+                      `${legendaryPalette.secondary}22`,
+                    ]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={{
+                      borderRadius: 14,
+                      borderWidth: 1,
+                      borderColor: legendaryPalette.primary,
+                      padding: 12,
+                      marginBottom: 12,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: legendaryPalette.secondary,
+                        fontSize: 10,
+                        fontWeight: "900",
+                        letterSpacing: 1.2,
+                        marginBottom: 5,
+                      }}
+                    >
+                      LEGENDARY ABILITY
+                    </Text>
+                    <Text
+                      style={{
+                        color: legendaryPalette.accent,
+                        fontSize: 14,
+                        lineHeight: 20,
+                        fontWeight: "800",
+                      }}
+                    >
+                      {abilityNote}
+                    </Text>
+                  </LinearGradient>
+                ) : (
+                  <Text
+                    style={{
+                      color: tokens.text as any,
+                      fontSize: 13,
+                      lineHeight: 18,
+                      marginBottom: 10,
+                      fontStyle: "italic",
+                      opacity: locked ? 0.85 : 1,
+                    }}
+                  >
+                    Ability: {abilityNote}
+                  </Text>
+                )
               ) : null}
 
               {(priceCoins || priceUSD) && !locked && !owned ? (
@@ -2125,7 +2429,9 @@ export default function Shop() {
   const purchaseUpdatedSubscriptionRef = useRef<{ remove: () => void } | null>(null);
   const purchaseErrorSubscriptionRef = useRef<{ remove: () => void } | null>(null);
   const iapPurchaseInFlightRef = useRef(false);
+  const iapPurchaseStartedAtRef = useRef<number | null>(null);
   const purchaseResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [restoringIapPurchases, setRestoringIapPurchases] = useState(false);
 
   const panResponder = useRef(
     PanResponder.create({
@@ -2399,6 +2705,7 @@ export default function Shop() {
 
   const clearIapPurchasePendingState = () => {
     iapPurchaseInFlightRef.current = false;
+    iapPurchaseStartedAtRef.current = null;
     pendingIapProductIdRef.current = null;
     pendingIapItemRef.current = null;
 
@@ -2668,8 +2975,10 @@ export default function Shop() {
 
   const processCompletedIapPurchase = async (
     purchase: any,
-    fallbackItem?: any
+    fallbackItem?: any,
+    options?: { restored?: boolean }
   ) => {
+    const restored = options?.restored === true;
     const productId =
       getPurchaseProductId(purchase) || pendingIapProductIdRef.current || "";
     const item =
@@ -2692,17 +3001,36 @@ export default function Shop() {
       !!transactionId &&
       (processedPurchaseIdsRef.current.has(transactionId) ||
         persistedTransactions.has(transactionId));
+    const isConsumable = item?.category === "coin_pack";
 
     try {
-      if (!alreadyProcessed) {
-        await fulfillDigitalItem(item, productId);
-        await persistOwnedPurchaseLocally((item as any)?.id || null);
-        await persistOwnedPurchaseLocally((item as any)?.meta?.grantId || null);
-        await persistOwnedPurchaseLocally(productId);
-        await persistOwnedPurchaseLocally(
-          canonId((item as any)?.id || "") || null
-        );
+      /*
+       * Non-consumable ownership is idempotent and must be reasserted during
+       * every restore, even when this transaction ID was processed before.
+       * The old code skipped fulfillment for processed IDs, so a stale local
+       * or Supabase hydrate could permanently hide a legitimate Apple purchase.
+       * Consumable coin packs remain transaction-ID guarded to prevent double
+       * credits.
+       */
+      if (!alreadyProcessed || !isConsumable) {
+        await fulfillDigitalItem(item, productId, {
+          autoEquip: !restored && !alreadyProcessed,
+          source: restored ? "iap_restore" : "iap_purchase",
+        });
 
+        if (!isConsumable) {
+          await persistOwnedPurchaseLocally((item as any)?.id || null);
+          await persistOwnedPurchaseLocally(
+            (item as any)?.meta?.grantId || null
+          );
+          await persistOwnedPurchaseLocally(productId);
+          await persistOwnedPurchaseLocally(
+            canonId((item as any)?.id || "") || null
+          );
+        }
+      }
+
+      if (!alreadyProcessed) {
         if (transactionId) {
           processedPurchaseIdsRef.current.add(transactionId);
           await markIapTransactionProcessed(transactionId);
@@ -2721,30 +3049,46 @@ export default function Shop() {
           purchaseKey: transactionId
             ? `iap:${transactionId}`
             : `iap:${productId}:${fallbackPurchaseStamp}`,
-          source: "iap",
+          source: restored ? "iap_restore" : "iap",
           sku: (item as any)?.id || productId,
           category: (item as any)?.category || null,
           inventoryBacked: (item as any)?.category !== "coin_pack",
           ownedCountBefore: Object.keys(purchases || {}).length,
         });
       } else {
-        console.log("[IAP DEBUG] duplicate transaction ignored", {
+        console.log("[IAP DEBUG] existing transaction entitlement refreshed", {
           transactionId,
           productId,
+          isConsumable,
+          restored,
         });
       }
 
-      // Coins are consumable; themes/cursors/etc. are non-consumable.
-      await ExpoIAP.finishTransaction({
-        purchase,
-        isConsumable: item?.category === "coin_pack",
-      });
+      try {
+        await ExpoIAP.finishTransaction({
+          purchase,
+          isConsumable,
+        });
 
-      console.log("[IAP DEBUG] transaction finished", {
-        transactionId,
-        productId,
-        consumable: item?.category === "coin_pack",
-      });
+        console.log("[IAP DEBUG] transaction finished", {
+          transactionId,
+          productId,
+          isConsumable,
+          restored,
+        });
+      } catch (finishError) {
+        /*
+         * getAvailablePurchases may return an already-finished StoreKit 2
+         * entitlement. Ownership has already been safely refreshed above, so
+         * a harmless second-finish failure must not make the restore disappear.
+         */
+        console.warn("[IAP] finishTransaction did not complete", {
+          transactionId,
+          productId,
+          restored,
+          finishError,
+        });
+      }
 
       try {
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -2752,41 +3096,101 @@ export default function Shop() {
 
       clearIapPurchasePendingState();
       return true;
-    } catch (e) {
-      console.warn("[IAP] purchase fulfillment/finalization failed", e);
+    } catch (error) {
+      console.warn("[IAP] purchase fulfillment failed", error);
       clearIapPurchasePendingState();
       return false;
     }
   };
 
   const restoreAvailableIapPurchases = async (silent = true) => {
+    if (restoringIapPurchases) return 0;
+
+    setRestoringIapPurchases(true);
     try {
-      const purchases = await ExpoIAP.getAvailablePurchases();
-      if (!Array.isArray(purchases) || !purchases.length) return 0;
+      const available = await isIapAvailable();
+      const connected = available ? await ensureIapConnected() : false;
 
-      let restored = 0;
-      for (const purchase of purchases) {
-        const productId = getPurchaseProductId(purchase);
-        const item = resolveIapCatalogItem(productId);
-        if (!item) continue;
-
-        const ok = await processCompletedIapPurchase(purchase, item);
-        if (ok) restored += 1;
+      if (!available || !connected) {
+        if (!silent) showIapUnavailableAlert(available ? "connect_failed" : "module_missing");
+        return 0;
       }
 
-      if (restored > 0 && !silent) {
+      const storePurchases = await ExpoIAP.getAvailablePurchases();
+      if (!Array.isArray(storePurchases) || !storePurchases.length) {
+        if (!silent) {
+          Alert.alert(
+            "No purchases found",
+            "Apple did not return any restorable purchases for this account."
+          );
+        }
+        return 0;
+      }
+
+      let restoredCount = 0;
+      for (const purchase of storePurchases) {
+        const productId = getPurchaseProductId(purchase);
+        const item = resolveIapCatalogItem(productId);
+        if (!item || item?.category === "coin_pack") continue;
+
+        const ok = await processCompletedIapPurchase(purchase, item, {
+          restored: true,
+        });
+        if (ok) restoredCount += 1;
+      }
+
+      if (!silent) {
         Alert.alert(
-          "Purchases restored",
-          restored === 1
+          restoredCount > 0 ? "Purchases restored" : "Nothing to restore",
+          restoredCount === 1
             ? "Your Apple purchase was restored."
-            : `${restored} Apple purchases were restored.`
+            : restoredCount > 1
+            ? `${restoredCount} Apple purchases were restored.`
+            : "No matching Nova Tutoring purchases were found."
         );
       }
 
-      return restored;
-    } catch (e) {
-      console.warn("[IAP] getAvailablePurchases failed", e);
+      return restoredCount;
+    } catch (error) {
+      console.warn("[IAP] getAvailablePurchases failed", error);
+      if (!silent) {
+        Alert.alert(
+          "Restore failed",
+          "Apple purchases could not be restored right now. Please try again."
+        );
+      }
       return 0;
+    } finally {
+      setRestoringIapPurchases(false);
+      clearIapPurchasePendingState();
+    }
+  };
+
+  const findExistingStorePurchaseForItem = async (
+    item: any,
+    candidateProductIds: string[]
+  ) => {
+    if (item?.category === "coin_pack") return null;
+
+    try {
+      const storePurchases = await ExpoIAP.getAvailablePurchases();
+      const candidateSet = new Set(
+        normalizeIapProductIdSet(candidateProductIds).map(toUnderscoreId)
+      );
+
+      return (
+        (Array.isArray(storePurchases) ? storePurchases : []).find(
+          (purchase: any) => {
+            const purchaseIds = normalizeIapProductIdSet([
+              getPurchaseProductId(purchase),
+            ]).map(toUnderscoreId);
+            return purchaseIds.some((id) => candidateSet.has(id));
+          }
+        ) || null
+      );
+    } catch (error) {
+      console.warn("[IAP] existing entitlement lookup failed", error);
+      return null;
     }
   };
 
@@ -2797,11 +3201,22 @@ export default function Shop() {
     });
 
     if (iapPurchaseInFlightRef.current) {
-      Alert.alert(
-        "Purchase in progress",
-        "Please finish or cancel the current Apple purchase first."
-      );
-      return;
+      const startedAt = iapPurchaseStartedAtRef.current ?? 0;
+      const isStale = !startedAt || Date.now() - startedAt > 45000;
+
+      if (isStale) {
+        console.warn("[IAP] clearing stale purchase lock", {
+          pendingProductId: pendingIapProductIdRef.current,
+          startedAt,
+        });
+        clearIapPurchasePendingState();
+      } else {
+        Alert.alert(
+          "Purchase in progress",
+          "Please finish or cancel the current Apple purchase first."
+        );
+        return;
+      }
     }
 
     if (
@@ -2849,6 +3264,27 @@ export default function Shop() {
     }
 
     try {
+      const existingPurchase = await findExistingStorePurchaseForItem(
+        it,
+        candidatePids
+      );
+
+      if (existingPurchase) {
+        const restored = await processCompletedIapPurchase(
+          existingPurchase,
+          it,
+          { restored: true }
+        );
+
+        if (restored) {
+          Alert.alert(
+            "Purchase restored",
+            `${String(it?.title || "This item")} was already purchased with this Apple account and has been restored.`
+          );
+        }
+        return;
+      }
+
       const requestedIds = Array.from(new Set(candidatePids));
       const products = await ExpoIAP.fetchProducts({
         skus: requestedIds,
@@ -2881,11 +3317,16 @@ export default function Shop() {
       pendingIapProductIdRef.current = productId;
       pendingIapItemRef.current = it;
       iapPurchaseInFlightRef.current = true;
+      iapPurchaseStartedAtRef.current = Date.now();
 
       // Safety reset only. Successful/cancelled flows clear this from listeners.
       purchaseResetTimerRef.current = setTimeout(() => {
+        console.warn("[IAP] purchase request timed out; clearing local lock", {
+          productId,
+          itemId: it?.id,
+        });
         clearIapPurchasePendingState();
-      }, 120000);
+      }, 45000);
 
       track("shop_iap_purchase_start", {
         productId,
@@ -2946,7 +3387,8 @@ export default function Shop() {
 
           await processCompletedIapPurchase(
             purchase,
-            pendingIapItemRef.current || undefined
+            pendingIapItemRef.current || undefined,
+            { restored: false }
           );
         });
 
@@ -3002,6 +3444,7 @@ export default function Shop() {
       pendingIapItemRef.current = null;
       iapProductsPromiseRef.current = null;
       iapPurchaseInFlightRef.current = false;
+      iapPurchaseStartedAtRef.current = null;
 
       if (iapConnectedRef.current) {
         void ExpoIAP.endConnection().catch((e: any) =>
@@ -3238,6 +3681,41 @@ export default function Shop() {
         return fromContext || fromPurchases;
       }),
     [ownedCompanionIds, purchases, isOwnedAny]
+  );
+
+  const ownedLegendaryCompanions = useMemo(
+    () =>
+      COMPANIONS.filter((c: any) => {
+        const cid = canonId(c.id);
+        const effectType =
+          getCompanionEffect(c.id);
+
+        const isLegendary =
+          effectType === "legend_fire" ||
+          effectType === "legend_lightning" ||
+          effectType === "legend_bubbles" ||
+          effectType === "legend_sparkles" ||
+          effectType === "legend_spiral" ||
+          effectType === "shield";
+
+        if (!isLegendary) return false;
+
+        const fromContext =
+          (ownedCompanionIds || []).some(
+            (ownedId: string) =>
+              canonId(ownedId) === cid
+          );
+
+        const fromPurchases =
+          isOwnedAny(c.id);
+
+        return fromContext || fromPurchases;
+      }),
+    [
+      ownedCompanionIds,
+      purchases,
+      isOwnedAny,
+    ]
   );
 
   function isCompanionOwned(rawId: string | null | undefined): boolean {
@@ -4515,6 +4993,41 @@ export default function Shop() {
           </View>
         </View>
 
+        {Platform.OS !== "web" && (
+          <Pressable
+            disabled={restoringIapPurchases}
+            onPress={() => void restoreAvailableIapPurchases(false)}
+            accessibilityRole="button"
+            accessibilityLabel="Restore Apple purchases"
+            style={({ pressed }) => ({
+              alignSelf: "flex-end",
+              marginTop: 10,
+              marginBottom: 2,
+              paddingHorizontal: 12,
+              paddingVertical: 7,
+              borderRadius: 999,
+              borderWidth: 1,
+              borderColor: tokens.pillBorder as any,
+              backgroundColor: pressed
+                ? "rgba(0,229,255,0.14)"
+                : (tokens.pillBg as any),
+              opacity: restoringIapPurchases ? 0.55 : 1,
+            })}
+          >
+            <Text
+              style={{
+                color: tokens.pillText as any,
+                fontSize: 12,
+                fontWeight: "800",
+              }}
+            >
+              {restoringIapPurchases
+                ? "Restoring…"
+                : "Restore Apple Purchases"}
+            </Text>
+          </Pressable>
+        )}
+
         {ownedCompanions.length > 0 && (
           <View style={{ marginTop: 16, marginBottom: 12 }}>
             <Text
@@ -4659,6 +5172,222 @@ export default function Shop() {
           </View>
         )}
 
+        {ownedLegendaryCompanions.length > 0 && (
+          <View
+            style={{
+              marginTop: 4,
+              marginBottom: 16,
+            }}
+          >
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 8,
+              }}
+            >
+              <Text
+                style={{
+                  color: tokens.titleText as any,
+                  fontSize: 14,
+                  fontWeight: "900",
+                }}
+              >
+                My Legendary Companions
+              </Text>
+              <Text
+                style={{
+                  color: "#FDE68A",
+                  fontSize: 10,
+                  fontWeight: "900",
+                  letterSpacing: 0.7,
+                }}
+              >
+                {ownedLegendaryCompanions.length} OWNED
+              </Text>
+            </View>
+
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+            >
+              {ownedLegendaryCompanions.map(
+                (it: any) => {
+                  const cid = canonId(it.id);
+                  const isActive =
+                    !!equippedCompanionId &&
+                    canonId(
+                      equippedCompanionId
+                    ) === cid;
+
+                  const palette =
+                    getLegendaryPalette(cid);
+
+                  const scale =
+                    isActive ||
+                    stripActiveId === it.id
+                      ? companionScale
+                      : 1;
+
+                  const abilityShort =
+                    getCompanionAbilityShort(
+                      it.id
+                    );
+
+                  return (
+                    <Animated.View
+                      key={it.id}
+                      style={{
+                        width: 104,
+                        marginRight: 13,
+                        transform: [{ scale }],
+                      }}
+                    >
+                      <Pressable
+                        onPress={() =>
+                          triggerCompanion(
+                            it.id
+                          )
+                        }
+                        onLongPress={() =>
+                          setDetailItem(it)
+                        }
+                        delayLongPress={350}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${
+                          isActive
+                            ? "Equipped"
+                            : "Equip"
+                        } ${
+                          it.shortLabel ||
+                          it.title
+                        }`}
+                        accessibilityHint="Tap to equip. Press and hold for details."
+                        style={({ pressed }) => ({
+                          width: 86,
+                          height: 86,
+                          borderRadius: 43,
+                          borderWidth: isActive
+                            ? 5
+                            : 4,
+                          borderColor: isActive
+                            ? "#FACC15"
+                            : palette.primary,
+                          overflow: "hidden",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          backgroundColor:
+                            pressed
+                              ? palette.glow
+                              : palette.dark,
+                          shadowColor:
+                            palette.primary,
+                          shadowOpacity: 0.68,
+                          shadowRadius: 11,
+                          shadowOffset: {
+                            width: 0,
+                            height: 0,
+                          },
+                          elevation: 7,
+                        })}
+                      >
+                        <LinearGradient
+                          pointerEvents="none"
+                          colors={[
+                            palette.glow,
+                            palette.dark,
+                            `${palette.secondary}33`,
+                          ]}
+                          style={{
+                            position: "absolute",
+                            top: 0,
+                            right: 0,
+                            bottom: 0,
+                            left: 0,
+                          }}
+                        />
+
+                        {it.image ? (
+                          <Image
+                            source={it.image}
+                            style={{
+                              width: "100%",
+                              height: "100%",
+                            }}
+                            resizeMode="contain"
+                          />
+                        ) : (
+                          <Text
+                            style={{
+                              color: palette.accent,
+                              fontWeight: "900",
+                              textAlign: "center",
+                              paddingHorizontal: 6,
+                            }}
+                            numberOfLines={2}
+                          >
+                            {it.shortLabel ||
+                              it.title}
+                          </Text>
+                        )}
+                      </Pressable>
+
+                      <Text
+                        style={{
+                          color: palette.accent,
+                          fontSize: 11,
+                          fontWeight: "900",
+                          marginTop: 6,
+                          maxWidth: 100,
+                          textAlign: "center",
+                        }}
+                        numberOfLines={1}
+                      >
+                        {it.shortLabel ||
+                          it.title}
+                      </Text>
+
+                      {abilityShort ? (
+                        <Text
+                          style={{
+                            color: palette.secondary,
+                            fontSize: 9,
+                            fontWeight: "800",
+                            lineHeight: 12,
+                            marginTop: 3,
+                            maxWidth: 100,
+                            textAlign: "center",
+                          }}
+                          numberOfLines={2}
+                        >
+                          {abilityShort}
+                        </Text>
+                      ) : null}
+
+                      <Text
+                        style={{
+                          color: isActive
+                            ? "#FACC15"
+                            : "#C4B5FD",
+                          fontSize: 9,
+                          fontWeight: "900",
+                          marginTop: 3,
+                          textAlign: "center",
+                        }}
+                      >
+                        {isActive
+                          ? "EQUIPPED"
+                          : "TAP TO EQUIP"}
+                      </Text>
+                    </Animated.View>
+                  );
+                }
+              )}
+            </ScrollView>
+          </View>
+        )}
+
         <View data-quick-rows style={{ marginVertical: 16 }}>
           <QuickRow
             title="Themes"
@@ -4739,23 +5468,36 @@ export default function Shop() {
             const isWhiteLegend = isWhiteLegendId(cid);
             const abilityShort = getCompanionAbilityShort(it.id);
 
+            const legendaryPalette = getLegendaryPalette(cid);
             const baseBorderColor = isLegendary
-              ? "#22E5FF"
+              ? legendaryPalette.primary
               : CATEGORY_BORDER.tangibles;
             const equippedBorderColor = "#FACC15";
             const borderColor = isEquipped ? equippedBorderColor : baseBorderColor;
 
-            const legendImageOpacity = isLegendary ? 0.5 : 1;
+            const legendImageOpacity = 1;
             const legendTextColor = isLegendary
-              ? "rgba(148,163,184,0.95)"
+              ? legendaryPalette.accent
               : (tokens.text as any);
 
             if (owned && !isLegendary) return null;
 
-            const comingSoon = isLegendary;
+            const comingSoon = isComingSoon(it);
 
             return (
-              <Card key={it.id} color={borderColor} comingSoon={comingSoon}>
+              <Card
+                key={it.id}
+                color={borderColor}
+                comingSoon={comingSoon}
+                legendary={isLegendary}
+                legendaryPalette={legendaryPalette}
+              >
+                {isLegendary ? (
+                  <LegendaryBadge
+                    palette={legendaryPalette}
+                    compact
+                  />
+                ) : null}
                 {src ? (
                   <Pressable
                     onPress={() => setDetailItem(it)}
@@ -4763,26 +5505,51 @@ export default function Shop() {
                     delayLongPress={180}
                     style={{
                       width: "100%",
-                      height: 110,
-                      borderRadius: 10,
+                      height: isLegendary ? 138 : 110,
+                      borderRadius: isLegendary ? 14 : 10,
                       overflow: "hidden",
                       borderWidth: isLegendary ? 2 : 1,
                       borderColor,
                       marginBottom: 8,
                       backgroundColor:
-                        isLegendary && isWhiteLegend
+                        isLegendary
+                          ? legendaryPalette.dark
+                          : isLegendary && isWhiteLegend
                           ? "#000"
                           : tokens.isDark
                           ? "rgba(15,23,42,0.98)"
                           : "rgba(255,255,255,0.95)",
                     }}
                   >
+                    {isLegendary ? (
+                      <LinearGradient
+                        pointerEvents="none"
+                        colors={[
+                          legendaryPalette.glow,
+                          "rgba(2,6,23,0.15)",
+                          `${legendaryPalette.secondary}22`,
+                        ]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={{
+                          position: "absolute",
+                          top: 0,
+                          right: 0,
+                          bottom: 0,
+                          left: 0,
+                        }}
+                      />
+                    ) : null}
+
                     <Image
                       source={src}
                       style={{
                         width: "100%",
                         height: "100%",
                         opacity: legendImageOpacity,
+                        transform: [
+                          { scale: isLegendary ? 1.08 : 1 },
+                        ],
                       }}
                       resizeMode="contain"
                     />
@@ -4792,9 +5559,14 @@ export default function Shop() {
                 <Text
                   style={{
                     color: legendTextColor,
-                    fontSize: 14,
-                    fontWeight: "700",
+                    fontSize: isLegendary ? 16 : 14,
+                    fontWeight: isLegendary ? "900" : "700",
                     textAlign: "center",
+                    letterSpacing: isLegendary ? 0.5 : 0,
+                    textShadowColor: isLegendary
+                      ? legendaryPalette.primary
+                      : "transparent",
+                    textShadowRadius: isLegendary ? 9 : 0,
                   }}
                 >
                   {it.title}
@@ -4817,24 +5589,135 @@ export default function Shop() {
                 ) : null}
 
                 {abilityShort && (
-                  <Text
-                    style={{
-                      color: isLegendary ? "#FDE68A" : legendTextColor,
-                      fontSize: 11,
-                      fontWeight: "700",
-                      marginTop: 6,
-                      textAlign: "center",
-                    }}
-                    numberOfLines={2}
-                  >
-                    Ability: {abilityShort}
-                  </Text>
+                  isLegendary ? (
+                    <LinearGradient
+                      colors={[
+                        `${legendaryPalette.primary}2E`,
+                        `${legendaryPalette.secondary}1F`,
+                      ]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={{
+                        marginTop: 8,
+                        borderRadius: 11,
+                        borderWidth: 1,
+                        borderColor: `${legendaryPalette.primary}AA`,
+                        paddingHorizontal: 8,
+                        paddingVertical: 8,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: legendaryPalette.secondary,
+                          fontSize: 9,
+                          fontWeight: "900",
+                          letterSpacing: 0.9,
+                          textAlign: "center",
+                          marginBottom: 3,
+                        }}
+                      >
+                        LEGENDARY ABILITY
+                      </Text>
+                      <Text
+                        style={{
+                          color: legendaryPalette.accent,
+                          fontSize: 11,
+                          lineHeight: 15,
+                          fontWeight: "800",
+                          textAlign: "center",
+                        }}
+                        numberOfLines={3}
+                      >
+                        {abilityShort}
+                      </Text>
+                    </LinearGradient>
+                  ) : (
+                    <Text
+                      style={{
+                        color: legendTextColor,
+                        fontSize: 11,
+                        fontWeight: "700",
+                        marginTop: 6,
+                        textAlign: "center",
+                      }}
+                      numberOfLines={2}
+                    >
+                      Ability: {abilityShort}
+                    </Text>
+                  )
                 )}
 
                 <View style={{ height: 8 }} />
 
                 {isLegendary ? (
-                  <ComingSoonPill />
+                  owned ? (
+                    <Pressable
+                      onPress={() => setDetailItem(it)}
+                      style={({ pressed }) => ({
+                        alignItems: "center",
+                        paddingVertical: 10,
+                        paddingHorizontal: 10,
+                        borderRadius: 10,
+                        borderWidth: 1,
+                        borderColor: isEquipped
+                          ? "#FACC15"
+                          : legendaryPalette.primary,
+                        backgroundColor: pressed
+                          ? legendaryPalette.glow
+                          : "rgba(255,255,255,0.04)",
+                      })}
+                    >
+                      <Text
+                        style={{
+                          color: isEquipped
+                            ? "#FDE68A"
+                            : legendaryPalette.accent,
+                          fontWeight: "900",
+                          fontSize: 11,
+                          textAlign: "center",
+                        }}
+                      >
+                        {isEquipped
+                          ? "EQUIPPED"
+                          : "OWNED · TAP TO EQUIP"}
+                      </Text>
+                    </Pressable>
+                  ) : (
+                    <Pressable
+                      onPress={() =>
+                        moneyBuy(
+                          {
+                            ...it,
+                            category: "companions",
+                            priceUSD,
+                          },
+                          {}
+                        )
+                      }
+                      style={({ pressed }) => ({
+                        alignItems: "center",
+                        paddingVertical: 11,
+                        paddingHorizontal: 10,
+                        borderRadius: 10,
+                        borderWidth: 1,
+                        borderColor: legendaryPalette.primary,
+                        backgroundColor: pressed
+                          ? legendaryPalette.glow
+                          : "rgba(255,255,255,0.04)",
+                      })}
+                    >
+                      <Text
+                        style={{
+                          color: legendaryPalette.accent,
+                          fontWeight: "900",
+                          fontSize: 12,
+                          textAlign: "center",
+                        }}
+                      >
+                        UNLOCK · ${priceUSD.toFixed(2)}
+                      </Text>
+                    </Pressable>
+                  )
                 ) : (
                   <View
                     style={{
@@ -5018,6 +5901,11 @@ export default function Shop() {
           isCompanionOwned(detailItem?.id) &&
           !isCompanionEquipped(detailItem?.id)
             ? "Equip Companion"
+            : detailItem?.category === "companions" &&
+              !isCompanionOwned(detailItem?.id)
+            ? `Unlock for $${Number(
+                getCompanionUsdPrice(detailItem)
+              ).toFixed(2)}`
             : detailItem?.category === "ask_personality" &&
               !isOwnedAny(detailItem?.id)
             ? `Unlock for $${Number(
@@ -5032,6 +5920,18 @@ export default function Shop() {
             ? () => {
                 triggerCompanion(detailItem.id);
                 setDetailItem(null);
+              }
+            : detailItem?.category === "companions" &&
+              !isCompanionOwned(detailItem?.id)
+            ? () => {
+                const itemToBuy = {
+                  ...detailItem,
+                  category: "companions",
+                  priceUSD:
+                    getCompanionUsdPrice(detailItem),
+                };
+                setDetailItem(null);
+                void moneyBuy(itemToBuy);
               }
             : detailItem?.category === "ask_personality" &&
               !isOwnedAny(detailItem?.id)
