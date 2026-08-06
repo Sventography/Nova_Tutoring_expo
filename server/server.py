@@ -13,6 +13,15 @@ from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 import requests  # used for Supabase REST + Resend HTTP
 
+from ai_quota import (
+  estimate_openai_cost_usd,
+  extract_completion_usage,
+  finalize_ai_question,
+  release_ai_question,
+  reserve_ai_question,
+  resolve_ai_entitlement,
+)
+
 from apple_subscriptions import (
   apple_subscription_configuration_status,
   register_apple_subscription_routes,
@@ -1903,8 +1912,29 @@ def _ask_logic():
   memory_tier = "free"
   personality_code = ASK_PERSONALITY_FREE
   memory_messages: list[dict] = []
+  entitlement = None
 
   if user_id:
+    try:
+      entitlement = resolve_ai_entitlement(
+        supabase_url=SUPABASE_URL,
+        service_role_key=SUPABASE_SERVICE_ROLE_KEY,
+        user_id=user_id,
+      )
+    except Exception as error:
+      print(
+        "[ask] entitlement lookup failed:",
+        repr(error),
+      )
+      return jsonify(
+        ok=False,
+        code="AI_USAGE_UNAVAILABLE",
+        error=(
+          "Nova could not check your AI allowance. "
+          "Please try again in a moment."
+        ),
+      ), 503
+
     (
       memory_limit,
       memory_tier,
@@ -1912,6 +1942,19 @@ def _ask_logic():
     ) = fetch_profile_ask_settings(
       user_id,
       requested_personality,
+    )
+
+    # Paid subscription memory and grandfathered permanent
+    # memory purchases stack by taking whichever limit is higher.
+    memory_limit = max(
+      int(memory_limit or 0),
+      int(
+        entitlement.get(
+          "memory_message_limit",
+          ASK_FREE_MEMORY_LIMIT,
+        )
+        or 0
+      ),
     )
 
     if memory_limit > 0:
@@ -2018,6 +2061,73 @@ def _ask_logic():
     "content": question,
   })
 
+  quota_request_id = None
+  quota_reservation = None
+
+  if user_id:
+    try:
+      quota_reservation = reserve_ai_question(
+        supabase_url=SUPABASE_URL,
+        service_role_key=SUPABASE_SERVICE_ROLE_KEY,
+        user_id=user_id,
+        entitlement=entitlement,
+        model=OPENAI_MODEL,
+      )
+    except Exception as error:
+      print(
+        "[ask] quota reservation failed:",
+        repr(error),
+      )
+      return jsonify(
+        ok=False,
+        code="AI_USAGE_UNAVAILABLE",
+        error=(
+          "Nova could not check your AI allowance. "
+          "Please try again in a moment."
+        ),
+      ), 503
+
+    quota_request_id = quota_reservation.get(
+      "request_id"
+    )
+
+    if not bool(
+      quota_reservation.get("allowed")
+    ):
+      question_limit = int(
+        entitlement.get(
+          "question_limit",
+          5,
+        )
+      )
+
+      questions_used = int(
+        quota_reservation.get(
+          "questions_used",
+          question_limit,
+        )
+        or 0
+      )
+
+      return jsonify(
+        ok=False,
+        code="AI_MONTHLY_LIMIT_REACHED",
+        error=(
+          "You've used all of your Nova AI "
+          "questions for this period."
+        ),
+        ai_plan_id=entitlement.get(
+          "plan_id",
+          "free",
+        ),
+        ai_question_limit=question_limit,
+        ai_questions_used=questions_used,
+        ai_questions_remaining=0,
+        ai_period_end=entitlement.get(
+          "period_end"
+        ),
+      ), 429
+
   try:
     completion = openai_client.chat.completions.create(
       model=OPENAI_MODEL,
@@ -2031,10 +2141,87 @@ def _ask_logic():
     ).strip()
 
     if not answer:
+      if quota_request_id:
+        try:
+          release_ai_question(
+            supabase_url=SUPABASE_URL,
+            service_role_key=SUPABASE_SERVICE_ROLE_KEY,
+            request_id=quota_request_id,
+            error_code="empty_answer",
+          )
+        except Exception as release_error:
+          print(
+            "[ask] empty-answer release failed:",
+            repr(release_error),
+          )
+
       return jsonify(
         ok=False,
         error="The AI returned an empty answer.",
       ), 502
+
+    finalized_usage = None
+    token_usage = extract_completion_usage(
+      completion
+    )
+
+    if quota_request_id:
+      try:
+        finalized_usage = finalize_ai_question(
+          supabase_url=SUPABASE_URL,
+          service_role_key=SUPABASE_SERVICE_ROLE_KEY,
+          request_id=quota_request_id,
+          model=OPENAI_MODEL,
+          prompt_tokens=token_usage[
+            "prompt_tokens"
+          ],
+          cached_input_tokens=token_usage[
+            "cached_input_tokens"
+          ],
+          completion_tokens=token_usage[
+            "completion_tokens"
+          ],
+          cost_usd_snapshot=estimate_openai_cost_usd(
+            token_usage
+          ),
+        )
+
+        if not bool(
+          finalized_usage.get("finalized")
+        ):
+          raise RuntimeError(
+            "Quota finalization did not succeed: "
+            + repr(finalized_usage)
+          )
+
+      except Exception as finalize_error:
+        print(
+          "[ask] quota finalization failed:",
+          repr(finalize_error),
+        )
+
+        try:
+          release_ai_question(
+            supabase_url=SUPABASE_URL,
+            service_role_key=SUPABASE_SERVICE_ROLE_KEY,
+            request_id=quota_request_id,
+            error_code="finalization_failed",
+          )
+        except Exception as release_error:
+          print(
+            "[ask] finalization release failed:",
+            repr(release_error),
+          )
+
+        return jsonify(
+          ok=False,
+          code="AI_USAGE_UNAVAILABLE",
+          error=(
+            "Nova created an answer but could not "
+            "finish recording this request. "
+            "Please try again."
+          ),
+        ), 503
 
     if user_id and memory_limit > 0:
       insert_memory_messages(
@@ -2066,6 +2253,73 @@ def _ask_logic():
       memory_limit=memory_limit,
       ask_memory_tier=memory_tier,
       ask_memory_limit=memory_limit,
+
+      ai_plan_id=(
+        entitlement.get("plan_id")
+        if entitlement
+        else "guest"
+      ),
+
+      ai_question_limit=(
+        int(
+          entitlement.get(
+            "question_limit",
+            0,
+          )
+        )
+        if entitlement
+        else None
+      ),
+
+      ai_questions_used=(
+        int(
+          finalized_usage.get(
+            "questions_used",
+            0,
+          )
+          or 0
+        )
+        if finalized_usage
+        else None
+      ),
+
+      ai_questions_remaining=(
+        max(
+          int(
+            entitlement.get(
+              "question_limit",
+              0,
+            )
+          )
+          - int(
+            finalized_usage.get(
+              "questions_used",
+              0,
+            )
+            or 0
+          ),
+          0,
+        )
+        if (
+          entitlement
+          and finalized_usage
+        )
+        else None
+      ),
+
+      ai_period_end=(
+        entitlement.get(
+          "period_end"
+        )
+        if entitlement
+        else None
+      ),
+
+      ai_token_usage=(
+        token_usage
+        if user_id
+        else None
+      ),
     )
 
   except Exception as error:
@@ -2090,6 +2344,24 @@ def _ask_logic():
         "detail": repr(error),
       },
     )
+
+    if quota_request_id:
+      try:
+        release_ai_question(
+          supabase_url=SUPABASE_URL,
+          service_role_key=SUPABASE_SERVICE_ROLE_KEY,
+          request_id=quota_request_id,
+          error_code=(
+            str(error_code)
+            if error_code
+            else error_type
+          ),
+        )
+      except Exception as release_error:
+        print(
+          "[ask] error reservation release failed:",
+          repr(release_error),
+        )
 
     # Never expose provider messages, API links,
     # keys, quota details, or raw JSON to users.
