@@ -13,6 +13,11 @@ from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 import requests  # used for Supabase REST + Resend HTTP
 
+from apple_subscriptions import (
+  apple_subscription_configuration_status,
+  register_apple_subscription_routes,
+)
+
 # -------------------------------------------------
 # Optional deps (Stripe, dotenv, OpenAI)
 # -------------------------------------------------
@@ -573,6 +578,15 @@ def _verify_supabase_access_token(access_token: str):
     return None
 
   return user if isinstance(user, dict) else None
+
+
+register_apple_subscription_routes(
+  app,
+  supabase_url=SUPABASE_URL,
+  service_role_key=SUPABASE_SERVICE_ROLE_KEY,
+  extract_bearer_token=_extract_bearer_token,
+  verify_access_token=_verify_supabase_access_token,
+)
 
 
 def _delete_public_rows(table: str, column: str, user_id: str):
@@ -1475,6 +1489,9 @@ def health():
     resend=bool(RESEND_API_KEY),
     shop_owner_email=bool(SHOP_OWNER_EMAIL),
     email_logo_url=bool(EMAIL_LOGO_URL),
+    apple_subscriptions=(
+      apple_subscription_configuration_status()
+    ),
   )
 
 
