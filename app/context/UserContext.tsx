@@ -150,6 +150,12 @@ type UserContextValue = {
 const UserContext = createContext<UserContextValue | null>(null);
 
 const PROFILE_KEY = "user.profile.v1";
+const GUEST_RESET_GUARD_KEY =
+  "@nova/guest.reset.guard.v2";
+
+const GUEST_RESET_GUARD_MS =
+  8000;
+
 const SUPABASE_JWT_KEY = "auth.supabase.jwt";
 const SUPABASE_AUTH_TOKEN_KEY = "@supabase.auth.token";
 const PENDING_EMAIL_CHANGE_KEY =
@@ -1485,7 +1491,42 @@ export function UserProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
-    // Update the visible app state immediately.
+    /*
+     * A signed-out guest must start from an isolated local profile, not from
+     * stale data left by an earlier account or development build. Clear only
+     * guest/device-global commerce and customization keys; signed-in user keys
+     * and Supabase data remain untouched.
+     */
+    try {
+      await AsyncStorage.setItem(
+        GUEST_RESET_GUARD_KEY,
+        String(
+          Date.now() +
+            GUEST_RESET_GUARD_MS
+        )
+      );
+
+      await AsyncStorage.multiRemove([
+        "@nova/coins:guest",
+        "@nova/coins:guest:meta:v2",
+        "@nova/purchases/guest",
+        "@nova/purchases",
+        "@nova/purchases.v2",
+        "@nova/companion.active/guest",
+        "@nova/active-companion/guest",
+        "@nova/companion.friendship.v1/guest",
+        "@nova/companion.friendship.daily.v1/guest",
+        "@nova/themeId.guest",
+        "@nova/cursor.equipped.v1.guest",
+      ]);
+    } catch (error) {
+      console.warn(
+        "[UserContext] guest profile cleanup warning:",
+        error
+      );
+    }
+
+    // Update the visible app state after guest storage is clean.
     setSession(null);
     setSupabaseUserId(null);
     setProfileSnapshot(null);

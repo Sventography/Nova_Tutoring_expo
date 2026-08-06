@@ -59,7 +59,6 @@ import { canonId } from "../_lib/canonId";
 import { startCheckout } from "../utils/checkout";
 import { startCoinCheckout } from "../utils/coinCheckout";
 import { notifyCoinOrder } from "../utils/coin-order";
-import { showToast } from "../utils/toast";
 
 import AddressSheet, { AddressPayload } from "../components/AddressSheet";
 import { supabase } from "../lib/supabase";
@@ -640,14 +639,40 @@ async function saveOrders(list: Order[]) {
   await AsyncStorage.setItem(ORDERS_KEY, JSON.stringify(list));
 }
 
-async function persistOwnedPurchaseLocally(
-  _rawId: string | null | undefined
-) {
-  /*
-   * PurchasesContext.grant() is the only ownership writer. It persists to the
-   * current account/guest key and mirrors signed-in ownership to Supabase.
-   * Device-global purchase mirrors caused account data to leak into guests.
-   */
+async function persistOwnedPurchaseLocally(rawId: string | null | undefined) {
+  if (!rawId) return;
+
+  const id = String(rawId);
+  const canon = canonId(id) || id;
+  const variants = Array.from(
+    new Set([
+      id,
+      canon,
+      id.replace(/_/g, "-"),
+      id.replace(/-/g, "_"),
+      canon.replace(/_/g, "-"),
+      canon.replace(/-/g, "_"),
+    ].filter(Boolean))
+  );
+
+  const arrayKeys = ["@nova/purchases", "@nova/purchases.v2"];
+
+  for (const key of arrayKeys) {
+    try {
+      const raw = await AsyncStorage.getItem(key);
+      const arr = Array.isArray(raw ? JSON.parse(raw) : null)
+        ? JSON.parse(raw as string)
+        : [];
+      let changed = false;
+      for (const v of variants) {
+        if (!arr.includes(v)) {
+          arr.push(v);
+          changed = true;
+        }
+      }
+      if (changed) await AsyncStorage.setItem(key, JSON.stringify(arr));
+    } catch {}
+  }
 }
 
 function makeIsOwnedAny(isOwnedFn: (id: string) => boolean) {
@@ -668,20 +693,27 @@ function makeIsOwnedAny(isOwnedFn: (id: string) => boolean) {
   };
 }
 
-function makeGrantAny(
-  grantFn: (id: string | string[]) => Promise<any> | any
-) {
+function makeGrantAny(grantFn: (id: string) => Promise<any> | any) {
   return async (raw: string | null | undefined) => {
     if (!raw) return;
+    const a = String(raw);
+    const c = canonId(a);
 
-    const canonicalId = canonId(String(raw)) || String(raw);
-    if (!canonicalId) return;
+    const swapUnderscoreHyphen = (s: string) =>
+      s.includes("_") ? s.replace(/_/g, "-") : s.replace(/-/g, "_");
 
-    /*
-     * PurchasesContext canonicalizes IDs itself. One awaited grant is safer
-     * than four sequential profile writes for underscore/hyphen variants.
-     */
-    await grantFn(canonicalId);
+    const v1 = a;
+    const v2 = c;
+    const v3 = swapUnderscoreHyphen(a);
+    const v4 = swapUnderscoreHyphen(c);
+
+    const seen = new Set<string>();
+    for (const v of [v2, v1, v4, v3]) {
+      if (!v) continue;
+      if (seen.has(v)) continue;
+      seen.add(v);
+      await grantFn(v);
+    }
   };
 }
 
@@ -2285,20 +2317,14 @@ export default function Shop() {
   const { cursorId, setCursorById } = useCursor();
   const {
     user: currentUser,
-    session,
-    supabaseUserId,
     setAskPersonality,
     setAskMemoryConfig,
   } = useUser() as any;
-  const isAuthenticated =
-    !!supabaseUserId &&
-    !!session?.user?.id;
   const { purchases, isOwned, grant } = usePurchases();
   const {
     activeCompanionId: equippedCompanionId,
     ownedCompanions: ownedCompanionIds,
     equipCompanion,
-    clearCompanion,
   } = useCompanion();
 
   useEffect(() => {
@@ -2392,15 +2418,12 @@ export default function Shop() {
   const processedPurchaseIdsRef = useRef<Set<string>>(new Set());
   const pendingIapProductIdRef = useRef<string | null>(null);
   const pendingIapItemRef = useRef<any | null>(null);
-  const iapPurchaseOwnerIdRef = useRef<string | null>(null);
   const iapConnectedRef = useRef(false);
   const iapProductsPromiseRef = useRef<Promise<string[]> | null>(null);
   const purchaseUpdatedSubscriptionRef = useRef<{ remove: () => void } | null>(null);
   const purchaseErrorSubscriptionRef = useRef<{ remove: () => void } | null>(null);
   const iapPurchaseInFlightRef = useRef(false);
-  const iapPurchaseStartedAtRef = useRef<number | null>(null);
   const purchaseResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [restoringIapPurchases, setRestoringIapPurchases] = useState(false);
 
   const panResponder = useRef(
     PanResponder.create({
@@ -2674,10 +2697,8 @@ export default function Shop() {
 
   const clearIapPurchasePendingState = () => {
     iapPurchaseInFlightRef.current = false;
-    iapPurchaseStartedAtRef.current = null;
     pendingIapProductIdRef.current = null;
     pendingIapItemRef.current = null;
-    iapPurchaseOwnerIdRef.current = null;
 
     if (purchaseResetTimerRef.current) {
       clearTimeout(purchaseResetTimerRef.current);
@@ -2945,40 +2966,8 @@ export default function Shop() {
 
   const processCompletedIapPurchase = async (
     purchase: any,
-    fallbackItem?: any,
-    options?: { restored?: boolean }
+    fallbackItem?: any
   ) => {
-    const restored = options?.restored === true;
-    const expectedOwnerId =
-      iapPurchaseOwnerIdRef.current ||
-      supabaseUserId ||
-      null;
-
-    if (
-      !supabaseUserId ||
-      (expectedOwnerId &&
-        expectedOwnerId !== supabaseUserId)
-    ) {
-      console.warn(
-        "[IAP] refusing to grant a purchase without the matching signed-in account",
-        {
-          expectedOwnerId,
-          currentOwnerId: supabaseUserId ?? null,
-          restored,
-        }
-      );
-
-      if (!restored) {
-        Alert.alert(
-          "Sign in required",
-          "Sign in to the account that started this purchase, then use Restore Apple Purchases."
-        );
-      }
-
-      clearIapPurchasePendingState();
-      return false;
-    }
-
     const productId =
       getPurchaseProductId(purchase) || pendingIapProductIdRef.current || "";
     const item =
@@ -3001,36 +2990,17 @@ export default function Shop() {
       !!transactionId &&
       (processedPurchaseIdsRef.current.has(transactionId) ||
         persistedTransactions.has(transactionId));
-    const isConsumable = item?.category === "coin_pack";
 
     try {
-      /*
-       * Non-consumable ownership is idempotent and must be reasserted during
-       * every restore, even when this transaction ID was processed before.
-       * The old code skipped fulfillment for processed IDs, so a stale local
-       * or Supabase hydrate could permanently hide a legitimate Apple purchase.
-       * Consumable coin packs remain transaction-ID guarded to prevent double
-       * credits.
-       */
-      if (!alreadyProcessed || !isConsumable) {
-        await fulfillDigitalItem(item, productId, {
-          autoEquip: !restored && !alreadyProcessed,
-          source: restored ? "iap_restore" : "iap_purchase",
-        });
-
-        if (!isConsumable) {
-          await persistOwnedPurchaseLocally((item as any)?.id || null);
-          await persistOwnedPurchaseLocally(
-            (item as any)?.meta?.grantId || null
-          );
-          await persistOwnedPurchaseLocally(productId);
-          await persistOwnedPurchaseLocally(
-            canonId((item as any)?.id || "") || null
-          );
-        }
-      }
-
       if (!alreadyProcessed) {
+        await fulfillDigitalItem(item, productId);
+        await persistOwnedPurchaseLocally((item as any)?.id || null);
+        await persistOwnedPurchaseLocally((item as any)?.meta?.grantId || null);
+        await persistOwnedPurchaseLocally(productId);
+        await persistOwnedPurchaseLocally(
+          canonId((item as any)?.id || "") || null
+        );
+
         if (transactionId) {
           processedPurchaseIdsRef.current.add(transactionId);
           await markIapTransactionProcessed(transactionId);
@@ -3049,46 +3019,30 @@ export default function Shop() {
           purchaseKey: transactionId
             ? `iap:${transactionId}`
             : `iap:${productId}:${fallbackPurchaseStamp}`,
-          source: restored ? "iap_restore" : "iap",
+          source: "iap",
           sku: (item as any)?.id || productId,
           category: (item as any)?.category || null,
           inventoryBacked: (item as any)?.category !== "coin_pack",
           ownedCountBefore: Object.keys(purchases || {}).length,
         });
       } else {
-        console.log("[IAP DEBUG] existing transaction entitlement refreshed", {
+        console.log("[IAP DEBUG] duplicate transaction ignored", {
           transactionId,
           productId,
-          isConsumable,
-          restored,
         });
       }
 
-      try {
-        await ExpoIAP.finishTransaction({
-          purchase,
-          isConsumable,
-        });
+      // Coins are consumable; themes/cursors/etc. are non-consumable.
+      await ExpoIAP.finishTransaction({
+        purchase,
+        isConsumable: item?.category === "coin_pack",
+      });
 
-        console.log("[IAP DEBUG] transaction finished", {
-          transactionId,
-          productId,
-          isConsumable,
-          restored,
-        });
-      } catch (finishError) {
-        /*
-         * getAvailablePurchases may return an already-finished StoreKit 2
-         * entitlement. Ownership has already been safely refreshed above, so
-         * a harmless second-finish failure must not make the restore disappear.
-         */
-        console.warn("[IAP] finishTransaction did not complete", {
-          transactionId,
-          productId,
-          restored,
-          finishError,
-        });
-      }
+      console.log("[IAP DEBUG] transaction finished", {
+        transactionId,
+        productId,
+        consumable: item?.category === "coin_pack",
+      });
 
       try {
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -3096,145 +3050,56 @@ export default function Shop() {
 
       clearIapPurchasePendingState();
       return true;
-    } catch (error) {
-      console.warn("[IAP] purchase fulfillment failed", error);
+    } catch (e) {
+      console.warn("[IAP] purchase fulfillment/finalization failed", e);
       clearIapPurchasePendingState();
       return false;
     }
   };
 
   const restoreAvailableIapPurchases = async (silent = true) => {
-    if (!isAuthenticated) {
-      if (!silent) {
-        Alert.alert(
-          "Sign in required",
-          "Sign in before restoring Apple purchases so they are saved to the correct Nova Tutoring account."
-        );
-      }
-      return 0;
-    }
-
-    if (restoringIapPurchases) return 0;
-
-    setRestoringIapPurchases(true);
     try {
-      const available = await isIapAvailable();
-      const connected = available ? await ensureIapConnected() : false;
+      const purchases = await ExpoIAP.getAvailablePurchases();
+      if (!Array.isArray(purchases) || !purchases.length) return 0;
 
-      if (!available || !connected) {
-        if (!silent) showIapUnavailableAlert(available ? "connect_failed" : "module_missing");
-        return 0;
-      }
-
-      const storePurchases = await ExpoIAP.getAvailablePurchases();
-      if (!Array.isArray(storePurchases) || !storePurchases.length) {
-        if (!silent) {
-          Alert.alert(
-            "No purchases found",
-            "Apple did not return any restorable purchases for this account."
-          );
-        }
-        return 0;
-      }
-
-      let restoredCount = 0;
-      for (const purchase of storePurchases) {
+      let restored = 0;
+      for (const purchase of purchases) {
         const productId = getPurchaseProductId(purchase);
         const item = resolveIapCatalogItem(productId);
-        if (!item || item?.category === "coin_pack") continue;
+        if (!item) continue;
 
-        const ok = await processCompletedIapPurchase(purchase, item, {
-          restored: true,
-        });
-        if (ok) restoredCount += 1;
+        const ok = await processCompletedIapPurchase(purchase, item);
+        if (ok) restored += 1;
       }
 
-      if (!silent) {
+      if (restored > 0 && !silent) {
         Alert.alert(
-          restoredCount > 0 ? "Purchases restored" : "Nothing to restore",
-          restoredCount === 1
+          "Purchases restored",
+          restored === 1
             ? "Your Apple purchase was restored."
-            : restoredCount > 1
-            ? `${restoredCount} Apple purchases were restored.`
-            : "No matching Nova Tutoring purchases were found."
+            : `${restored} Apple purchases were restored.`
         );
       }
 
-      return restoredCount;
-    } catch (error) {
-      console.warn("[IAP] getAvailablePurchases failed", error);
-      if (!silent) {
-        Alert.alert(
-          "Restore failed",
-          "Apple purchases could not be restored right now. Please try again."
-        );
-      }
+      return restored;
+    } catch (e) {
+      console.warn("[IAP] getAvailablePurchases failed", e);
       return 0;
-    } finally {
-      setRestoringIapPurchases(false);
-      clearIapPurchasePendingState();
-    }
-  };
-
-  const findExistingStorePurchaseForItem = async (
-    item: any,
-    candidateProductIds: string[]
-  ) => {
-    if (item?.category === "coin_pack") return null;
-
-    try {
-      const storePurchases = await ExpoIAP.getAvailablePurchases();
-      const candidateSet = new Set(
-        normalizeIapProductIdSet(candidateProductIds).map(toUnderscoreId)
-      );
-
-      return (
-        (Array.isArray(storePurchases) ? storePurchases : []).find(
-          (purchase: any) => {
-            const purchaseIds = normalizeIapProductIdSet([
-              getPurchaseProductId(purchase),
-            ]).map(toUnderscoreId);
-            return purchaseIds.some((id) => candidateSet.has(id));
-          }
-        ) || null
-      );
-    } catch (error) {
-      console.warn("[IAP] existing entitlement lookup failed", error);
-      return null;
     }
   };
 
   const buyWithIap = async (it: any) => {
-    if (!isAuthenticated) {
-      Alert.alert(
-        "Sign in required",
-        "Please sign in or create an account before making an Apple purchase. This keeps purchases attached to the correct Nova Tutoring account."
-      );
-      return;
-    }
-
     console.log("[IAP DEBUG] buyWithIap invoked", {
       itemId: it?.id,
       category: it?.category,
     });
 
     if (iapPurchaseInFlightRef.current) {
-      const startedAt = iapPurchaseStartedAtRef.current ?? 0;
-      const isStale = !startedAt || Date.now() - startedAt > 45000;
-
-      if (isStale) {
-        console.warn("[IAP] clearing stale purchase lock", {
-          pendingProductId: pendingIapProductIdRef.current,
-          startedAt,
-        });
-        clearIapPurchasePendingState();
-      } else {
-        Alert.alert(
-          "Purchase in progress",
-          "Please finish or cancel the current Apple purchase first."
-        );
-        return;
-      }
+      Alert.alert(
+        "Purchase in progress",
+        "Please finish or cancel the current Apple purchase first."
+      );
+      return;
     }
 
     if (
@@ -3282,27 +3147,6 @@ export default function Shop() {
     }
 
     try {
-      const existingPurchase = await findExistingStorePurchaseForItem(
-        it,
-        candidatePids
-      );
-
-      if (existingPurchase) {
-        const restored = await processCompletedIapPurchase(
-          existingPurchase,
-          it,
-          { restored: true }
-        );
-
-        if (restored) {
-          Alert.alert(
-            "Purchase restored",
-            `${String(it?.title || "This item")} was already purchased with this Apple account and has been restored.`
-          );
-        }
-        return;
-      }
-
       const requestedIds = Array.from(new Set(candidatePids));
       const products = await ExpoIAP.fetchProducts({
         skus: requestedIds,
@@ -3334,18 +3178,12 @@ export default function Shop() {
 
       pendingIapProductIdRef.current = productId;
       pendingIapItemRef.current = it;
-      iapPurchaseOwnerIdRef.current = supabaseUserId;
       iapPurchaseInFlightRef.current = true;
-      iapPurchaseStartedAtRef.current = Date.now();
 
       // Safety reset only. Successful/cancelled flows clear this from listeners.
       purchaseResetTimerRef.current = setTimeout(() => {
-        console.warn("[IAP] purchase request timed out; clearing local lock", {
-          productId,
-          itemId: it?.id,
-        });
         clearIapPurchasePendingState();
-      }, 45000);
+      }, 120000);
 
       track("shop_iap_purchase_start", {
         productId,
@@ -3406,8 +3244,7 @@ export default function Shop() {
 
           await processCompletedIapPurchase(
             purchase,
-            pendingIapItemRef.current || undefined,
-            { restored: false }
+            pendingIapItemRef.current || undefined
           );
         });
 
@@ -3438,11 +3275,9 @@ export default function Shop() {
 
       await fetchIapProducts();
 
-      // Restore only for an authenticated Nova account. StoreKit entitlements
-      // must never be silently granted into an anonymous guest profile.
-      if (isAuthenticated) {
-        await restoreAvailableIapPurchases(true);
-      }
+      // Complete any StoreKit transaction that succeeded while the app was
+      // closed or before JavaScript finished starting.
+      await restoreAvailableIapPurchases(true);
     };
 
     void startIap();
@@ -3463,10 +3298,8 @@ export default function Shop() {
 
       pendingIapProductIdRef.current = null;
       pendingIapItemRef.current = null;
-      iapPurchaseOwnerIdRef.current = null;
       iapProductsPromiseRef.current = null;
       iapPurchaseInFlightRef.current = false;
-      iapPurchaseStartedAtRef.current = null;
 
       if (iapConnectedRef.current) {
         void ExpoIAP.endConnection().catch((e: any) =>
@@ -3475,7 +3308,7 @@ export default function Shop() {
         iapConnectedRef.current = false;
       }
     };
-  }, [supabaseUserId, isAuthenticated]);
+  }, [currentUser?.id]);
 
   useEffect(() => {
     const onUrl = async (event: { url: string }) => {
@@ -3703,41 +3536,6 @@ export default function Shop() {
         return fromContext || fromPurchases;
       }),
     [ownedCompanionIds, purchases, isOwnedAny]
-  );
-
-  const ownedLegendaryCompanions = useMemo(
-    () =>
-      COMPANIONS.filter((c: any) => {
-        const cid = canonId(c.id);
-        const effectType =
-          getCompanionEffect(c.id);
-
-        const isLegendary =
-          effectType === "legend_fire" ||
-          effectType === "legend_lightning" ||
-          effectType === "legend_bubbles" ||
-          effectType === "legend_sparkles" ||
-          effectType === "legend_spiral" ||
-          effectType === "shield";
-
-        if (!isLegendary) return false;
-
-        const fromContext =
-          (ownedCompanionIds || []).some(
-            (ownedId: string) =>
-              canonId(ownedId) === cid
-          );
-
-        const fromPurchases =
-          isOwnedAny(c.id);
-
-        return fromContext || fromPurchases;
-      }),
-    [
-      ownedCompanionIds,
-      purchases,
-      isOwnedAny,
-    ]
   );
 
   function isCompanionOwned(rawId: string | null | undefined): boolean {
@@ -4444,33 +4242,6 @@ export default function Shop() {
     if (activeEffect) setEffectKey((k) => k + 1);
   }
 
-  async function unequipCompanionNow(
-    source:
-      | "shop_header"
-      | "quick_row"
-      | "legendary_quick_row"
-      | "detail_modal" = "shop_header"
-  ) {
-    const previousId = equippedCompanionId
-      ? canonId(equippedCompanionId)
-      : null;
-
-    setFloatingCompanion(null);
-    setActiveEffect(null);
-    setStripActiveId(null);
-    companionAnim.stopAnimation();
-    companionAnim.setValue(0);
-
-    await clearCompanion();
-
-    track("companion_unequipped", {
-      id: previousId,
-      source,
-    });
-
-    showToast("Companion unequipped");
-  }
-
   function triggerCompanion(id: string) {
     const comp = COMPANIONS.find((c: any) => canonId(c.id) === canonId(id));
     if (comp) {
@@ -5042,110 +4813,18 @@ export default function Shop() {
           </View>
         </View>
 
-        {Platform.OS !== "web" && (
-          <Pressable
-            disabled={restoringIapPurchases}
-            onPress={() => void restoreAvailableIapPurchases(false)}
-            accessibilityRole="button"
-            accessibilityLabel={
-              isAuthenticated
-                ? "Restore Apple purchases"
-                : "Sign in to restore Apple purchases"
-            }
-            style={({ pressed }) => ({
-              alignSelf: "flex-end",
-              marginTop: 10,
-              marginBottom: 2,
-              paddingHorizontal: 12,
-              paddingVertical: 7,
-              borderRadius: 999,
-              borderWidth: 1,
-              borderColor: tokens.pillBorder as any,
-              backgroundColor: pressed
-                ? "rgba(0,229,255,0.14)"
-                : (tokens.pillBg as any),
-              opacity: restoringIapPurchases ? 0.55 : 1,
-            })}
-          >
-            <Text
-              style={{
-                color: tokens.pillText as any,
-                fontSize: 12,
-                fontWeight: "800",
-              }}
-            >
-              {restoringIapPurchases
-                ? "Restoring…"
-                : isAuthenticated
-                ? "Restore Apple Purchases"
-                : "Sign In to Restore"}
-            </Text>
-          </Pressable>
-        )}
-
         {ownedCompanions.length > 0 && (
           <View style={{ marginTop: 16, marginBottom: 12 }}>
-            <View
+            <Text
               style={{
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginBottom: 8,
+                color: tokens.titleText as any,
+                fontSize: 14,
+                fontWeight: "800",
+                marginBottom: 6,
               }}
             >
-              <Text
-                style={{
-                  color: tokens.titleText as any,
-                  fontSize: 14,
-                  fontWeight: "800",
-                }}
-              >
-                My Companions
-              </Text>
-
-              {equippedCompanionId ? (
-                <Pressable
-                  onPress={() =>
-                    void unequipCompanionNow(
-                      "shop_header"
-                    )
-                  }
-                  accessibilityRole="button"
-                  accessibilityLabel="Show no companion"
-                  style={({ pressed }) => ({
-                    paddingHorizontal: 11,
-                    paddingVertical: 6,
-                    borderRadius: 999,
-                    borderWidth: 1,
-                    borderColor: "#FCA5A5",
-                    backgroundColor: pressed
-                      ? "rgba(239,68,68,0.22)"
-                      : "rgba(239,68,68,0.10)",
-                  })}
-                >
-                  <Text
-                    style={{
-                      color: "#FCA5A5",
-                      fontSize: 10,
-                      fontWeight: "900",
-                    }}
-                  >
-                    NO COMPANION
-                  </Text>
-                </Pressable>
-              ) : (
-                <Text
-                  style={{
-                    color: tokens.cardText as any,
-                    fontSize: 10,
-                    fontWeight: "800",
-                  }}
-                >
-                  NONE EQUIPPED
-                </Text>
-              )}
-            </View>
-
+              My Companions
+            </Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {ownedCompanions.map((it: any) => {
                 const cid = canonId(it.id);
@@ -5178,24 +4857,14 @@ export default function Shop() {
                     }}
                   >
                     <Pressable
-                      onPress={() =>
-                        isActive
-                          ? void unequipCompanionNow(
-                              "quick_row"
-                            )
-                          : triggerCompanion(it.id)
-                      }
+                      onPress={() => triggerCompanion(it.id)}
                       onLongPress={() => setDetailItem(it)}
                       delayLongPress={350}
                       accessibilityRole="button"
                       accessibilityLabel={`${
-                        isActive ? "Unequip" : "Equip"
+                        isActive ? "Equipped" : "Equip"
                       } ${it.shortLabel || it.title}`}
-                      accessibilityHint={
-                        isActive
-                          ? "Tap to show no companion. Press and hold for details."
-                          : "Tap to equip. Press and hold for details."
-                      }
+                      accessibilityHint="Tap to equip. Press and hold for details."
                       style={({ pressed }) => ({
                         width: 72,
                         height: 72,
@@ -5279,237 +4948,11 @@ export default function Shop() {
                         textAlign: "center",
                       }}
                     >
-                      {isActive
-                        ? "Tap to unequip"
-                        : "Tap to equip"}
+                      {isActive ? "Equipped" : "Tap to equip"}
                     </Text>
                   </Animated.View>
                 );
               })}
-            </ScrollView>
-          </View>
-        )}
-
-        {ownedLegendaryCompanions.length > 0 && (
-          <View
-            style={{
-              marginTop: 4,
-              marginBottom: 16,
-            }}
-          >
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginBottom: 8,
-              }}
-            >
-              <Text
-                style={{
-                  color: tokens.titleText as any,
-                  fontSize: 14,
-                  fontWeight: "900",
-                }}
-              >
-                My Legendary Companions
-              </Text>
-              <Text
-                style={{
-                  color: "#FDE68A",
-                  fontSize: 10,
-                  fontWeight: "900",
-                  letterSpacing: 0.7,
-                }}
-              >
-                {ownedLegendaryCompanions.length} OWNED
-              </Text>
-            </View>
-
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-            >
-              {ownedLegendaryCompanions.map(
-                (it: any) => {
-                  const cid = canonId(it.id);
-                  const isActive =
-                    !!equippedCompanionId &&
-                    canonId(
-                      equippedCompanionId
-                    ) === cid;
-
-                  const palette =
-                    getLegendaryPalette(cid);
-
-                  const scale =
-                    isActive ||
-                    stripActiveId === it.id
-                      ? companionScale
-                      : 1;
-
-                  const abilityShort =
-                    getCompanionAbilityShort(
-                      it.id
-                    );
-
-                  return (
-                    <Animated.View
-                      key={it.id}
-                      style={{
-                        width: 104,
-                        marginRight: 13,
-                        transform: [{ scale }],
-                      }}
-                    >
-                      <Pressable
-                        onPress={() =>
-                          isActive
-                            ? void unequipCompanionNow(
-                                "legendary_quick_row"
-                              )
-                            : triggerCompanion(
-                                it.id
-                              )
-                        }
-                        onLongPress={() =>
-                          setDetailItem(it)
-                        }
-                        delayLongPress={350}
-                        accessibilityRole="button"
-                        accessibilityLabel={`${
-                          isActive
-                            ? "Unequip"
-                            : "Equip"
-                        } ${
-                          it.shortLabel ||
-                          it.title
-                        }`}
-                        accessibilityHint={
-                          isActive
-                            ? "Tap to show no companion. Press and hold for details."
-                            : "Tap to equip. Press and hold for details."
-                        }
-                        style={({ pressed }) => ({
-                          width: 86,
-                          height: 86,
-                          borderRadius: 43,
-                          borderWidth: isActive
-                            ? 5
-                            : 4,
-                          borderColor: isActive
-                            ? "#FACC15"
-                            : palette.primary,
-                          overflow: "hidden",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          backgroundColor:
-                            pressed
-                              ? palette.glow
-                              : palette.dark,
-                          shadowColor:
-                            palette.primary,
-                          shadowOpacity: 0.68,
-                          shadowRadius: 11,
-                          shadowOffset: {
-                            width: 0,
-                            height: 0,
-                          },
-                          elevation: 7,
-                        })}
-                      >
-                        <LinearGradient
-                          pointerEvents="none"
-                          colors={[
-                            palette.glow,
-                            palette.dark,
-                            `${palette.secondary}33`,
-                          ]}
-                          style={{
-                            position: "absolute",
-                            top: 0,
-                            right: 0,
-                            bottom: 0,
-                            left: 0,
-                          }}
-                        />
-
-                        {it.image ? (
-                          <Image
-                            source={it.image}
-                            style={{
-                              width: "100%",
-                              height: "100%",
-                            }}
-                            resizeMode="contain"
-                          />
-                        ) : (
-                          <Text
-                            style={{
-                              color: palette.accent,
-                              fontWeight: "900",
-                              textAlign: "center",
-                              paddingHorizontal: 6,
-                            }}
-                            numberOfLines={2}
-                          >
-                            {it.shortLabel ||
-                              it.title}
-                          </Text>
-                        )}
-                      </Pressable>
-
-                      <Text
-                        style={{
-                          color: palette.accent,
-                          fontSize: 11,
-                          fontWeight: "900",
-                          marginTop: 6,
-                          maxWidth: 100,
-                          textAlign: "center",
-                        }}
-                        numberOfLines={1}
-                      >
-                        {it.shortLabel ||
-                          it.title}
-                      </Text>
-
-                      {abilityShort ? (
-                        <Text
-                          style={{
-                            color: palette.secondary,
-                            fontSize: 9,
-                            fontWeight: "800",
-                            lineHeight: 12,
-                            marginTop: 3,
-                            maxWidth: 100,
-                            textAlign: "center",
-                          }}
-                          numberOfLines={2}
-                        >
-                          {abilityShort}
-                        </Text>
-                      ) : null}
-
-                      <Text
-                        style={{
-                          color: isActive
-                            ? "#FACC15"
-                            : "#C4B5FD",
-                          fontSize: 9,
-                          fontWeight: "900",
-                          marginTop: 3,
-                          textAlign: "center",
-                        }}
-                      >
-                        {isActive
-                          ? "TAP TO UNEQUIP"
-                          : "TAP TO EQUIP"}
-                      </Text>
-                    </Animated.View>
-                  );
-                }
-              )}
             </ScrollView>
           </View>
         )}
@@ -6025,11 +5468,7 @@ export default function Shop() {
         primaryLabel={
           detailItem?.category === "companions" &&
           isCompanionOwned(detailItem?.id) &&
-          isCompanionEquipped(detailItem?.id)
-            ? "Unequip Companion"
-            : detailItem?.category === "companions" &&
-              isCompanionOwned(detailItem?.id) &&
-              !isCompanionEquipped(detailItem?.id)
+          !isCompanionEquipped(detailItem?.id)
             ? "Equip Companion"
             : detailItem?.category === "companions" &&
               !isCompanionOwned(detailItem?.id)
@@ -6046,16 +5485,7 @@ export default function Shop() {
         onPrimaryAction={
           detailItem?.category === "companions" &&
           isCompanionOwned(detailItem?.id) &&
-          isCompanionEquipped(detailItem?.id)
-            ? () => {
-                setDetailItem(null);
-                void unequipCompanionNow(
-                  "detail_modal"
-                );
-              }
-            : detailItem?.category === "companions" &&
-              isCompanionOwned(detailItem?.id) &&
-              !isCompanionEquipped(detailItem?.id)
+          !isCompanionEquipped(detailItem?.id)
             ? () => {
                 triggerCompanion(detailItem.id);
                 setDetailItem(null);

@@ -4,6 +4,7 @@ import React, {
   createContext,
   useContext,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   ReactNode,
@@ -50,13 +51,29 @@ const CoinsContext =
   >(undefined);
 
 const GUEST_COINS_KEY =
-  "@nova/coins:guest";
+  "@nova/coins:guest:v4";
 
 const USER_COINS_PREFIX =
   "@nova/coins:user:";
 
+const LEGACY_GUEST_COIN_KEYS = [
+  "@nova/coins:guest",
+  "@nova/coins:guest:meta:v2",
+  "@nova/coins:guest:v2",
+  "@nova/coins:guest:v2:meta:v2",
+  "@nova/coins:guest:v3",
+  "@nova/coins:guest:v3:meta:v2",
+] as const;
+
+
 const COIN_META_SUFFIX =
   ":meta:v2";
+
+const GUEST_RESET_GUARD_KEY =
+  "@nova/guest.reset.guard.v2";
+
+const GUEST_RESET_GUARD_MS =
+  8000;
 
 function getUserCoinsKey(
   userId: string | null
@@ -455,12 +472,50 @@ export function CoinsProvider({
     async (
       ownerId: string | null
     ): Promise<number> => {
+      if (!ownerId) {
+        /*
+         * Guest wallet v4 intentionally starts clean.
+         * Remove only historical guest keys that may contain data leaked
+         * from older builds. Signed-in user keys are never touched.
+         */
+        await AsyncStorage.multiRemove([
+          ...LEGACY_GUEST_COIN_KEYS,
+        ]);
+      }
+
       const local =
         await readLocalCoins(
           ownerId
         );
 
       if (!ownerId) {
+        const rawGuardUntil =
+          await AsyncStorage.getItem(
+            GUEST_RESET_GUARD_KEY
+          );
+
+        const guardUntil =
+          Number(rawGuardUntil || 0);
+
+        if (
+          Number.isFinite(guardUntil) &&
+          guardUntil > Date.now()
+        ) {
+          await writeLocalCoins(
+            null,
+            0,
+            false
+          );
+
+          return 0;
+        }
+
+        if (rawGuardUntil) {
+          await AsyncStorage.removeItem(
+            GUEST_RESET_GUARD_KEY
+          );
+        }
+
         return local.value;
       }
 
@@ -626,17 +681,20 @@ export function CoinsProvider({
       }
     };
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     let cancelled = false;
 
     const ownerId =
       supabaseUserId ?? null;
 
+    // Reset before the next frame so a signed-out guest never sees or spends
+    // the previous account's balance while the new owner is hydrating.
+    applyCoins(0);
+    setLoading(true);
+    setReady(false);
+
     const run = async () => {
       if (!userReady) return;
-
-      setLoading(true);
-      setReady(false);
 
       try {
         /**
@@ -698,6 +756,39 @@ export function CoinsProvider({
       const run =
         mutationQueueRef.current.then(
           async () => {
+            if (!ownerId) {
+              const rawGuardUntil =
+                await AsyncStorage.getItem(
+                  GUEST_RESET_GUARD_KEY
+                );
+
+              const guardUntil =
+                Number(rawGuardUntil || 0);
+
+              if (
+                Number.isFinite(
+                  guardUntil
+                ) &&
+                guardUntil > Date.now()
+              ) {
+                applyCoins(0);
+                await writeLocalCoins(
+                  null,
+                  0,
+                  false
+                );
+
+                if (__DEV__) {
+                  console.log(
+                    "[CoinsContext] ignored guest coin mutation during sign-out reset:",
+                    reason
+                  );
+                }
+
+                return;
+              }
+            }
+
             const previous =
               coinsRef.current;
 

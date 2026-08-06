@@ -307,19 +307,6 @@ type PurchaseRow = {
   item_id?: string | null;
 };
 
-function mergePurchaseMaps(...sources: any[]): PurchaseMap {
-  const merged: PurchaseMap = {};
-
-  for (const source of sources) {
-    const normalized = normalizePurchases(source);
-    for (const id of Object.keys(normalized)) {
-      merged[id] = true;
-    }
-  }
-
-  return merged;
-}
-
 function normalizeRowsToMap(rows: PurchaseRow[] | null): PurchaseMap {
   const out: PurchaseMap = {};
   if (!rows) return out;
@@ -403,8 +390,7 @@ export function PurchasesProvider({
   useEffect(() => {
     let alive = true;
 
-    // Clear both state and the ref immediately so the previous identity can't flash or receive a late grant after an account switch.
-    purchasesRef.current = {};
+    // Clear immediately so we don't flash previous account's purchases
     setPurchases({});
     setHydrated(false);
 
@@ -416,10 +402,10 @@ export function PurchasesProvider({
         // --------------------- GUEST MODE ---------------------
         if (!supabaseUserId) {
           console.log(
-            "[PurchasesContext] guest mode, loading isolated guest inventory"
+            "[PurchasesContext] guest mode, loading from AsyncStorage (with legacy)"
           );
-          // Never merge device-global legacy keys into a guest profile.
-          const guestPurchases = await loadLocalPurchases(key, false);
+          // Guests can see legacy keys so old installs don't lose entitlements.
+          const guestPurchases = await loadLocalPurchases(key, true);
           console.log(
             "[PurchasesContext] loaded guest purchases (normalized):",
             guestPurchases
@@ -433,17 +419,16 @@ export function PurchasesProvider({
 
         // --------------------- LOGGED-IN MODE ---------------------
         console.log(
-          "[PurchasesContext] logged in, merging local and remote ownership for",
+          "[PurchasesContext] logged in, loading from Supabase purchases table for",
           supabaseUserId
         );
 
-        /*
-         * Ownership must be additive. A stale purchases-table row set must not
-         * erase a newer IAP grant already saved locally or in profiles.purchases.
-         */
-        const localPurchases = await loadLocalPurchases(key, false);
-        let tablePurchases: PurchaseMap = {};
-        let profilePurchases: PurchaseMap = {};
+        let next: PurchaseMap | null = null;
+        let remoteError = false;
+
+        // 1) Try purchases table (prefer new schema: item_id/source).
+        let rows: PurchaseRow[] | null = null;
+        let rowsError: any = null;
 
         try {
           const { data: rowsV1, error: errV1 } = await supabase
@@ -452,39 +437,40 @@ export function PurchasesProvider({
             .eq("user_id", supabaseUserId);
 
           if (errV1 && (errV1 as any).code === "42703") {
+            // item_id doesn't exist → older schema (sku)
             const { data: rowsV2, error: errV2 } = await supabase
               .from("purchases")
               .select("sku")
               .eq("user_id", supabaseUserId);
-
-            if (errV2) {
-              console.warn(
-                "[PurchasesContext] purchases table unavailable during hydrate:",
-                errV2
-              );
-            } else {
-              tablePurchases = normalizeRowsToMap(
-                (rowsV2 as PurchaseRow[]) || null
-              );
-            }
-          } else if (errV1) {
-            console.warn(
-              "[PurchasesContext] purchases table unavailable during hydrate:",
-              errV1
-            );
+            rows = (rowsV2 as PurchaseRow[]) || null;
+            rowsError = errV2;
           } else {
-            tablePurchases = normalizeRowsToMap(
-              (rowsV1 as PurchaseRow[]) || null
-            );
+            rows = (rowsV1 as PurchaseRow[]) || null;
+            rowsError = errV1;
           }
-        } catch (error) {
-          console.warn(
-            "[PurchasesContext] purchases table hydrate threw:",
-            error
-          );
+        } catch (err: any) {
+          rowsError = err;
         }
 
-        try {
+        if (rowsError) {
+          remoteError = true;
+          console.warn(
+            "[PurchasesContext] load purchases table error:",
+            rowsError
+          );
+        } else if (rows && rows.length > 0) {
+          console.log(
+            "[PurchasesContext] found rows in purchases table:",
+            rows.length
+          );
+          next = normalizeRowsToMap(rows);
+        }
+
+        // 2) If table is empty but no error, try legacy profiles.purchases JSON
+        if (!remoteError && (!next || Object.keys(next).length === 0)) {
+          console.log(
+            "[PurchasesContext] no purchases in table, checking profiles.purchases"
+          );
           const { data: profileRow, error: profileError } = await supabase
             .from("profiles")
             .select("purchases")
@@ -492,30 +478,45 @@ export function PurchasesProvider({
             .maybeSingle();
 
           if (profileError) {
+            remoteError = true;
             console.warn(
-              "[PurchasesContext] profile purchase mirror unavailable:",
+              "[PurchasesContext] load profile.purchases error:",
               profileError
             );
-          } else {
-            profilePurchases = normalizePurchases(profileRow?.purchases);
+          } else if (
+            profileRow &&
+            profileRow.purchases &&
+            typeof profileRow.purchases === "object"
+          ) {
+            console.log(
+              "[PurchasesContext] found purchases in profile JSON:",
+              profileRow.purchases
+            );
+            next = normalizePurchases(profileRow.purchases);
           }
-        } catch (error) {
-          console.warn(
-            "[PurchasesContext] profile purchase mirror hydrate threw:",
-            error
-          );
         }
 
-        const next = mergePurchaseMaps(
-          localPurchases,
-          profilePurchases,
-          tablePurchases
-        );
+        // 3) If remote errored out entirely, fall back to *only* this user's local key
+        if (remoteError) {
+          console.log(
+            "[PurchasesContext] remote error, checking local storage for user",
+            key
+          );
+          const local = await loadLocalPurchases(key, false);
+          if (Object.keys(local).length > 0) {
+            console.log(
+              "[PurchasesContext] loaded local purchases for user (normalized):",
+              local
+            );
+            next = local;
+          }
+        }
 
-        console.log("[PurchasesContext] merged ownership:", next);
+        if (!next) {
+          next = {};
+        }
 
         if (alive) {
-          purchasesRef.current = next;
           setPurchases(next);
           await AsyncStorage.setItem(key, JSON.stringify(next));
         }
@@ -870,9 +871,11 @@ export function PurchasesProvider({
 
       try {
         if (supabaseUserId) {
-          const localPurchases = await loadLocalPurchases(key, false);
-          let tablePurchases: PurchaseMap = {};
-          let profilePurchases: PurchaseMap = {};
+          let remoteError = false;
+
+          // Try purchases table first (new schema, then fallback)
+          let rows: PurchaseRow[] | null = null;
+          let rowsError: any = null;
 
           try {
             const { data: rowsV1, error: errV1 } = await supabase
@@ -885,35 +888,35 @@ export function PurchasesProvider({
                 .from("purchases")
                 .select("sku")
                 .eq("user_id", supabaseUserId);
-
-              if (errV2) {
-                console.warn(
-                  "[PurchasesContext] reload purchases table unavailable:",
-                  errV2
-                );
-              } else {
-                tablePurchases = normalizeRowsToMap(
-                  (rowsV2 as PurchaseRow[]) || null
-                );
-              }
-            } else if (errV1) {
-              console.warn(
-                "[PurchasesContext] reload purchases table unavailable:",
-                errV1
-              );
+              rows = (rowsV2 as PurchaseRow[]) || null;
+              rowsError = errV2;
             } else {
-              tablePurchases = normalizeRowsToMap(
-                (rowsV1 as PurchaseRow[]) || null
-              );
+              rows = (rowsV1 as PurchaseRow[]) || null;
+              rowsError = errV1;
             }
-          } catch (error) {
-            console.warn(
-              "[PurchasesContext] reload purchases table threw:",
-              error
-            );
+          } catch (err: any) {
+            rowsError = err;
           }
 
-          try {
+          if (rowsError) {
+            remoteError = true;
+            console.warn(
+              "[PurchasesContext] reload purchases table error:",
+              rowsError
+            );
+          } else if (rows && rows.length > 0) {
+            console.log(
+              "[PurchasesContext] reload got purchases from table:",
+              rows
+            );
+            const norm = normalizeRowsToMap(rows);
+            setPurchases(norm);
+            await AsyncStorage.setItem(key, JSON.stringify(norm));
+            return;
+          }
+
+          // Fallback: profiles.purchases JSON if table empty but no error
+          if (!remoteError) {
             const { data: profileRow, error: profileError } = await supabase
               .from("profiles")
               .select("purchases")
@@ -921,35 +924,51 @@ export function PurchasesProvider({
               .maybeSingle();
 
             if (profileError) {
+              remoteError = true;
               console.warn(
-                "[PurchasesContext] reload profile mirror unavailable:",
+                "[PurchasesContext] reload profile.purchases error:",
                 profileError
               );
-            } else {
-              profilePurchases = normalizePurchases(profileRow?.purchases);
+            } else if (
+              profileRow &&
+              profileRow.purchases &&
+              typeof profileRow.purchases === "object"
+            ) {
+              console.log(
+                "[PurchasesContext] reload got purchases from profile JSON:",
+                profileRow.purchases
+              );
+              const norm = normalizePurchases(profileRow.purchases);
+              setPurchases(norm);
+              await AsyncStorage.setItem(key, JSON.stringify(norm));
+              return;
             }
-          } catch (error) {
-            console.warn(
-              "[PurchasesContext] reload profile mirror threw:",
-              error
-            );
           }
 
-          const merged = mergePurchaseMaps(
-            localPurchases,
-            profilePurchases,
-            tablePurchases
-          );
+          // Only if remote errored do we fall back to local
+          if (remoteError) {
+            const local = await loadLocalPurchases(key, false);
+            if (Object.keys(local).length > 0) {
+              console.log(
+                "[PurchasesContext] reload got purchases from AsyncStorage:",
+                local
+              );
+              setPurchases(local);
+              return;
+            }
+          }
 
-          purchasesRef.current = merged;
-          setPurchases(merged);
-          await AsyncStorage.setItem(key, JSON.stringify(merged));
-          console.log("[PurchasesContext] reload merged ownership:", merged);
+          console.log("[PurchasesContext] reload found nothing, clearing");
+          setPurchases({});
+          await AsyncStorage.setItem(key, JSON.stringify({}));
           return;
         }
 
-        // Guest reload: isolated guest key only.
-        const local = await loadLocalPurchases(key, false);
+        // Guest reload: local only, with legacy merge
+        const local = await loadLocalPurchases(
+          key,
+          supabaseUserId ? false : true
+        );
         if (Object.keys(local).length > 0) {
           console.log(
             "[PurchasesContext] reload got guest purchases from AsyncStorage:",

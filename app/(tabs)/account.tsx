@@ -227,16 +227,22 @@ export default function AccountScreen() {
       return;
     }
 
-    const task = Promise.resolve(signOut?.()).catch((error) => {
-      console.warn("[Account] signOut warning:", error);
-    });
+    try {
+      await Promise.resolve(
+        signOut?.()
+      );
+    } catch (error) {
+      console.warn(
+        "[Account] signOut warning:",
+        error
+      );
+    }
 
-    // Never persist a zero balance while this account is still signed in.
-    // CoinsContext will load the guest balance after the auth state changes.
+    // Do not navigate until auth and guest cleanup have completed. This keeps
+    // account reward listeners from recreating the guest wallet mid-transition.
     setAvatarLocal(null);
     showToast("Signed out");
     (router as any).replace("/");
-    void task;
   }
 
   async function handleConfirmDelete() {

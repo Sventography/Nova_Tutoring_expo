@@ -155,6 +155,76 @@ const BACKEND_BASE =
   (process.env.EXPO_PUBLIC_BACKEND_URL || "").replace(/\/$/, "") ||
   "http://127.0.0.1:5055";
 
+
+const ASK_EXPERIENCE_DETAILS_KEY =
+  "@nova/ask/experience-details-expanded.v1";
+
+function askErrorText(
+  value: unknown,
+  status?: number
+): string {
+  let raw = "";
+
+  if (typeof value === "string") {
+    raw = value;
+  } else if (
+    value &&
+    typeof value === "object"
+  ) {
+    const record = value as Record<
+      string,
+      unknown
+    >;
+
+    if (
+      typeof record.message === "string"
+    ) {
+      raw = record.message;
+    } else {
+      try {
+        raw = JSON.stringify(value);
+      } catch {
+        raw = "";
+      }
+    }
+  }
+
+  const lowered = raw.toLowerCase();
+
+  if (
+    status === 429 ||
+    lowered.includes(
+      "credit_balance_exhausted"
+    ) ||
+    lowered.includes(
+      "insufficient_quota"
+    ) ||
+    lowered.includes("quota")
+  ) {
+    return (
+      "Nova is taking a quick break " +
+      "right now. Please try again later."
+    );
+  }
+
+  if (
+    lowered.includes("network") ||
+    lowered.includes("failed to fetch") ||
+    lowered.includes("timed out") ||
+    lowered.includes("timeout")
+  ) {
+    return (
+      "Nova could not connect right now. " +
+      "Check your connection and try again."
+    );
+  }
+
+  return (
+    "Nova is temporarily unavailable. " +
+    "Please try again in a few moments."
+  );
+}
+
 export type PersonalityKey =
   | "encouraging"
   | "calm_focus"
@@ -184,12 +254,38 @@ async function callAskApi(
       body: JSON.stringify(body),
     });
 
-    const json = (await res.json()) as any;
+    const responseText = await res.text();
+    let json: any = {};
+
+    try {
+      json = responseText
+        ? JSON.parse(responseText)
+        : {};
+    } catch {
+      json = {};
+    }
 
     if (!res.ok || json.error) {
+      const rawError =
+        json?.error?.message ??
+        json?.error ??
+        json?.message ??
+        responseText;
+
+      console.warn(
+        "[Ask] request failed",
+        {
+          status: res.status,
+          rawError,
+        }
+      );
+
       return {
         ok: false,
-        error: json.error || `Request failed (status ${res.status})`,
+        error: askErrorText(
+          rawError,
+          res.status
+        ),
       };
     }
 
@@ -211,7 +307,17 @@ async function callAskApi(
       },
     };
   } catch (e: any) {
-    return { ok: false, error: e?.message || "Network error while calling /api/ask" };
+    console.warn(
+      "[Ask] request exception",
+      e
+    );
+
+    return {
+      ok: false,
+      error: askErrorText(
+        e?.message || e
+      ),
+    };
   }
 }
 
@@ -383,6 +489,28 @@ const AskPersonalitySelector = ({
   } = purchaseContext;
 
   const [open, setOpen] = useState(false);
+  const [detailsExpanded, setDetailsExpanded] =
+    useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+
+    void AsyncStorage.getItem(
+      ASK_EXPERIENCE_DETAILS_KEY
+    )
+      .then((stored) => {
+        if (mounted) {
+          setDetailsExpanded(
+            stored === "1"
+          );
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const hasOption = useCallback(
     (option: PersonalityOption) => {
@@ -429,6 +557,19 @@ const AskPersonalitySelector = ({
     setOpen(false);
     if (key === value || disabled) return;
     await onChange(key);
+  };
+
+  const toggleExperienceDetails = () => {
+    setDetailsExpanded((current) => {
+      const next = !current;
+
+      void AsyncStorage.setItem(
+        ASK_EXPERIENCE_DETAILS_KEY,
+        next ? "1" : "0"
+      ).catch(() => {});
+
+      return next;
+    });
   };
 
   return (
@@ -499,6 +640,55 @@ const AskPersonalitySelector = ({
         )}
       </Pressable>
 
+      <Pressable
+        onPress={toggleExperienceDetails}
+        accessibilityRole="button"
+        accessibilityLabel={
+          detailsExpanded
+            ? "Hide Nova experience details"
+            : "Show Nova experience details"
+        }
+        style={({ pressed }) => ({
+          marginTop: 8,
+          minHeight: 38,
+          borderRadius: 12,
+          borderWidth: 1,
+          borderColor: `${selected.accent}66`,
+          backgroundColor: tokens?.isDark
+            ? "rgba(2,6,23,0.34)"
+            : "rgba(255,255,255,0.44)",
+          paddingHorizontal: 11,
+          paddingVertical: 8,
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          opacity: pressed ? 0.76 : 1,
+        })}
+      >
+        <Text
+          style={{
+            color: selected.accent,
+            fontSize: 11,
+            fontWeight: "900",
+            letterSpacing: 0.45,
+          }}
+        >
+          ABOUT THIS EXPERIENCE
+        </Text>
+
+        <Ionicons
+          name={
+            detailsExpanded
+              ? "chevron-up"
+              : "chevron-down"
+          }
+          size={18}
+          color={selected.accent}
+        />
+      </Pressable>
+
+      {detailsExpanded ? (
+        <>
       <View
         style={[
           S.experienceCard,
@@ -549,6 +739,8 @@ const AskPersonalitySelector = ({
         <Text style={[S.personalityHint, { color: textDim }]}>
           Unlock more Nova experiences in the Shop.
         </Text>
+      ) : null}
+        </>
       ) : null}
 
       <Modal
@@ -690,19 +882,70 @@ const AskPersonalitySelector = ({
 
 /* ────────────────────────────────────────── */
 
-const todayKey = () => {
-  const d = new Date();
-  return `@ask/count/${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const askCountOwnerKey = (
+  userId: string | null | undefined
+): string => {
+  if (!userId) return "guest:v2";
+  return `user:${encodeURIComponent(userId)}`;
 };
 
-async function loadCount(): Promise<number> {
-  const v = await AsyncStorage.getItem(todayKey());
-  return v ? parseInt(v, 10) : 0;
+const todayKey = (
+  userId: string | null | undefined
+): string => {
+  const d = new Date();
+  const date = `${d.getFullYear()}-${String(
+    d.getMonth() + 1
+  ).padStart(2, "0")}-${String(
+    d.getDate()
+  ).padStart(2, "0")}`;
+
+  return `@ask/count:v2/${askCountOwnerKey(
+    userId
+  )}/${date}`;
+};
+
+async function removeLegacyUnscopedAskCounts() {
+  const keys = await AsyncStorage.getAllKeys();
+  const legacyKeys = keys.filter((key) =>
+    /^@ask\/count\/\d{4}-\d{2}-\d{2}$/.test(
+      key
+    )
+  );
+
+  if (legacyKeys.length > 0) {
+    await AsyncStorage.multiRemove(legacyKeys);
+  }
 }
-async function bumpCount() {
-  const c = await loadCount();
-  await AsyncStorage.setItem(todayKey(), String(c + 1));
-  return c + 1;
+
+async function loadCount(
+  userId: string | null | undefined
+): Promise<number> {
+  const value = await AsyncStorage.getItem(
+    todayKey(userId)
+  );
+  const parsed = Number.parseInt(
+    value ?? "0",
+    10
+  );
+
+  return Number.isFinite(parsed) && parsed > 0
+    ? parsed
+    : 0;
+}
+
+async function bumpCount(
+  userId: string | null | undefined
+): Promise<number> {
+  const key = todayKey(userId);
+  const current = await loadCount(userId);
+  const next = current + 1;
+
+  await AsyncStorage.setItem(
+    key,
+    String(next)
+  );
+
+  return next;
 }
 
 function buildHistoryFromMessages(
@@ -793,8 +1036,31 @@ export default function Ask() {
     useRef<PersonalityKey>("encouraging");
 
   useEffect(() => {
-    loadCount().then(setCount).catch(() => {});
-  }, []);
+    let cancelled = false;
+
+    setCount(0);
+
+    void (async () => {
+      try {
+        await removeLegacyUnscopedAskCounts();
+        const nextCount = await loadCount(
+          supabaseUserId
+        );
+
+        if (!cancelled) {
+          setCount(nextCount);
+        }
+      } catch {
+        if (!cancelled) {
+          setCount(0);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [supabaseUserId]);
 
   useEffect(() => {
     setMemoryTier(askMemoryTier || "free");
@@ -912,7 +1178,7 @@ export default function Ask() {
             setMemoryLimit(apiRes.data.ask_memory_limit);
           }
 
-          const newCount = await bumpCount();
+          const newCount = await bumpCount(supabaseUserId);
           setCount(newCount);
           onAskQuestion?.();
 
@@ -1199,7 +1465,66 @@ export default function Ask() {
                 </Pressable>
               </View>
 
-              {error ? <Text style={{ color: "#ffa7a7", marginTop: 6 }}>{error}</Text> : null}
+              {error ? (
+                <View
+                  style={{
+                    marginTop: 8,
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor:
+                      "rgba(248,113,113,0.58)",
+                    backgroundColor:
+                      "rgba(127,29,29,0.18)",
+                    paddingHorizontal: 11,
+                    paddingVertical: 10,
+                    flexDirection: "row",
+                    alignItems: "flex-start",
+                    gap: 9,
+                  }}
+                >
+                  <Ionicons
+                    name="cloud-offline-outline"
+                    size={20}
+                    color="#FCA5A5"
+                  />
+
+                  <View style={{ flex: 1 }}>
+                    <Text
+                      style={{
+                        color: "#FECACA",
+                        fontSize: 12,
+                        fontWeight: "900",
+                        marginBottom: 3,
+                      }}
+                    >
+                      Nova could not answer that just now.
+                    </Text>
+
+                    <Text
+                      style={{
+                        color: "#FCA5A5",
+                        fontSize: 12,
+                        lineHeight: 17,
+                      }}
+                    >
+                      {error}
+                    </Text>
+                  </View>
+
+                  <Pressable
+                    onPress={() => setError(null)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Dismiss error"
+                    hitSlop={10}
+                  >
+                    <Ionicons
+                      name="close"
+                      size={18}
+                      color="#FCA5A5"
+                    />
+                  </Pressable>
+                </View>
+              ) : null}
             </View>
           </View>
         </TouchableWithoutFeedback>

@@ -2052,11 +2052,38 @@ def _ask_logic():
     )
 
   except Exception as error:
-    print("[server] OpenAI error:", error)
+    error_type = type(error).__name__
+    status_code = getattr(
+      error,
+      "status_code",
+      None,
+    )
+    error_code = getattr(
+      error,
+      "code",
+      None,
+    )
+
+    print(
+      "[server] OpenAI error:",
+      {
+        "type": error_type,
+        "status": status_code,
+        "code": error_code,
+        "detail": repr(error),
+      },
+    )
+
+    # Never expose provider messages, API links,
+    # keys, quota details, or raw JSON to users.
     return jsonify(
       ok=False,
-      error=str(error),
-    ), 500
+      code="AI_SERVICE_UNAVAILABLE",
+      error=(
+        "Nova is temporarily unavailable. "
+        "Please try again in a few moments."
+      ),
+    ), 503
 
 
 # -------------------------------------------------

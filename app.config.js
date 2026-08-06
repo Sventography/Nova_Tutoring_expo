@@ -12,7 +12,7 @@ export default ({ config }) => {
     slug: "Nova_Tutoring_expo_3",
     scheme: "nova",
 
-    version: "1.1.0",
+    version: "1.2.0",
     orientation: "portrait",
     icon: "./app/assets/favicon.png",
     userInterfaceStyle: "dark",
@@ -29,7 +29,7 @@ export default ({ config }) => {
       ...(config.ios || {}),
       supportsTablet: true,
       bundleIdentifier: "com.sventography.novatutoring.ios",
-      buildNumber: "97",
+      buildNumber: "99",
     },
 
     android: {

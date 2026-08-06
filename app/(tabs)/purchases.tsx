@@ -12,6 +12,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useTheme } from "../context/ThemeContext";
 import { useCursor } from "../context/CursorContext";
 import { usePurchases } from "../context/PurchasesContext";
+import { useCompanion } from "../context/CompanionContext";
 import { showToast } from "../utils/toast";
 
 import {
@@ -157,6 +158,11 @@ function Card({
 export default function PurchasesScreen() {
   const { tokens, themeId, setThemeById } = useTheme();
   const { isOwned } = usePurchases();
+  const {
+    activeCompanionId,
+    equipCompanion,
+    clearCompanion,
+  } = useCompanion();
 
   // Cursor context may be fussy on web if overlay not mounted yet, so guard it
   const cursorApi = (() => {
@@ -175,6 +181,9 @@ export default function PurchasesScreen() {
   // canonical "equipped" ids from the contexts
   const equippedTheme = canonId(themeId as any);
   const equippedCursor = canonId(cursorId as any);
+  const equippedCompanion = canonId(
+    activeCompanionId as any
+  );
 
   const ownedThemes = useMemo(
     () => catalog.filter((it) => it.category === "theme" && isOwned(it.id)),
@@ -236,6 +245,21 @@ export default function PurchasesScreen() {
     showToast("Cursor unequipped");
   }
 
+  async function equipOwnedCompanion(
+    id: string
+  ) {
+    const cid = canonId(id);
+    if (!cid) return;
+
+    await equipCompanion(cid);
+    showToast("Companion equipped");
+  }
+
+  async function unequipOwnedCompanion() {
+    await clearCompanion();
+    showToast("Companion unequipped");
+  }
+
   return (
     <LinearGradient colors={tokens.gradient as any} style={{ flex: 1 }}>
       <ScrollView
@@ -259,8 +283,8 @@ export default function PurchasesScreen() {
             marginBottom: 16,
           }}
         >
-          Everything you’ve unlocked in the shop lives here. Equip themes
-          and cursors, or just admire your collection.
+          Everything you’ve unlocked in the shop lives here. Equip or
+          unequip themes, cursors, and companions whenever you like.
         </Text>
 
         {!hasAny && (
@@ -458,69 +482,110 @@ export default function PurchasesScreen() {
 
         {ownedCompanions.length > 0 && (
           <Section title="Companions">
-            {ownedCompanions.map((it: any) => (
-              <Card key={it.id} color={CATEGORY_BORDER.tangibles}>
-                {it.image ? (
-                  <Image
-                    source={it.image}
-                    style={{
-                      width: "100%",
-                      height: 90,
-                      borderRadius: 10,
-                      marginBottom: 8,
-                    }}
-                    resizeMode="contain"
-                  />
-                ) : null}
+            {ownedCompanions.map((it: any) => {
+              const cid = canonId(it.id);
+              const isEquipped =
+                !!cid &&
+                !!equippedCompanion &&
+                cid === equippedCompanion;
 
-                <Text
-                  style={{
-                    color: tokens.text as any,
-                    fontSize: 14,
-                    fontWeight: "700",
-                    textAlign: "center",
-                  }}
+              return (
+                <Card
+                  key={it.id}
+                  color={
+                    isEquipped
+                      ? "#FACC15"
+                      : CATEGORY_BORDER.tangibles
+                  }
                 >
-                  {it.title}
-                </Text>
+                  {it.image ? (
+                    <Image
+                      source={it.image}
+                      style={{
+                        width: "100%",
+                        height: 90,
+                        borderRadius: 10,
+                        marginBottom: 8,
+                      }}
+                      resizeMode="contain"
+                    />
+                  ) : null}
 
-                {it.desc ? (
                   <Text
                     style={{
-                      color: tokens.cardText as any,
-                      fontSize: 12,
-                      lineHeight: 16,
-                      marginTop: 8,
+                      color: tokens.text as any,
+                      fontSize: 14,
+                      fontWeight: "700",
                       textAlign: "center",
                     }}
-                    numberOfLines={3}
                   >
-                    {it.desc}
+                    {it.title}
                   </Text>
-                ) : null}
 
-                <View style={{ height: 10 }} />
+                  {it.desc ? (
+                    <Text
+                      style={{
+                        color: tokens.cardText as any,
+                        fontSize: 12,
+                        lineHeight: 16,
+                        marginTop: 8,
+                        textAlign: "center",
+                      }}
+                      numberOfLines={3}
+                    >
+                      {it.desc}
+                    </Text>
+                  ) : null}
 
-                <View
-                  style={{
-                    alignItems: "center",
-                    paddingVertical: 8,
-                    borderRadius: 10,
-                    borderWidth: 1,
-                    borderColor: CATEGORY_BORDER.tangibles,
-                  }}
-                >
-                  <Text
-                    style={{
-                      color: CATEGORY_BORDER.tangibles,
-                      fontWeight: "800",
-                    }}
+                  <View style={{ height: 10 }} />
+
+                  <Pressable
+                    onPress={() =>
+                      isEquipped
+                        ? void unequipOwnedCompanion()
+                        : void equipOwnedCompanion(
+                            it.id
+                          )
+                    }
+                    accessibilityRole="button"
+                    accessibilityLabel={`${
+                      isEquipped
+                        ? "Unequip"
+                        : "Equip"
+                    } ${it.title}`}
+                    style={({ pressed }) => ({
+                      alignItems: "center",
+                      paddingVertical: 10,
+                      borderRadius: 10,
+                      borderWidth: 1,
+                      borderColor: isEquipped
+                        ? "#FACC15"
+                        : CATEGORY_BORDER.tangibles,
+                      backgroundColor: pressed
+                        ? isEquipped
+                          ? "rgba(250,204,21,0.22)"
+                          : "rgba(56,189,248,0.22)"
+                        : isEquipped
+                        ? "rgba(250,204,21,0.12)"
+                        : "transparent",
+                    })}
                   >
-                    Owned ✓
-                  </Text>
-                </View>
-              </Card>
-            ))}
+                    <Text
+                      style={{
+                        color: isEquipped
+                          ? "#FACC15"
+                          : CATEGORY_BORDER.tangibles,
+                        fontWeight: "800",
+                      }}
+                    >
+                      {isEquipped
+                        ? "Unequip Companion"
+                        : "Equip Companion"}
+                    </Text>
+                  </Pressable>
+                </Card>
+              );
+            })}
           </Section>
         )}
 
