@@ -22,6 +22,15 @@ from ai_quota import (
   resolve_ai_entitlement,
 )
 
+from guest_ai_quota import (
+  GUEST_AI_QUESTION_LIMIT,
+  finalize_guest_ai_question,
+  get_guest_ai_usage,
+  hash_guest_installation_id,
+  release_guest_ai_question,
+  reserve_guest_ai_question,
+)
+
 from apple_subscriptions import (
   apple_subscription_configuration_status,
   register_apple_subscription_routes,
@@ -105,6 +114,11 @@ SUPABASE_SERVICE_ROLE_KEY = (
 OPENAI_API_KEY = (os.getenv("OPENAI_API_KEY") or "").strip()
 OPENAI_MODEL = (os.getenv("OPENAI_MODEL") or "gpt-4.1-mini").strip() or "gpt-4.1-mini"
 
+# Guest Nova AI quota hashing. The raw installation id never enters Supabase.
+GUEST_AI_HASH_SECRET = (
+  os.getenv("GUEST_AI_HASH_SECRET") or ""
+).strip()
+
 # Admin / internal secret for debug/test routes
 ADMIN_SUPER_SECRET_CODE = (os.getenv("ADMIN_SUPER_SECRET_CODE") or "").strip()
 
@@ -128,6 +142,10 @@ print("[debug] RESEND_API_KEY present:", bool(RESEND_API_KEY))
 print("[debug] RESEND_FROM_EMAIL:", repr(RESEND_FROM_EMAIL))
 print("[debug] SHOP_OWNER_EMAIL:", repr(SHOP_OWNER_EMAIL))
 print("[debug] EMAIL_LOGO_URL:", repr(EMAIL_LOGO_URL))
+print(
+  "[debug] GUEST_AI_HASH_SECRET present:",
+  bool(GUEST_AI_HASH_SECRET),
+)
 
 if RESEND_API_KEY:
   print(f"[server] Resend configured: True, from={RESEND_FROM_EMAIL!r}")
@@ -1821,6 +1839,32 @@ else:
     print("[server] OpenAI configured: False (unknown reason)")
 
 # -------------------------------------------------
+# Guest Nova AI quota identity
+# -------------------------------------------------
+
+def _guest_ai_key_hash_from_request() -> str:
+  raw_guest_id = (
+    request.headers.get("X-Nova-Guest-Id")
+    or ""
+  ).strip()
+
+  if not raw_guest_id:
+    raise ValueError(
+      "Nova needs a guest installation identifier."
+    )
+
+  if not GUEST_AI_HASH_SECRET:
+    raise RuntimeError(
+      "Guest Nova AI quota hashing is not configured."
+    )
+
+  return hash_guest_installation_id(
+    raw_guest_id,
+    GUEST_AI_HASH_SECRET,
+  )
+
+
+# -------------------------------------------------
 # Ask core (OpenAI + Supabase-backed memory via HTTP)
 # -------------------------------------------------
 
@@ -1907,6 +1951,33 @@ def _ask_logic():
       "[ask] ignored unverified body user_id:",
       body_user_id,
     )
+
+  guest_key_hash = None
+
+  if not user_id:
+    try:
+      guest_key_hash = (
+        _guest_ai_key_hash_from_request()
+      )
+    except ValueError as error:
+      return jsonify(
+        ok=False,
+        code="GUEST_ID_REQUIRED",
+        error=str(error),
+      ), 400
+    except Exception as error:
+      print(
+        "[ask] guest quota identity failed:",
+        repr(error),
+      )
+      return jsonify(
+        ok=False,
+        code="AI_USAGE_UNAVAILABLE",
+        error=(
+          "Nova could not check the guest AI allowance. "
+          "Please try again in a moment."
+        ),
+      ), 503
 
   memory_limit = ASK_FREE_MEMORY_LIMIT
   memory_tier = "free"
@@ -2063,6 +2134,7 @@ def _ask_logic():
 
   quota_request_id = None
   quota_reservation = None
+  quota_is_guest = False
 
   if user_id:
     try:
@@ -2122,10 +2194,77 @@ def _ask_logic():
         ),
         ai_question_limit=question_limit,
         ai_questions_used=questions_used,
+        ai_questions_reserved=int(
+          quota_reservation.get(
+            "questions_reserved",
+            0,
+          )
+          or 0
+        ),
         ai_questions_remaining=0,
         ai_period_end=entitlement.get(
           "period_end"
         ),
+      ), 429
+  else:
+    quota_is_guest = True
+
+    try:
+      quota_reservation = reserve_guest_ai_question(
+        supabase_url=SUPABASE_URL,
+        service_role_key=SUPABASE_SERVICE_ROLE_KEY,
+        guest_key_hash=guest_key_hash,
+        model=OPENAI_MODEL,
+      )
+    except Exception as error:
+      print(
+        "[ask] guest quota reservation failed:",
+        repr(error),
+      )
+      return jsonify(
+        ok=False,
+        code="AI_USAGE_UNAVAILABLE",
+        error=(
+          "Nova could not check the guest AI allowance. "
+          "Please try again in a moment."
+        ),
+      ), 503
+
+    quota_request_id = quota_reservation.get(
+      "request_id"
+    )
+
+    if not bool(
+      quota_reservation.get("allowed")
+    ):
+      questions_used = int(
+        quota_reservation.get(
+          "questions_used",
+          GUEST_AI_QUESTION_LIMIT,
+        )
+        or 0
+      )
+      questions_reserved = int(
+        quota_reservation.get(
+          "questions_reserved",
+          0,
+        )
+        or 0
+      )
+
+      return jsonify(
+        ok=False,
+        code="AI_GUEST_LIMIT_REACHED",
+        error=(
+          "You've used both guest Nova AI questions. "
+          "Create a free account to keep asking Nova."
+        ),
+        ai_plan_id="guest",
+        ai_question_limit=GUEST_AI_QUESTION_LIMIT,
+        ai_questions_used=questions_used,
+        ai_questions_reserved=questions_reserved,
+        ai_questions_remaining=0,
+        ai_period_end=None,
       ), 429
 
   try:
@@ -2143,12 +2282,20 @@ def _ask_logic():
     if not answer:
       if quota_request_id:
         try:
-          release_ai_question(
-            supabase_url=SUPABASE_URL,
-            service_role_key=SUPABASE_SERVICE_ROLE_KEY,
-            request_id=quota_request_id,
-            error_code="empty_answer",
-          )
+          if quota_is_guest:
+            release_guest_ai_question(
+              supabase_url=SUPABASE_URL,
+              service_role_key=SUPABASE_SERVICE_ROLE_KEY,
+              request_id=quota_request_id,
+              error_code="empty_answer",
+            )
+          else:
+            release_ai_question(
+              supabase_url=SUPABASE_URL,
+              service_role_key=SUPABASE_SERVICE_ROLE_KEY,
+              request_id=quota_request_id,
+              error_code="empty_answer",
+            )
         except Exception as release_error:
           print(
             "[ask] empty-answer release failed:",
@@ -2167,24 +2314,33 @@ def _ask_logic():
 
     if quota_request_id:
       try:
-        finalized_usage = finalize_ai_question(
-          supabase_url=SUPABASE_URL,
-          service_role_key=SUPABASE_SERVICE_ROLE_KEY,
-          request_id=quota_request_id,
-          model=OPENAI_MODEL,
-          prompt_tokens=token_usage[
+        finalize_kwargs = {
+          "supabase_url": SUPABASE_URL,
+          "service_role_key": SUPABASE_SERVICE_ROLE_KEY,
+          "request_id": quota_request_id,
+          "model": OPENAI_MODEL,
+          "prompt_tokens": token_usage[
             "prompt_tokens"
           ],
-          cached_input_tokens=token_usage[
+          "cached_input_tokens": token_usage[
             "cached_input_tokens"
           ],
-          completion_tokens=token_usage[
+          "completion_tokens": token_usage[
             "completion_tokens"
           ],
-          cost_usd_snapshot=estimate_openai_cost_usd(
+          "cost_usd_snapshot": estimate_openai_cost_usd(
             token_usage
           ),
-        )
+        }
+
+        if quota_is_guest:
+          finalized_usage = finalize_guest_ai_question(
+            **finalize_kwargs
+          )
+        else:
+          finalized_usage = finalize_ai_question(
+            **finalize_kwargs
+          )
 
         if not bool(
           finalized_usage.get("finalized")
@@ -2201,12 +2357,20 @@ def _ask_logic():
         )
 
         try:
-          release_ai_question(
-            supabase_url=SUPABASE_URL,
-            service_role_key=SUPABASE_SERVICE_ROLE_KEY,
-            request_id=quota_request_id,
-            error_code="finalization_failed",
-          )
+          if quota_is_guest:
+            release_guest_ai_question(
+              supabase_url=SUPABASE_URL,
+              service_role_key=SUPABASE_SERVICE_ROLE_KEY,
+              request_id=quota_request_id,
+              error_code="finalization_failed",
+            )
+          else:
+            release_ai_question(
+              supabase_url=SUPABASE_URL,
+              service_role_key=SUPABASE_SERVICE_ROLE_KEY,
+              request_id=quota_request_id,
+              error_code="finalization_failed",
+            )
         except Exception as release_error:
           print(
             "[ask] finalization release failed:",
@@ -2268,7 +2432,7 @@ def _ask_logic():
           )
         )
         if entitlement
-        else None
+        else GUEST_AI_QUESTION_LIMIT
       ),
 
       ai_questions_used=(
@@ -2283,13 +2447,29 @@ def _ask_logic():
         else None
       ),
 
+      ai_questions_reserved=(
+        int(
+          finalized_usage.get(
+            "questions_reserved",
+            0,
+          )
+          or 0
+        )
+        if finalized_usage
+        else 0
+      ),
+
       ai_questions_remaining=(
         max(
-          int(
-            entitlement.get(
-              "question_limit",
-              0,
+          (
+            int(
+              entitlement.get(
+                "question_limit",
+                0,
+              )
             )
+            if entitlement
+            else GUEST_AI_QUESTION_LIMIT
           )
           - int(
             finalized_usage.get(
@@ -2297,13 +2477,17 @@ def _ask_logic():
               0,
             )
             or 0
+          )
+          - int(
+            finalized_usage.get(
+              "questions_reserved",
+              0,
+            )
+            or 0
           ),
           0,
         )
-        if (
-          entitlement
-          and finalized_usage
-        )
+        if finalized_usage
         else None
       ),
 
@@ -2347,16 +2531,25 @@ def _ask_logic():
 
     if quota_request_id:
       try:
-        release_ai_question(
-          supabase_url=SUPABASE_URL,
-          service_role_key=SUPABASE_SERVICE_ROLE_KEY,
-          request_id=quota_request_id,
-          error_code=(
+        release_kwargs = {
+          "supabase_url": SUPABASE_URL,
+          "service_role_key": SUPABASE_SERVICE_ROLE_KEY,
+          "request_id": quota_request_id,
+          "error_code": (
             str(error_code)
             if error_code
             else error_type
           ),
-        )
+        }
+
+        if quota_is_guest:
+          release_guest_ai_question(
+            **release_kwargs
+          )
+        else:
+          release_ai_question(
+            **release_kwargs
+          )
       except Exception as release_error:
         print(
           "[ask] error reservation release failed:",
@@ -2387,6 +2580,55 @@ def checkout_start():
 @app.post("/api/checkout/start")
 def checkout_start_api():
   return _checkout_logic()
+
+
+@app.get("/api/ask/guest-usage")
+def ask_guest_usage():
+  try:
+    guest_key_hash = (
+      _guest_ai_key_hash_from_request()
+    )
+
+    usage = get_guest_ai_usage(
+      supabase_url=SUPABASE_URL,
+      service_role_key=SUPABASE_SERVICE_ROLE_KEY,
+      guest_key_hash=guest_key_hash,
+    )
+
+    return jsonify(
+      ok=True,
+      ai_plan_id="guest",
+      ai_question_limit=GUEST_AI_QUESTION_LIMIT,
+      ai_questions_used=usage[
+        "questions_used"
+      ],
+      ai_questions_reserved=usage[
+        "questions_reserved"
+      ],
+      ai_questions_remaining=usage[
+        "questions_remaining"
+      ],
+      ai_period_end=None,
+    )
+  except ValueError as error:
+    return jsonify(
+      ok=False,
+      code="GUEST_ID_REQUIRED",
+      error=str(error),
+    ), 400
+  except Exception as error:
+    print(
+      "[ask] guest usage lookup failed:",
+      repr(error),
+    )
+    return jsonify(
+      ok=False,
+      code="AI_USAGE_UNAVAILABLE",
+      error=(
+        "Nova could not check the guest AI allowance. "
+        "Please try again in a moment."
+      ),
+    ), 503
 
 
 @app.post("/ask")
