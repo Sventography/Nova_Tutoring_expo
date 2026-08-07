@@ -477,44 +477,6 @@ def _get_rows(
   )
 
 
-def _same_period(
-  existing: dict[str, Any] | None,
-  purchase_ms: int,
-) -> bool:
-  if not existing:
-    return False
-
-  raw = _text(
-    existing.get("period_start")
-  )
-
-  if not raw:
-    return False
-
-  try:
-    existing_ms = int(
-      datetime.fromisoformat(
-        raw.replace(
-          "Z",
-          "+00:00",
-        )
-      ).timestamp()
-      * 1000
-    )
-  except (
-    TypeError,
-    ValueError,
-  ):
-    return False
-
-  return (
-    abs(
-      existing_ms
-      - purchase_ms
-    )
-    < 1500
-  )
-
 
 def _persist_subscription(
   *,
@@ -553,47 +515,6 @@ def _persist_subscription(
       "Nova account."
     )
 
-  existing_rows = _get_rows(
-    supabase_url,
-    service_role_key,
-    "ai_subscriptions",
-    {
-      "user_id": f"eq.{user_id}",
-      "select":
-        "user_id,period_start,"
-        "questions_used",
-      "limit": "1",
-    },
-  )
-
-  existing = (
-    existing_rows[0]
-    if existing_rows
-    else None
-  )
-
-  questions_used = 0
-
-  if _same_period(
-    existing,
-    purchase_ms,
-  ):
-    try:
-      questions_used = max(
-        0,
-        int(
-          existing.get(
-            "questions_used"
-          )
-          or 0
-        ),
-      )
-    except (
-      TypeError,
-      ValueError,
-    ):
-      questions_used = 0
-
   now_iso = _utc_now_iso()
 
   payload = {
@@ -617,8 +538,6 @@ def _persist_subscription(
       _utc_iso_from_ms(
         expires_ms
       ),
-    "questions_used":
-      questions_used,
     "verified_at":
       now_iso,
     "updated_at":
