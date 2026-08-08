@@ -27,6 +27,8 @@ import * as Haptics from "expo-haptics";
 
 import { useUser } from "./context/UserContext";
 import { useIsland } from "./context/IslandContext";
+import { useCoins } from "./context/CoinsContext";
+import { useAchievements } from "./context/AchievementsContext";
 
 const TUTORIAL_KEY =
   "onboarding.tutorial.done.v2";
@@ -228,6 +230,14 @@ export default function HomeScreen() {
     ready: islandReady,
   } = useIsland();
 
+  const {
+    resetGuestCoins,
+  } = useCoins();
+
+  const {
+    resetGuestAchievements,
+  } = useAchievements();
+
   const pulseAnim = useRef(
     new Animated.Value(1)
   ).current;
@@ -328,7 +338,8 @@ export default function HomeScreen() {
   useEffect(() => {
     if (
       !userReady ||
-      !islandReady
+      !islandReady ||
+      !isLoggedIn
     ) {
       return;
     }
@@ -371,9 +382,10 @@ export default function HomeScreen() {
     return () => {
       cancelled = true;
     };
-  }, [
+    }, [
     grantDailyLoginXpIfNeeded,
     islandReady,
+    isLoggedIn,
     userReady,
   ]);
 
@@ -439,6 +451,22 @@ export default function HomeScreen() {
   const handleLetsLearn =
     async () => {
       await hapticTap();
+
+      /*
+       * A user who explicitly chooses Continue as Guest starts with
+       * fresh ephemeral game progress every time.
+       *
+       * This resets ONLY guest coins + achievements.
+       *
+       * The anonymous Nova AI installation ID is intentionally
+       * preserved so the 2-question guest Ask trial cannot reset.
+       */
+      if (!isLoggedIn) {
+        await Promise.all([
+          resetGuestCoins(),
+          resetGuestAchievements(),
+        ]);
+      }
 
       (router as any).push(
         "/ask"
@@ -568,7 +596,7 @@ export default function HomeScreen() {
     >
       <SplashShimmer />
 
-      {dailyLoginAwarded ? (
+      {dailyLoginAwarded && isLoggedIn ? (
         <View
           pointerEvents="none"
           style={

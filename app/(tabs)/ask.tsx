@@ -25,6 +25,7 @@ import { useAchievements } from "../context/AchievementsContext";
 import { useUser } from "../context/UserContext";
 import { useIsland } from "../context/IslandContext";
 import { usePurchases } from "../context/PurchasesContext";
+import { useAiPlan } from "../context/AiPlanContext";
 
 /* ────────────────────────────────────────── */
 /* ✨ Nova Thinking — Bounce + Dark Shimmer   */
@@ -145,10 +146,17 @@ type AskHistoryItem = {
 type AskApiResponse = {
   answer?: string;
   error?: string;
+  code?: string | null;
   coins_awarded?: number;
   ask_memory_tier?: string | null;
   ask_memory_limit?: number | null;
   ask_personality?: PersonalityKey | null;
+  ai_plan_id?: string | null;
+  ai_question_limit?: number | null;
+  ai_questions_used?: number | null;
+  ai_questions_reserved?: number | null;
+  ai_questions_remaining?: number | null;
+  ai_period_end?: string | null;
 };
 
 const BACKEND_BASE =
@@ -158,6 +166,161 @@ const BACKEND_BASE =
 
 const ASK_EXPERIENCE_DETAILS_KEY =
   "@nova/ask/experience-details-expanded.v1";
+
+const GUEST_AI_INSTALLATION_ID_KEY =
+  "@nova/guest-ai-installation-id.v1";
+
+/*
+ * Keep exactly one guest installation ID in memory.
+ * The promise lock prevents the initial usage lookup and the
+ * first Ask request from racing and creating different IDs.
+ */
+let guestAiInstallationIdCache: string | null = null;
+let guestAiInstallationIdPromise: Promise<string> | null = null;
+
+function makeGuestAiInstallationId(): string {
+  const randomPart = () =>
+    Math.random().toString(36).slice(2, 14);
+
+  return [
+    "nova",
+    Date.now().toString(36),
+    randomPart(),
+    randomPart(),
+    randomPart(),
+  ].join("-");
+}
+
+async function getOrCreateGuestAiInstallationId(): Promise<string> {
+  if (guestAiInstallationIdCache) {
+    return guestAiInstallationIdCache;
+  }
+
+  if (guestAiInstallationIdPromise) {
+    return guestAiInstallationIdPromise;
+  }
+
+  guestAiInstallationIdPromise = (async () => {
+    const existing = String(
+      (await AsyncStorage.getItem(
+        GUEST_AI_INSTALLATION_ID_KEY
+      )) || ""
+    ).trim();
+
+    if (existing) {
+      guestAiInstallationIdCache = existing;
+      return existing;
+    }
+
+    const created = makeGuestAiInstallationId();
+
+    await AsyncStorage.setItem(
+      GUEST_AI_INSTALLATION_ID_KEY,
+      created
+    );
+
+    guestAiInstallationIdCache = created;
+    return created;
+  })();
+
+  try {
+    return await guestAiInstallationIdPromise;
+  } finally {
+    guestAiInstallationIdPromise = null;
+  }
+}
+
+function normalizeGuestUsagePayload(
+  json: any
+): AskApiResponse {
+  return {
+    code:
+      typeof json?.code === "string"
+        ? json.code
+        : null,
+    ai_plan_id:
+      typeof json?.ai_plan_id === "string"
+        ? json.ai_plan_id
+        : "guest",
+    ai_question_limit:
+      Number.isFinite(Number(json?.ai_question_limit))
+        ? Number(json.ai_question_limit)
+        : null,
+    ai_questions_used:
+      Number.isFinite(Number(json?.ai_questions_used))
+        ? Number(json.ai_questions_used)
+        : null,
+    ai_questions_reserved:
+      Number.isFinite(Number(json?.ai_questions_reserved))
+        ? Number(json.ai_questions_reserved)
+        : null,
+    ai_questions_remaining:
+      Number.isFinite(Number(json?.ai_questions_remaining))
+        ? Number(json.ai_questions_remaining)
+        : null,
+    ai_period_end:
+      typeof json?.ai_period_end === "string"
+        ? json.ai_period_end
+        : null,
+  };
+}
+
+async function fetchGuestAiUsageApi(): Promise<{
+  ok: boolean;
+  data?: AskApiResponse;
+  error?: string;
+  status?: number;
+}> {
+  try {
+    const guestId =
+      await getOrCreateGuestAiInstallationId();
+
+    const res = await fetch(
+      `${BACKEND_BASE}/api/ask/guest-usage`,
+      {
+        method: "GET",
+        headers: {
+          "X-Nova-Guest-Id": guestId,
+        },
+      }
+    );
+
+    const responseText = await res.text();
+    let json: any = {};
+
+    try {
+      json = responseText
+        ? JSON.parse(responseText)
+        : {};
+    } catch {
+      json = {};
+    }
+
+    if (!res.ok || json?.error) {
+      return {
+        ok: false,
+        status: res.status,
+        error: askErrorText(
+          json?.error || responseText,
+          res.status
+        ),
+        data: normalizeGuestUsagePayload(json),
+      };
+    }
+
+    return {
+      ok: true,
+      data: normalizeGuestUsagePayload(json),
+    };
+  } catch (error: any) {
+    return {
+      ok: false,
+      error: askErrorText(
+        error?.message || error
+      ),
+    };
+  }
+}
 
 function askErrorText(
   value: unknown,
@@ -236,17 +399,34 @@ async function callAskApi(
   question: string,
   history: AskHistoryItem[],
   personality: PersonalityKey,
-  userId: string | null
-): Promise<{ ok: boolean; data?: AskApiResponse; error?: string }> {
+  isGuest: boolean
+): Promise<{
+  ok: boolean;
+  data?: AskApiResponse;
+  error?: string;
+  status?: number;
+}> {
   try {
-    const jwt = await AsyncStorage.getItem("auth.supabase.jwt");
+    const jwt = isGuest
+      ? null
+      : await AsyncStorage.getItem("auth.supabase.jwt");
+
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
-    if (jwt) headers["Authorization"] = `Bearer ${jwt}`;
 
-    const body: any = { question, history, personality };
-    if (userId) body.user_id = userId;
+    if (isGuest) {
+      headers["X-Nova-Guest-Id"] =
+        await getOrCreateGuestAiInstallationId();
+    } else if (jwt) {
+      headers["Authorization"] = `Bearer ${jwt}`;
+    }
+
+    const body = {
+      question,
+      history,
+      personality,
+    };
 
     const res = await fetch(`${BACKEND_BASE}/api/ask`, {
       method: "POST",
@@ -272,20 +452,59 @@ async function callAskApi(
         json?.message ??
         responseText;
 
+      const apiCode =
+        typeof json?.code === "string"
+          ? json.code
+          : null;
+
       console.warn(
         "[Ask] request failed",
         {
           status: res.status,
+          code: apiCode,
           rawError,
         }
       );
 
       return {
         ok: false,
-        error: askErrorText(
-          rawError,
-          res.status
-        ),
+        status: res.status,
+        error:
+          apiCode === "AI_MONTHLY_LIMIT_REACHED"
+            ? "You've used all of your Nova AI questions for this period."
+            : apiCode === "AI_GUEST_LIMIT_REACHED"
+            ? "You've used both guest Nova AI questions. Create a free account to keep asking Nova."
+            : askErrorText(
+                rawError,
+                res.status
+              ),
+        data: {
+          code: apiCode,
+          ai_plan_id:
+            typeof json?.ai_plan_id === "string"
+              ? json.ai_plan_id
+              : null,
+          ai_question_limit:
+            Number.isFinite(Number(json?.ai_question_limit))
+              ? Number(json.ai_question_limit)
+              : null,
+          ai_questions_used:
+            Number.isFinite(Number(json?.ai_questions_used))
+              ? Number(json.ai_questions_used)
+              : null,
+          ai_questions_reserved:
+            Number.isFinite(Number(json?.ai_questions_reserved))
+              ? Number(json.ai_questions_reserved)
+              : null,
+          ai_questions_remaining:
+            Number.isFinite(Number(json?.ai_questions_remaining))
+              ? Number(json.ai_questions_remaining)
+              : null,
+          ai_period_end:
+            typeof json?.ai_period_end === "string"
+              ? json.ai_period_end
+              : null,
+        },
       };
     }
 
@@ -303,6 +522,34 @@ async function callAskApi(
         ask_personality:
           typeof json.ask_personality === "string"
             ? (json.ask_personality as PersonalityKey)
+            : null,
+        code:
+          typeof json.code === "string"
+            ? json.code
+            : null,
+        ai_plan_id:
+          typeof json.ai_plan_id === "string"
+            ? json.ai_plan_id
+            : null,
+        ai_question_limit:
+          Number.isFinite(Number(json.ai_question_limit))
+            ? Number(json.ai_question_limit)
+            : null,
+        ai_questions_used:
+          Number.isFinite(Number(json.ai_questions_used))
+            ? Number(json.ai_questions_used)
+            : null,
+        ai_questions_reserved:
+          Number.isFinite(Number(json.ai_questions_reserved))
+            ? Number(json.ai_questions_reserved)
+            : null,
+        ai_questions_remaining:
+          Number.isFinite(Number(json.ai_questions_remaining))
+            ? Number(json.ai_questions_remaining)
+            : null,
+        ai_period_end:
+          typeof json.ai_period_end === "string"
+            ? json.ai_period_end
             : null,
       },
     };
@@ -882,70 +1129,22 @@ const AskPersonalitySelector = ({
 
 /* ────────────────────────────────────────── */
 
-const askCountOwnerKey = (
-  userId: string | null | undefined
-): string => {
-  if (!userId) return "guest:v2";
-  return `user:${encodeURIComponent(userId)}`;
-};
+async function removeLegacyLocalAskCounts() {
+  try {
+    const keys = await AsyncStorage.getAllKeys();
+    const oldKeys = keys.filter((key) =>
+      key.startsWith("@ask/count")
+    );
 
-const todayKey = (
-  userId: string | null | undefined
-): string => {
-  const d = new Date();
-  const date = `${d.getFullYear()}-${String(
-    d.getMonth() + 1
-  ).padStart(2, "0")}-${String(
-    d.getDate()
-  ).padStart(2, "0")}`;
-
-  return `@ask/count:v2/${askCountOwnerKey(
-    userId
-  )}/${date}`;
-};
-
-async function removeLegacyUnscopedAskCounts() {
-  const keys = await AsyncStorage.getAllKeys();
-  const legacyKeys = keys.filter((key) =>
-    /^@ask\/count\/\d{4}-\d{2}-\d{2}$/.test(
-      key
-    )
-  );
-
-  if (legacyKeys.length > 0) {
-    await AsyncStorage.multiRemove(legacyKeys);
+    if (oldKeys.length > 0) {
+      await AsyncStorage.multiRemove(oldKeys);
+    }
+  } catch (error) {
+    console.warn(
+      "[Ask] legacy count cleanup failed",
+      error
+    );
   }
-}
-
-async function loadCount(
-  userId: string | null | undefined
-): Promise<number> {
-  const value = await AsyncStorage.getItem(
-    todayKey(userId)
-  );
-  const parsed = Number.parseInt(
-    value ?? "0",
-    10
-  );
-
-  return Number.isFinite(parsed) && parsed > 0
-    ? parsed
-    : 0;
-}
-
-async function bumpCount(
-  userId: string | null | undefined
-): Promise<number> {
-  const key = todayKey(userId);
-  const current = await loadCount(userId);
-  const next = current + 1;
-
-  await AsyncStorage.setItem(
-    key,
-    String(next)
-  );
-
-  return next;
 }
 
 function buildHistoryFromMessages(
@@ -963,6 +1162,22 @@ function buildHistoryFromMessages(
       : 5;
 
   return relevant.slice(-safeLimit);
+}
+
+function prettyPeriodEnd(
+  value: string | null
+): string {
+  if (!value) return "Not available";
+
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) {
+    return "Not available";
+  }
+
+  return date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
 }
 
 function prettyMemoryTier(tier: string | null, limit: number | null): string {
@@ -984,7 +1199,6 @@ export default function Ask() {
   const { tokens } = useTheme() as any;
   const { onAskQuestion } = useAchievements() as any;
   const {
-    supabaseUserId,
     askPersonality,
     setAskPersonality,
     askMemoryTier,
@@ -995,6 +1209,20 @@ export default function Ask() {
     purchasesReady,
     isAskPersonalityOwned,
   } = usePurchases() as any;
+
+  const {
+    isGuest: isAiGuest,
+    plan: aiPlan,
+    monthlyQuestionLimit,
+    questionsUsed,
+    questionsReserved,
+    questionsRemaining,
+    guestTrialQuestionLimit,
+    effectiveMemoryMessageLimit,
+    periodEnd: aiPeriodEnd,
+    loading: aiPlanLoading,
+    refresh: refreshAiPlan,
+  } = useAiPlan();
 
   const validKeys = PERSONALITY_OPTIONS.map((option) => option.key);
 
@@ -1024,7 +1252,17 @@ export default function Ask() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [count, setCount] = useState<number>(0);
+  const [errorCode, setErrorCode] = useState<string | null>(null);
+  const [usageExpanded, setUsageExpanded] = useState(false);
+
+  const [guestQuestionsUsed, setGuestQuestionsUsed] =
+    useState(0);
+  const [guestQuestionsReserved, setGuestQuestionsReserved] =
+    useState(0);
+  const [guestUsageLoading, setGuestUsageLoading] =
+    useState(false);
+  const [guestUsageReady, setGuestUsageReady] =
+    useState(false);
 
   const [memoryTier, setMemoryTier] = useState<string | null>(null);
   const [memoryLimit, setMemoryLimit] = useState<number | null>(null);
@@ -1036,36 +1274,57 @@ export default function Ask() {
     useRef<PersonalityKey>("encouraging");
 
   useEffect(() => {
-    let cancelled = false;
-
-    setCount(0);
-
-    void (async () => {
-      try {
-        await removeLegacyUnscopedAskCounts();
-        const nextCount = await loadCount(
-          supabaseUserId
-        );
-
-        if (!cancelled) {
-          setCount(nextCount);
-        }
-      } catch {
-        if (!cancelled) {
-          setCount(0);
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [supabaseUserId]);
+    void removeLegacyLocalAskCounts();
+  }, []);
 
   useEffect(() => {
     setMemoryTier(askMemoryTier || "free");
     setMemoryLimit(typeof askMemoryLimit === "number" ? askMemoryLimit : null);
   }, [askMemoryTier, askMemoryLimit]);
+
+  const refreshGuestAiUsage = useCallback(async () => {
+    if (!isAiGuest) {
+      setGuestQuestionsUsed(0);
+      setGuestQuestionsReserved(0);
+      setGuestUsageLoading(false);
+      setGuestUsageReady(false);
+      return;
+    }
+
+    setGuestUsageLoading(true);
+
+    try {
+      const result = await fetchGuestAiUsageApi();
+
+      if (result.ok && result.data) {
+        setGuestQuestionsUsed(
+          Math.max(
+            0,
+            Number(result.data.ai_questions_used) || 0
+          )
+        );
+        setGuestQuestionsReserved(
+          Math.max(
+            0,
+            Number(result.data.ai_questions_reserved) || 0
+          )
+        );
+        setGuestUsageReady(true);
+      } else {
+        setGuestUsageReady(false);
+        console.warn(
+          "[Ask] guest usage refresh failed",
+          result.error
+        );
+      }
+    } finally {
+      setGuestUsageLoading(false);
+    }
+  }, [isAiGuest]);
+
+  useEffect(() => {
+    void refreshGuestAiUsage();
+  }, [refreshGuestAiUsage]);
 
   useEffect(() => {
     const experience = getPersonalityOption(activePersonality);
@@ -1122,16 +1381,46 @@ export default function Ask() {
     setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50);
   }, [messages]);
 
+  const guestQuestionLimit = Math.max(
+    1,
+    Number(guestTrialQuestionLimit) || 2
+  );
+
+  const guestQuestionsRemaining = Math.max(
+    0,
+    guestQuestionLimit -
+      guestQuestionsUsed -
+      guestQuestionsReserved
+  );
+
+  const guestAskUnavailable =
+    isAiGuest &&
+    (
+      guestUsageLoading ||
+      !guestUsageReady ||
+      guestQuestionsRemaining <= 0
+    );
+
+  const aiLimitReached = isAiGuest
+    ? guestAskUnavailable
+    : !aiPlanLoading &&
+      questionsRemaining <= 0;
+
   const send = useCallback(
     async () => {
       const trimmed = input.trim();
-      if (!trimmed || loading) return;
+      if (!trimmed || loading || aiLimitReached) return;
 
       setLoading(true);
       setError(null);
+      setErrorCode(null);
 
-      const effectiveMemoryLimit =
-        memoryLimit ?? askMemoryLimit ?? 5;
+      const effectiveMemoryLimit = Math.max(
+        Number(effectiveMemoryMessageLimit) || 0,
+        Number(memoryLimit) || 0,
+        Number(askMemoryLimit) || 0,
+        5
+      );
       const historyPayload = buildHistoryFromMessages(
         messages,
         effectiveMemoryLimit
@@ -1147,11 +1436,28 @@ export default function Ask() {
       setInput("");
 
       try {
-        const apiRes = await callAskApi(trimmed, historyPayload, activePersonality, supabaseUserId);
+        const apiRes = await callAskApi(
+          trimmed,
+          historyPayload,
+          activePersonality,
+          isAiGuest
+        );
 
         if (!apiRes.ok || !apiRes.data || !apiRes.data.answer) {
           setError(apiRes.error || "Something went wrong.");
+          setErrorCode(apiRes.data?.code ?? null);
+
+          if (
+            apiRes.data?.code === "AI_MONTHLY_LIMIT_REACHED"
+          ) {
+            await refreshAiPlan();
+          } else if (
+            apiRes.data?.code === "AI_GUEST_LIMIT_REACHED"
+          ) {
+            await refreshGuestAiUsage();
+          }
         } else {
+          setErrorCode(null);
           const answer = apiRes.data.answer;
 
           const responsePersonality =
@@ -1178,9 +1484,26 @@ export default function Ask() {
             setMemoryLimit(apiRes.data.ask_memory_limit);
           }
 
-          const newCount = await bumpCount(supabaseUserId);
-          setCount(newCount);
           onAskQuestion?.();
+
+          if (isAiGuest) {
+            setGuestQuestionsUsed(
+              Math.max(
+                0,
+                Number(apiRes.data.ai_questions_used) || 0
+              )
+            );
+            setGuestQuestionsReserved(
+              Math.max(
+                0,
+                Number(apiRes.data.ai_questions_reserved) || 0
+              )
+            );
+            await refreshGuestAiUsage();
+          } else {
+            // Supabase is authoritative for signed-in Nova AI usage.
+            await refreshAiPlan();
+          }
 
           // XP drip is okay to keep (Island bar will be greyed in v1 anyway)
           try {
@@ -1190,6 +1513,7 @@ export default function Ask() {
           }
         }
       } catch (e: any) {
+        setErrorCode(null);
         setError(e?.message || "Something went wrong.");
       } finally {
         setLoading(false);
@@ -1202,9 +1526,13 @@ export default function Ask() {
       onAskQuestion,
       addIslandXp,
       activePersonality,
-      supabaseUserId,
       memoryLimit,
       askMemoryLimit,
+      effectiveMemoryMessageLimit,
+      aiLimitReached,
+      isAiGuest,
+      refreshAiPlan,
+      refreshGuestAiUsage,
     ]
   );
 
@@ -1312,10 +1640,71 @@ export default function Ask() {
     );
   };
 
-  const memoryText = prettyMemoryTier(
-    memoryTier ?? askMemoryTier ?? "free",
-    memoryLimit ?? askMemoryLimit ?? null
+  const effectiveDisplayMemoryLimit = Math.max(
+    Number(memoryLimit) || 0,
+    Number(effectiveMemoryMessageLimit) || 0,
+    Number(askMemoryLimit) || 0
   );
+
+  const memoryText =
+    !isAiGuest && aiPlan.id !== "free"
+      ? `${aiPlan.shortName} memory • remembers ~${effectiveDisplayMemoryLimit} msgs`
+      : prettyMemoryTier(
+          memoryTier ?? askMemoryTier ?? "free",
+          effectiveDisplayMemoryLimit || null
+        );
+
+  const aiRemainingRatio =
+    monthlyQuestionLimit > 0
+      ? questionsRemaining / monthlyQuestionLimit
+      : 1;
+
+  const aiUsageWarning = aiRemainingRatio < 0.2;
+  const aiUsageAccent = aiUsageWarning
+    ? "#FB7185"
+    : aiPlan.accentColor || activeExperience.accent;
+
+  const aiConsumed = Math.min(
+    monthlyQuestionLimit,
+    Math.max(0, questionsUsed + questionsReserved)
+  );
+
+  const aiUsedPercent =
+    monthlyQuestionLimit > 0
+      ? Math.min(
+          100,
+          Math.max(
+            0,
+            (aiConsumed / monthlyQuestionLimit) * 100
+          )
+        )
+      : 0;
+
+  const aiUsageWidth = `${aiUsedPercent}%` as `${number}%`;
+  const aiResetLabel = prettyPeriodEnd(aiPeriodEnd);
+
+  const guestConsumed = Math.min(
+    guestQuestionLimit,
+    Math.max(
+      0,
+      guestQuestionsUsed +
+        guestQuestionsReserved
+    )
+  );
+
+  const guestUsedPercent =
+    guestQuestionLimit > 0
+      ? Math.min(
+          100,
+          Math.max(
+            0,
+            (guestConsumed / guestQuestionLimit) * 100
+          )
+        )
+      : 0;
+
+  const guestUsageWidth =
+    `${guestUsedPercent}%` as `${number}%`;
 
   return (
     <LinearGradient colors={tokens.gradient} style={{ flex: 1 }}>
@@ -1324,8 +1713,8 @@ export default function Ask() {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={115}
       >
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <View style={{ flex: 1 }}>
+        <View style={{ flex: 1, minHeight: 0 }}>
+          <View style={{ flex: 1, minHeight: 0 }}>
             <View
               style={{
                 padding: 12,
@@ -1384,11 +1773,236 @@ export default function Ask() {
                   {memoryText}
                 </Text>
               </View>
-
-              <Text style={{ color: tokens.cardText, fontWeight: "700", fontSize: 13 }}>
-                Questions today: {count}
-              </Text>
             </View>
+
+            {isAiGuest ? (
+              <View
+                style={[
+                  S.aiUsageCard,
+                  {
+                    borderColor: `${activeExperience.accent}88`,
+                    backgroundColor: tokens.isDark
+                      ? "rgba(2,6,23,0.48)"
+                      : "rgba(255,255,255,0.58)",
+                  },
+                ]}
+              >
+                <View style={S.aiUsageTopRow}>
+                  <View style={S.aiUsageTitleRow}>
+                    <Ionicons
+                      name={
+                        guestQuestionsRemaining <= 0
+                          ? "lock-closed-outline"
+                          : "sparkles-outline"
+                      }
+                      size={15}
+                      color={activeExperience.accent}
+                    />
+                    <Text
+                      numberOfLines={1}
+                      style={[
+                        S.aiUsageSummary,
+                        { color: tokens.text },
+                      ]}
+                    >
+                      Guest trial
+                      {" • "}
+                      {guestUsageLoading
+                        ? "Updating…"
+                        : `${guestQuestionsRemaining} of ${guestQuestionLimit} left`}
+                    </Text>
+                  </View>
+                </View>
+
+                <View
+                  style={[
+                    S.aiUsageTrack,
+                    {
+                      backgroundColor: tokens.isDark
+                        ? "rgba(148,163,184,0.16)"
+                        : "rgba(15,23,42,0.10)",
+                    },
+                  ]}
+                >
+                  <View
+                    style={[
+                      S.aiUsageFill,
+                      {
+                        width: guestUsageWidth,
+                        backgroundColor: activeExperience.accent,
+                      },
+                    ]}
+                  />
+                </View>
+
+                {guestQuestionsRemaining <= 0 ? (
+                  <Text
+                    style={[
+                      S.aiUsagePending,
+                      { color: activeExperience.accent },
+                    ]}
+                  >
+                    Guest trial complete • create a free account to keep asking Nova
+                  </Text>
+                ) : (
+                  <Text
+                    style={[
+                      S.aiUsagePending,
+                      { color: tokens.cardText },
+                    ]}
+                  >
+                    2 total guest questions • no conversation history is stored by Nova
+                  </Text>
+                )}
+              </View>
+            ) : (
+              <Pressable
+                onPress={() => setUsageExpanded((current) => !current)}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  usageExpanded
+                    ? "Hide Nova AI usage details"
+                    : "Show Nova AI usage details"
+                }
+                style={({ pressed }) => [
+                  S.aiUsageCard,
+                  {
+                    borderColor: `${aiUsageAccent}88`,
+                    backgroundColor: tokens.isDark
+                      ? "rgba(2,6,23,0.48)"
+                      : "rgba(255,255,255,0.58)",
+                    opacity: pressed ? 0.82 : 1,
+                  },
+                ]}
+              >
+                <View style={S.aiUsageTopRow}>
+                  <View style={S.aiUsageTitleRow}>
+                    <Ionicons
+                      name={
+                        aiUsageWarning
+                          ? "warning-outline"
+                          : "sparkles-outline"
+                      }
+                      size={15}
+                      color={aiUsageAccent}
+                    />
+                    <Text
+                      numberOfLines={1}
+                      style={[
+                        S.aiUsageSummary,
+                        { color: tokens.text },
+                      ]}
+                    >
+                      {aiPlan.shortName}
+                      {" • "}
+                      {aiPlanLoading
+                        ? "Updating…"
+                        : `${questionsRemaining} of ${monthlyQuestionLimit} left`}
+                    </Text>
+                  </View>
+
+                  <Ionicons
+                    name={usageExpanded ? "chevron-up" : "chevron-down"}
+                    size={16}
+                    color={aiUsageAccent}
+                  />
+                </View>
+
+                <View
+                  style={[
+                    S.aiUsageTrack,
+                    {
+                      backgroundColor: tokens.isDark
+                        ? "rgba(148,163,184,0.16)"
+                        : "rgba(15,23,42,0.10)",
+                    },
+                  ]}
+                >
+                  <View
+                    style={[
+                      S.aiUsageFill,
+                      {
+                        width: aiUsageWidth,
+                        backgroundColor: aiUsageAccent,
+                      },
+                    ]}
+                  />
+                </View>
+
+                {usageExpanded ? (
+                  <View style={S.aiUsageDetails}>
+                    <View style={S.aiUsageDetailRow}>
+                      <Text
+                        style={[
+                          S.aiUsageDetailLabel,
+                          { color: tokens.cardText },
+                        ]}
+                      >
+                        Used
+                      </Text>
+                      <Text
+                        style={[
+                          S.aiUsageDetailValue,
+                          { color: tokens.text },
+                        ]}
+                      >
+                        {questionsUsed} / {monthlyQuestionLimit}
+                      </Text>
+                    </View>
+
+                    <View style={S.aiUsageDetailRow}>
+                      <Text
+                        style={[
+                          S.aiUsageDetailLabel,
+                          { color: tokens.cardText },
+                        ]}
+                      >
+                        Memory
+                      </Text>
+                      <Text
+                        style={[
+                          S.aiUsageDetailValue,
+                          { color: tokens.text },
+                        ]}
+                      >
+                        Remembers ~{effectiveMemoryMessageLimit} msgs
+                      </Text>
+                    </View>
+
+                    <View style={S.aiUsageDetailRow}>
+                      <Text
+                        style={[
+                          S.aiUsageDetailLabel,
+                          { color: tokens.cardText },
+                        ]}
+                      >
+                        Resets
+                      </Text>
+                      <Text
+                        style={[
+                          S.aiUsageDetailValue,
+                          { color: tokens.text },
+                        ]}
+                      >
+                        {aiResetLabel}
+                      </Text>
+                    </View>
+
+                    {questionsReserved > 0 ? (
+                      <Text
+                        style={[
+                          S.aiUsagePending,
+                          { color: aiUsageAccent },
+                        ]}
+                      >
+                        {questionsReserved} question
+                        {questionsReserved === 1 ? "" : "s"} currently processing
+                      </Text>
+                    ) : null}
+                  </View>
+                ) : null}
+              </Pressable>
+            )}
 
             <AskPersonalitySelector
               value={activePersonality}
@@ -1414,10 +2028,26 @@ export default function Ask() {
 
             <FlatList
               ref={listRef}
+              style={{
+                flex: 1,
+                minHeight: 0,
+              }}
               data={messages}
               keyExtractor={(m) => m.id}
               renderItem={renderItem}
-              contentContainerStyle={{ paddingBottom: 120 }}
+              contentContainerStyle={{
+                paddingTop: 4,
+                paddingBottom: 28,
+              }}
+              showsVerticalScrollIndicator
+              scrollEnabled
+              nestedScrollEnabled
+              keyboardDismissMode={
+                Platform.OS === "ios"
+                  ? "interactive"
+                  : "on-drag"
+              }
+              onScrollBeginDrag={Keyboard.dismiss}
               ListFooterComponent={
                 loading ? (
                   <NovaThinking
@@ -1442,7 +2072,19 @@ export default function Ask() {
                 }}
               >
                 <TextInput
-                  placeholder={activeExperience.placeholder}
+                  placeholder={
+                    isAiGuest &&
+                    (
+                      guestUsageLoading ||
+                      !guestUsageReady
+                    )
+                      ? "Checking guest trial…"
+                      : aiLimitReached
+                      ? isAiGuest
+                        ? "Guest trial used — create a free account"
+                        : "Nova AI limit reached for this period"
+                      : activeExperience.placeholder
+                  }
                   placeholderTextColor={tokens.isDark ? "#678a94" : "#6b7685"}
                   value={input}
                   onChangeText={setInput}
@@ -1450,12 +2092,15 @@ export default function Ask() {
                   style={{ flex: 1, color: tokens.text, paddingVertical: 10 }}
                   editable={!loading}
                 />
-                <Pressable onPress={send} disabled={loading || !input.trim()}>
+                <Pressable
+                  onPress={send}
+                  disabled={loading || !input.trim() || aiLimitReached}
+                >
                   <Ionicons
                     name="arrow-up-circle"
                     size={28}
                     color={
-                      input.trim()
+                      input.trim() && !aiLimitReached
                         ? activeExperience.accent
                         : tokens.isDark
                         ? "#294b55"
@@ -1483,7 +2128,12 @@ export default function Ask() {
                   }}
                 >
                   <Ionicons
-                    name="cloud-offline-outline"
+                    name={
+                      errorCode === "AI_MONTHLY_LIMIT_REACHED" ||
+                      errorCode === "AI_GUEST_LIMIT_REACHED"
+                        ? "hourglass-outline"
+                        : "cloud-offline-outline"
+                    }
                     size={20}
                     color="#FCA5A5"
                   />
@@ -1497,7 +2147,11 @@ export default function Ask() {
                         marginBottom: 3,
                       }}
                     >
-                      Nova could not answer that just now.
+                      {errorCode === "AI_GUEST_LIMIT_REACHED"
+                        ? "Your guest Nova AI trial is complete."
+                        : errorCode === "AI_MONTHLY_LIMIT_REACHED"
+                        ? "You've reached this period's Nova AI limit."
+                        : "Nova could not answer that just now."}
                     </Text>
 
                     <Text
@@ -1512,7 +2166,10 @@ export default function Ask() {
                   </View>
 
                   <Pressable
-                    onPress={() => setError(null)}
+                    onPress={() => {
+                      setError(null);
+                      setErrorCode(null);
+                    }}
                     accessibilityRole="button"
                     accessibilityLabel="Dismiss error"
                     hitSlop={10}
@@ -1527,13 +2184,78 @@ export default function Ask() {
               ) : null}
             </View>
           </View>
-        </TouchableWithoutFeedback>
+        </View>
       </KeyboardAvoidingView>
     </LinearGradient>
   );
 }
 
 const S = StyleSheet.create({
+  aiUsageCard: {
+    marginHorizontal: 12,
+    marginBottom: 9,
+    minHeight: 43,
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: 11,
+    paddingVertical: 9,
+  },
+  aiUsageTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  aiUsageTitleRow: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+  },
+  aiUsageSummary: {
+    flex: 1,
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: "900",
+  },
+  aiUsageTrack: {
+    height: 4,
+    borderRadius: 999,
+    overflow: "hidden",
+    marginTop: 7,
+  },
+  aiUsageFill: {
+    height: "100%",
+    borderRadius: 999,
+  },
+  aiUsageDetails: {
+    marginTop: 9,
+    paddingTop: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(148,163,184,0.28)",
+    gap: 5,
+  },
+  aiUsageDetailRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  aiUsageDetailLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+  },
+  aiUsageDetailValue: {
+    flexShrink: 1,
+    textAlign: "right",
+    fontSize: 10,
+    fontWeight: "800",
+  },
+  aiUsagePending: {
+    marginTop: 3,
+    fontSize: 9,
+    fontWeight: "800",
+  },
   thinkingWrap: {
     alignSelf: "center",
     marginVertical: 14,

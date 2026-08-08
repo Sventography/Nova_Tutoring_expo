@@ -441,7 +441,7 @@ function toFriendlyAuthError(error: any) {
 
   if (msg.includes("network request failed")) {
     return new Error(
-      `Network request failed while contacting Supabase.\n\nRaw error: ${raw}`
+      "Nova could not connect right now. Please check your connection and try again."
     );
   }
 
@@ -499,6 +499,16 @@ function toFriendlyAuthError(error: any) {
   if (msg.includes("username_change_requires_rpc")) {
     return new Error(
       "Username changes must be completed from the Change Username screen."
+    );
+  }
+
+  if (
+    msg.includes("profiles_ask_memory_tier_check") ||
+    msg.includes("violates check constraint") ||
+    msg.includes("check constraint")
+  ) {
+    return new Error(
+      "Nova could not save that setting. Please try again."
     );
   }
 
@@ -933,7 +943,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateProfile = async (patch: Partial<LocalUserProfile>) => {
-    // Build from the latest committed snapshot rather than a stale render.
+    /*
+     * Build the visible/local profile from the latest committed snapshot.
+     *
+     * IMPORTANT:
+     * The local object may contain many profile fields, but the Supabase write
+     * below must contain ONLY fields explicitly present in `patch`.
+     *
+     * This prevents an unrelated action such as changing Nova personality
+     * from accidentally resubmitting stale Ask-memory data.
+     */
     const previous =
       profileRef.current ||
       profile || {
@@ -945,70 +964,165 @@ export function UserProvider({ children }: { children: ReactNode }) {
       ...patch,
     };
 
-    // Update the UI immediately, then truly await the local write.
+    // Optimistic local update.
     setProfileSnapshot(next);
     await persistProfile(next);
 
-    if (!supabaseUserId) return;
+    // Guests keep only local profile state.
+    if (!supabaseUserId) {
+      return;
+    }
+
+    const hasOwn = (
+      key: keyof LocalUserProfile
+    ): boolean =>
+      Object.prototype.hasOwnProperty.call(
+        patch,
+        key
+      );
 
     const row: any = {
       id: supabaseUserId,
       updated_at: new Date().toISOString(),
     };
 
-    // Identity fields are intentionally excluded from ordinary profile saves.
-    // Username changes use change_username(); login email changes use Supabase Auth.
+    /*
+     * Identity fields remain intentionally excluded.
+     * Username changes use change_username().
+     * Login-email changes use Supabase Auth.
+     */
 
-    const avatarCandidate =
-      next.avatar ??
-      next.avatarUrl ??
-      next.avatarUri ??
-      next.photoURL ??
-      next.imageUrl;
+    // --------------------------------------------------------
+    // Avatar
+    // --------------------------------------------------------
+
+    const hasAvatarPatch =
+      hasOwn("avatar") ||
+      hasOwn("avatarUrl") ||
+      hasOwn("avatarUri") ||
+      hasOwn("photoURL") ||
+      hasOwn("imageUrl");
+
+    if (hasAvatarPatch) {
+      let avatarCandidate:
+        | string
+        | null
+        | undefined;
+
+      if (hasOwn("avatar")) {
+        avatarCandidate =
+          patch.avatar;
+      } else if (hasOwn("avatarUrl")) {
+        avatarCandidate =
+          patch.avatarUrl;
+      } else if (hasOwn("avatarUri")) {
+        avatarCandidate =
+          patch.avatarUri;
+      } else if (hasOwn("photoURL")) {
+        avatarCandidate =
+          patch.photoURL;
+      } else if (hasOwn("imageUrl")) {
+        avatarCandidate =
+          patch.imageUrl;
+      }
+
+      if (
+        typeof avatarCandidate === "string" ||
+        avatarCandidate === null
+      ) {
+        row.avatar_url =
+          avatarCandidate;
+      }
+    }
+
+    // --------------------------------------------------------
+    // Ask personality
+    // --------------------------------------------------------
 
     if (
-      typeof avatarCandidate === "string" ||
-      avatarCandidate === null
+      hasOwn("askPersonality") &&
+      typeof patch.askPersonality === "string" &&
+      patch.askPersonality.trim()
     ) {
-      row.avatar_url = avatarCandidate;
+      row.ask_personality =
+        normalizeAskPersonality(
+          patch.askPersonality
+        );
+    }
+
+    // --------------------------------------------------------
+    // Legacy permanent Ask-memory ownership
+    // --------------------------------------------------------
+
+    if (
+      hasOwn("askMemoryTier") &&
+      typeof patch.askMemoryTier === "string" &&
+      patch.askMemoryTier.trim()
+    ) {
+      row.ask_memory_tier =
+        patch.askMemoryTier.trim();
     }
 
     if (
-      typeof next.askPersonality === "string" &&
-      next.askPersonality.trim()
+      hasOwn("askMemoryLimit") &&
+      typeof patch.askMemoryLimit === "number" &&
+      Number.isFinite(
+        patch.askMemoryLimit
+      )
     ) {
-      row.ask_personality = next.askPersonality;
-    }
-
-    if (
-      typeof next.askMemoryTier === "string" &&
-      next.askMemoryTier.trim()
-    ) {
-      row.ask_memory_tier = next.askMemoryTier;
-    }
-
-    if (
-      typeof next.askMemoryLimit === "number" &&
-      Number.isFinite(next.askMemoryLimit)
-    ) {
-      row.ask_memory_limit = next.askMemoryLimit;
+      row.ask_memory_limit =
+        patch.askMemoryLimit;
     }
 
     try {
-      const { error } = await supabase.from("profiles").upsert(row, {
-        onConflict: "id",
-      });
+      const { error } =
+        await supabase
+          .from("profiles")
+          .upsert(
+            row,
+            {
+              onConflict: "id",
+            }
+          );
 
       if (error) {
-        console.warn("[UserContext] updateProfile upsert error:", error);
-        throw toFriendlyAuthError(error);
+        console.warn(
+          "[UserContext] updateProfile upsert error:",
+          error
+        );
+
+        throw error;
       }
 
-      // Keep the local cache aligned with the completed remote save.
+      // Keep local storage aligned with the completed server write.
       await persistProfile(next);
-    } catch (e) {
-      console.warn("[UserContext] updateProfile threw:", e);
-      throw toFriendlyAuthError(e);
+    } catch (error) {
+      console.warn(
+        "[UserContext] updateProfile threw:",
+        error
+      );
+
+      /*
+       * The optimistic UI should never remain on a setting that the server
+       * rejected. Restore the last committed profile before surfacing the
+       * friendly error.
+       */
+      setProfileSnapshot(previous);
+
+      try {
+        await persistProfile(
+          previous
+        );
+      } catch (rollbackError) {
+        console.warn(
+          "[UserContext] profile rollback warning:",
+          rollbackError
+        );
+      }
+
+      throw toFriendlyAuthError(
+        error
+      );
     }
   };
 
@@ -1507,8 +1621,32 @@ export function UserProvider({ children }: { children: ReactNode }) {
       );
 
       await AsyncStorage.multiRemove([
+        /*
+         * Current + legacy anonymous coin wallets.
+         */
         "@nova/coins:guest",
         "@nova/coins:guest:meta:v2",
+        "@nova/coins:guest:v2",
+        "@nova/coins:guest:v2:meta:v2",
+        "@nova/coins:guest:v3",
+        "@nova/coins:guest:v3:meta:v2",
+        "@nova/coins:guest:v4",
+        "@nova/coins:guest:v4:meta:v2",
+
+        /*
+         * Anonymous achievement progress.
+         * User-scoped keys such as .user.<uuid> are untouched.
+         */
+        "@achieve/unlocked.v1.guest",
+        "@achieve/quizCount.v1.guest",
+        "@achieve/askCount.v1.guest",
+        "@achieve/flashcardCount.v1.guest",
+        "@achieve/brainteaserCount.v1.guest",
+        "@achieve/relaxMinutes.v1.guest",
+        "@achieve/purchaseCount.v1.guest",
+        "@achieve/purchaseKeys.v1.guest",
+        "@nova/achievements.quizFlags.v1",
+
         "@nova/purchases/guest",
         "@nova/purchases",
         "@nova/purchases.v2",

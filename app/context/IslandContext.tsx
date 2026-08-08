@@ -688,6 +688,11 @@ export function IslandProvider({ children }: { children: ReactNode }) {
         return false;
       }
 
+      // Daily-login rewards belong only to authenticated accounts.
+      if (!userId) {
+        return false;
+      }
+
       if (dailyLoginGrantRef.current) {
         return dailyLoginGrantRef.current;
       }

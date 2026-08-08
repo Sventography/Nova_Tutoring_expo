@@ -35,6 +35,7 @@ type CoinsContextValue = {
   ) => Promise<void>;
 
   refreshCoins: () => Promise<void>;
+  resetGuestCoins: () => Promise<void>;
 };
 
 type LocalCoinSnapshot = {
@@ -913,6 +914,44 @@ export function CoinsProvider({
       );
     };
 
+  const resetGuestCoins =
+    async (): Promise<void> => {
+      /*
+       * Guest coins are temporary session progress.
+       * Signed-in user balances are never touched.
+       *
+       * IMPORTANT:
+       * Never remove @nova/guest-ai-installation-id.v1 here.
+       * That ID controls the lifetime 2-question guest AI trial.
+       */
+      if (supabaseUserId) {
+        return;
+      }
+
+      try {
+        await mutationQueueRef.current;
+      } catch {
+        // Queued mutation errors are already logged elsewhere.
+      }
+
+      applyCoins(0);
+
+      await AsyncStorage.multiRemove([
+        GUEST_COINS_KEY,
+        getCoinMetaKey(null),
+        ...LEGACY_GUEST_COIN_KEYS,
+      ]);
+
+      setLoading(false);
+      setReady(true);
+
+      if (__DEV__) {
+        console.log(
+          "[CoinsContext] guest wallet reset to 0"
+        );
+      }
+    };
+
   const value: CoinsContextValue = {
     coins,
     loading,
@@ -920,6 +959,7 @@ export function CoinsProvider({
     setCoins,
     addCoins,
     refreshCoins,
+    resetGuestCoins,
   };
 
   return (

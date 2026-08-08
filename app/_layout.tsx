@@ -9,6 +9,7 @@ import { Slot } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 import AppProviders from "./AppProviders";
+import { AiPlanProvider } from "./context/AiPlanContext";
 import { StreakProvider } from "./context/StreakContext";
 import ThemeOverlay from "./components/ThemeOverlay";
 import { FxProvider } from "./context/FxProvider";
@@ -22,12 +23,14 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <AppProviders>
-        <StreakProvider>
-          <FxProvider>
-            <ThemeOverlay />
-            <Slot />
-          </FxProvider>
-        </StreakProvider>
+        <AiPlanProvider>
+          <StreakProvider>
+            <FxProvider>
+              <ThemeOverlay />
+              <Slot />
+            </FxProvider>
+          </StreakProvider>
+        </AiPlanProvider>
       </AppProviders>
     </GestureHandlerRootView>
   );

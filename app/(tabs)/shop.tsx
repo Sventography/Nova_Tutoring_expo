@@ -28,6 +28,7 @@ import { useCursor } from "../context/CursorContext";
 import { useUser } from "../context/UserContext";
 import { usePurchases } from "../context/PurchasesContext";
 import { useCompanion } from "../context/CompanionContext";
+import { useAiPlan } from "../context/AiPlanContext";
 
 import {
   catalog,
@@ -64,6 +65,16 @@ import { showToast } from "../utils/toast";
 import AddressSheet, { AddressPayload } from "../components/AddressSheet";
 import { supabase } from "../lib/supabase";
 
+import NovaAiPlansSection from "../components/NovaAiPlansSection";
+import {
+  fetchNovaAiSubscriptionProducts,
+  getNovaAiPurchaseProductId,
+  getNovaAiPurchaseTransactionId,
+  isNovaAiSubscriptionProductId,
+  openNovaAiSubscriptionManagement,
+  requestNovaAiSubscriptionPurchase,
+  verifyNovaAiSubscriptionOnServer,
+} from "../_lib/aiSubscriptionIap";
 
 
 const InAppPurchases: any = ExpoIAP;
@@ -2301,6 +2312,13 @@ export default function Shop() {
     clearCompanion,
   } = useCompanion();
 
+    const {
+    plan: currentAiPlan,
+    subscriptionStatus:
+      currentAiSubscriptionStatus,
+    refresh: refreshAiPlan,
+  } = useAiPlan();
+
   useEffect(() => {
     if (Platform.OS === "android") {
       try {
@@ -2401,6 +2419,18 @@ export default function Shop() {
   const iapPurchaseStartedAtRef = useRef<number | null>(null);
   const purchaseResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [restoringIapPurchases, setRestoringIapPurchases] = useState(false);
+  const [
+    aiSubscriptionProductsById,
+    setAiSubscriptionProductsById,
+  ] = useState<Record<string, any>>({});
+  const [
+    pendingAiSubscriptionProductId,
+    setPendingAiSubscriptionProductId,
+  ] = useState<string | null>(null);
+  const aiSubscriptionProcessingIdsRef =
+    useRef<Set<string>>(new Set());
+  const aiSubscriptionCompletedIdsRef =
+    useRef<Set<string>>(new Set());
 
   const panResponder = useRef(
     PanResponder.create({
@@ -2644,6 +2674,7 @@ export default function Shop() {
   const getPurchaseTransactionId = (purchase: any): string =>
     String(
       purchase?.transactionId ||
+        purchase?.id ||
         purchase?.purchaseToken ||
         purchase?.orderId ||
         ""
@@ -2678,6 +2709,7 @@ export default function Shop() {
     pendingIapProductIdRef.current = null;
     pendingIapItemRef.current = null;
     iapPurchaseOwnerIdRef.current = null;
+    setPendingAiSubscriptionProductId(null);
 
     if (purchaseResetTimerRef.current) {
       clearTimeout(purchaseResetTimerRef.current);
@@ -2770,6 +2802,68 @@ export default function Shop() {
     })();
 
     return iapProductsPromiseRef.current;
+  };
+
+  const fetchAiSubscriptionProducts = async () => {
+    const available = await isIapAvailable();
+
+    if (!available) {
+      setAiSubscriptionProductsById({});
+      return {};
+    }
+
+    const connected = await ensureIapConnected();
+
+    if (!connected) {
+      setAiSubscriptionProductsById({});
+      return {};
+    }
+
+    try {
+      const products =
+        await fetchNovaAiSubscriptionProducts();
+
+      const byId: Record<string, any> = {};
+
+      for (const product of products) {
+        const productId = String(
+          product?.id ||
+            product?.productId ||
+            ""
+        ).trim();
+
+        if (
+          productId &&
+          isNovaAiSubscriptionProductId(
+            productId
+          )
+        ) {
+          byId[productId] = product;
+        }
+      }
+
+      setAiSubscriptionProductsById(
+        byId
+      );
+
+      console.log(
+        "[AI IAP] subscriptions loaded",
+        Object.keys(byId)
+      );
+
+      return byId;
+    } catch (error) {
+      console.warn(
+        "[AI IAP] subscription fetch failed",
+        error
+      );
+
+      setAiSubscriptionProductsById(
+        {}
+      );
+
+      return {};
+    }
   };
 
   const fulfillDigitalItem = async (
@@ -2942,6 +3036,216 @@ export default function Shop() {
     }
   };
 
+
+  const processCompletedAiSubscriptionPurchase =
+    async (
+      purchase: any,
+      options?: {
+        restored?: boolean;
+      }
+    ) => {
+      const restored =
+        options?.restored === true;
+
+      const productId =
+        getNovaAiPurchaseProductId(
+          purchase
+        ) ||
+        pendingIapProductIdRef.current ||
+        "";
+
+      if (
+        !isNovaAiSubscriptionProductId(
+          productId
+        )
+      ) {
+        return false;
+      }
+
+      const transactionId =
+        getNovaAiPurchaseTransactionId(
+          purchase
+        );
+
+      const expectedOwnerId =
+        iapPurchaseOwnerIdRef.current ||
+        supabaseUserId ||
+        null;
+
+      if (
+        !supabaseUserId ||
+        (
+          expectedOwnerId &&
+          expectedOwnerId !==
+            supabaseUserId
+        )
+      ) {
+        console.warn(
+          "[AI IAP] refusing subscription without matching Nova account",
+          {
+            expectedOwnerId,
+            currentOwnerId:
+              supabaseUserId ?? null,
+            productId,
+          }
+        );
+
+        if (!restored) {
+          Alert.alert(
+            "Sign in required",
+            "Sign in to the Nova account that started this subscription, then restore Apple purchases."
+          );
+        }
+
+        clearIapPurchasePendingState();
+        return false;
+      }
+
+      if (
+        !restored &&
+        transactionId
+      ) {
+        if (
+          aiSubscriptionProcessingIdsRef.current.has(
+            transactionId
+          ) ||
+          aiSubscriptionCompletedIdsRef.current.has(
+            transactionId
+          )
+        ) {
+          console.log(
+            "[AI IAP] duplicate subscription delivery ignored",
+            { transactionId, productId }
+          );
+
+          if (
+            aiSubscriptionCompletedIdsRef.current.has(
+              transactionId
+            ) &&
+            pendingIapProductIdRef.current ===
+              productId
+          ) {
+            clearIapPurchasePendingState();
+          }
+
+          return true;
+        }
+
+        aiSubscriptionProcessingIdsRef.current.add(
+          transactionId
+        );
+      }
+
+      try {
+        const verification =
+          await verifyNovaAiSubscriptionOnServer({
+            purchase,
+            expectedProductId:
+              productId,
+          });
+
+        await refreshAiPlan();
+
+        /*
+         * Apple is finished ONLY after our Flask backend has
+         * verified and persisted the entitlement.
+         */
+        try {
+          await ExpoIAP.finishTransaction({
+            purchase,
+            isConsumable: false,
+          });
+        } catch (finishError) {
+          /*
+           * A restored StoreKit 2 entitlement may already be finished.
+           * The backend entitlement is already verified and saved, so a
+           * harmless second-finish failure must not undo the restore.
+           */
+          console.warn(
+            "[AI IAP] finishTransaction warning",
+            finishError
+          );
+        }
+
+        if (transactionId) {
+          aiSubscriptionCompletedIdsRef.current.add(
+            transactionId
+          );
+        }
+
+        console.log(
+          "[AI IAP] verified and entitlement refreshed",
+          {
+            productId,
+            planId:
+              verification?.plan_id,
+            restored,
+          }
+        );
+
+        if (!restored) {
+          const label = String(
+            verification?.purchased_plan_id ||
+              verification?.plan_id ||
+              "Nova AI"
+          );
+
+          Alert.alert(
+            "Nova AI updated ✨",
+            `${label.charAt(0).toUpperCase()}${label.slice(1)} is now connected to your Nova account.`
+          );
+        }
+
+        clearIapPurchasePendingState();
+        return true;
+      } catch (error: any) {
+        console.warn(
+          "[AI IAP] verification failed",
+          error
+        );
+
+        /*
+         * Never finish an unverified StoreKit transaction.
+         * Apple can redeliver the unfinished purchase later.
+         */
+        if (!restored) {
+          const stillProcessing =
+            error?.code ===
+            "APPLE_VERIFICATION_PENDING";
+
+          Alert.alert(
+            stillProcessing
+              ? "Purchase still processing"
+              : "Subscription verification",
+            stillProcessing
+              ? "Apple completed the purchase, but Nova is still waiting for confirmation. You do not need to purchase it again. Your plan will update automatically when Apple verification becomes available."
+              : error?.message ||
+                  "Apple completed the purchase, but Nova could not verify the subscription yet."
+          );
+        }
+
+        clearIapPurchasePendingState();
+        return false;
+      } finally {
+        if (transactionId) {
+          aiSubscriptionProcessingIdsRef.current.delete(
+            transactionId
+          );
+        }
+
+        /*
+         * Whether verification succeeds, fails, or times out,
+         * never leave the selected plan button locked.
+         */
+        if (
+          !restored &&
+          pendingIapProductIdRef.current ===
+            productId
+        ) {
+          clearIapPurchasePendingState();
+        }
+      }
+    };
 
   const processCompletedIapPurchase = async (
     purchase: any,
@@ -3139,14 +3443,53 @@ export default function Shop() {
 
       let restoredCount = 0;
       for (const purchase of storePurchases) {
-        const productId = getPurchaseProductId(purchase);
-        const item = resolveIapCatalogItem(productId);
-        if (!item || item?.category === "coin_pack") continue;
+        const productId =
+          getPurchaseProductId(purchase);
 
-        const ok = await processCompletedIapPurchase(purchase, item, {
-          restored: true,
-        });
-        if (ok) restoredCount += 1;
+        if (
+          isNovaAiSubscriptionProductId(
+            productId
+          )
+        ) {
+          const ok =
+            await processCompletedAiSubscriptionPurchase(
+              purchase,
+              {
+                restored: true,
+              }
+            );
+
+          if (ok) {
+            restoredCount += 1;
+          }
+
+          continue;
+        }
+
+        const item =
+          resolveIapCatalogItem(
+            productId
+          );
+
+        if (
+          !item ||
+          item?.category === "coin_pack"
+        ) {
+          continue;
+        }
+
+        const ok =
+          await processCompletedIapPurchase(
+            purchase,
+            item,
+            {
+              restored: true,
+            }
+          );
+
+        if (ok) {
+          restoredCount += 1;
+        }
       }
 
       if (!silent) {
@@ -3201,6 +3544,318 @@ export default function Shop() {
     } catch (error) {
       console.warn("[IAP] existing entitlement lookup failed", error);
       return null;
+    }
+  };
+
+  const buyAiSubscription = async (
+    plan: any
+  ) => {
+    if (!isAuthenticated) {
+      Alert.alert(
+        "Sign in required",
+        "Please sign in or create an account before subscribing to Nova AI."
+      );
+      return;
+    }
+
+    if (Platform.OS !== "ios") {
+      Alert.alert(
+        "Apple subscription",
+        "Nova AI subscriptions are currently configured for the iOS App Store."
+      );
+      return;
+    }
+
+    const productId = String(
+      plan?.appleProductId || ""
+    ).trim();
+
+    if (
+      !productId ||
+      !isNovaAiSubscriptionProductId(
+        productId
+      )
+    ) {
+      Alert.alert(
+        "Subscription unavailable",
+        "This Nova AI plan is missing its App Store product."
+      );
+      return;
+    }
+
+    const activePaidStatuses =
+      new Set([
+        "active",
+        "grace_period",
+        "billing_retry",
+      ]);
+
+    const hasActivePaidPlan =
+      currentAiPlan?.id !== "free" &&
+      activePaidStatuses.has(
+        String(
+          currentAiSubscriptionStatus ||
+            ""
+        )
+      );
+
+    /*
+     * Current plan: don't send another StoreKit request.
+     */
+    if (
+      hasActivePaidPlan &&
+      String(
+        currentAiPlan?.id || ""
+      ) ===
+        String(
+          plan?.id || ""
+        )
+    ) {
+      Alert.alert(
+        "Current Nova AI Plan",
+        `${currentAiPlan.shortName} is already your active Nova AI plan.`
+      );
+
+      return;
+    }
+
+    const currentOrder =
+      Number(
+        currentAiPlan?.sortOrder
+      );
+
+    const targetOrder =
+      Number(
+        plan?.sortOrder
+      );
+
+    const isDowngrade =
+      hasActivePaidPlan &&
+      Number.isFinite(
+        currentOrder
+      ) &&
+      Number.isFinite(
+        targetOrder
+      ) &&
+      targetOrder <
+        currentOrder;
+
+    /*
+     * Apple schedules a downgrade for the next renewal.
+     * Don't treat it like an immediate entitlement purchase.
+     */
+    if (isDowngrade) {
+      Alert.alert(
+        "Change Your Nova AI Plan?",
+        `You're currently using ${currentAiPlan.shortName}. Apple applies a change to ${plan.shortName} at your next renewal, so you'll keep ${currentAiPlan.shortName} and its benefits until then.`,
+        [
+          {
+            text: "Cancel",
+            style: "cancel",
+          },
+          {
+            text:
+              "Manage Subscription",
+            onPress: () => {
+              void openNovaAiSubscriptionManagement()
+                .catch(
+                  (error: any) => {
+                    console.warn(
+                      "[AI IAP] could not open Apple subscription management",
+                      error
+                    );
+
+                    Alert.alert(
+                      "Could not open subscriptions",
+                      String(
+                        error?.message ||
+                          "Open your Apple ID subscription settings to manage your Nova AI plan."
+                      )
+                    );
+                  }
+                );
+            },
+          },
+        ]
+      );
+
+      return;
+    }
+
+    if (
+      iapPurchaseInFlightRef.current
+    ) {
+      const startedAt =
+        iapPurchaseStartedAtRef.current ??
+        0;
+
+      const isStale =
+        !startedAt ||
+        Date.now() - startedAt >
+          45000;
+
+      if (isStale) {
+        clearIapPurchasePendingState();
+      } else {
+        Alert.alert(
+          "Purchase in progress",
+          "Please finish or cancel the current Apple purchase first."
+        );
+        return;
+      }
+    }
+
+    const available =
+      await isIapAvailable();
+
+    if (!available) {
+      showIapUnavailableAlert(
+        "module_missing"
+      );
+      return;
+    }
+
+    const connected =
+      await ensureIapConnected();
+
+    if (!connected) {
+      showIapUnavailableAlert(
+        "connect_failed"
+      );
+      return;
+    }
+
+    try {
+      let storeProduct =
+        aiSubscriptionProductsById[
+          productId
+        ];
+
+      if (!storeProduct) {
+        const products =
+          await fetchNovaAiSubscriptionProducts(
+            [productId]
+          );
+
+        storeProduct =
+          products.find(
+            (candidate: any) =>
+              String(
+                candidate?.id ||
+                  candidate?.productId ||
+                  ""
+              ).trim() ===
+              productId
+          );
+
+        if (storeProduct) {
+          setAiSubscriptionProductsById(
+            (current) => ({
+              ...current,
+              [productId]:
+                storeProduct,
+            })
+          );
+        }
+      }
+
+      if (!storeProduct) {
+        Alert.alert(
+          "Subscription unavailable",
+          "Apple has not returned this Nova AI subscription yet. App Store Connect changes can take a little time to appear in testing."
+        );
+        return;
+      }
+
+      pendingIapProductIdRef.current =
+        productId;
+
+      pendingIapItemRef.current = {
+        id: `ai_subscription:${String(
+          plan?.id || productId
+        )}`,
+        title:
+          plan?.displayName ||
+          "Nova AI",
+        category:
+          "ai_subscription",
+        iapProductId:
+          productId,
+      };
+
+      iapPurchaseOwnerIdRef.current =
+        supabaseUserId;
+
+      iapPurchaseInFlightRef.current =
+        true;
+
+      iapPurchaseStartedAtRef.current =
+        Date.now();
+
+      setPendingAiSubscriptionProductId(
+        productId
+      );
+
+      purchaseResetTimerRef.current =
+        setTimeout(() => {
+          console.warn(
+            "[AI IAP] purchase request timed out",
+            {
+              productId,
+            }
+          );
+
+          clearIapPurchasePendingState();
+        }, 45000);
+
+      console.log(
+        "[AI IAP] starting subscription purchase",
+        {
+          productId,
+          planId: plan?.id,
+          accountToken:
+            supabaseUserId,
+        }
+      );
+
+      await requestNovaAiSubscriptionPurchase({
+        productId,
+        appAccountToken:
+          String(supabaseUserId),
+      });
+    } catch (error: any) {
+      const message = String(
+        error?.message ||
+          error ||
+          ""
+      );
+
+      const code = String(
+        error?.code || ""
+      ).toLowerCase();
+
+      const cancelled =
+        code.includes("cancel") ||
+        message
+          .toLowerCase()
+          .includes("cancel");
+
+      console.warn(
+        "[AI IAP] request failed",
+        error
+      );
+
+      clearIapPurchasePendingState();
+
+      if (cancelled) {
+        return;
+      }
+
+      Alert.alert(
+        "Subscription error",
+        message ||
+          "Could not start the Nova AI subscription."
+      );
     }
   };
 
@@ -3321,7 +3976,10 @@ export default function Shop() {
 
       const product = eligibleProducts[0];
       const productId = String(
-        product?.id || product?.productId || requestedIds[0] || ""
+        product?.id ||
+          (product as any)?.productId ||
+          requestedIds[0] ||
+          ""
       ).trim();
 
       if (!product || !productId) {
@@ -3404,6 +4062,25 @@ export default function Shop() {
             transactionId: getPurchaseTransactionId(purchase),
           });
 
+          const productId =
+            getPurchaseProductId(
+              purchase
+            );
+
+          if (
+            isNovaAiSubscriptionProductId(
+              productId
+            )
+          ) {
+            await processCompletedAiSubscriptionPurchase(
+              purchase,
+              {
+                restored: false,
+              }
+            );
+            return;
+          }
+
           await processCompletedIapPurchase(
             purchase,
             pendingIapItemRef.current || undefined,
@@ -3437,6 +4114,7 @@ export default function Shop() {
       if (!connected || !mounted) return;
 
       await fetchIapProducts();
+      await fetchAiSubscriptionProducts();
 
       // Restore only for an authenticated Nova account. StoreKit entitlements
       // must never be silently granted into an anonymous guest profile.
@@ -5954,17 +6632,22 @@ export default function Shop() {
           </Section>
         </View>
 
-        <Section title="Ask Memory Upgrades">
-          {groups.ask_memory.map((it) =>
-            renderItem(
-              it,
-              CATEGORY_BORDER.ask_memory,
-              undefined,
-              setDetailItem,
-              tokens
+        <NovaAiPlansSection
+          storeProductsById={
+            aiSubscriptionProductsById
+          }
+          pendingProductId={
+            pendingAiSubscriptionProductId
+          }
+          isAuthenticated={
+            isAuthenticated
+          }
+          onSelectPlan={(plan) =>
+            void buyAiSubscription(
+              plan
             )
-          )}
-        </Section>
+          }
+        />
 
         <View style={{ marginBottom: 8 }}>
           <Text

@@ -40,6 +40,7 @@ type AchievementsContextValue = {
   onFlashcardSaved?: () => void;
   onBrainPairCompleted?: () => void;
   onRelaxMinutes?: (deltaMinutes: number) => void;
+  resetGuestAchievements: () => Promise<void>;
 
   /**
    * Development-only helpers used by the hidden Dev Test screen.
@@ -52,15 +53,15 @@ type AchievementsContextValue = {
    * Development diagnostics. These come from the exact provider that awards
    * the coins, so they reveal whether Mecha Owl is being detected there.
    */
-  devAchievementRewardPreview?: (
-    base: number,
-    id: string
-  ) => number;
+  devAchievementRewardPreview?: ReturnType<
+    typeof useLegendaryCompanions
+  >["calculateCoinReward"];
+
   devAchievementCompanionDebug?: {
-    activeCompanionId: string | null;
-    activeCompanionToken: string;
-    activeAbilityType: string | null;
-    activeBonusPercent: number;
+    activeCompanionId?: string | null;
+    activeCompanionToken?: string;
+    activeAbilityType?: string | null;
+    activeBonusPercent?: number;
     mechaOwlDetected: boolean;
   };
 };
@@ -477,9 +478,24 @@ export function AchievementsProvider({
 
       try {
         DeviceEventEmitter.emit(ACHIEVEMENT_EVENT, { id, ts: now });
-        if (Platform.OS === "web" && typeof window !== "undefined") {
+        if (Platform.OS === "web") {
           try {
-            window.dispatchEvent(new Event(ACHIEVEMENT_EVENT));
+            const webWindow =
+              (globalThis as any).window;
+
+            const WebEvent =
+              (globalThis as any).Event;
+
+            if (
+              webWindow?.dispatchEvent &&
+              typeof WebEvent === "function"
+            ) {
+              webWindow.dispatchEvent(
+                new WebEvent(
+                  ACHIEVEMENT_EVENT
+                )
+              );
+            }
           } catch {}
         }
       } catch (e) {
@@ -786,6 +802,82 @@ export function AchievementsProvider({
     [unlock, persistRelaxMinutes]
   );
 
+  const resetGuestAchievements =
+    useCallback(async (): Promise<void> => {
+      /*
+       * Guest achievement progress is session-only.
+       * Signed-in achievement keys are deliberately untouched.
+       *
+       * Also clear the old device-global quiz flags so a previous
+       * anonymous session cannot affect the new guest.
+       *
+       * The Nova AI installation identifier is NOT part of this list.
+       */
+      if (supabaseUserId) {
+        return;
+      }
+
+      unlockedRef.current = {};
+      quizCountRef.current = 0;
+      askCountRef.current = 0;
+      flashCountRef.current = 0;
+      brainCountRef.current = 0;
+      relaxMinutesRef.current = 0;
+      purchaseCountRef.current = 0;
+      purchaseKeysRef.current =
+        new Set();
+      purchaseBaselineReadyRef.current =
+        false;
+      inventoryBaselineTotalRef.current =
+        0;
+
+      setUnlocked({});
+
+      await AsyncStorage.multiRemove([
+        storageKey(
+          STORAGE_BASE_UNLOCKED,
+          null
+        ),
+        storageKey(
+          STORAGE_BASE_QUIZ_COUNT,
+          null
+        ),
+        storageKey(
+          STORAGE_BASE_ASK_COUNT,
+          null
+        ),
+        storageKey(
+          STORAGE_BASE_FLASHCARD_COUNT,
+          null
+        ),
+        storageKey(
+          STORAGE_BASE_BRAIN_COUNT,
+          null
+        ),
+        storageKey(
+          STORAGE_BASE_RELAX_MIN,
+          null
+        ),
+        storageKey(
+          STORAGE_BASE_PURCHASE_COUNT,
+          null
+        ),
+        storageKey(
+          STORAGE_BASE_PURCHASE_KEYS,
+          null
+        ),
+
+        // Legacy device-global quiz achievement flags.
+        "@nova/achievements.quizFlags.v1",
+      ]);
+
+      if (__DEV__) {
+        console.log(
+          "[Achievements] fresh guest progress reset"
+        );
+      }
+    }, [supabaseUserId]);
+
   const value = useMemo<AchievementsContextValue>(
     () => ({
       unlocked,
@@ -794,6 +886,7 @@ export function AchievementsProvider({
       onFlashcardSaved,
       onBrainPairCompleted,
       onRelaxMinutes,
+      resetGuestAchievements,
       devUnlockAchievement,
       devResetAchievement,
       devAchievementRewardPreview: computeAchievementReward,
@@ -808,6 +901,7 @@ export function AchievementsProvider({
       onFlashcardSaved,
       onBrainPairCompleted,
       onRelaxMinutes,
+      resetGuestAchievements,
       devUnlockAchievement,
       devResetAchievement,
       computeAchievementReward,
