@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import os
 import uuid
 from datetime import datetime, timezone
@@ -581,6 +582,477 @@ def _persist_subscription(
   return payload
 
 
+
+
+APPLE_NOTIFICATION_STATUS_BY_RAW = {
+  1: "active",
+  2: "expired",
+  3: "billing_retry",
+  4: "grace_period",
+  5: "revoked",
+}
+
+
+def _safe_int(value: Any) -> int | None:
+  try:
+    return int(value)
+  except (TypeError, ValueError):
+    return None
+
+
+def _enum_text(value: Any) -> str:
+  if value is None:
+    return ""
+
+  return _text(
+    getattr(value, "value", value)
+  )
+
+
+def _iso_datetime(
+  value: Any,
+) -> datetime | None:
+  raw = _text(value)
+
+  if not raw:
+    return None
+
+  try:
+    dt = datetime.fromisoformat(
+      raw.replace("Z", "+00:00")
+    )
+  except ValueError:
+    return None
+
+  if dt.tzinfo is None:
+    dt = dt.replace(
+      tzinfo=timezone.utc
+    )
+
+  return dt.astimezone(
+    timezone.utc
+  )
+
+
+def _verify_notification_payload(
+  signed_payload: str,
+):
+  config = _apple_configuration()
+
+  if not (
+    apple_subscription_configuration_status()
+    ["sandbox_ready"]
+  ):
+    raise RuntimeError(
+      "Apple notification verification "
+      "is not configured."
+    )
+
+  clients = _build_apple_clients(
+    config
+  )
+
+  last_error: Exception | None = None
+  retryable_error: Exception | None = None
+
+  for name in (
+    "production",
+    "sandbox",
+  ):
+    pair = clients.get(name)
+
+    if not pair:
+      continue
+
+    _, verifier = pair
+
+    try:
+      decoded = (
+        verifier
+        .verify_and_decode_notification(
+          signed_payload
+        )
+      )
+
+      return (
+        name,
+        verifier,
+        decoded,
+      )
+
+    except Exception as error:
+      last_error = error
+
+      status_name = _text(
+        getattr(
+          getattr(
+            error,
+            "status",
+            None,
+          ),
+          "name",
+          "",
+        )
+      )
+
+      if (
+        status_name
+        == "RETRYABLE_VERIFICATION_FAILURE"
+      ):
+        retryable_error = error
+
+  if retryable_error is not None:
+    raise RuntimeError(
+      "Apple notification verification "
+      "is temporarily unavailable."
+    ) from retryable_error
+
+  raise PermissionError(
+    "Apple notification signature "
+    "could not be verified."
+  ) from last_error
+
+
+def _notification_rows(
+  supabase_url: str,
+  service_role_key: str,
+  notification_uuid: str,
+):
+  return _get_rows(
+    supabase_url,
+    service_role_key,
+    "apple_subscription_notifications",
+    {
+      "notification_uuid":
+        f"eq.{notification_uuid}",
+      "select": (
+        "notification_uuid,"
+        "processed_at,"
+        "processing_error"
+      ),
+      "limit": "1",
+    },
+  )
+
+
+def _insert_notification(
+  supabase_url: str,
+  service_role_key: str,
+  payload: dict[str, Any],
+) -> None:
+  response = requests.post(
+    (
+      f"{supabase_url}"
+      "/rest/v1/"
+      "apple_subscription_notifications"
+    ),
+    headers=_supabase_headers(
+      service_role_key
+    ),
+    json=payload,
+    timeout=15,
+  )
+
+  # 409 means Apple retried a UUID we have already inserted.
+  if response.status_code not in (
+    200,
+    201,
+    204,
+    409,
+  ):
+    raise RuntimeError(
+      "Supabase notification insert "
+      f"failed: {response.status_code} "
+      f"{response.text[:800]}"
+    )
+
+
+def _patch_notification(
+  supabase_url: str,
+  service_role_key: str,
+  notification_uuid: str,
+  payload: dict[str, Any],
+) -> None:
+  response = requests.patch(
+    (
+      f"{supabase_url}"
+      "/rest/v1/"
+      "apple_subscription_notifications"
+    ),
+    headers=_supabase_headers(
+      service_role_key
+    ),
+    params={
+      "notification_uuid":
+        f"eq.{notification_uuid}",
+    },
+    json=payload,
+    timeout=15,
+  )
+
+  if response.status_code not in (
+    200,
+    204,
+  ):
+    raise RuntimeError(
+      "Supabase notification update "
+      f"failed: {response.status_code} "
+      f"{response.text[:800]}"
+    )
+
+
+def _subscription_owner_rows(
+  supabase_url: str,
+  service_role_key: str,
+  original_transaction_id: str,
+):
+  return _get_rows(
+    supabase_url,
+    service_role_key,
+    "ai_subscriptions",
+    {
+      "original_transaction_id":
+        f"eq.{original_transaction_id}",
+      "select": (
+        "user_id,"
+        "last_notification_signed_at"
+      ),
+      "limit": "1",
+    },
+  )
+
+
+def _patch_subscription_notification_metadata(
+  supabase_url: str,
+  service_role_key: str,
+  user_id: str,
+  *,
+  environment_name: str,
+  renewal: Any,
+  notification_uuid: str,
+  notification_type: str,
+  notification_subtype: str | None,
+  notification_signed_ms: int | None,
+) -> None:
+  payload: dict[str, Any] = {
+    "environment":
+      environment_name,
+    "last_notification_uuid":
+      notification_uuid,
+    "last_notification_type":
+      notification_type,
+    "last_notification_subtype":
+      notification_subtype,
+    "last_notification_signed_at":
+      _utc_iso_from_ms(
+        notification_signed_ms
+      ),
+    "updated_at":
+      _utc_now_iso(),
+  }
+
+  if renewal is not None:
+    raw_auto_renew = _safe_int(
+      getattr(
+        renewal,
+        "rawAutoRenewStatus",
+        None,
+      )
+    )
+
+    payload.update({
+      "auto_renew_product_id":
+        _text(
+          getattr(
+            renewal,
+            "autoRenewProductId",
+            None,
+          )
+        )
+        or None,
+
+      "auto_renew_status":
+        (
+          None
+          if raw_auto_renew is None
+          else raw_auto_renew == 1
+        ),
+
+      "renewal_date":
+        _utc_iso_from_ms(
+          getattr(
+            renewal,
+            "renewalDate",
+            None,
+          )
+        ),
+
+      "grace_period_end":
+        _utc_iso_from_ms(
+          getattr(
+            renewal,
+            "gracePeriodExpiresDate",
+            None,
+          )
+        ),
+
+      "expiration_intent":
+        _safe_int(
+          getattr(
+            renewal,
+            "rawExpirationIntent",
+            None,
+          )
+        ),
+    })
+
+  response = requests.patch(
+    (
+      f"{supabase_url}"
+      "/rest/v1/ai_subscriptions"
+    ),
+    headers=_supabase_headers(
+      service_role_key
+    ),
+    params={
+      "user_id":
+        f"eq.{user_id}",
+    },
+    json=payload,
+    timeout=15,
+  )
+
+  if response.status_code not in (
+    200,
+    204,
+  ):
+    raise RuntimeError(
+      "Supabase subscription metadata "
+      f"update failed: "
+      f"{response.status_code} "
+      f"{response.text[:800]}"
+    )
+
+
+def _notification_entitlement_status(
+  notification_type: str,
+  subtype: str | None,
+  raw_status: Any,
+  transaction: Any,
+  renewal: Any,
+) -> str:
+  if notification_type in {
+    "REFUND",
+    "REVOKE",
+  }:
+    return "revoked"
+
+  if notification_type == "EXPIRED":
+    return "expired"
+
+  if (
+    notification_type
+    == "DID_FAIL_TO_RENEW"
+  ):
+    if subtype == "GRACE_PERIOD":
+      return "grace_period"
+
+    return "billing_retry"
+
+  if (
+    notification_type
+    == "GRACE_PERIOD_EXPIRED"
+  ):
+    return "billing_retry"
+
+  raw = _safe_int(
+    raw_status
+  )
+
+  if (
+    raw
+    in APPLE_NOTIFICATION_STATUS_BY_RAW
+  ):
+    return (
+      APPLE_NOTIFICATION_STATUS_BY_RAW[
+        raw
+      ]
+    )
+
+  now_ms = int(
+    datetime.now(
+      timezone.utc
+    ).timestamp()
+    * 1000
+  )
+
+  expires_ms = _safe_int(
+    getattr(
+      transaction,
+      "expiresDate",
+      None,
+    )
+  )
+
+  if (
+    notification_type
+    == "REFUND_REVERSED"
+  ):
+    if (
+      expires_ms
+      and expires_ms <= now_ms
+    ):
+      return "expired"
+
+    return "active"
+
+  if _safe_int(
+    getattr(
+      transaction,
+      "revocationDate",
+      None,
+    )
+  ):
+    return "revoked"
+
+  grace_ms = (
+    _safe_int(
+      getattr(
+        renewal,
+        "gracePeriodExpiresDate",
+        None,
+      )
+    )
+    if renewal is not None
+    else None
+  )
+
+  if (
+    grace_ms
+    and grace_ms > now_ms
+  ):
+    return "grace_period"
+
+  if (
+    renewal is not None
+    and getattr(
+      renewal,
+      "isInBillingRetryPeriod",
+      None,
+    )
+    is True
+  ):
+    return "billing_retry"
+
+  if (
+    expires_ms
+    and expires_ms <= now_ms
+  ):
+    return "expired"
+
+  return "active"
+
+
 def register_apple_subscription_routes(
   app: Flask,
   *,
@@ -607,6 +1079,806 @@ def register_apple_subscription_routes(
         APPLE_PLAN_BY_PRODUCT_ID.keys()
       ),
     )
+
+
+  @app.post(
+    "/api/apple-subscriptions/notifications/v2"
+  )
+  def apple_subscription_notifications_v2():
+    """
+    App Store Server Notifications V2.
+
+    Apple authenticates this route using
+    signedPayload rather than a Nova bearer token.
+    """
+    if not (
+      supabase_url
+      and service_role_key
+    ):
+      return jsonify(
+        ok=False,
+        error=(
+          "Subscription storage "
+          "is not configured."
+        ),
+      ), 503
+
+    signed_payload = _text(
+      (
+        request.get_json(
+          silent=True
+        )
+        or {}
+      ).get(
+        "signedPayload"
+      )
+    )
+
+    if not signed_payload:
+      return jsonify(
+        ok=False,
+        error=(
+          "Apple signedPayload "
+          "is required."
+        ),
+      ), 400
+
+    payload_hash = (
+      hashlib.sha256(
+        signed_payload.encode(
+          "utf-8"
+        )
+      ).hexdigest()
+    )
+
+    try:
+      (
+        environment_name,
+        verifier,
+        decoded,
+      ) = _verify_notification_payload(
+        signed_payload
+      )
+
+    except PermissionError as error:
+      print(
+        "[apple-notifications] "
+        "signature rejected:",
+        repr(error),
+      )
+
+      return jsonify(
+        ok=False,
+        error=(
+          "Apple notification "
+          "verification failed."
+        ),
+      ), 400
+
+    except Exception as error:
+      print(
+        "[apple-notifications] "
+        "verification unavailable:",
+        repr(error),
+      )
+
+      return jsonify(
+        ok=False,
+        error=(
+          "Apple notification "
+          "verification is temporarily "
+          "unavailable."
+        ),
+      ), 503
+
+    notification_type = (
+      _text(
+        getattr(
+          decoded,
+          "rawNotificationType",
+          None,
+        )
+      )
+      or _enum_text(
+        getattr(
+          decoded,
+          "notificationType",
+          None,
+        )
+      )
+      or "UNKNOWN"
+    )
+
+    subtype = (
+      _text(
+        getattr(
+          decoded,
+          "rawSubtype",
+          None,
+        )
+      )
+      or _enum_text(
+        getattr(
+          decoded,
+          "subtype",
+          None,
+        )
+      )
+      or None
+    )
+
+    signed_ms = _safe_int(
+      getattr(
+        decoded,
+        "signedDate",
+        None,
+      )
+    )
+
+    notification_uuid = (
+      _text(
+        getattr(
+          decoded,
+          "notificationUUID",
+          None,
+        )
+      )
+      or f"sha256:{payload_hash}"
+    )
+
+    try:
+      rows = _notification_rows(
+        supabase_url,
+        service_role_key,
+        notification_uuid,
+      )
+
+      if (
+        rows
+        and rows[0].get(
+          "processed_at"
+        )
+      ):
+        return jsonify(
+          ok=True,
+          duplicate=True,
+        ), 200
+
+      if not rows:
+        _insert_notification(
+          supabase_url,
+          service_role_key,
+          {
+            "notification_uuid":
+              notification_uuid,
+            "notification_type":
+              notification_type,
+            "subtype":
+              subtype,
+            "environment":
+              environment_name,
+            "signed_at":
+              _utc_iso_from_ms(
+                signed_ms
+              ),
+            "payload_sha256":
+              payload_hash,
+            "processing_error":
+              None,
+          },
+        )
+
+    except Exception as error:
+      print(
+        "[apple-notifications] "
+        "log insert failed:",
+        repr(error),
+      )
+
+      return jsonify(
+        ok=False,
+      ), 503
+
+    # Apple TEST notification
+    if notification_type == "TEST":
+      try:
+        _patch_notification(
+          supabase_url,
+          service_role_key,
+          notification_uuid,
+          {
+            "processed_at":
+              _utc_now_iso(),
+            "ignored":
+              False,
+            "processing_error":
+              None,
+          },
+        )
+      except Exception:
+        return jsonify(
+          ok=False,
+        ), 503
+
+      print(
+        "[apple-notifications] "
+        "verified TEST:",
+        notification_uuid,
+        environment_name,
+      )
+
+      return jsonify(
+        ok=True,
+        test=True,
+      ), 200
+
+    data = getattr(
+      decoded,
+      "data",
+      None,
+    )
+
+    signed_transaction = (
+      _text(
+        getattr(
+          data,
+          "signedTransactionInfo",
+          None,
+        )
+      )
+      if data is not None
+      else ""
+    )
+
+    signed_renewal = (
+      _text(
+        getattr(
+          data,
+          "signedRenewalInfo",
+          None,
+        )
+      )
+      if data is not None
+      else ""
+    )
+
+    # Valid Apple events without a transaction
+    # are recorded but need no Nova entitlement change.
+    if not signed_transaction:
+      try:
+        _patch_notification(
+          supabase_url,
+          service_role_key,
+          notification_uuid,
+          {
+            "processed_at":
+              _utc_now_iso(),
+            "ignored":
+              True,
+            "processing_error":
+              None,
+          },
+        )
+      except Exception:
+        return jsonify(
+          ok=False,
+        ), 503
+
+      return jsonify(
+        ok=True,
+        ignored=True,
+      ), 200
+
+    try:
+      transaction = (
+        verifier
+        .verify_and_decode_signed_transaction(
+          signed_transaction
+        )
+      )
+
+      renewal = (
+        verifier
+        .verify_and_decode_renewal_info(
+          signed_renewal
+        )
+        if signed_renewal
+        else None
+      )
+
+    except Exception as error:
+      print(
+        "[apple-notifications] "
+        "nested JWS verification failed:",
+        repr(error),
+      )
+
+      try:
+        _patch_notification(
+          supabase_url,
+          service_role_key,
+          notification_uuid,
+          {
+            "processing_error": (
+              "Nested Apple JWS "
+              "verification failed."
+            ),
+          },
+        )
+      except Exception:
+        pass
+
+      return jsonify(
+        ok=False,
+      ), 503
+
+    product_id = _text(
+      getattr(
+        transaction,
+        "productId",
+        None,
+      )
+    )
+
+    plan_id = (
+      APPLE_PLAN_BY_PRODUCT_ID.get(
+        product_id
+      )
+    )
+
+    original_transaction_id = _text(
+      getattr(
+        transaction,
+        "originalTransactionId",
+        None,
+      )
+    )
+
+    transaction_id = _text(
+      getattr(
+        transaction,
+        "transactionId",
+        None,
+      )
+    )
+
+    auto_renew_product_id = (
+      _text(
+        getattr(
+          renewal,
+          "autoRenewProductId",
+          None,
+        )
+      )
+      if renewal is not None
+      else ""
+    )
+
+    try:
+      _patch_notification(
+        supabase_url,
+        service_role_key,
+        notification_uuid,
+        {
+          "original_transaction_id":
+            original_transaction_id
+            or None,
+          "transaction_id":
+            transaction_id
+            or None,
+          "product_id":
+            product_id
+            or None,
+          "auto_renew_product_id":
+            auto_renew_product_id
+            or None,
+        },
+      )
+    except Exception:
+      return jsonify(
+        ok=False,
+      ), 503
+
+    # Apple also sends notifications for Nova's
+    # normal one-time IAPs. Ignore those here.
+    if not plan_id:
+      try:
+        _patch_notification(
+          supabase_url,
+          service_role_key,
+          notification_uuid,
+          {
+            "processed_at":
+              _utc_now_iso(),
+            "ignored":
+              True,
+            "processing_error":
+              None,
+          },
+        )
+      except Exception:
+        return jsonify(
+          ok=False,
+        ), 503
+
+      return jsonify(
+        ok=True,
+        ignored=True,
+      ), 200
+
+    if not (
+      original_transaction_id
+      and transaction_id
+    ):
+      return jsonify(
+        ok=False,
+        error=(
+          "Apple returned incomplete "
+          "subscription identifiers."
+        ),
+      ), 503
+
+    try:
+      owner_rows = (
+        _subscription_owner_rows(
+          supabase_url,
+          service_role_key,
+          original_transaction_id,
+        )
+      )
+
+    except Exception as error:
+      print(
+        "[apple-notifications] "
+        "owner lookup failed:",
+        repr(error),
+      )
+
+      return jsonify(
+        ok=False,
+      ), 503
+
+    existing_owner = (
+      _uuid_text(
+        owner_rows[0].get(
+          "user_id"
+        )
+      )
+      if owner_rows
+      else None
+    )
+
+    account_token = _uuid_text(
+      getattr(
+        transaction,
+        "appAccountToken",
+        None,
+      )
+    )
+
+    if (
+      not account_token
+      and renewal is not None
+    ):
+      account_token = _uuid_text(
+        getattr(
+          renewal,
+          "appAccountToken",
+          None,
+        )
+      )
+
+    user_id = (
+      existing_owner
+      or account_token
+    )
+
+    if (
+      existing_owner
+      and account_token
+      and existing_owner
+      != account_token
+    ):
+      try:
+        _patch_notification(
+          supabase_url,
+          service_role_key,
+          notification_uuid,
+          {
+            "processed_at":
+              _utc_now_iso(),
+            "ignored":
+              True,
+            "processing_error": (
+              "Apple appAccountToken "
+              "does not match the linked "
+              "Nova account."
+            ),
+          },
+        )
+      except Exception:
+        return jsonify(
+          ok=False,
+        ), 503
+
+      return jsonify(
+        ok=True,
+        ignored=True,
+        ownership_conflict=True,
+      ), 200
+
+    if not user_id:
+      try:
+        _patch_notification(
+          supabase_url,
+          service_role_key,
+          notification_uuid,
+          {
+            "processed_at":
+              _utc_now_iso(),
+            "ignored":
+              True,
+            "processing_error": (
+              "No Nova account mapping "
+              "was available for this "
+              "verified Apple subscription."
+            ),
+          },
+        )
+      except Exception:
+        return jsonify(
+          ok=False,
+        ), 503
+
+      return jsonify(
+        ok=True,
+        ignored=True,
+      ), 200
+
+    # Prevent a delayed older Apple event from
+    # overwriting a newer entitlement.
+    if (
+      owner_rows
+      and signed_ms
+    ):
+      previous = _iso_datetime(
+        owner_rows[0].get(
+          "last_notification_signed_at"
+        )
+      )
+
+      incoming = datetime.fromtimestamp(
+        signed_ms / 1000,
+        tz=timezone.utc,
+      )
+
+      if (
+        previous is not None
+        and incoming < previous
+      ):
+        try:
+          _patch_notification(
+            supabase_url,
+            service_role_key,
+            notification_uuid,
+            {
+              "user_id":
+                user_id,
+              "processed_at":
+                _utc_now_iso(),
+              "ignored":
+                True,
+              "processing_error":
+                None,
+            },
+          )
+        except Exception:
+          return jsonify(
+            ok=False,
+          ), 503
+
+        return jsonify(
+          ok=True,
+          stale=True,
+        ), 200
+
+    purchase_ms = _safe_int(
+      getattr(
+        transaction,
+        "purchaseDate",
+        None,
+      )
+    )
+
+    expires_ms = _safe_int(
+      getattr(
+        transaction,
+        "expiresDate",
+        None,
+      )
+    )
+
+    if not (
+      purchase_ms
+      and expires_ms
+    ):
+      return jsonify(
+        ok=False,
+        error=(
+          "Apple returned incomplete "
+          "subscription dates."
+        ),
+      ), 503
+
+    entitlement_status = (
+      _notification_entitlement_status(
+        notification_type,
+        subtype,
+        getattr(
+          data,
+          "rawStatus",
+          None,
+        ),
+        transaction,
+        renewal,
+      )
+    )
+
+    try:
+      # Existing trusted persistence path.
+      _persist_subscription(
+        supabase_url=
+          supabase_url,
+        service_role_key=
+          service_role_key,
+        user_id=
+          user_id,
+        plan_id=
+          plan_id,
+        product_id=
+          product_id,
+        original_transaction_id=
+          original_transaction_id,
+        latest_transaction_id=
+          transaction_id,
+        purchase_ms=
+          purchase_ms,
+        expires_ms=
+          expires_ms,
+        status=
+          entitlement_status,
+      )
+
+      _patch_subscription_notification_metadata(
+        supabase_url,
+        service_role_key,
+        user_id,
+        environment_name=
+          environment_name,
+        renewal=
+          renewal,
+        notification_uuid=
+          notification_uuid,
+        notification_type=
+          notification_type,
+        notification_subtype=
+          subtype,
+        notification_signed_ms=
+          signed_ms,
+      )
+
+      _patch_notification(
+        supabase_url,
+        service_role_key,
+        notification_uuid,
+        {
+          "user_id":
+            user_id,
+          "status":
+            entitlement_status,
+          "processed_at":
+            _utc_now_iso(),
+          "ignored":
+            False,
+          "processing_error":
+            None,
+        },
+      )
+
+    except PermissionError as error:
+      print(
+        "[apple-notifications] "
+        "ownership conflict:",
+        repr(error),
+      )
+
+      try:
+        _patch_notification(
+          supabase_url,
+          service_role_key,
+          notification_uuid,
+          {
+            "processed_at":
+              _utc_now_iso(),
+            "ignored":
+              True,
+            "processing_error":
+              str(error),
+          },
+        )
+      except Exception:
+        return jsonify(
+          ok=False,
+        ), 503
+
+      return jsonify(
+        ok=True,
+        ignored=True,
+        ownership_conflict=True,
+      ), 200
+
+    except Exception as error:
+      print(
+        "[apple-notifications] "
+        "processing failed:",
+        repr(error),
+      )
+
+      try:
+        _patch_notification(
+          supabase_url,
+          service_role_key,
+          notification_uuid,
+          {
+            "processing_error": (
+              "Subscription notification "
+              "processing failed."
+            ),
+          },
+        )
+      except Exception:
+        pass
+
+      return jsonify(
+        ok=False,
+        error=(
+          "Nova could not apply "
+          "the Apple subscription event."
+        ),
+      ), 503
+
+    print(
+      "[apple-notifications] processed:",
+      {
+        "notification_uuid":
+          notification_uuid,
+        "type":
+          notification_type,
+        "subtype":
+          subtype,
+        "environment":
+          environment_name,
+        "user_id":
+          user_id,
+        "plan_id":
+          plan_id,
+        "status":
+          entitlement_status,
+        "auto_renew_product_id":
+          auto_renew_product_id
+          or None,
+      },
+    )
+
+    return jsonify(
+      ok=True,
+      processed=True,
+      plan_id=
+        plan_id,
+      status=
+        entitlement_status,
+    ), 200
+
 
   @app.post(
     "/api/apple-subscriptions/verify"
