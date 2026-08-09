@@ -15,6 +15,7 @@
 		B148585B825D47FEB4A3658D /* noop-file.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75600DCA8B4E4B1889D0BF3A /* noop-file.swift */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
+		F364E0323028D9120069645F /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F364E0313028D9120069645F /* StoreKit.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -32,6 +33,7 @@
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = NovaTutoring/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* NovaTutoring-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "NovaTutoring-Bridging-Header.h"; path = "NovaTutoring/NovaTutoring-Bridging-Header.h"; sourceTree = "<group>"; };
+		F364E0313028D9120069645F /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -40,6 +42,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				74AE4B619F15C79A00F7ADC9 /* Pods_NovaTutoring.framework in Frameworks */,
+				F364E0323028D9120069645F /* StoreKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -64,6 +67,7 @@
 		2D16E6871FA4F8E400B85C8A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				F364E0313028D9120069645F /* StoreKit.framework */,
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
 				5443A4D4820025E07CE46CD8 /* Pods_NovaTutoring.framework */,
 			);
