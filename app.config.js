@@ -12,7 +12,7 @@ export default ({ config }) => {
     slug: "Nova_Tutoring_expo_3",
     scheme: "nova",
 
-    version: "1.3.0",
+    version: "1.4.0",
     orientation: "portrait",
     icon: "./app/assets/favicon.png",
     userInterfaceStyle: "dark",
