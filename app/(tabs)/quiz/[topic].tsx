@@ -278,6 +278,8 @@ export default function TopicQuiz() {
     if (isCorrect) {
       setCorrect((c) => c + 1);
 
+      let awardedCoins = 5;
+
       // Per-question coins (legit reward)
       try {
         const reward =
@@ -285,6 +287,9 @@ export default function TopicQuiz() {
             5,
             "quiz_correct"
           );
+
+        awardedCoins =
+          reward.totalCoins;
 
         void addCoins(
           reward.totalCoins,
@@ -325,7 +330,7 @@ export default function TopicQuiz() {
       }
 
       try {
-        showToast("+5 coins • Correct answer!");
+        showToast(`+${awardedCoins} coins • Correct answer!`);
       } catch (e) {
         console.warn("[Quiz] showToast failed", e);
       }
