@@ -238,6 +238,16 @@ function fuzzyScore(source: string, query: string) {
   return score;
 }
 
+function normalizeTestAnswer(value: string) {
+  return value
+    .normalize("NFKD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export default function CollectionsTab() {
   const coll = useCollections();
   const { tokens } = useTheme();
@@ -246,6 +256,16 @@ export default function CollectionsTab() {
   const [front, setFront] = useState("");
   const [back, setBack] = useState("");
   const [query, setQuery] = useState(""); // 🔎 search
+
+  const [testing, setTesting] = useState(false);
+  const [testCards, setTestCards] = useState<Topic["cards"]>([]);
+  const [testIndex, setTestIndex] = useState(0);
+  const [testAnswer, setTestAnswer] = useState("");
+  const [testResult, setTestResult] = useState<
+    "correct" | "incorrect" | null
+  >(null);
+  const [testScore, setTestScore] = useState(0);
+  const [testFinished, setTestFinished] = useState(false);
 
   const { show, Toast } = useScreenToast(tokens);
 
@@ -329,6 +349,329 @@ export default function CollectionsTab() {
     setFront("");
     setBack("");
     show("Saved to Collections");
+  }
+
+  function startTest() {
+    const source = active?.cards ?? [];
+
+    if (!source.length) {
+      show("Add some flashcards before starting a test.");
+      return;
+    }
+
+    const shuffled = [...source];
+
+    for (let i = shuffled.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+
+    setTestCards(shuffled);
+    setTestIndex(0);
+    setTestAnswer("");
+    setTestResult(null);
+    setTestScore(0);
+    setTestFinished(false);
+    setTesting(true);
+  }
+
+  function exitTest() {
+    setTesting(false);
+    setTestCards([]);
+    setTestIndex(0);
+    setTestAnswer("");
+    setTestResult(null);
+    setTestScore(0);
+    setTestFinished(false);
+  }
+
+  function checkTestAnswer() {
+    if (testResult) return;
+
+    const card = testCards[testIndex];
+    if (!card) return;
+
+    const typed = normalizeTestAnswer(testAnswer);
+    const expected = normalizeTestAnswer(card.back);
+
+    if (!typed) return;
+
+    if (typed === expected) {
+      setTestResult("correct");
+      setTestScore((score) => score + 1);
+      Haptics.notificationAsync(
+        Haptics.NotificationFeedbackType.Success
+      ).catch(() => {});
+    } else {
+      setTestResult("incorrect");
+      Haptics.notificationAsync(
+        Haptics.NotificationFeedbackType.Error
+      ).catch(() => {});
+    }
+  }
+
+  function nextTestCard() {
+    if (testIndex >= testCards.length - 1) {
+      setTestFinished(true);
+      setTestAnswer("");
+      setTestResult(null);
+      return;
+    }
+
+    setTestIndex((index) => index + 1);
+    setTestAnswer("");
+    setTestResult(null);
+  }
+
+  if (testing) {
+    const card = testCards[testIndex];
+    const isLast = testIndex >= testCards.length - 1;
+    const percent =
+      testCards.length > 0
+        ? Math.round((testScore / testCards.length) * 100)
+        : 0;
+
+    return (
+      <LinearGradient colors={tokens.gradient} style={{ flex: 1 }}>
+        <View style={S.testScreen}>
+          <View style={S.testHeaderRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={[S.testTitle, { color: "#00E5FF" }]}>
+                Test Me
+              </Text>
+              <Text style={[S.testSubtitle, { color: tokens.cardText }]}>
+                {active?.title || "Flashcards"}
+              </Text>
+            </View>
+
+            <Pressable
+              onPress={exitTest}
+              style={[
+                S.testExit,
+                {
+                  borderColor: "#00E5FF",
+                  backgroundColor: tokens.card,
+                },
+              ]}
+            >
+              <Text style={[S.testExitText, { color: "#00E5FF" }]}>
+                Exit
+              </Text>
+            </Pressable>
+          </View>
+
+          {testFinished ? (
+            <View
+              style={[
+                S.testResultCard,
+                {
+                  borderColor: "#00E5FF",
+                  backgroundColor: tokens.card,
+                },
+              ]}
+            >
+              <Text style={[S.testFinishedLabel, { color: "#00E5FF" }]}>
+                TEST COMPLETE
+              </Text>
+
+              <Text style={[S.testFinalScore, { color: tokens.text }]}>
+                {testScore} / {testCards.length}
+              </Text>
+
+              <Text style={[S.testPercent, { color: tokens.cardText }]}>
+                {percent}%
+              </Text>
+
+              <Pressable
+                style={S.testPrimaryButton}
+                onPress={startTest}
+              >
+                <Text style={S.testPrimaryButtonText}>
+                  Shuffle & Test Again
+                </Text>
+              </Pressable>
+
+              <Pressable
+                style={[
+                  S.testSecondaryButton,
+                  {
+                    borderColor: "#00E5FF",
+                    backgroundColor: tokens.card,
+                  },
+                ]}
+                onPress={exitTest}
+              >
+                <Text style={[S.testSecondaryButtonText, { color: "#00E5FF" }]}>
+                  Back to Collections
+                </Text>
+              </Pressable>
+            </View>
+          ) : card ? (
+            <>
+              <Text style={[S.testProgress, { color: tokens.cardText }]}>
+                Card {testIndex + 1} of {testCards.length}
+              </Text>
+
+              <View
+                style={[
+                  S.testQuestionCard,
+                  {
+                    borderColor: "#00E5FF",
+                    backgroundColor: tokens.card,
+                  },
+                ]}
+              >
+                <Text style={S.testQuestionLabel}>
+                  QUESTION
+                </Text>
+
+                <Text style={[S.testQuestion, { color: tokens.text }]}>
+                  {card.front}
+                </Text>
+              </View>
+
+              <TextInput
+                value={testAnswer}
+                onChangeText={setTestAnswer}
+                editable={!testResult}
+                placeholder="Type your answer..."
+                placeholderTextColor={
+                  tokens.isDark
+                    ? "rgba(255,255,255,0.45)"
+                    : "#6b7685"
+                }
+                style={[
+                  S.testInput,
+                  {
+                    borderColor:
+                      testResult === "correct"
+                        ? "#39FF14"
+                        : testResult === "incorrect"
+                        ? "#FF5C8A"
+                        : "#00E5FF",
+                    backgroundColor: tokens.card,
+                    color: tokens.text,
+                  },
+                ]}
+                autoCorrect={false}
+                returnKeyType="done"
+                onSubmitEditing={() => {
+                  if (!testResult) checkTestAnswer();
+                }}
+              />
+
+              {!testResult ? (
+                <Pressable
+                  disabled={!testAnswer.trim()}
+                  onPress={checkTestAnswer}
+                  style={[
+                    S.testPrimaryButton,
+                    !testAnswer.trim() && { opacity: 0.4 },
+                  ]}
+                >
+                  <Text style={S.testPrimaryButtonText}>
+                    Check Answer
+                  </Text>
+                </Pressable>
+              ) : (
+                <View
+                  style={[
+                    S.testFeedback,
+                    {
+                      borderColor:
+                        testResult === "correct"
+                          ? "#39FF14"
+                          : "#FF5C8A",
+                      backgroundColor:
+                        testResult === "correct"
+                          ? "rgba(57,255,20,0.10)"
+                          : "rgba(255,92,138,0.10)",
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      S.testFeedbackTitle,
+                      {
+                        color:
+                          testResult === "correct"
+                            ? "#39FF14"
+                            : "#FF7AA5",
+                      },
+                    ]}
+                  >
+                    {testResult === "correct"
+                      ? "✓ Correct!"
+                      : "Not quite"}
+                  </Text>
+
+                  {testResult === "incorrect" ? (
+                    <>
+                      <Text
+                        style={[
+                          S.testCorrectLabel,
+                          { color: tokens.cardText },
+                        ]}
+                      >
+                        Correct answer
+                      </Text>
+                      <Text
+                        style={[
+                          S.testCorrectAnswer,
+                          { color: tokens.text },
+                        ]}
+                      >
+                        {card.back}
+                      </Text>
+                    </>
+                  ) : null}
+
+                  <Pressable
+                    onPress={nextTestCard}
+                    style={S.testPrimaryButton}
+                  >
+                    <Text style={S.testPrimaryButtonText}>
+                      {isLast ? "See Results" : "Next Card"}
+                    </Text>
+                  </Pressable>
+                </View>
+              )}
+
+              <Text style={[S.testRunningScore, { color: tokens.cardText }]}>
+                Correct: {testScore}
+              </Text>
+            </>
+          ) : (
+            <View
+              style={[
+                S.testResultCard,
+                {
+                  borderColor: "#00E5FF",
+                  backgroundColor: tokens.card,
+                },
+              ]}
+            >
+              <Text style={[S.testQuestion, { color: tokens.text }]}>
+                No cards available for this test.
+              </Text>
+
+              <Pressable
+                style={S.testPrimaryButton}
+                onPress={exitTest}
+              >
+                <Text style={S.testPrimaryButtonText}>
+                  Back to Collections
+                </Text>
+              </Pressable>
+            </View>
+          )}
+        </View>
+
+        {Toast}
+      </LinearGradient>
+    );
   }
 
   // Header = title + search + chips + creator
@@ -450,6 +793,32 @@ export default function CollectionsTab() {
           );
         }}
       />
+
+      <Pressable
+        disabled={!active?.cards?.length}
+        onPress={startTest}
+        style={[
+          S.testLaunch,
+          {
+            borderColor: active?.cards?.length
+              ? "#00E5FF"
+              : tokens.border,
+            backgroundColor: active?.cards?.length
+              ? "rgba(0,229,255,0.08)"
+              : tokens.card,
+            opacity: active?.cards?.length ? 1 : 0.45,
+          },
+        ]}
+      >
+        <Text style={S.testLaunchTitle}>
+          🧠 Test This Set
+        </Text>
+
+        <Text style={[S.testLaunchSub, { color: tokens.cardText }]}>
+          {active?.cards?.length || 0} card
+          {(active?.cards?.length || 0) === 1 ? "" : "s"} • shuffled • typed answers
+        </Text>
+      </Pressable>
 
       {/* Creator */}
       <View
@@ -688,6 +1057,182 @@ export const S = StyleSheet.create({
   outline: {},
 
   smallTxt: { fontWeight: "700" },
+
+  testLaunch: {
+    marginTop: 8,
+    marginBottom: 4,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    borderWidth: 1.6,
+  },
+  testLaunchTitle: {
+    color: "#00E5FF",
+    fontSize: 16,
+    fontWeight: "900",
+    textAlign: "center",
+  },
+  testLaunchSub: {
+    fontSize: 12,
+    fontWeight: "600",
+    textAlign: "center",
+    marginTop: 4,
+  },
+
+  testScreen: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 30,
+  },
+  testHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  testTitle: {
+    fontSize: 28,
+    fontWeight: "900",
+  },
+  testSubtitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    marginTop: 2,
+  },
+  testExit: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1.4,
+  },
+  testExitText: {
+    fontWeight: "800",
+  },
+  testProgress: {
+    textAlign: "center",
+    fontSize: 14,
+    fontWeight: "700",
+    marginBottom: 12,
+  },
+  testQuestionCard: {
+    minHeight: 150,
+    borderWidth: 1.8,
+    borderRadius: 18,
+    padding: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 18,
+    shadowColor: "#00E5FF",
+    shadowOpacity: 0.28,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  testQuestionLabel: {
+    color: "#00E5FF",
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 1.5,
+    marginBottom: 12,
+  },
+  testQuestion: {
+    fontSize: 20,
+    fontWeight: "800",
+    textAlign: "center",
+    lineHeight: 28,
+  },
+  testInput: {
+    borderWidth: 1.7,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 17,
+    fontWeight: "600",
+    marginBottom: 14,
+  },
+  testPrimaryButton: {
+    backgroundColor: "#00E5FF",
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    alignItems: "center",
+    marginTop: 8,
+  },
+  testPrimaryButtonText: {
+    color: "#001018",
+    fontSize: 15,
+    fontWeight: "900",
+  },
+  testSecondaryButton: {
+    borderWidth: 1.5,
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    alignItems: "center",
+    marginTop: 12,
+  },
+  testSecondaryButtonText: {
+    fontSize: 15,
+    fontWeight: "800",
+  },
+  testFeedback: {
+    borderWidth: 1.5,
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 2,
+  },
+  testFeedbackTitle: {
+    fontSize: 18,
+    fontWeight: "900",
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  testCorrectLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    textAlign: "center",
+    marginTop: 4,
+  },
+  testCorrectAnswer: {
+    fontSize: 17,
+    fontWeight: "800",
+    textAlign: "center",
+    marginTop: 4,
+    marginBottom: 6,
+  },
+  testRunningScore: {
+    fontSize: 13,
+    fontWeight: "700",
+    textAlign: "center",
+    marginTop: 16,
+  },
+  testResultCard: {
+    borderWidth: 1.8,
+    borderRadius: 20,
+    padding: 24,
+    marginTop: 40,
+    shadowColor: "#00E5FF",
+    shadowOpacity: 0.3,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  testFinishedLabel: {
+    fontSize: 13,
+    fontWeight: "900",
+    letterSpacing: 1.5,
+    textAlign: "center",
+  },
+  testFinalScore: {
+    fontSize: 44,
+    fontWeight: "900",
+    textAlign: "center",
+    marginTop: 20,
+  },
+  testPercent: {
+    fontSize: 22,
+    fontWeight: "800",
+    textAlign: "center",
+    marginBottom: 20,
+  },
 
   toast: {
     position: "absolute",
