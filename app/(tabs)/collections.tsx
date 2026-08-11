@@ -266,6 +266,8 @@ export default function CollectionsTab() {
   >(null);
   const [testScore, setTestScore] = useState(0);
   const [testFinished, setTestFinished] = useState(false);
+  const [testMissedCards, setTestMissedCards] =
+    useState<Topic["cards"]>([]);
 
   const { show, Toast } = useScreenToast(tokens);
 
@@ -374,7 +376,31 @@ export default function CollectionsTab() {
     setTestResult(null);
     setTestScore(0);
     setTestFinished(false);
+    setTestMissedCards([]);
     setTesting(true);
+  }
+
+  function retryMissedCards() {
+    if (!testMissedCards.length) return;
+
+    const shuffled = [...testMissedCards];
+
+    for (let i = shuffled.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+
+    Haptics.impactAsync(
+      Haptics.ImpactFeedbackStyle.Medium
+    ).catch(() => {});
+
+    setTestCards(shuffled);
+    setTestIndex(0);
+    setTestAnswer("");
+    setTestResult(null);
+    setTestScore(0);
+    setTestFinished(false);
+    setTestMissedCards([]);
   }
 
   function exitTest() {
@@ -385,6 +411,7 @@ export default function CollectionsTab() {
     setTestResult(null);
     setTestScore(0);
     setTestFinished(false);
+    setTestMissedCards([]);
   }
 
   function checkTestAnswer() {
@@ -406,6 +433,15 @@ export default function CollectionsTab() {
       ).catch(() => {});
     } else {
       setTestResult("incorrect");
+
+      setTestMissedCards((prev) => {
+        const alreadySaved = prev.some(
+          (item) => String(item.id) === String(card.id)
+        );
+
+        return alreadySaved ? prev : [...prev, card];
+      });
+
       Haptics.notificationAsync(
         Haptics.NotificationFeedbackType.Error
       ).catch(() => {});
@@ -484,11 +520,32 @@ export default function CollectionsTab() {
                 {percent}%
               </Text>
 
+              {testMissedCards.length > 0 ? (
+                <Pressable
+                  style={S.testPrimaryButton}
+                  onPress={retryMissedCards}
+                >
+                  <Text style={S.testPrimaryButtonText}>
+                    Retry Missed Cards ({testMissedCards.length})
+                  </Text>
+                </Pressable>
+              ) : null}
+
               <Pressable
-                style={S.testPrimaryButton}
+                style={[
+                  testMissedCards.length > 0
+                    ? S.testSecondaryButton
+                    : S.testPrimaryButton,
+                ]}
                 onPress={startTest}
               >
-                <Text style={S.testPrimaryButtonText}>
+                <Text
+                  style={
+                    testMissedCards.length > 0
+                      ? [S.testSecondaryButtonText, { color: "#00E5FF" }]
+                      : S.testPrimaryButtonText
+                  }
+                >
                   Shuffle & Test Again
                 </Text>
               </Pressable>
