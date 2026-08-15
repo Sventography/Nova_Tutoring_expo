@@ -19,6 +19,7 @@ import { Ionicons } from "@expo/vector-icons";
 import ConfettiCannon from "react-native-confetti-cannon";
 import * as Haptics from "expo-haptics";
 import { useTheme } from "../context/ThemeContext";
+import { useStudyProgress } from "../context/StudyProgressContext";
 
 type Item = {
   id: string;
@@ -32,6 +33,14 @@ type Section = { title: string; data: Item[] };
 export default function AchievementsScreen() {
   const { unlocked } = useAchievements();
   const { tokens } = useTheme();
+  const {
+    ready: studyReady,
+    totalXp: studyTotalXp,
+    level: studyLevel,
+    xpIntoLevel: studyXpIntoLevel,
+    xpForNextLevel: studyXpForNextLevel,
+    progress: studyProgress,
+  } = useStudyProgress();
   const confettiRef = useRef<any>(null);
 
   useEffect(() => {
@@ -99,6 +108,17 @@ export default function AchievementsScreen() {
           sections={sections}
           keyExtractor={(item) => item.id}
           contentContainerStyle={S.listContent}
+          ListHeaderComponent={
+            <StudyProgressCard
+              tokens={tokens}
+              ready={studyReady}
+              totalXp={studyTotalXp}
+              level={studyLevel}
+              xpIntoLevel={studyXpIntoLevel}
+              xpForNextLevel={studyXpForNextLevel}
+              progress={studyProgress}
+            />
+          }
           stickySectionHeadersEnabled={false}
           renderSectionHeader={({ section }) => (
             <Text style={[S.sectionTitle, { color: tokens.text }]}>
@@ -152,6 +172,193 @@ function formatWhen(ts?: number) {
   } catch {
     return "";
   }
+}
+
+function StudyProgressCard({
+  tokens,
+  ready,
+  totalXp,
+  level,
+  xpIntoLevel,
+  xpForNextLevel,
+  progress,
+}: {
+  tokens: any;
+  ready: boolean;
+  totalXp: number;
+  level: number;
+  xpIntoLevel: number;
+  xpForNextLevel: number;
+  progress: number;
+}) {
+  const progressPercent = Math.max(
+    0,
+    Math.min(100, Math.round(progress * 100))
+  );
+
+  return (
+    <View
+      style={[
+        S.studyProgressCard,
+        {
+          borderColor: tokens.accent,
+          backgroundColor: tokens.isDark
+            ? "rgba(0,229,255,0.08)"
+            : "rgba(0,120,200,0.06)",
+          shadowColor: tokens.accent,
+        },
+      ]}
+    >
+      <View style={S.studyProgressHeader}>
+        <View style={S.studyProgressTitleRow}>
+          <Ionicons
+            name="school-outline"
+            size={22}
+            color={tokens.accent}
+          />
+          <View style={{ flex: 1 }}>
+            <Text
+              style={[
+                S.studyProgressEyebrow,
+                { color: tokens.accent },
+              ]}
+            >
+              STUDY PROGRESS
+            </Text>
+            <Text
+              style={[
+                S.studyProgressLevel,
+                { color: tokens.text },
+              ]}
+            >
+              Study Level {level}
+            </Text>
+          </View>
+        </View>
+
+        <View
+          style={[
+            S.studyLevelBadge,
+            { borderColor: tokens.accent },
+          ]}
+        >
+          <Text
+            style={[
+              S.studyLevelBadgeText,
+              { color: tokens.accent },
+            ]}
+          >
+            LV {level}
+          </Text>
+        </View>
+      </View>
+
+      {ready ? (
+        <>
+          <View style={S.studyProgressNumbers}>
+            <Text
+              style={[
+                S.studyProgressXpText,
+                { color: tokens.text },
+              ]}
+            >
+              {xpIntoLevel} / {xpForNextLevel} XP
+            </Text>
+
+            <Text
+              style={[
+                S.studyProgressPercent,
+                { color: tokens.cardText },
+              ]}
+            >
+              {progressPercent}%
+            </Text>
+          </View>
+
+          <View
+            style={[
+              S.studyProgressTrack,
+              {
+                backgroundColor: tokens.isDark
+                  ? "rgba(255,255,255,0.10)"
+                  : "rgba(0,0,0,0.10)",
+              },
+            ]}
+          >
+            <View
+              style={[
+                S.studyProgressFill,
+                {
+                  backgroundColor: tokens.accent,
+                  width: `${progressPercent}%` as any,
+                },
+              ]}
+            />
+          </View>
+
+          <Text
+            style={[
+              S.studyProgressTotal,
+              { color: tokens.cardText },
+            ]}
+          >
+            Total Study XP earned: {totalXp}
+          </Text>
+        </>
+      ) : (
+        <Text
+          style={[
+            S.studyProgressTotal,
+            { color: tokens.cardText },
+          ]}
+        >
+          Loading Study Progress…
+        </Text>
+      )}
+
+      <View
+        style={[
+          S.studyInfoBox,
+          {
+            borderColor: tokens.isDark
+              ? "rgba(0,229,255,0.24)"
+              : "rgba(0,120,200,0.18)",
+          },
+        ]}
+      >
+        <Text
+          style={[
+            S.studyInfoTitle,
+            { color: tokens.text },
+          ]}
+        >
+          What is Study XP?
+        </Text>
+
+        <Text
+          style={[
+            S.studyInfoText,
+            { color: tokens.cardText },
+          ]}
+        >
+          Study XP raises your Study Level, a permanent measure
+          of your overall Nova quiz progress.
+        </Text>
+
+        <Text
+          style={[
+            S.studyInfoText,
+            { color: tokens.cardText },
+          ]}
+        >
+          Complete every question in a quiz to earn XP. Your
+          first completion of each topic per day earns the full
+          Study XP reward. Repeating that topic earns a smaller
+          5 XP practice reward.
+        </Text>
+      </View>
+    </View>
+  );
 }
 
 /* ---------- cards ---------- */
@@ -357,6 +564,96 @@ function LockedCard({ item, tokens }: { item: Item; tokens: any }) {
 
 export const S = StyleSheet.create({
   listContent: { padding: 14, paddingBottom: 24 },
+
+  studyProgressCard: {
+    borderRadius: 18,
+    borderWidth: 1.5,
+    padding: 16,
+    marginBottom: 20,
+    shadowOpacity: 0.28,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 5,
+  },
+  studyProgressHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  studyProgressTitleRow: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  studyProgressEyebrow: {
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 1,
+  },
+  studyProgressLevel: {
+    marginTop: 2,
+    fontSize: 22,
+    fontWeight: "900",
+  },
+  studyLevelBadge: {
+    borderWidth: 1.5,
+    borderRadius: 999,
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+  },
+  studyLevelBadgeText: {
+    fontSize: 12,
+    fontWeight: "900",
+    letterSpacing: 0.6,
+  },
+  studyProgressNumbers: {
+    marginTop: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  studyProgressXpText: {
+    fontSize: 14,
+    fontWeight: "900",
+  },
+  studyProgressPercent: {
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  studyProgressTrack: {
+    height: 12,
+    borderRadius: 999,
+    overflow: "hidden",
+    marginTop: 7,
+  },
+  studyProgressFill: {
+    height: "100%",
+    borderRadius: 999,
+  },
+  studyProgressTotal: {
+    marginTop: 7,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  studyInfoBox: {
+    marginTop: 16,
+    borderTopWidth: 1,
+    paddingTop: 13,
+  },
+  studyInfoTitle: {
+    fontSize: 14,
+    fontWeight: "900",
+    marginBottom: 5,
+  },
+  studyInfoText: {
+    fontSize: 12,
+    fontWeight: "600",
+    lineHeight: 18,
+    marginTop: 3,
+  },
+
   sectionTitle: {
     fontWeight: "800",
     fontSize: 16,

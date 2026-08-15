@@ -19,6 +19,7 @@ import { UserProvider, useUser } from "./context/UserContext";
 import { CompanionProvider } from "./context/CompanionContext";
 import { StreakProvider } from "./context/StreakContext";
 import { IslandProvider } from "./context/IslandContext";
+import { StudyProgressProvider } from "./context/StudyProgressContext";
 
 function ThemeGate({ children }: { children: React.ReactNode }) {
   const { themeId } = useTheme();
@@ -46,7 +47,8 @@ export function AppProviders(props: any) {
   return (
     <UserProvider>
       <UserGate>
-        <IslandProvider>
+        <StudyProgressProvider>
+          <IslandProvider>
           <CoinsProvider>
             <PurchasesProvider>
               <CompanionProvider>
@@ -70,7 +72,8 @@ export function AppProviders(props: any) {
               </CompanionProvider>
             </PurchasesProvider>
           </CoinsProvider>
-        </IslandProvider>
+          </IslandProvider>
+        </StudyProgressProvider>
       </UserGate>
     </UserProvider>
   );

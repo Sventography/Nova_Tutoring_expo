@@ -29,6 +29,10 @@ import { useUser } from "../../context/UserContext";
 import { createCertificate } from "../../utils/certificates";
 import { useIsland } from "../../context/IslandContext";
 import { useLegendaryCompanions } from "../../hooks/useLegendaryCompanions";
+import {
+  useStudyProgress,
+  type StudyQuizAward,
+} from "../../context/StudyProgressContext";
 
 type QItem = { question: string; choices: string[]; answer: string };
 
@@ -62,6 +66,7 @@ export default function TopicQuiz() {
   const { show: showToast } = useToast();
   const { user } = useUser() as any;
   const { addIslandXp } = useIsland();
+  const { awardQuizStudyXp } = useStudyProgress();
   const {
     hasChronoFox,
     hasAstralNova,
@@ -108,9 +113,12 @@ export default function TopicQuiz() {
   const certificateCreatedRef =
     useRef(false);
   const astralBonusGivenRef = useRef(false);
+  const studyXpEligibleRef = useRef(false);
 
   const [showCongrats, setShowCongrats] = useState(false);
   const [lastXp, setLastXp] = useState<number | null>(null); // 🌴 store last quiz XP for UI
+  const [studyAward, setStudyAward] =
+    useState<StudyQuizAward | null>(null);
   const [legendaryNotice, setLegendaryNotice] =
     useState<string | null>(null);
 
@@ -212,9 +220,11 @@ export default function TopicQuiz() {
           notifiedRef.current = false;
           certificateCreatedRef.current = false;
           astralBonusGivenRef.current = false;
+          studyXpEligibleRef.current = false;
           setShowCongrats(false);
           setLegendaryNotice(null);
           setLastXp(null); // reset XP display for a fresh run
+          setStudyAward(null);
         }
       } finally {
         mounted && setLoading(false);
@@ -243,6 +253,7 @@ export default function TopicQuiz() {
         if (t <= 1) {
           if (totalTimerRef.current) clearInterval(totalTimerRef.current);
           totalTimerRef.current = null;
+          studyXpEligibleRef.current = false;
           setDone(true);
           return 0;
         }
@@ -258,6 +269,7 @@ export default function TopicQuiz() {
 
   function next() {
     if (idx + 1 >= total) {
+      studyXpEligibleRef.current = true;
       setDone(true);
       return;
     }
@@ -341,6 +353,7 @@ export default function TopicQuiz() {
   }
 
   function finishNow() {
+    studyXpEligibleRef.current = false;
     setDone(true);
   }
 
@@ -359,9 +372,11 @@ export default function TopicQuiz() {
     notifiedRef.current = false;
     certificateCreatedRef.current = false;
     astralBonusGivenRef.current = false;
+    studyXpEligibleRef.current = false;
     setShowCongrats(false);
     setLegendaryNotice(null);
     setLastXp(null);
+    setStudyAward(null);
   }
 
   const mm = Math.floor(totalLeft / 60);
@@ -424,6 +439,22 @@ export default function TopicQuiz() {
         subject: headerTitle,
       });
     } catch {}
+
+    if (studyXpEligibleRef.current) {
+      void awardQuizStudyXp({
+        topicId,
+        scorePercent: pct,
+      })
+        .then((award) => {
+          setStudyAward(award);
+        })
+        .catch((error) => {
+          console.warn(
+            "[StudyProgress] quiz award failed",
+            error
+          );
+        });
+    }
 
     // 🌴 Island XP: gentle, non-abusable scaling from quizzes
     try {
@@ -623,6 +654,7 @@ export default function TopicQuiz() {
     ach,
     getDisplayName,
     addIslandXp,
+    awardQuizStudyXp,
     quizTotalTime,
     hasAstralNova,
     astralCertificateBonus,
@@ -679,6 +711,38 @@ export default function TopicQuiz() {
         {typeof lastXp === "number" && lastXp > 0 && (
           <Text style={S.xpText}>Island XP gained: +{lastXp}</Text>
         )}
+
+        {studyAward ? (
+          <View style={S.studyXpCard}>
+            <Text style={S.studyXpTitle}>
+              +{studyAward.xpAwarded} STUDY XP
+            </Text>
+
+            <Text style={S.studyXpText}>
+              Level {studyAward.levelAfter} •{" "}
+              {studyAward.xpIntoLevel} /{" "}
+              {studyAward.xpForNextLevel} XP
+              toward the next level
+            </Text>
+
+            <Text style={S.studyXpSubtext}>
+              {studyAward.leveledUp
+                ? `LEVEL UP! You reached Study Level ${studyAward.levelAfter}.`
+                : studyAward.fullReward
+                ? "Full daily topic reward"
+                : "Practice reward • this topic already earned its full XP today"}
+            </Text>
+
+            <Text style={S.studyXpExplainer}>
+              Study XP raises your Study Level. View your overall
+              progress in Achievements.
+            </Text>
+          </View>
+        ) : !studyXpEligibleRef.current ? (
+          <Text style={S.studyXpHint}>
+            Complete all quiz questions to earn Study XP.
+          </Text>
+        ) : null}
 
         {legendaryNotice ? (
           <View style={S.legendaryResultCard}>
@@ -890,6 +954,59 @@ export const S = StyleSheet.create({
 
   meta: { fontSize: 14, color: CYAN, opacity: 0.9, fontWeight: "700" },
   danger: { color: "#ff6b6b", fontWeight: "900" },
+
+  studyXpCard: {
+    marginTop: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: "#00E5FF",
+    backgroundColor: "rgba(0,229,255,0.08)",
+    shadowColor: "#00E5FF",
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  studyXpTitle: {
+    color: "#00E5FF",
+    fontSize: 18,
+    fontWeight: "900",
+    textAlign: "center",
+  },
+  studyXpText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "700",
+    textAlign: "center",
+    marginTop: 5,
+  },
+  studyXpSubtext: {
+    color: "#9BDFFF",
+    fontSize: 12,
+    fontWeight: "700",
+    textAlign: "center",
+    marginTop: 5,
+    lineHeight: 17,
+  },
+  studyXpHint: {
+    color: "#9BDFFF",
+    fontSize: 13,
+    fontWeight: "700",
+    textAlign: "center",
+    marginTop: 10,
+  },
+  studyXpExplainer: {
+    color: "#CFEAF7",
+    fontSize: 12,
+    fontWeight: "600",
+    textAlign: "center",
+    lineHeight: 17,
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(0,229,255,0.22)",
+  },
 
   choice: {
     minHeight: 56,
