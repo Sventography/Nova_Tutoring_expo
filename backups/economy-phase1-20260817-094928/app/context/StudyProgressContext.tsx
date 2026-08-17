@@ -10,10 +10,6 @@ import React, {
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useUser } from "./UserContext";
-import {
-  novaLevelXpRequired,
-  novaQuizXpAward,
-} from "../_lib/economy";
 
 type StoredStudyProgress = {
   totalXp: number;
@@ -72,6 +68,23 @@ function normalizeTopicId(value: unknown): string {
   );
 }
 
+function scoreBonus(percent: number): number {
+  const pct = Math.max(
+    0,
+    Math.min(100, Math.round(Number(percent) || 0))
+  );
+
+  if (pct === 100) return 25;
+  if (pct >= 90) return 15;
+  if (pct >= 80) return 10;
+  if (pct >= 70) return 5;
+
+  return 0;
+}
+
+function xpRequiredForLevel(level: number): number {
+  return 100 + 25 * Math.max(0, level - 1);
+}
 
 function getLevelState(totalXpValue: number) {
   const totalXp = Math.max(
@@ -81,12 +94,12 @@ function getLevelState(totalXpValue: number) {
 
   let level = 1;
   let remaining = totalXp;
-  let needed = novaLevelXpRequired(level);
+  let needed = xpRequiredForLevel(level);
 
   while (remaining >= needed) {
     remaining -= needed;
     level += 1;
-    needed = novaLevelXpRequired(level);
+    needed = xpRequiredForLevel(level);
   }
 
   return {
@@ -274,11 +287,10 @@ export function StudyProgressProvider({
             const fullReward =
               !alreadyReceivedFullReward;
 
-            const xpAwarded =
-              novaQuizXpAward(
-                scorePercent,
-                fullReward
-              );
+            const xpAwarded = fullReward
+              ? 20 +
+                scoreBonus(scorePercent)
+              : 5;
 
             const before =
               getLevelState(

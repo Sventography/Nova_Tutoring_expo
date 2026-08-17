@@ -33,9 +33,6 @@ import {
   useStudyProgress,
   type StudyQuizAward,
 } from "../../context/StudyProgressContext";
-import {
-  QUIZ_CORRECT_BASE_COINS,
-} from "../../_lib/economy";
 
 type QItem = { question: string; choices: string[]; answer: string };
 
@@ -293,14 +290,13 @@ export default function TopicQuiz() {
     if (isCorrect) {
       setCorrect((c) => c + 1);
 
-      let awardedCoins =
-        QUIZ_CORRECT_BASE_COINS;
+      let awardedCoins = 5;
 
       // Per-question coins (legit reward)
       try {
         const reward =
           calculateCoinReward(
-            QUIZ_CORRECT_BASE_COINS,
+            5,
             "quiz_correct"
           );
 
@@ -332,15 +328,14 @@ export default function TopicQuiz() {
       // 🌴 Per-question Island XP (small drip, hard to farm)
       try {
         if (addIslandXp) {
-          void addIslandXp(
-            2,
-            "quiz_correct",
-            {
+          addIslandXp(2, {
+            reason: "quiz_correct",
+            meta: {
               topicId: String(id),
               questionIndex: idx,
               question: current.question,
-            }
-          ).catch(() => {});
+            },
+          }).catch(() => {});
         }
       } catch {
         // ignore island XP errors
@@ -483,17 +478,16 @@ export default function TopicQuiz() {
         setLastXp(totalXp > 0 ? totalXp : 0); // store for UI
 
         if (totalXp > 0) {
-          void addIslandXp(
-            totalXp,
-            "quiz",
-            {
+          addIslandXp(totalXp, {
+            reason: "quiz",
+            meta: {
               topicId,
               title: headerTitle,
               totalQuestions: total,
               correct,
               percent: pct,
-            }
-          ).catch(() => {});
+            },
+          }).catch(() => {});
         } else if (__DEV__) {
           // eslint-disable-next-line no-console
           console.log("[Island] No XP from quiz (totalXp=0)", {
