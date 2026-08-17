@@ -207,7 +207,12 @@ export default function AccountScreen() {
         await saveAvatarEverywhere(storedUri);
 
       setAvatarLocal(persistentUrl);
-      showToast("Avatar successfully changed!");
+      showToast({
+        type: "success",
+        icon: "✓",
+        title: "Avatar updated!",
+        message: "Your new profile photo was saved to your account.",
+      });
     } catch (error: any) {
       // Never leave a temporary preview behind after a failed upload.
       setAvatarLocal(previousAvatar);

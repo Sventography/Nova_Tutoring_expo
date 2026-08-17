@@ -49,12 +49,12 @@ type SatelliteShellProps = {
  * satellite is present, so the wider safe orbit remains visible.
  */
 export const LEGENDARY_SATELLITE_POSITIONS = {
-  mechaOwl: [12.95, 1.5, 6.51] as Vec3,
-  chronoFox: [0.85, 1.56, 14.46] as Vec3,
-  axolotlOracle: [-12.11, 1.48, 7.97] as Vec3,
-  astralNova: [-12.95, 1.52, -6.51] as Vec3,
-  celestra: [-0.85, 1.64, -14.46] as Vec3,
-  aetherwyrm: [12.11, 1.7, -7.97] as Vec3,
+  mechaOwl: [8.04, 1.5, 4.04] as Vec3,
+  chronoFox: [0.53, 1.56, 8.98] as Vec3,
+  axolotlOracle: [-7.52, 1.48, 4.95] as Vec3,
+  astralNova: [-8.04, 1.52, -4.04] as Vec3,
+  celestra: [-0.53, 1.64, -8.98] as Vec3,
+  aetherwyrm: [7.52, 1.7, -4.95] as Vec3,
 } as const;
 
 export const LEGENDARY_ISLAND_INFO: Record<

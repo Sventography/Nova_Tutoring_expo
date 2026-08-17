@@ -141,9 +141,9 @@ const NOVA_ISLAND_MASCOT_ART =
  * drawn by React Native, avoiding native Three.js texture-loader problems.
  */
 const NOVA_PEDESTAL_WORLD: Vec3 = [
-  -3.0,
+  -2.3,
   0.8,
-  1.6,
+  1.22,
 ];
 
 const NOVA_SPRITE_BASE_WIDTH = 62;
@@ -153,65 +153,68 @@ const LANDMARK_POSITIONS: Record<
   string,
   Vec3
 > = {
+  // Central island — completed before any outer realm appears.
   study_grove: [
-    -4.45,
+    -3.45,
     1.08,
-    -1.1,
+    -0.85,
   ],
   starlight_garden: [
-    -2.95,
+    -2.25,
     0.98,
-    2.8,
+    2.15,
   ],
   nova_library: [
-    0.2,
+    0.15,
     1.12,
-    -1.5,
+    -1.15,
   ],
   whisperwind_mill: [
-    -2.45,
+    -1.85,
     1.08,
-    -3.55,
+    -2.75,
   ],
   learning_falls: [
-    3.2,
+    2.45,
     0.82,
-    2.7,
+    2.05,
   ],
   moonwell: [
-    -0.45,
+    -0.35,
     0.98,
-    1.75,
+    1.35,
   ],
   sky_observatory: [
-    4.2,
+    3.2,
     1.1,
-    -1.25,
-  ],
-  companion_habitat: [
-    1.75,
-    0.94,
-    -4.2,
-  ],
-  castle_reach: [
-    -9.15,
-    1.12,
     -0.95,
   ],
+  companion_habitat: [
+    1.35,
+    0.94,
+    -3.25,
+  ],
+
+  // Outer realms — question beacons only until their land unlocks.
+  castle_reach: [
+    -5.25,
+    1.12,
+    -0.65,
+  ],
   starport_dock: [
-    9.1,
+    5.25,
     1.05,
-    1.5,
+    1.1,
   ],
   crystal_wilds: [
-    1.5,
+    1.0,
     1.08,
-    -9.05,
+    -5.15,
   ],
   moon_temple: [
-    -1.1,
+    -0.75,
     1.08,
-    8.8,
+    4.9,
   ],
 };
 
@@ -220,39 +223,39 @@ const DISCOVERY_ZONE_POSITIONS: Record<
   Vec3
 > = {
   grove: [
-    -3.55,
+    -2.7,
     1.02,
-    0.7,
+    0.55,
   ],
   garden: [
-    -1.75,
+    -1.35,
     0.94,
-    3.65,
+    2.85,
   ],
   library: [
-    1.0,
+    0.75,
     1.02,
-    -0.7,
+    -0.55,
   ],
   waterfall: [
-    3.45,
+    2.65,
     0.8,
-    1.75,
+    1.35,
   ],
   observatory: [
-    3.55,
+    2.7,
     1.0,
-    -2.45,
+    -1.85,
   ],
   habitat: [
-    0.45,
+    0.35,
     0.92,
-    -4.55,
+    -3.55,
   ],
   open_grass: [
-    -0.6,
+    -0.45,
     0.96,
-    1.75,
+    1.35,
   ],
 };
 
@@ -1325,10 +1328,10 @@ function IslandBase() {
       >
         <cylinderGeometry
           args={[
-            6.85,
-            6.2,
-            1.05,
-            56,
+            5.35,
+            4.85,
+            0.95,
+            48,
           ]}
         />
         <meshStandardMaterial
@@ -1340,16 +1343,16 @@ function IslandBase() {
       <mesh
         position={[
           0,
-          0.72,
+          0.68,
           0,
         ]}
       >
         <cylinderGeometry
           args={[
-            6.7,
-            6.8,
-            0.24,
-            56,
+            5.2,
+            5.28,
+            0.22,
+            48,
           ]}
         />
         <meshStandardMaterial
@@ -1361,7 +1364,7 @@ function IslandBase() {
       <mesh
         position={[
           0,
-          -2.5,
+          -2.3,
           0,
         ]}
         rotation={[
@@ -1372,9 +1375,9 @@ function IslandBase() {
       >
         <coneGeometry
           args={[
-            6.25,
-            5.5,
-            48,
+            4.9,
+            5.1,
+            42,
           ]}
         />
         <meshStandardMaterial
@@ -1385,9 +1388,9 @@ function IslandBase() {
 
       <mesh
         position={[
-          -1.45,
-          -2.0,
-          0.85,
+          -1.15,
+          -1.85,
+          0.65,
         ]}
         rotation={[
           Math.PI,
@@ -1395,16 +1398,16 @@ function IslandBase() {
           0,
         ]}
         scale={[
-          0.82,
-          0.82,
-          0.82,
+          0.72,
+          0.72,
+          0.72,
         ]}
       >
         <coneGeometry
           args={[
-            3.0,
-            4.5,
-            28,
+            2.7,
+            4.25,
+            24,
           ]}
         />
         <meshStandardMaterial
@@ -1414,9 +1417,9 @@ function IslandBase() {
       </mesh>
 
       {[
-        [-4.4, -1.15, 1.45],
-        [3.65, -1.3, -1.9],
-        [0.55, -2.55, 2.0],
+        [-3.5, -1.05, 1.1],
+        [2.8, -1.2, -1.45],
+        [0.4, -2.3, 1.5],
       ].map(
         (position, index) => (
           <mesh
@@ -1430,9 +1433,9 @@ function IslandBase() {
               0,
             ]}
             scale={[
-              0.5,
-              0.5,
-              0.5,
+              0.45,
+              0.45,
+              0.45,
             ]}
           >
             <coneGeometry
@@ -1682,9 +1685,9 @@ function IslandExpansions({
         level={level}
         requiredLevel={12}
         center={[
-          -9.0,
+          -5.15,
           0.08,
-          -0.9,
+          -0.7,
         ]}
         scale={[
           1.12,
@@ -1692,12 +1695,12 @@ function IslandExpansions({
           0.94,
         ]}
         connectorPosition={[
-          -7.0,
+          -3.8,
           0.57,
-          -0.8,
+          -0.62,
         ]}
         connectorScale={[
-          4.0,
+          2.7,
           0.34,
           1.35,
         ]}
@@ -1709,9 +1712,9 @@ function IslandExpansions({
         level={level}
         requiredLevel={15}
         center={[
-          8.9,
+          5.0,
           0.04,
-          1.45,
+          1.05,
         ]}
         scale={[
           1.12,
@@ -1719,12 +1722,12 @@ function IslandExpansions({
           0.92,
         ]}
         connectorPosition={[
-          6.9,
+          3.7,
           0.56,
-          1.15,
+          0.82,
         ]}
         connectorScale={[
-          4.0,
+          2.7,
           0.34,
           1.28,
         ]}
@@ -1736,9 +1739,9 @@ function IslandExpansions({
         level={level}
         requiredLevel={18}
         center={[
-          1.45,
+          1.0,
           0.08,
-          -8.9,
+          -5.0,
         ]}
         scale={[
           0.98,
@@ -1746,14 +1749,14 @@ function IslandExpansions({
           1.12,
         ]}
         connectorPosition={[
-          1.05,
+          0.7,
           0.58,
-          -6.9,
+          -3.72,
         ]}
         connectorScale={[
           1.32,
           0.34,
-          4.05,
+          2.75,
         ]}
         grassColor="#389f68"
         stoneColor="#564039"
@@ -1763,9 +1766,9 @@ function IslandExpansions({
         level={level}
         requiredLevel={21}
         center={[
-          -1.05,
+          -0.7,
           0.08,
-          8.65,
+          4.72,
         ]}
         scale={[
           1.02,
@@ -1773,14 +1776,14 @@ function IslandExpansions({
           1.14,
         ]}
         connectorPosition={[
-          -0.72,
+          -0.48,
           0.58,
-          6.7,
+          3.55,
         ]}
         connectorScale={[
           1.38,
           0.34,
-          3.95,
+          2.65,
         ]}
         grassColor="#41a96e"
         stoneColor="#62443a"
@@ -10596,24 +10599,10 @@ export default function NovaIsland3DScene({
     null
   );
 
-  const expansionViewDistance =
-    level >= 21
-      ? 28.5
-      : level >= 18
-      ? 27
-      : level >= 15
-      ? 25.5
-      : level >= 12
-      ? 24
-      : 20.5;
-
   const fullViewDistance =
     legendaryCompanionIds.length > 0
-      ? Math.max(
-          expansionViewDistance,
-          33.5
-        )
-      : expansionViewDistance;
+      ? 21.4
+      : 17.2;
 
   const controlsRef =
     useRef<OrbitControlsState>({
@@ -10975,7 +10964,7 @@ export default function NovaIsland3DScene({
                         0.72
                       ),
                     6,
-                    35
+                    21
                   );
 
                 controlsRef.current.desiredDistance =

@@ -139,9 +139,19 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   });
   const opacity = anim;
 
-  const bgColor = "rgba(0, 0, 0, 0.96)";
-  const textColor = "#ffffff";
-  const messageText = toast?.message ?? toast?.title ?? "";
+  const bgColor =
+    toast?.type === "error"
+      ? "#ff3355"
+      : toast?.type === "success"
+      ? tokens.accent || "#00e5ff"
+      : tokens.card || "rgba(15,20,30,0.95)";
+
+  const textColor =
+    toast?.type === "error" || toast?.type === "success"
+      ? "#ffffff"
+      : tokens.text || "#f4f8ff";
+
+  const iconColor = textColor;
 
   return (
     <ToastCtx.Provider value={value}>
@@ -160,12 +170,43 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 },
               ]}
             >
-              <Text
-                style={[S.message, { color: textColor }]}
-                numberOfLines={Platform.OS === "web" ? 3 : 2}
-              >
-                {messageText}
-              </Text>
+              <View style={S.row}>
+                {toast.icon ? (
+                  <Text style={[S.icon, { color: iconColor }]}>
+                    {toast.icon}
+                  </Text>
+                ) : null}
+
+                <View style={{ flex: 1 }}>
+                  {!!toast.title && (
+                    <Text
+                      style={[S.title, { color: textColor }]}
+                      numberOfLines={1}
+                    >
+                      {toast.title}
+                    </Text>
+                  )}
+
+                  {!!toast.message && (
+                    <Text
+                      style={[S.message, { color: textColor }]}
+                      numberOfLines={Platform.OS === "web" ? 3 : 2}
+                    >
+                      {toast.message}
+                    </Text>
+                  )}
+
+                  {/* If dev forgets to pass message but passes title, at least show title */}
+                  {!toast.message && toast.title && (
+                    <Text
+                      style={[S.message, { color: textColor, opacity: 0.9 }]}
+                      numberOfLines={Platform.OS === "web" ? 3 : 2}
+                    >
+                      {toast.title}
+                    </Text>
+                  )}
+                </View>
+              </View>
             </Animated.View>
           </View>
         </TouchableWithoutFeedback>
@@ -194,22 +235,20 @@ const S = StyleSheet.create({
   toastContainer: {
     width: "84%",
     minWidth: 220,
-    maxWidth: 360,
+    maxWidth: 340,
     marginHorizontal: 16,
     marginBottom: Platform.OS === "ios" ? 112 : 92,
-    paddingHorizontal: 18,
-    paddingVertical: 14,
-    borderRadius: 16,
-    borderWidth: 2,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 18,
+    borderWidth: 1.8,
     borderColor: "#00E5FF",
-    backgroundColor: "rgba(0, 0, 0, 0.96)",
+    backgroundColor: "rgba(0, 14, 26, 0.96)",
     shadowColor: "#00E5FF",
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
+    shadowOpacity: 0.55,
+    shadowRadius: 14,
     shadowOffset: { width: 0, height: 0 },
     elevation: 100001,
-    alignItems: "center",
-    justifyContent: "center",
   },
   row: {
     flexDirection: "row",
@@ -226,10 +265,9 @@ const S = StyleSheet.create({
     letterSpacing: 0.3,
   },
   message: {
-    fontWeight: "700",
-    fontSize: 14,
+    fontWeight: "600",
+    fontSize: 13,
     letterSpacing: 0.2,
     textAlign: "center",
-    color: "#ffffff",
   },
 });

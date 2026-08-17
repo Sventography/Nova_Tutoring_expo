@@ -81,21 +81,11 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
       console.log("[ToastContext] show() input =", input);
 
-      // Normalize both modern and legacy toast payloads.
-      // Legacy calls may use `msg` / `duration`; newer calls use
-      // `message` / `durationMs`.
-      const raw: any =
+      // Normalize input: string → { message }
+      const opts: ToastOptions =
         typeof input === "string"
           ? { message: input, type: "info" }
           : input || {};
-
-      const opts: ToastOptions = {
-        title: raw.title,
-        message: raw.message ?? raw.msg,
-        type: raw.type ?? "info",
-        durationMs: raw.durationMs ?? raw.duration,
-        icon: raw.icon,
-      };
 
       console.log("[ToastContext] normalized opts =", opts);
 
@@ -139,9 +129,19 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   });
   const opacity = anim;
 
-  const bgColor = "rgba(0, 0, 0, 0.96)";
-  const textColor = "#ffffff";
-  const messageText = toast?.message ?? toast?.title ?? "";
+  const bgColor =
+    toast?.type === "error"
+      ? "#ff3355"
+      : toast?.type === "success"
+      ? tokens.accent || "#00e5ff"
+      : tokens.card || "rgba(15,20,30,0.95)";
+
+  const textColor =
+    toast?.type === "error" || toast?.type === "success"
+      ? "#ffffff"
+      : tokens.text || "#f4f8ff";
+
+  const iconColor = textColor;
 
   return (
     <ToastCtx.Provider value={value}>
@@ -160,12 +160,43 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 },
               ]}
             >
-              <Text
-                style={[S.message, { color: textColor }]}
-                numberOfLines={Platform.OS === "web" ? 3 : 2}
-              >
-                {messageText}
-              </Text>
+              <View style={S.row}>
+                {toast.icon ? (
+                  <Text style={[S.icon, { color: iconColor }]}>
+                    {toast.icon}
+                  </Text>
+                ) : null}
+
+                <View style={{ flex: 1 }}>
+                  {!!toast.title && (
+                    <Text
+                      style={[S.title, { color: textColor }]}
+                      numberOfLines={1}
+                    >
+                      {toast.title}
+                    </Text>
+                  )}
+
+                  {!!toast.message && (
+                    <Text
+                      style={[S.message, { color: textColor }]}
+                      numberOfLines={Platform.OS === "web" ? 3 : 2}
+                    >
+                      {toast.message}
+                    </Text>
+                  )}
+
+                  {/* If dev forgets to pass message but passes title, at least show title */}
+                  {!toast.message && toast.title && (
+                    <Text
+                      style={[S.message, { color: textColor, opacity: 0.9 }]}
+                      numberOfLines={Platform.OS === "web" ? 3 : 2}
+                    >
+                      {toast.title}
+                    </Text>
+                  )}
+                </View>
+              </View>
             </Animated.View>
           </View>
         </TouchableWithoutFeedback>
@@ -188,48 +219,36 @@ const S = StyleSheet.create({
     justifyContent: "flex-end",
     alignItems: "center",
     pointerEvents: "box-none",
-    zIndex: 100000,
-    elevation: 100000,
   },
   toastContainer: {
-    width: "84%",
-    minWidth: 220,
-    maxWidth: 360,
+    maxWidth: 420,
     marginHorizontal: 16,
-    marginBottom: Platform.OS === "ios" ? 112 : 92,
-    paddingHorizontal: 18,
-    paddingVertical: 14,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: "#00E5FF",
-    backgroundColor: "rgba(0, 0, 0, 0.96)",
-    shadowColor: "#00E5FF",
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 100001,
-    alignItems: "center",
-    justifyContent: "center",
+    marginBottom: 24,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 14,
+    borderWidth: 1.2,
+    borderColor: "rgba(255,255,255,0.25)",
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
   },
   row: {
     flexDirection: "row",
     alignItems: "center",
   },
   icon: {
-    fontSize: 18,
+    fontSize: 20,
     marginRight: 8,
   },
   title: {
-    fontWeight: "800",
-    fontSize: 14,
-    marginBottom: 3,
-    letterSpacing: 0.3,
-  },
-  message: {
     fontWeight: "700",
     fontSize: 14,
-    letterSpacing: 0.2,
-    textAlign: "center",
-    color: "#ffffff",
+    marginBottom: 4,
+  },
+  message: {
+    fontWeight: "400",
+    fontSize: 13,
   },
 });

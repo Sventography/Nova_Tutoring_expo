@@ -11,11 +11,8 @@ export type ToastPayload =
       title?: string;
       icon?: string;
       duration?: number;
-      durationMs?: number;
       type?: "success" | "error" | "info";
     };
-
-export type ToastBridgeInput = ToastPayload;
 
 type Listener = (t: ToastPayload) => void;
 
@@ -39,19 +36,16 @@ export function registerToast(fn: (t: ToastPayload) => void) {
  * - All onToast() listeners (e.g. ToastHost) also receive the payload.
  */
 export function showToast(payload: ToastPayload) {
-  // ToastProvider is the primary renderer. If it exists, let it handle
-  // the toast by itself so we do not render a duplicate ToastHost bubble.
-  if (mainHandler) {
-    try {
+  try {
+    if (mainHandler) {
       mainHandler(payload);
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.warn("[toast] mainHandler error", err);
     }
-    return;
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn("[toast] mainHandler error", err);
   }
 
-  // Fallback for screens/environments where ToastProvider is not mounted.
+  // Fan-out to additional listeners
   listeners.forEach((listener) => {
     try {
       listener(payload);
