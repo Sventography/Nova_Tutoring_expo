@@ -1,7 +1,5 @@
 // app/constants/achievements.ts
 
-import { streakAchievementBaseCoins } from "../_lib/economy";
-
 export type Achievement = {
   id: string;
   title: string;
@@ -58,17 +56,17 @@ export function buildAchievements() {
     );
   }
 
-  // ────────── STREAK ACHIEVEMENT BONUSES (2→365) ──────────
-  // These are one-time bonuses on top of the increasing daily streak payout.
+  // ────────── STREAKS (2→365) ──────────
   for (let d of [2, 3, 5, 7, 10, 14, 21, 30, 50, 75, 100, 150, 200, 250, 300, 365]) {
-    const coins = streakAchievementBaseCoins(d);
+    const coins =
+      d <= 10 ? 20 : d <= 30 ? 40 : d <= 100 ? 80 : d <= 250 ? 150 : 300;
     list.push(
       make(
         `streak_${d}`,
         `Daily Streak: ${d}`,
         coins,
         "streaks",
-        `Opened Nova ${d} days in a row. Includes a one-time streak milestone bonus.`
+        `Opened Nova ${d} days in a row.`
       )
     );
   }
@@ -80,7 +78,7 @@ export function buildAchievements() {
     else if (pct === 85) coins = 80;
     else if (pct === 90) coins = 110;
     else if (pct === 95) coins = 150;
-    else coins = 250; // 100% — one-time achievement reward, separate from daily perfect bonus
+    else coins = 250; // 100%
     list.push(
       make(
         `quiz_${pct}`,

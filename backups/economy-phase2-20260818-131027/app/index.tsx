@@ -29,7 +29,6 @@ import { useUser } from "./context/UserContext";
 import { useIsland } from "./context/IslandContext";
 import { useCoins } from "./context/CoinsContext";
 import { useAchievements } from "./context/AchievementsContext";
-import { useStreak } from "./context/StreakContext";
 
 const TUTORIAL_KEY =
   "onboarding.tutorial.done.v2";
@@ -232,11 +231,6 @@ export default function HomeScreen() {
   } = useIsland();
 
   const {
-    loaded: streakLoaded,
-    markToday,
-  } = useStreak();
-
-  const {
     resetGuestCoins,
   } = useCoins();
 
@@ -257,14 +251,9 @@ export default function HomeScreen() {
     });
 
   const [
-    dailyLoginReward,
-    setDailyLoginReward,
-  ] = useState<{
-    streakDays: number;
-    coinsAwarded: number;
-    nextCoins: number;
-    islandXpAwarded: boolean;
-  } | null>(null);
+    dailyLoginAwarded,
+    setDailyLoginAwarded,
+  ] = useState(false);
 
   const dailyLoginToastTimerRef =
     useRef<ReturnType<
@@ -350,7 +339,6 @@ export default function HomeScreen() {
     if (
       !userReady ||
       !islandReady ||
-      !streakLoaded ||
       !isLoggedIn
     ) {
       return;
@@ -358,54 +346,48 @@ export default function HomeScreen() {
 
     let cancelled = false;
 
-    void Promise.all([
-      grantDailyLoginXpIfNeeded(),
-      markToday(),
-    ])
-      .then(([islandXpAwarded, streakResult]) => {
+    void grantDailyLoginXpIfNeeded()
+      .then((awarded) => {
         if (
           cancelled ||
-          (!islandXpAwarded && !streakResult.awarded)
+          !awarded
         ) {
           return;
         }
 
-        setDailyLoginReward({
-          streakDays: streakResult.streakDays,
-          coinsAwarded: streakResult.coinsAwarded,
-          nextCoins: streakResult.nextCoins,
-          islandXpAwarded,
-        });
+        setDailyLoginAwarded(
+          true
+        );
 
-        if (dailyLoginToastTimerRef.current) {
-          clearTimeout(dailyLoginToastTimerRef.current);
+        if (
+          dailyLoginToastTimerRef.current
+        ) {
+          clearTimeout(
+            dailyLoginToastTimerRef.current
+          );
         }
 
         dailyLoginToastTimerRef.current =
           setTimeout(() => {
-            setDailyLoginReward(null);
-            dailyLoginToastTimerRef.current = null;
-          }, 5200);
+            setDailyLoginAwarded(
+              false
+            );
+
+            dailyLoginToastTimerRef.current =
+              null;
+          }, 3600);
       })
-      .catch((error) => {
-        console.warn(
-          "[HomeScreen] daily login rewards failed:",
-          error
-        );
-      });
+      .catch(() => {});
 
     return () => {
       cancelled = true;
     };
-  }, [
+    }, [
     grantDailyLoginXpIfNeeded,
     islandReady,
     isLoggedIn,
-    markToday,
-    streakLoaded,
     userReady,
   ]);
-
 
   useEffect(() => {
     return () => {
@@ -614,32 +596,20 @@ export default function HomeScreen() {
     >
       <SplashShimmer />
 
-      {dailyLoginReward && isLoggedIn ? (
+      {dailyLoginAwarded && isLoggedIn ? (
         <View
           pointerEvents="none"
-          style={styles.dailyLoginToast}
+          style={
+            styles.dailyLoginToast
+          }
         >
-          <Text style={styles.dailyLoginToastTitle}>
-            🔥 {dailyLoginReward.streakDays} Day Streak
+          <Text
+            style={
+              styles.dailyLoginToastText
+            }
+          >
+            ✨ Daily login +5 Island XP
           </Text>
-
-          {dailyLoginReward.coinsAwarded > 0 ? (
-            <Text style={styles.dailyLoginToastText}>
-              🪙 +{dailyLoginReward.coinsAwarded} Nova Coins
-            </Text>
-          ) : null}
-
-          {dailyLoginReward.islandXpAwarded ? (
-            <Text style={styles.dailyLoginToastText}>
-              🏝️ +5 Island XP
-            </Text>
-          ) : null}
-
-          {dailyLoginReward.nextCoins > 0 ? (
-            <Text style={styles.dailyLoginToastSubtext}>
-              Tomorrow: +{dailyLoginReward.nextCoins} streak coins
-            </Text>
-          ) : null}
         </View>
       ) : null}
 
@@ -838,27 +808,11 @@ const styles =
         height: 0,
       },
     },
-    dailyLoginToastTitle: {
-      color: "#ffffff",
-      fontSize: 14,
-      fontWeight: "900",
-      textAlign: "center",
-      marginBottom: 3,
-    },
     dailyLoginToastText: {
       color: "#cffafe",
       fontSize: 13,
       fontWeight: "900",
       letterSpacing: 0.2,
-      textAlign: "center",
-      marginTop: 1,
-    },
-    dailyLoginToastSubtext: {
-      color: "#9bdfff",
-      fontSize: 11,
-      fontWeight: "700",
-      textAlign: "center",
-      marginTop: 4,
     },
     shimmerLayer: {
       ...StyleSheet.absoluteFillObject,

@@ -421,14 +421,9 @@ export function AchievementsProvider({
                 id
               );
 
-              const coinReason =
-                ACH_MAP[id]?.group === "streaks"
-                  ? "streak_achievement"
-                  : "achievement";
-
               void addCoins(
                 coinsAwarded,
-                coinReason,
+                "achievement",
                 {
                   achievementId:
                     id,

@@ -34,9 +34,8 @@ import {
   type StudyQuizAward,
 } from "../../context/StudyProgressContext";
 import {
-  useQuizCoinEconomy,
-  type QuizPerfectBonusAwardResult,
-} from "../../hooks/useQuizCoinEconomy";
+  QUIZ_CORRECT_BASE_COINS,
+} from "../../_lib/economy";
 
 type QItem = { question: string; choices: string[]; answer: string };
 
@@ -125,8 +124,6 @@ export default function TopicQuiz() {
     useState<StudyQuizAward | null>(null);
   const [legendaryNotice, setLegendaryNotice] =
     useState<string | null>(null);
-  const [perfectBonusAward, setPerfectBonusAward] =
-    useState<QuizPerfectBonusAwardResult | null>(null);
 
   const current = items[idx];
   const total = items.length;
@@ -134,24 +131,6 @@ export default function TopicQuiz() {
   const headerTitle = useMemo(
     () => (title ? String(title) : "Quiz"),
     [title]
-  );
-
-  const {
-    ready: quizCoinEconomyReady,
-    dailyActualCoinsEarned,
-    dailyActualCoinLimit,
-    dailyRegularRemaining,
-    dailyProgress,
-    currentTopicActualCoinsEarned,
-    currentTopicActualCoinLimit,
-    topicProgress,
-    perfectBonusClaimedForTopic,
-    perfectBonusActualCoinsEarnedToday,
-    perfectBonusPreviewCoins,
-    awardCorrectAnswer,
-    awardPerfectBonus,
-  } = useQuizCoinEconomy(
-    String(id || headerTitle)
   );
 
   const astralTopicBonusStorageKey =
@@ -247,7 +226,6 @@ export default function TopicQuiz() {
           studyXpEligibleRef.current = false;
           setShowCongrats(false);
           setLegendaryNotice(null);
-          setPerfectBonusAward(null);
           setLastXp(null); // reset XP display for a fresh run
           setStudyAward(null);
         }
@@ -315,37 +293,41 @@ export default function TopicQuiz() {
     if (isCorrect) {
       setCorrect((c) => c + 1);
 
-      // 🪙 Normal quiz coins are now protected by both a per-topic daily
-      // allowance and an all-quiz daily allowance. Legendary bonuses still
-      // apply on top of the base quota.
-      void awardCorrectAnswer({
-        topicId: String(id || headerTitle),
-        questionIndex: idx,
-        question: current.question,
-      })
-        .then((award) => {
-          try {
-            if (award.awarded) {
-              showToast(
-                `+${award.coinsAwarded} coins • Correct answer!`
-              );
-            } else if (award.reason === "daily_limit") {
-              showToast(
-                "Correct! Daily Quiz Coin Goal complete • XP still counts."
-              );
-            } else {
-              showToast(
-                `Correct! ${headerTitle} coin reward complete for today.`
-              );
-            }
-          } catch {}
-        })
-        .catch((e) => {
-          console.warn(
-            "[Quiz] protected coin award failed",
-            e
+      let awardedCoins =
+        QUIZ_CORRECT_BASE_COINS;
+
+      // Per-question coins (legit reward)
+      try {
+        const reward =
+          calculateCoinReward(
+            QUIZ_CORRECT_BASE_COINS,
+            "quiz_correct"
           );
-        });
+
+        awardedCoins =
+          reward.totalCoins;
+
+        void addCoins(
+          reward.totalCoins,
+          "quiz_correct",
+          {
+            topicId: String(id),
+            questionIndex: idx,
+            question:
+              current.question,
+            baseCoins:
+              reward.baseCoins,
+            specialistBonus:
+              reward.specialistBonus,
+            aetherwyrmBonus:
+              reward.aetherwyrmBonus,
+            appliedCompanions:
+              reward.appliedCompanions,
+          }
+        );
+      } catch (e) {
+        console.warn("[Quiz] addCoins failed", e);
+      }
 
       // 🌴 Per-question Island XP (small drip, hard to farm)
       try {
@@ -364,6 +346,11 @@ export default function TopicQuiz() {
         // ignore island XP errors
       }
 
+      try {
+        showToast(`+${awardedCoins} coins • Correct answer!`);
+      } catch (e) {
+        console.warn("[Quiz] showToast failed", e);
+      }
     }
 
     if (autoRef.current) clearTimeout(autoRef.current);
@@ -393,7 +380,6 @@ export default function TopicQuiz() {
     studyXpEligibleRef.current = false;
     setShowCongrats(false);
     setLegendaryNotice(null);
-    setPerfectBonusAward(null);
     setLastXp(null);
     setStudyAward(null);
   }
@@ -418,32 +404,6 @@ export default function TopicQuiz() {
 
     // The guarded direct certificate writer below is the single source of truth.
     loggedRef.current = true;
-
-    // 🏆 A perfect score gets the full Daily Perfect Bonus once per topic/day.
-    // This bonus is intentionally separate from the normal correct-answer quota.
-    if (pct === 100) {
-      void awardPerfectBonus({
-        topicId,
-        title: headerTitle,
-      })
-        .then((award) => {
-          setPerfectBonusAward(award);
-
-          if (award.awarded) {
-            try {
-              showToast(
-                `Perfect score! +${award.coinsAwarded} Daily Perfect Bonus`
-              );
-            } catch {}
-          }
-        })
-        .catch((error) => {
-          console.warn(
-            "[Quiz] Daily Perfect Bonus failed",
-            error
-          );
-        });
-    }
 
     const durationSecRaw = quizTotalTime - totalLeft;
     const durationSec = durationSecRaw < 0 ? 0 : durationSecRaw;
@@ -701,7 +661,6 @@ export default function TopicQuiz() {
     getDisplayName,
     addIslandXp,
     awardQuizStudyXp,
-    awardPerfectBonus,
     quizTotalTime,
     hasAstralNova,
     astralCertificateBonus,
@@ -789,21 +748,6 @@ export default function TopicQuiz() {
           <Text style={S.studyXpHint}>
             Complete all quiz questions to earn Study XP.
           </Text>
-        ) : null}
-
-        {pct === 100 ? (
-          <View style={S.perfectResultCard}>
-            <Text style={S.perfectResultTitle}>
-              🏆 DAILY PERFECT
-            </Text>
-            <Text style={S.perfectResultText}>
-              {perfectBonusAward?.awarded
-                ? `+${perfectBonusAward.coinsAwarded} bonus coins for a perfect ${headerTitle} quiz today!`
-                : perfectBonusAward?.alreadyClaimed
-                ? `Today's Perfect Bonus for ${headerTitle} was already claimed. Your perfect score still counts.`
-                : "Checking today's Perfect Bonus…"}
-            </Text>
-          </View>
         ) : null}
 
         {legendaryNotice ? (
@@ -906,65 +850,6 @@ export default function TopicQuiz() {
       <Text style={S.meta}>
         Question {idx + 1} / {total}
       </Text>
-
-      <View style={S.quizCoinMeter}>
-        <View style={S.quizCoinMeterHeader}>
-          <Text style={S.quizCoinMeterTitle}>
-            🪙 Today’s Quiz Coins
-          </Text>
-          <Text style={S.quizCoinMeterValue}>
-            {quizCoinEconomyReady
-              ? `${dailyActualCoinsEarned} / ${dailyActualCoinLimit}`
-              : "Loading…"}
-          </Text>
-        </View>
-
-        <View style={S.quizCoinTrack}>
-          <View
-            style={[
-              S.quizCoinFill,
-              { width: `${dailyProgress * 100}%` },
-            ]}
-          />
-        </View>
-
-        <Text style={S.quizCoinMeterSubtext}>
-          {dailyRegularRemaining > 0
-            ? `${dailyRegularRemaining} regular quiz coins available today`
-            : "Daily Quiz Coin Goal complete • quizzes still earn XP and progress"}
-        </Text>
-
-        <View style={S.topicCoinRow}>
-          <Text style={S.topicCoinLabel}>
-            {headerTitle} today
-          </Text>
-          <Text style={S.topicCoinValue}>
-            {currentTopicActualCoinsEarned} / {currentTopicActualCoinLimit}
-          </Text>
-        </View>
-
-        <View style={S.topicCoinTrack}>
-          <View
-            style={[
-              S.topicCoinFill,
-              { width: `${topicProgress * 100}%` },
-            ]}
-          />
-        </View>
-
-        <Text style={S.quizCoinPerfectText}>
-          {perfectBonusClaimedForTopic
-            ? `✓ Daily Perfect Bonus claimed for this topic`
-            : `🏆 Perfect score today: +${perfectBonusPreviewCoins} bonus coins`}
-        </Text>
-
-        {perfectBonusActualCoinsEarnedToday > 0 ? (
-          <Text style={S.quizCoinBonusTodayText}>
-            Perfect bonuses earned today: +
-            {perfectBonusActualCoinsEarnedToday}
-          </Text>
-        ) : null}
-      </View>
 
       {hasChronoFox ? (
         <View style={S.chronoCard}>
@@ -1075,97 +960,6 @@ export const S = StyleSheet.create({
 
   meta: { fontSize: 14, color: CYAN, opacity: 0.9, fontWeight: "700" },
   danger: { color: "#ff6b6b", fontWeight: "900" },
-
-  quizCoinMeter: {
-    marginTop: 12,
-    marginBottom: 2,
-    paddingVertical: 12,
-    paddingHorizontal: 13,
-    borderRadius: 15,
-    borderWidth: 1.5,
-    borderColor: "rgba(0,229,255,0.72)",
-    backgroundColor: "rgba(3,18,34,0.76)",
-  },
-  quizCoinMeterHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 10,
-  },
-  quizCoinMeterTitle: {
-    color: "#FFFFFF",
-    fontSize: 13,
-    fontWeight: "900",
-  },
-  quizCoinMeterValue: {
-    color: "#67E8F9",
-    fontSize: 13,
-    fontWeight: "900",
-  },
-  quizCoinTrack: {
-    height: 10,
-    marginTop: 9,
-    borderRadius: 999,
-    overflow: "hidden",
-    backgroundColor: "rgba(255,255,255,0.10)",
-    borderWidth: 1,
-    borderColor: "rgba(0,229,255,0.28)",
-  },
-  quizCoinFill: {
-    height: "100%",
-    borderRadius: 999,
-    backgroundColor: CYAN,
-  },
-  quizCoinMeterSubtext: {
-    marginTop: 7,
-    color: "#B6EAF3",
-    fontSize: 11,
-    fontWeight: "700",
-    lineHeight: 16,
-  },
-  topicCoinRow: {
-    marginTop: 10,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 10,
-  },
-  topicCoinLabel: {
-    color: "#D8F7FF",
-    fontSize: 11,
-    fontWeight: "800",
-    flex: 1,
-  },
-  topicCoinValue: {
-    color: "#9BDFFF",
-    fontSize: 11,
-    fontWeight: "900",
-  },
-  topicCoinTrack: {
-    height: 6,
-    marginTop: 5,
-    borderRadius: 999,
-    overflow: "hidden",
-    backgroundColor: "rgba(255,255,255,0.08)",
-  },
-  topicCoinFill: {
-    height: "100%",
-    borderRadius: 999,
-    backgroundColor: "#67E8F9",
-  },
-  quizCoinPerfectText: {
-    marginTop: 9,
-    color: "#FDE68A",
-    fontSize: 11,
-    fontWeight: "900",
-    lineHeight: 16,
-  },
-  quizCoinBonusTodayText: {
-    marginTop: 3,
-    color: "#C4B5FD",
-    fontSize: 10,
-    fontWeight: "800",
-  },
 
   studyXpCard: {
     marginTop: 12,
@@ -1328,28 +1122,6 @@ export const S = StyleSheet.create({
     color: "#E2E8F0",
     fontSize: 13,
     fontWeight: "700",
-    lineHeight: 18,
-  },
-  perfectResultCard: {
-    marginTop: 12,
-    borderRadius: 13,
-    borderWidth: 1.5,
-    borderColor: "#FBBF24",
-    backgroundColor: "rgba(120,53,15,0.28)",
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  perfectResultTitle: {
-    color: "#FDE68A",
-    fontSize: 11,
-    fontWeight: "900",
-    letterSpacing: 0.8,
-  },
-  perfectResultText: {
-    marginTop: 4,
-    color: "#FFF7D6",
-    fontSize: 13,
-    fontWeight: "800",
     lineHeight: 18,
   },
   legendaryResultCard: {

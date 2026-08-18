@@ -5,7 +5,6 @@ import React, {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
   ReactNode,
 } from "react";
@@ -14,8 +13,6 @@ import { useUser } from "./UserContext";
 import { supabase } from "../lib/supabase";
 import { useLegendaryCompanions } from "../hooks/useLegendaryCompanions";
 import { AchieveEmitter, ACHIEVEMENT_EVENT } from "./AchievementsContext";
-import { useCoins } from "./CoinsContext";
-import { dailyStreakBaseCoins } from "../_lib/economy";
 
 // All streak logic is anchored to Eastern Time (America/New_York)
 const EASTERN_TZ = "America/New_York";
@@ -41,24 +38,13 @@ type StreakMeta = {
   lastDate: string | null; // YYYY-MM-DD in Eastern
 };
 
-export type StreakMarkResult = {
-  awarded: boolean;
-  streakDays: number;
-  baseCoins: number;
-  coinsAwarded: number;
-  nextBaseCoins: number;
-  nextCoins: number;
-  shieldUsed: boolean;
-  appliedCompanions: string[];
-};
-
 type State = {
   loaded: boolean;
   count: number;
   best: number;
   todayChecked: boolean;
   lastDate: string | null;
-  markToday: () => Promise<StreakMarkResult>;
+  markToday: () => Promise<void>;
   resetStreak: () => Promise<void>;
   reload: () => Promise<void>;
 
@@ -296,10 +282,7 @@ export function StreakProvider({ children }: { children: ReactNode }) {
     hasAxolotlOracle:
       hasAxolotl,
     ownedLegendaryTokens,
-    calculateCoinReward,
   } = useLegendaryCompanions();
-
-  const { addCoins } = useCoins();
 
   const [loaded, setLoaded] = useState(false);
   const [meta, setMeta] = useState<StreakMeta>({
@@ -310,9 +293,6 @@ export function StreakProvider({ children }: { children: ReactNode }) {
 
   // logs are just a list of dayIds; mostly for future UX / debugging
   const [logs, setLogs] = useState<string[]>([]);
-
-  const markTodayInFlightRef =
-    useRef<Promise<StreakMarkResult> | null>(null);
 
   const todayId = getEasternDayId();
   const todayChecked = meta.lastDate === todayId;
@@ -417,184 +397,103 @@ export function StreakProvider({ children }: { children: ReactNode }) {
     [metaKey, logsKey, supabaseUserId]
   );
 
-  const markToday = useCallback(async (): Promise<StreakMarkResult> => {
-    if (markTodayInFlightRef.current) {
-      return markTodayInFlightRef.current;
+  const markToday = useCallback(async () => {
+    const nowId = getEasternDayId();
+
+    // If we've already marked today as checked, don't double-count
+    if (meta.lastDate === nowId && meta.count > 0) {
+      return;
     }
 
-    const run = (async (): Promise<StreakMarkResult> => {
-      const nowId = getEasternDayId();
+    const prevDate = meta.lastDate;
+    const prevCount = meta.count;
+    const prevBest = meta.best;
 
-      // If today was already marked, do not award the daily streak coins again.
-      if (meta.lastDate === nowId && meta.count > 0) {
-        const nextBaseCoins = dailyStreakBaseCoins(meta.count + 1);
-        const nextReward = calculateCoinReward(
-          nextBaseCoins,
-          "streak_milestone"
-        );
+    let nextCount = 1;
 
-        return {
-          awarded: false,
-          streakDays: meta.count,
-          baseCoins: 0,
-          coinsAwarded: 0,
-          nextBaseCoins,
-          nextCoins: nextReward.totalCoins,
-          shieldUsed: false,
-          appliedCompanions: [],
-        };
-      }
+    if (prevDate) {
+      const diff = daysBetween(prevDate, nowId);
 
-      const prevDate = meta.lastDate;
-      const prevCount = meta.count;
-      const prevBest = meta.best;
+      if (diff === 0) {
+        // weird edge case; treat as already marked
+        nextCount = prevCount || 1;
+      } else if (diff === 1) {
+        // consecutive day – streak continues
+        nextCount = prevCount + 1;
+      } else if (diff && diff > 1) {
+        // Missed at least one day – Axolotl Oracle may save you once per 7 days
+        let usedShield = false;
 
-      let nextCount = 1;
-      let usedShield = false;
+        if (hasAxolotl) {
+          try {
+            const lastUsed = await AsyncStorage.getItem(axolotlKey);
+            let canUseShield = false;
 
-      if (prevDate) {
-        const diff = daysBetween(prevDate, nowId);
-
-        if (diff === 0) {
-          nextCount = prevCount || 1;
-        } else if (diff === 1) {
-          nextCount = prevCount + 1;
-        } else if (diff && diff > 1) {
-          if (hasAxolotl) {
-            try {
-              const lastUsed = await AsyncStorage.getItem(axolotlKey);
-              let canUseShield = false;
-
-              if (!lastUsed) {
+            if (!lastUsed) {
+              canUseShield = true;
+            } else {
+              const since = daysBetween(lastUsed, nowId);
+              if (since === null || since >= 7) {
                 canUseShield = true;
-              } else {
-                const since = daysBetween(lastUsed, nowId);
-                if (since === null || since >= 7) {
-                  canUseShield = true;
-                }
               }
+            }
 
-              if (canUseShield) {
-                nextCount = prevCount + 1;
-                usedShield = true;
-                await AsyncStorage.setItem(axolotlKey, nowId);
-                console.log(
-                  "[StreakContext] Axolotl Oracle shield used – streak preserved."
-                );
-              }
-            } catch (err) {
-              console.warn(
-                "[StreakContext] Axolotl Oracle shield error:",
-                err
+            if (canUseShield) {
+              // Treat it like the streak never broke: continue counting
+              nextCount = prevCount + 1;
+              usedShield = true;
+              await AsyncStorage.setItem(axolotlKey, nowId);
+              console.log(
+                "[StreakContext] Axolotl Oracle shield used – streak preserved."
               );
             }
-          }
-
-          if (!usedShield) {
-            nextCount = 1;
-          }
-        }
-      }
-
-      const nextBest = Math.max(prevBest, nextCount);
-      const nextMeta: StreakMeta = {
-        count: nextCount,
-        best: nextBest,
-        lastDate: nowId,
-      };
-
-      const existingLogs = new Set(logs);
-      existingLogs.add(nowId);
-      const nextLogsArr = Array.from(existingLogs).sort();
-
-      // Persist the streak day first. This makes the daily reward idempotent across
-      // the app: later markToday() calls see today as already claimed.
-      await persistAll(nextMeta, nextLogsArr);
-
-      const baseCoins = dailyStreakBaseCoins(nextCount);
-      const reward = calculateCoinReward(
-        baseCoins,
-        "streak_milestone"
-      );
-
-      let coinsAwarded = 0;
-
-      try {
-        await addCoins(
-          reward.totalCoins,
-          "daily_streak_reward",
-          {
-            streakDays: nextCount,
-            baseCoins: reward.baseCoins,
-            specialistBonus: reward.specialistBonus,
-            aetherwyrmBonus: reward.aetherwyrmBonus,
-            awardedCoins: reward.totalCoins,
-            appliedCompanions: reward.appliedCompanions,
-            shieldUsed: usedShield,
-          }
-        );
-
-        coinsAwarded = reward.totalCoins;
-      } catch (error) {
-        console.warn(
-          "[StreakContext] daily streak coin reward failed:",
-          error
-        );
-      }
-
-      // Fire one-time streak achievement bonuses after the normal daily reward.
-      try {
-        const thresholds = [
-          2, 3, 5, 7, 10, 14, 21, 30, 50, 75, 100, 150, 200, 250, 300, 365,
-        ];
-        for (const d of thresholds) {
-          if (nextCount >= d) {
-            AchieveEmitter.emit(ACHIEVEMENT_EVENT, {
-              id: `streak_${d}`,
-            });
+          } catch (err) {
+            console.warn(
+              "[StreakContext] Axolotl Oracle shield error:",
+              err
+            );
           }
         }
-      } catch (err) {
-        console.warn(
-          "[StreakContext] emit streak achievements error:",
-          err
-        );
+
+        if (!usedShield) {
+          // No shield available: streak resets
+          nextCount = 1;
+        }
       }
-
-      const nextBaseCoins = dailyStreakBaseCoins(nextCount + 1);
-      const nextReward = calculateCoinReward(
-        nextBaseCoins,
-        "streak_milestone"
-      );
-
-      return {
-        awarded: coinsAwarded > 0,
-        streakDays: nextCount,
-        baseCoins: reward.baseCoins,
-        coinsAwarded,
-        nextBaseCoins,
-        nextCoins: nextReward.totalCoins,
-        shieldUsed: usedShield,
-        appliedCompanions: reward.appliedCompanions,
-      };
-    })();
-
-    markTodayInFlightRef.current = run;
-
-    try {
-      return await run;
-    } finally {
-      markTodayInFlightRef.current = null;
     }
-  }, [
-    addCoins,
-    axolotlKey,
-    calculateCoinReward,
-    hasAxolotl,
-    logs,
-    meta,
-    persistAll,
-  ]);
+
+    const nextBest = Math.max(prevBest, nextCount);
+    const nextMeta: StreakMeta = {
+      count: nextCount,
+      best: nextBest,
+      lastDate: nowId,
+    };
+
+    const existingLogs = new Set(logs);
+    existingLogs.add(nowId);
+    const nextLogsArr = Array.from(existingLogs).sort(); // keeps ordering nice
+
+    await persistAll(nextMeta, nextLogsArr);
+
+    // 🔥 Fire streak achievements via AchievementsContext bridge
+    try {
+      const thresholds = [
+        2, 3, 5, 7, 10, 14, 21, 30, 50, 75, 100, 150, 200, 250, 300, 365,
+      ];
+      for (const d of thresholds) {
+        if (nextCount >= d) {
+          AchieveEmitter.emit(ACHIEVEMENT_EVENT, {
+            id: `streak_${d}`,
+          });
+        }
+      }
+    } catch (err) {
+      console.warn(
+        "[StreakContext] emit streak achievements error:",
+        err
+      );
+    }
+  }, [meta, logs, persistAll, hasAxolotl, axolotlKey]);
 
   const resetStreak = useCallback(async () => {
     const nowId = getEasternDayId();
