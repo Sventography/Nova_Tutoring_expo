@@ -52,67 +52,6 @@ export type StreakMarkResult = {
   appliedCompanions: string[];
 };
 
-type RemoteStreakStatus = {
-  day_key?: string;
-  current_streak?: number;
-  streak_days?: number;
-  best_streak?: number;
-  last_day?: string | null;
-  today_claimed?: boolean;
-  today_base_coins?: number;
-  today_actual_coins?: number;
-  has_axolotl?: boolean;
-  has_celestra?: boolean;
-  has_aetherwyrm?: boolean;
-};
-
-type RemoteStreakAward = RemoteStreakStatus & {
-  awarded?: boolean;
-  reason?: string;
-  streak_days?: number;
-  shield_used?: boolean;
-  base_coins?: number;
-  specialist_bonus?: number;
-  aetherwyrm_bonus?: number;
-  coins_awarded?: number;
-  next_base_coins?: number;
-  next_coins?: number;
-};
-
-function safeNonNegativeInt(value: unknown): number {
-  const amount = Math.floor(Number(value) || 0);
-  return Number.isFinite(amount) ? Math.max(0, amount) : 0;
-}
-
-function firstRpcRow<T>(data: unknown): T | null {
-  if (Array.isArray(data)) {
-    return (data[0] as T | undefined) ?? null;
-  }
-
-  if (data && typeof data === "object") {
-    return data as T;
-  }
-
-  return null;
-}
-
-function remoteRowToMeta(row: RemoteStreakStatus): StreakMeta {
-  const rawLast = row.last_day;
-
-  return {
-    count: safeNonNegativeInt(
-      row.current_streak ?? row.streak_days
-    ),
-    best: safeNonNegativeInt(
-      row.best_streak ?? row.current_streak ?? row.streak_days
-    ),
-    lastDate:
-      typeof rawLast === "string" && rawLast.trim()
-        ? rawLast.slice(0, 10)
-        : null,
-  };
-}
-
 type State = {
   loaded: boolean;
   count: number;
@@ -251,36 +190,68 @@ async function migrateLegacyGuestIfNeeded(): Promise<void> {
 }
 
 /**
- * Read server-authoritative streak info for logged-in users.
+ * Read streak info from Supabase profiles table.
  *
- * Phase 3B keeps the streak state and the daily coin claim on Supabase so
- * reinstalling or switching devices cannot reset or duplicate the reward.
+ * We treat Supabase as the *source of truth* for logged-in users so that
+ * streaks follow the account across devices and installs.
  */
 async function fetchStreakFromSupabase(
   userId: string | null
 ): Promise<StreakMeta | null> {
   if (!userId) return null;
-
   try {
-    const { data, error } = await supabase.rpc(
-      "nova_streak_economy_status"
-    );
+    const { data, error } = await supabase
+      .from("profiles")
+      .select(
+        "daily_streak_current, daily_streak_best, daily_streak_last_utc"
+      )
+      .eq("id", userId)
+      .maybeSingle();
 
     if (error) {
-      console.warn(
-        "[StreakContext] server streak status error:",
-        error
-      );
+      console.warn("[StreakContext] Supabase fetch streak error:", error);
       return null;
     }
+    if (!data) return null;
 
-    const row = firstRpcRow<RemoteStreakStatus>(data);
-    return row ? remoteRowToMeta(row) : null;
+    const rawCount = (data as any).daily_streak_current;
+    const rawBest = (data as any).daily_streak_best;
+    const rawLast = (data as any).daily_streak_last_utc as
+      | string
+      | null
+      | undefined;
+
+    const count =
+      typeof rawCount === "number" && Number.isFinite(rawCount)
+        ? rawCount
+        : 0;
+    const best =
+      typeof rawBest === "number" && Number.isFinite(rawBest)
+        ? rawBest
+        : count;
+
+    let lastDate: string | null = null;
+
+    if (rawLast) {
+      // If it's already YYYY-MM-DD, keep as-is.
+      if (/^\d{4}-\d{2}-\d{2}$/.test(rawLast)) {
+        lastDate = rawLast;
+      } else {
+        // Otherwise, try to parse as a timestamp and convert to Eastern day id.
+        const parsed = new Date(rawLast);
+        if (!Number.isNaN(parsed.getTime())) {
+          lastDate = getEasternDayId(parsed);
+        }
+      }
+    }
+
+    return {
+      count,
+      best,
+      lastDate,
+    };
   } catch (err) {
-    console.warn(
-      "[StreakContext] fetch server streak exception:",
-      err
-    );
+    console.warn("[StreakContext] fetchStreakFromSupabase exception:", err);
     return null;
   }
 }
@@ -328,10 +299,7 @@ export function StreakProvider({ children }: { children: ReactNode }) {
     calculateCoinReward,
   } = useLegendaryCompanions();
 
-  const {
-    addCoins,
-    refreshCoins,
-  } = useCoins();
+  const { addCoins } = useCoins();
 
   const [loaded, setLoaded] = useState(false);
   const [meta, setMeta] = useState<StreakMeta>({
@@ -438,20 +406,11 @@ export function StreakProvider({ children }: { children: ReactNode }) {
     async (nextMeta: StreakMeta, nextLogs: string[]) => {
       setMeta(nextMeta);
       setLogs(nextLogs);
-      const writes: Promise<void>[] = [
+      await Promise.all([
         safeSetJSON(metaKey, nextMeta),
         safeSetJSON(logsKey, nextLogs),
-      ];
-
-      // Signed-in streak state is server-authoritative in Economy Phase 3B.
-      // Guests remain local-only.
-      if (!supabaseUserId) {
-        writes.push(
-          syncStreakToSupabase(null, nextMeta)
-        );
-      }
-
-      await Promise.all(writes).catch((err) =>
+        syncStreakToSupabase(supabaseUserId ?? null, nextMeta),
+      ]).catch((err) =>
         console.warn("[StreakContext] persistAll error:", err)
       );
     },
@@ -466,107 +425,6 @@ export function StreakProvider({ children }: { children: ReactNode }) {
     const run = (async (): Promise<StreakMarkResult> => {
       const nowId = getEasternDayId();
 
-      if (supabaseUserId) {
-        const eventKey = `streak:${nowId}`;
-
-        const { data, error } = await supabase.rpc(
-          "nova_mark_daily_streak",
-          {
-            p_event_key: eventKey,
-          }
-        );
-
-        if (error) {
-          console.warn(
-            "[StreakContext] server daily streak claim failed:",
-            error
-          );
-          throw error;
-        }
-
-        const row = firstRpcRow<RemoteStreakAward>(data);
-        if (!row) {
-          throw new Error(
-            "Nova streak server returned no data."
-          );
-        }
-
-        const nextMeta = remoteRowToMeta({
-          ...row,
-          current_streak: row.streak_days,
-        });
-
-        const nextLogs = new Set(logs);
-        if (nextMeta.lastDate) {
-          nextLogs.add(nextMeta.lastDate);
-        }
-        const nextLogsArr = Array.from(nextLogs).sort();
-
-        setMeta(nextMeta);
-        setLogs(nextLogsArr);
-        await Promise.all([
-          safeSetJSON(metaKey, nextMeta),
-          safeSetJSON(logsKey, nextLogsArr),
-        ]);
-
-        const coinsAwarded = safeNonNegativeInt(
-          row.coins_awarded
-        );
-
-        if (coinsAwarded > 0) {
-          await refreshCoins();
-        }
-
-        const streakDays = safeNonNegativeInt(
-          row.streak_days
-        );
-
-        // Milestone achievements remain one-time achievement rewards.
-        try {
-          const thresholds = [
-            2, 3, 5, 7, 10, 14, 21, 30, 50, 75, 100,
-            150, 200, 250, 300, 365,
-          ];
-          for (const d of thresholds) {
-            if (streakDays >= d) {
-              AchieveEmitter.emit(ACHIEVEMENT_EVENT, {
-                id: `streak_${d}`,
-              });
-            }
-          }
-        } catch (err) {
-          console.warn(
-            "[StreakContext] emit server streak achievements error:",
-            err
-          );
-        }
-
-        const appliedCompanions: string[] = [];
-        if (row.has_celestra) {
-          appliedCompanions.push("companion:celestra");
-        }
-        if (row.has_aetherwyrm) {
-          appliedCompanions.push("companion:aetherwyrm");
-        }
-        if (row.shield_used) {
-          appliedCompanions.push("companion:axolotl_oracle");
-        }
-
-        return {
-          awarded: !!row.awarded && coinsAwarded > 0,
-          streakDays,
-          baseCoins: safeNonNegativeInt(row.base_coins),
-          coinsAwarded,
-          nextBaseCoins: safeNonNegativeInt(
-            row.next_base_coins
-          ),
-          nextCoins: safeNonNegativeInt(row.next_coins),
-          shieldUsed: !!row.shield_used,
-          appliedCompanions,
-        };
-      }
-
-      // Guest mode keeps the proven local Phase-2 behavior.
       // If today was already marked, do not award the daily streak coins again.
       if (meta.lastDate === nowId && meta.count > 0) {
         const nextBaseCoins = dailyStreakBaseCoins(meta.count + 1);
@@ -734,47 +592,12 @@ export function StreakProvider({ children }: { children: ReactNode }) {
     calculateCoinReward,
     hasAxolotl,
     logs,
-    logsKey,
     meta,
-    metaKey,
     persistAll,
-    refreshCoins,
-    supabaseUserId,
   ]);
 
   const resetStreak = useCallback(async () => {
     const nowId = getEasternDayId();
-
-    if (supabaseUserId) {
-      const { data, error } = await supabase.rpc(
-        "nova_reset_streak"
-      );
-
-      if (error) {
-        console.warn(
-          "[StreakContext] server reset streak failed:",
-          error
-        );
-        throw error;
-      }
-
-      const row = firstRpcRow<RemoteStreakStatus>(data);
-      const nextMeta: StreakMeta = {
-        count: safeNonNegativeInt(row?.current_streak),
-        best: safeNonNegativeInt(
-          row?.best_streak ?? meta.best
-        ),
-        lastDate:
-          typeof row?.last_day === "string"
-            ? row.last_day.slice(0, 10)
-            : nowId,
-      };
-
-      setMeta(nextMeta);
-      await safeSetJSON(metaKey, nextMeta);
-      return;
-    }
-
     const nextMeta: StreakMeta = {
       count: 0,
       best: meta.best, // keep best streak for bragging rights
@@ -782,13 +605,7 @@ export function StreakProvider({ children }: { children: ReactNode }) {
     };
     // we don't clear logs; we just add a new "break" day implicitly
     await persistAll(nextMeta, logs);
-  }, [
-    logs,
-    meta.best,
-    metaKey,
-    persistAll,
-    supabaseUserId,
-  ]);
+  }, [meta.best, logs, persistAll]);
 
   const reload = useCallback(async () => {
     await hydrate();
