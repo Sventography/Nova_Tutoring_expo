@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import { supabase } from "../lib/supabase";
 import { useCoins } from "../context/CoinsContext";
 import { useUser } from "../context/UserContext";
 import { useLegendaryCompanions } from "./useLegendaryCompanions";
@@ -26,25 +25,6 @@ type StoredQuizCoinEconomy = {
   perfectBonusTopicIds: string[];
   perfectBaseCoinsEarned: number;
   perfectActualCoinsEarned: number;
-};
-
-type RemoteQuizStatus = {
-  day_key?: string;
-  daily_base_coins_earned?: number;
-  daily_actual_coins_earned?: number;
-  topic_base_coins_earned?: number;
-  topic_actual_coins_earned?: number;
-  perfect_claimed?: boolean;
-  perfect_base_coins_earned?: number;
-  perfect_actual_coins_earned?: number;
-  has_aetherwyrm?: boolean;
-};
-
-type RemoteQuizAward = RemoteQuizStatus & {
-  awarded?: boolean;
-  reason?: string;
-  base_coins?: number;
-  coins_awarded?: number;
 };
 
 export type QuizCoinAwardResult = {
@@ -148,52 +128,17 @@ function parseStored(raw: string | null): StoredQuizCoinEconomy {
   }
 }
 
-function firstRpcRow<T>(data: unknown): T | null {
-  if (Array.isArray(data)) {
-    return (data[0] as T | undefined) ?? null;
-  }
-
-  if (data && typeof data === "object") {
-    return data as T;
-  }
-
-  return null;
-}
-
-function remoteStatusToSnapshot(
-  row: RemoteQuizStatus,
-  topicId: string
-): StoredQuizCoinEconomy {
-  const perfectClaimed = !!row.perfect_claimed;
-
-  return {
-    version: 1,
-    dateKey: String(row.day_key || localDateKey()),
-    dailyBaseCoinsEarned: safeNonNegativeInt(row.daily_base_coins_earned),
-    dailyActualCoinsEarned: safeNonNegativeInt(row.daily_actual_coins_earned),
-    topicBaseCoinsEarned: {
-      [topicId]: safeNonNegativeInt(row.topic_base_coins_earned),
-    },
-    topicActualCoinsEarned: {
-      [topicId]: safeNonNegativeInt(row.topic_actual_coins_earned),
-    },
-    perfectBonusTopicIds: perfectClaimed ? [topicId] : [],
-    perfectBaseCoinsEarned: safeNonNegativeInt(row.perfect_base_coins_earned),
-    perfectActualCoinsEarned: safeNonNegativeInt(row.perfect_actual_coins_earned),
-  };
-}
-
 export function useQuizCoinEconomy(topicIdInput: string) {
   const { supabaseUserId } = useUser() as any;
-  const { addCoins, refreshCoins } = useCoins();
+  const { addCoins } = useCoins();
   const { calculateCoinReward } = useLegendaryCompanions();
 
   const topicId = normalizeToken(topicIdInput);
-  const isSignedIn = !!(supabaseUserId && String(supabaseUserId).trim());
 
-  const ownerToken = isSignedIn
-    ? `user:${String(supabaseUserId).trim()}`
-    : "guest";
+  const ownerToken =
+    supabaseUserId && String(supabaseUserId).trim()
+      ? `user:${String(supabaseUserId).trim()}`
+      : "guest";
 
   const storageKey = useMemo(
     () => `${STORAGE_PREFIX}${encodeURIComponent(ownerToken)}`,
@@ -202,10 +147,6 @@ export function useQuizCoinEconomy(topicIdInput: string) {
 
   const ownerRef = useRef(ownerToken);
   const mutationQueueRef = useRef<Promise<void>>(Promise.resolve());
-  const eventSequenceRef = useRef(0);
-  const sessionTokenRef = useRef(
-    `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
-  );
 
   const [ready, setReady] = useState(false);
   const [snapshot, setSnapshot] = useState<StoredQuizCoinEconomy>(emptyState());
@@ -236,68 +177,11 @@ export function useQuizCoinEconomy(topicIdInput: string) {
     [calculateCoinReward]
   );
 
-  const nextEventKey = useCallback(
-    (kind: "correct" | "perfect", suffix?: string) => {
-      eventSequenceRef.current += 1;
-      return [
-        "quiz",
-        localDateKey(),
-        topicId,
-        sessionTokenRef.current,
-        kind,
-        suffix || "event",
-        eventSequenceRef.current,
-      ].join(":");
-    },
-    [topicId]
-  );
-
-  const loadRemoteStatus = useCallback(async () => {
-    const { data, error } = await supabase.rpc("nova_quiz_economy_status", {
-      p_topic_id: topicId,
-    });
-
-    if (error) {
-      throw error;
-    }
-
-    const row = firstRpcRow<RemoteQuizStatus>(data);
-    if (!row) {
-      throw new Error("Nova quiz economy status returned no data.");
-    }
-
-    const next = remoteStatusToSnapshot(row, topicId);
-
-    if (ownerRef.current === ownerToken) {
-      setSnapshot(next);
-      setReady(true);
-    }
-
-    return next;
-  }, [ownerToken, topicId]);
-
   useEffect(() => {
     let cancelled = false;
 
     ownerRef.current = ownerToken;
     setReady(false);
-
-    if (isSignedIn) {
-      void loadRemoteStatus().catch((error) => {
-        console.warn("[QuizCoinEconomy] server status load failed", error);
-
-        if (!cancelled && ownerRef.current === ownerToken) {
-          // Fail closed for signed-in coin awards: do not silently fall back to
-          // a resettable local quota when the server is unavailable.
-          setSnapshot(emptyState());
-          setReady(true);
-        }
-      });
-
-      return () => {
-        cancelled = true;
-      };
-    }
 
     void AsyncStorage.getItem(storageKey)
       .then((raw) => parseStored(raw))
@@ -313,7 +197,7 @@ export function useQuizCoinEconomy(topicIdInput: string) {
         }
       })
       .catch((error) => {
-        console.warn("[QuizCoinEconomy] guest load failed", error);
+        console.warn("[QuizCoinEconomy] load failed", error);
 
         if (!cancelled && ownerRef.current === ownerToken) {
           setSnapshot(emptyState());
@@ -324,9 +208,9 @@ export function useQuizCoinEconomy(topicIdInput: string) {
     return () => {
       cancelled = true;
     };
-  }, [isSignedIn, loadRemoteStatus, ownerToken, storageKey]);
+  }, [ownerToken, storageKey]);
 
-  const saveGuestSnapshot = useCallback(
+  const saveSnapshot = useCallback(
     async (next: StoredQuizCoinEconomy) => {
       await AsyncStorage.setItem(storageKey, JSON.stringify(next));
 
@@ -345,60 +229,6 @@ export function useQuizCoinEconomy(topicIdInput: string) {
       question?: string;
     }): Promise<QuizCoinAwardResult> => {
       const normalizedTopic = normalizeToken(input.topicId || topicId);
-
-      if (isSignedIn) {
-        const eventKey = nextEventKey(
-          "correct",
-          `q${safeNonNegativeInt(input.questionIndex)}`
-        );
-
-        const { data, error } = await supabase.rpc("nova_claim_quiz_reward", {
-          p_topic_id: normalizedTopic,
-          p_kind: "correct",
-          p_event_key: eventKey,
-        });
-
-        if (error) {
-          console.warn("[QuizCoinEconomy] server correct award failed", error);
-          throw error;
-        }
-
-        const row = firstRpcRow<RemoteQuizAward>(data);
-        if (!row) {
-          throw new Error("Nova quiz reward server returned no data.");
-        }
-
-        const next = remoteStatusToSnapshot(row, normalizedTopic);
-        if (ownerRef.current === ownerToken) {
-          setSnapshot(next);
-          setReady(true);
-        }
-
-        if (safeNonNegativeInt(row.coins_awarded) > 0) {
-          await refreshCoins();
-        }
-
-        const rawReason = String(row.reason || "awarded");
-        const reason: QuizCoinAwardResult["reason"] =
-          rawReason === "daily_limit"
-            ? "daily_limit"
-            : rawReason === "topic_limit"
-            ? "topic_limit"
-            : "awarded";
-
-        return {
-          awarded: !!row.awarded && safeNonNegativeInt(row.coins_awarded) > 0,
-          reason,
-          baseCoins: safeNonNegativeInt(row.base_coins),
-          coinsAwarded: safeNonNegativeInt(row.coins_awarded),
-          dailyActualCoinsEarned: next.dailyActualCoinsEarned,
-          dailyActualCoinLimit: effectiveDailyRegularLimit,
-          topicActualCoinsEarned: safeNonNegativeInt(
-            next.topicActualCoinsEarned[normalizedTopic]
-          ),
-          topicActualCoinLimit: effectiveTopicRegularLimit,
-        };
-      }
 
       let resolveResult!: (value: QuizCoinAwardResult) => void;
       let rejectResult!: (reason?: any) => void;
@@ -475,7 +305,8 @@ export function useQuizCoinEconomy(topicIdInput: string) {
             },
           };
 
-          await saveGuestSnapshot(next);
+          // Reserve quota first. If the wallet write fails, roll this reservation back.
+          await saveSnapshot(next);
 
           try {
             await addCoins(reward.totalCoins, "quiz_correct", {
@@ -493,7 +324,7 @@ export function useQuizCoinEconomy(topicIdInput: string) {
               topicBaseCoinLimit: QUIZ_TOPIC_DAILY_BASE_COIN_LIMIT,
             });
           } catch (error) {
-            await saveGuestSnapshot(current);
+            await saveSnapshot(current);
             throw error;
           }
 
@@ -509,7 +340,7 @@ export function useQuizCoinEconomy(topicIdInput: string) {
           });
         })
         .catch((error) => {
-          console.warn("[QuizCoinEconomy] guest correct-answer award failed", error);
+          console.warn("[QuizCoinEconomy] correct-answer award failed", error);
           rejectResult(error);
         });
 
@@ -520,11 +351,8 @@ export function useQuizCoinEconomy(topicIdInput: string) {
       calculateCoinReward,
       effectiveDailyRegularLimit,
       effectiveTopicRegularLimit,
-      isSignedIn,
-      nextEventKey,
       ownerToken,
-      refreshCoins,
-      saveGuestSnapshot,
+      saveSnapshot,
       storageKey,
       topicId,
     ]
@@ -536,47 +364,6 @@ export function useQuizCoinEconomy(topicIdInput: string) {
       title?: string;
     }): Promise<QuizPerfectBonusAwardResult> => {
       const normalizedTopic = normalizeToken(input.topicId || topicId);
-
-      if (isSignedIn) {
-        const eventKey = nextEventKey("perfect", normalizedTopic);
-
-        const { data, error } = await supabase.rpc("nova_claim_quiz_reward", {
-          p_topic_id: normalizedTopic,
-          p_kind: "perfect",
-          p_event_key: eventKey,
-        });
-
-        if (error) {
-          console.warn("[QuizCoinEconomy] server perfect bonus failed", error);
-          throw error;
-        }
-
-        const row = firstRpcRow<RemoteQuizAward>(data);
-        if (!row) {
-          throw new Error("Nova perfect bonus server returned no data.");
-        }
-
-        const next = remoteStatusToSnapshot(row, normalizedTopic);
-        if (ownerRef.current === ownerToken) {
-          setSnapshot(next);
-          setReady(true);
-        }
-
-        const coinsAwarded = safeNonNegativeInt(row.coins_awarded);
-        if (coinsAwarded > 0) {
-          await refreshCoins();
-        }
-
-        return {
-          awarded: !!row.awarded && coinsAwarded > 0,
-          alreadyClaimed:
-            String(row.reason || "") === "perfect_claimed" ||
-            (!row.awarded && !!row.perfect_claimed),
-          baseCoins: safeNonNegativeInt(row.base_coins),
-          coinsAwarded,
-          topicId: normalizedTopic,
-        };
-      }
 
       let resolveResult!: (value: QuizPerfectBonusAwardResult) => void;
       let rejectResult!: (reason?: any) => void;
@@ -625,7 +412,7 @@ export function useQuizCoinEconomy(topicIdInput: string) {
               current.perfectActualCoinsEarned + reward.totalCoins,
           };
 
-          await saveGuestSnapshot(next);
+          await saveSnapshot(next);
 
           try {
             await addCoins(reward.totalCoins, "quiz_daily_perfect_bonus", {
@@ -639,7 +426,7 @@ export function useQuizCoinEconomy(topicIdInput: string) {
               oncePerTopicPerDay: true,
             });
           } catch (error) {
-            await saveGuestSnapshot(current);
+            await saveSnapshot(current);
             throw error;
           }
 
@@ -652,7 +439,7 @@ export function useQuizCoinEconomy(topicIdInput: string) {
           });
         })
         .catch((error) => {
-          console.warn("[QuizCoinEconomy] guest perfect bonus failed", error);
+          console.warn("[QuizCoinEconomy] perfect bonus failed", error);
           rejectResult(error);
         });
 
@@ -661,11 +448,8 @@ export function useQuizCoinEconomy(topicIdInput: string) {
     [
       addCoins,
       calculateCoinReward,
-      isSignedIn,
-      nextEventKey,
       ownerToken,
-      refreshCoins,
-      saveGuestSnapshot,
+      saveSnapshot,
       storageKey,
       topicId,
     ]
