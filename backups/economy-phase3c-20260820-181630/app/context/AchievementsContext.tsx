@@ -11,7 +11,6 @@ import React, {
 import { DeviceEventEmitter, Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import { supabase } from "../lib/supabase";
 import { ACHIEVEMENT_LIST } from "../constants/achievements";
 import { useCoins } from "./CoinsContext";
 import { useUser } from "./UserContext";
@@ -25,7 +24,6 @@ const STORAGE_BASE_BRAIN_COUNT = "@achieve/brainteaserCount.v1";
 const STORAGE_BASE_RELAX_MIN = "@achieve/relaxMinutes.v1";
 const STORAGE_BASE_PURCHASE_COUNT = "@achieve/purchaseCount.v1";
 const STORAGE_BASE_PURCHASE_KEYS = "@achieve/purchaseKeys.v1";
-const STORAGE_BASE_PENDING_CLAIMS = "@achieve/pendingClaims.v1";
 
 export const ACHIEVEMENT_EVENT = "ACHIEVEMENT_EVENT";
 export const SHOP_PURCHASE_COMPLETED_EVENT = "shop:purchase_completed";
@@ -77,29 +75,6 @@ type AchMeta = {
   coins: number;
   group: string;
   desc?: string;
-};
-
-
-type RemoteAchievementUnlock = {
-  achievement_id?: string | null;
-  unlocked_at_ms?: number | string | null;
-  actual_coins?: number | string | null;
-  migrated_existing?: boolean | null;
-};
-
-type RemoteAchievementClaim = {
-  newly_claimed?: boolean | null;
-  achievement_id?: string | null;
-  group_name?: string | null;
-  base_coins?: number | string | null;
-  specialist_bonus?: number | string | null;
-  aetherwyrm_bonus?: number | string | null;
-  actual_coins?: number | string | null;
-  migrated_existing?: boolean | null;
-  has_mecha_owl?: boolean | null;
-  has_celestra?: boolean | null;
-  has_aetherwyrm?: boolean | null;
-  unlocked_at_ms?: number | string | null;
 };
 
 // ─────────────── SIMPLE EMITTER ───────────────
@@ -168,44 +143,6 @@ const parseNum = (raw: string | null) => {
   return Number.isNaN(n) ? 0 : n;
 };
 
-
-function firstRpcRow<T>(data: any): T | null {
-  if (Array.isArray(data)) {
-    return (data[0] ?? null) as T | null;
-  }
-
-  if (data && typeof data === "object") {
-    return data as T;
-  }
-
-  return null;
-}
-
-function safeRemoteNumber(value: unknown): number {
-  const n = Number(value);
-  return Number.isFinite(n) ? Math.max(0, Math.trunc(n)) : 0;
-}
-
-function parsePendingClaimIds(raw: string | null): Set<string> {
-  if (!raw) return new Set();
-
-  try {
-    const parsed = JSON.parse(raw);
-
-    if (!Array.isArray(parsed)) {
-      return new Set();
-    }
-
-    return new Set(
-      parsed
-        .map((value) => String(value || "").trim())
-        .filter(Boolean)
-    );
-  } catch {
-    return new Set();
-  }
-}
-
 // ─────────────── CONTEXT ───────────────
 
 const AchievementsCtx = createContext<AchievementsContextValue | null>(null);
@@ -243,22 +180,11 @@ export function AchievementsProvider({
   const relaxMinutesRef = useRef<number>(0);
   const purchaseCountRef = useRef<number>(0);
   const purchaseKeysRef = useRef<Set<string>>(new Set());
-  const pendingClaimsRef = useRef<Set<string>>(new Set());
-  const unlockInFlightRef = useRef<Set<string>>(new Set());
   const purchaseBaselineReadyRef = useRef(false);
   const inventoryBaselineTotalRef = useRef(0);
   const [hydrated, setHydrated] = useState(false);
 
-  const {
-    addCoins,
-    refreshCoins,
-  } = useCoins();
-
-  const refreshCoinsRef =
-    useRef(refreshCoins);
-
-  refreshCoinsRef.current =
-    refreshCoins;
+  const { addCoins } = useCoins();
 
   // All owned legendary companion powers remain active passively.
   const computeAchievementReward =
@@ -284,13 +210,10 @@ export function AchievementsProvider({
   // ─────────────── HYDRATE PER USER ───────────────
 
   useEffect(() => {
-    let cancelled = false;
-
     (async () => {
       try {
         setHydrated(false);
-
-        // Reset in-memory refs when switching users.
+        // reset in-memory refs when switching users
         unlockedRef.current = {};
         quizCountRef.current = 0;
         askCountRef.current = 0;
@@ -299,14 +222,9 @@ export function AchievementsProvider({
         relaxMinutesRef.current = 0;
         purchaseCountRef.current = 0;
         purchaseKeysRef.current = new Set();
-        pendingClaimsRef.current = new Set();
-        unlockInFlightRef.current = new Set();
         purchaseBaselineReadyRef.current = false;
         inventoryBaselineTotalRef.current = 0;
-
-        if (!cancelled) {
-          setUnlocked({});
-        }
+        setUnlocked({});
 
         const uid = supabaseUserId ?? null;
 
@@ -319,57 +237,26 @@ export function AchievementsProvider({
           rawRelaxMin,
           rawPurchaseCount,
           rawPurchaseKeys,
-          rawPendingClaims,
         ] = await Promise.all([
-          AsyncStorage.getItem(
-            storageKey(STORAGE_BASE_UNLOCKED, uid)
-          ),
-          AsyncStorage.getItem(
-            storageKey(STORAGE_BASE_QUIZ_COUNT, uid)
-          ),
-          AsyncStorage.getItem(
-            storageKey(STORAGE_BASE_ASK_COUNT, uid)
-          ),
-          AsyncStorage.getItem(
-            storageKey(STORAGE_BASE_FLASHCARD_COUNT, uid)
-          ),
-          AsyncStorage.getItem(
-            storageKey(STORAGE_BASE_BRAIN_COUNT, uid)
-          ),
-          AsyncStorage.getItem(
-            storageKey(STORAGE_BASE_RELAX_MIN, uid)
-          ),
-          AsyncStorage.getItem(
-            storageKey(STORAGE_BASE_PURCHASE_COUNT, uid)
-          ),
-          AsyncStorage.getItem(
-            storageKey(STORAGE_BASE_PURCHASE_KEYS, uid)
-          ),
-          AsyncStorage.getItem(
-            storageKey(STORAGE_BASE_PENDING_CLAIMS, uid)
-          ),
+          AsyncStorage.getItem(storageKey(STORAGE_BASE_UNLOCKED, uid)),
+          AsyncStorage.getItem(storageKey(STORAGE_BASE_QUIZ_COUNT, uid)),
+          AsyncStorage.getItem(storageKey(STORAGE_BASE_ASK_COUNT, uid)),
+          AsyncStorage.getItem(storageKey(STORAGE_BASE_FLASHCARD_COUNT, uid)),
+          AsyncStorage.getItem(storageKey(STORAGE_BASE_BRAIN_COUNT, uid)),
+          AsyncStorage.getItem(storageKey(STORAGE_BASE_RELAX_MIN, uid)),
+          AsyncStorage.getItem(storageKey(STORAGE_BASE_PURCHASE_COUNT, uid)),
+          AsyncStorage.getItem(storageKey(STORAGE_BASE_PURCHASE_KEYS, uid)),
         ]);
-
-        let localUnlocked: UnlockedMap = {};
 
         if (rawUnlocked) {
           try {
             const parsed: UnlockedMap = JSON.parse(rawUnlocked);
-            localUnlocked =
-              parsed && typeof parsed === "object"
-                ? parsed
-                : {};
+            unlockedRef.current = parsed || {};
+            setUnlocked(parsed || {});
           } catch (e) {
-            console.warn(
-              "[Achievements] parse unlocked failed",
-              e
-            );
+            console.warn("[Achievements] parse unlocked failed", e);
           }
         }
-
-        unlockedRef.current = localUnlocked;
-        pendingClaimsRef.current =
-          parsePendingClaimIds(rawPendingClaims);
 
         quizCountRef.current = parseNum(rawQuizCount);
         askCountRef.current = parseNum(rawAskCount);
@@ -377,202 +264,28 @@ export function AchievementsProvider({
         brainCountRef.current = parseNum(rawBrainCount);
         relaxMinutesRef.current = parseNum(rawRelaxMin);
         purchaseCountRef.current = parseNum(rawPurchaseCount);
-        purchaseBaselineReadyRef.current =
-          rawPurchaseCount !== null;
+        purchaseBaselineReadyRef.current = rawPurchaseCount !== null;
 
         if (rawPurchaseKeys) {
           try {
             const parsedKeys = JSON.parse(rawPurchaseKeys);
-
             if (Array.isArray(parsedKeys)) {
               purchaseKeysRef.current = new Set(
                 parsedKeys
-                  .map((value) =>
-                    String(value || "").trim()
-                  )
+                  .map((value) => String(value || "").trim())
                   .filter(Boolean)
               );
             }
           } catch (e) {
-            console.warn(
-              "[Achievements] parse purchase keys failed",
-              e
-            );
+            console.warn("[Achievements] parse purchase keys failed", e);
           }
-        }
-
-        /*
-         * Phase 3C:
-         *
-         * Signed-in achievements become account-wide and server-idempotent.
-         *
-         * 1) Existing local unlocks are registered as already paid so the
-         *    update cannot award them a second time.
-         * 2) Pending claims from a temporary network failure are retried.
-         * 3) Server unlocks are merged back into the local cache for fast UI.
-         */
-        if (uid) {
-          const existingIds =
-            Object.keys(localUnlocked);
-
-          if (existingIds.length > 0) {
-            const { error: migrationError } =
-              await supabase.rpc(
-                "nova_migrate_achievement_unlocks",
-                {
-                  p_achievement_ids:
-                    existingIds,
-                }
-              );
-
-            if (migrationError) {
-              console.warn(
-                "[Achievements] server migration failed",
-                migrationError
-              );
-            }
-          }
-
-          let awardedDuringRetry = false;
-
-          for (
-            const pendingId of Array.from(
-              pendingClaimsRef.current
-            )
-          ) {
-            const { data, error } =
-              await supabase.rpc(
-                "nova_claim_achievement",
-                {
-                  p_achievement_id:
-                    pendingId,
-                }
-              );
-
-            if (error) {
-              console.warn(
-                "[Achievements] pending server claim still failed:",
-                pendingId,
-                error
-              );
-              continue;
-            }
-
-            const row =
-              firstRpcRow<RemoteAchievementClaim>(
-                data
-              );
-
-            pendingClaimsRef.current.delete(
-              pendingId
-            );
-
-            if (
-              row?.newly_claimed === true &&
-              safeRemoteNumber(
-                row.actual_coins
-              ) > 0
-            ) {
-              awardedDuringRetry = true;
-            }
-          }
-
-          await AsyncStorage.setItem(
-            storageKey(
-              STORAGE_BASE_PENDING_CLAIMS,
-              uid
-            ),
-            JSON.stringify(
-              Array.from(
-                pendingClaimsRef.current
-              )
-            )
-          );
-
-          const {
-            data: remoteUnlockData,
-            error: remoteUnlockError,
-          } = await supabase.rpc(
-            "nova_achievement_unlocks"
-          );
-
-          if (remoteUnlockError) {
-            console.warn(
-              "[Achievements] server unlock hydrate failed",
-              remoteUnlockError
-            );
-          } else {
-            const rows = Array.isArray(
-              remoteUnlockData
-            )
-              ? (remoteUnlockData as RemoteAchievementUnlock[])
-              : [];
-
-            const merged: UnlockedMap = {
-              ...localUnlocked,
-            };
-
-            for (const row of rows) {
-              const id = String(
-                row?.achievement_id || ""
-              ).trim();
-
-              if (!id) continue;
-
-              const remoteTs =
-                safeRemoteNumber(
-                  row?.unlocked_at_ms
-                ) || Date.now();
-
-              if (!merged[id]) {
-                merged[id] = remoteTs;
-              }
-            }
-
-            localUnlocked = merged;
-            unlockedRef.current = merged;
-
-            await AsyncStorage.setItem(
-              storageKey(
-                STORAGE_BASE_UNLOCKED,
-                uid
-              ),
-              JSON.stringify(merged)
-            );
-          }
-
-          if (awardedDuringRetry) {
-            try {
-              await refreshCoinsRef.current();
-            } catch (e) {
-              console.warn(
-                "[Achievements] coin refresh after pending claims failed",
-                e
-              );
-            }
-          }
-        }
-
-        if (!cancelled) {
-          setUnlocked({
-            ...unlockedRef.current,
-          });
         }
       } catch (e) {
-        console.warn(
-          "[Achievements] hydrate failed",
-          e
-        );
+        console.warn("[Achievements] hydrate failed", e);
       } finally {
-        if (!cancelled) {
-          setHydrated(true);
-        }
+        setHydrated(true);
       }
     })();
-
-    return () => {
-      cancelled = true;
-    };
   }, [supabaseUserId]);
 
   const persistUnlocked = useCallback(async () => {
@@ -584,30 +297,6 @@ export function AchievementsProvider({
       );
     } catch (e) {
       console.warn("[Achievements] persist unlocked failed", e);
-    }
-  }, [supabaseUserId]);
-
-
-  const persistPendingClaims = useCallback(async () => {
-    try {
-      const uid = supabaseUserId ?? null;
-
-      await AsyncStorage.setItem(
-        storageKey(
-          STORAGE_BASE_PENDING_CLAIMS,
-          uid
-        ),
-        JSON.stringify(
-          Array.from(
-            pendingClaimsRef.current
-          )
-        )
-      );
-    } catch (e) {
-      console.warn(
-        "[Achievements] persist pending claims failed",
-        e
-      );
     }
   }, [supabaseUserId]);
 
@@ -698,90 +387,80 @@ export function AchievementsProvider({
   // ─────────────── UNLOCK ───────────────
 
   const unlock = useCallback(
-    (
-      id: string,
-      opts?: { silent?: boolean }
-    ) => {
-      const achievementId = String(
-        id || ""
-      ).trim();
+    (id: string, opts?: { silent?: boolean }) => {
+      if (unlockedRef.current[id]) return;
 
-      if (!achievementId) return;
-      if (
-        unlockedRef.current[
-          achievementId
-        ]
-      ) {
-        return;
-      }
+      const now = Date.now();
+      unlockedRef.current = { ...unlockedRef.current, [id]: now };
+      setUnlocked(unlockedRef.current);
+      persistUnlocked();
 
-      if (
-        unlockInFlightRef.current.has(
-          achievementId
-        )
-      ) {
-        return;
-      }
+      const ach = ACH_MAP[id];
+      if (ach) {
+        let coinsAwarded = 0;
 
-      const ach =
-        ACH_MAP[achievementId];
+        if (ach.coins && ach.coins > 0 && typeof addCoins === "function") {
+          try {
+            const base =
+              ach.coins;
 
-      if (!ach) {
-        console.warn(
-          "[Achievements] unknown achievement:",
-          achievementId
-        );
-        return;
-      }
+            const reward =
+              computeAchievementReward(
+                base,
+                id
+              );
 
-      const finalizeLocalUnlock = (
-        timestamp: number,
-        coinsAwarded: number,
-        shouldCelebrate: boolean
-      ) => {
-        if (
-          unlockedRef.current[
-            achievementId
-          ]
-        ) {
-          return;
+            coinsAwarded =
+              reward.totalCoins;
+
+            if (coinsAwarded > 0) {
+              console.log(
+                "[Achievements] awarding coins",
+                coinsAwarded,
+                "for",
+                id
+              );
+
+              const coinReason =
+                ACH_MAP[id]?.group === "streaks"
+                  ? "streak_achievement"
+                  : "achievement";
+
+              void addCoins(
+                coinsAwarded,
+                coinReason,
+                {
+                  achievementId:
+                    id,
+                  baseCoins:
+                    reward.baseCoins,
+                  specialistBonus:
+                    reward.specialistBonus,
+                  aetherwyrmBonus:
+                    reward.aetherwyrmBonus,
+                  awardedCoins:
+                    reward.totalCoins,
+                  appliedCompanions:
+                    reward.appliedCompanions,
+                }
+              );
+            }
+          } catch (e) {
+            console.warn("[Achievements] addCoins failed", e);
+          }
         }
 
-        const safeTimestamp =
-          Number.isFinite(timestamp) &&
-          timestamp > 0
-            ? timestamp
-            : Date.now();
-
-        unlockedRef.current = {
-          ...unlockedRef.current,
-          [achievementId]:
-            safeTimestamp,
-        };
-
-        setUnlocked(
-          unlockedRef.current
-        );
-
-        void persistUnlocked();
-
-        if (
-          !opts?.silent &&
-          shouldCelebrate
-        ) {
-          const hasCoins =
-            coinsAwarded > 0;
+        if (!opts?.silent) {
+          const hasCoins = coinsAwarded > 0;
           const label = ach.title;
 
+          // 🔔 Notify the detailed overlay with title + coins
           try {
-            AchieveEmitter.emit(
-              "achievement_unlocked_detail",
-              {
-                id: achievementId,
-                title: label,
-                coins: coinsAwarded,
-              }
-            );
+            AchieveEmitter.emit("achievement_unlocked_detail", {
+              id,
+              title: label,
+              coins: coinsAwarded,
+            });
           } catch (e) {
             console.warn(
               "[Achievements] achievement_unlocked_detail emit failed",
@@ -789,270 +468,46 @@ export function AchievementsProvider({
             );
           }
 
+          // 🎉 Also emit a simple celebrate banner message
           try {
-            const bannerMessage =
-              hasCoins
-                ? `${label} — +${coinsAwarded.toLocaleString()} coins`
-                : label ||
-                  "Achievement unlocked!";
-
-            console.log(
-              "[Achievements] emit celebrate:",
-              bannerMessage
-            );
-
-            AchieveEmitter.emit(
-              "celebrate",
-              bannerMessage
-            );
+            const bannerMessage = hasCoins
+              ? `${label} — +${coinsAwarded.toLocaleString()} coins`
+              : label || "Achievement unlocked!";
+            console.log("[Achievements] emit celebrate:", bannerMessage);
+            AchieveEmitter.emit("celebrate", bannerMessage);
           } catch (e) {
-            console.warn(
-              "[Achievements] celebrate emit failed",
-              e
-            );
+            console.warn("[Achievements] celebrate emit failed", e);
           }
         }
+      }
 
-        if (shouldCelebrate) {
+      try {
+        DeviceEventEmitter.emit(ACHIEVEMENT_EVENT, { id, ts: now });
+        if (Platform.OS === "web") {
           try {
-            DeviceEventEmitter.emit(
-              ACHIEVEMENT_EVENT,
-              {
-                id: achievementId,
-                ts: safeTimestamp,
-              }
-            );
+            const webWindow =
+              (globalThis as any).window;
 
-            if (Platform.OS === "web") {
-              try {
-                const webWindow =
-                  (globalThis as any)
-                    .window;
-
-                const WebEvent =
-                  (globalThis as any)
-                    .Event;
-
-                if (
-                  webWindow?.dispatchEvent &&
-                  typeof WebEvent ===
-                    "function"
-                ) {
-                  webWindow.dispatchEvent(
-                    new WebEvent(
-                      ACHIEVEMENT_EVENT
-                    )
-                  );
-                }
-              } catch {}
-            }
-          } catch (e) {
-            console.warn(
-              "[Achievements] DeviceEventEmitter emit failed",
-              e
-            );
-          }
-        }
-      };
-
-      const run = async () => {
-        unlockInFlightRef.current.add(
-          achievementId
-        );
-
-        try {
-          /*
-           * Signed-in users:
-           * Supabase owns the claim, reward value, Legendary modifiers,
-           * coin balance update, and duplicate protection.
-           */
-          if (supabaseUserId) {
-            const { data, error } =
-              await supabase.rpc(
-                "nova_claim_achievement",
-                {
-                  p_achievement_id:
-                    achievementId,
-                }
-              );
-
-            if (error) {
-              console.warn(
-                "[Achievements] server claim failed:",
-                achievementId,
-                error
-              );
-
-              pendingClaimsRef.current.add(
-                achievementId
-              );
-
-              await persistPendingClaims();
-              return;
-            }
-
-            const row =
-              firstRpcRow<RemoteAchievementClaim>(
-                data
-              );
-
-            if (!row) {
-              console.warn(
-                "[Achievements] server claim returned no row:",
-                achievementId
-              );
-
-              pendingClaimsRef.current.add(
-                achievementId
-              );
-
-              await persistPendingClaims();
-              return;
-            }
-
-            pendingClaimsRef.current.delete(
-              achievementId
-            );
-
-            await persistPendingClaims();
-
-            const coinsAwarded =
-              safeRemoteNumber(
-                row.actual_coins
-              );
-
-            const timestamp =
-              safeRemoteNumber(
-                row.unlocked_at_ms
-              ) || Date.now();
-
-            const newlyClaimed =
-              row.newly_claimed === true;
+            const WebEvent =
+              (globalThis as any).Event;
 
             if (
-              newlyClaimed &&
-              coinsAwarded > 0
+              webWindow?.dispatchEvent &&
+              typeof WebEvent === "function"
             ) {
-              try {
-                await refreshCoinsRef.current();
-              } catch (e) {
-                console.warn(
-                  "[Achievements] refreshCoins after server claim failed",
-                  e
-                );
-              }
-            }
-
-            console.log(
-              "[Achievements] server claim result",
-              {
-                achievementId,
-                newlyClaimed,
-                baseCoins:
-                  safeRemoteNumber(
-                    row.base_coins
-                  ),
-                specialistBonus:
-                  safeRemoteNumber(
-                    row.specialist_bonus
-                  ),
-                aetherwyrmBonus:
-                  safeRemoteNumber(
-                    row.aetherwyrm_bonus
-                  ),
-                awardedCoins:
-                  coinsAwarded,
-                migratedExisting:
-                  row.migrated_existing ===
-                  true,
-              }
-            );
-
-            finalizeLocalUnlock(
-              timestamp,
-              newlyClaimed
-                ? coinsAwarded
-                : 0,
-              newlyClaimed
-            );
-
-            return;
-          }
-
-          /*
-           * Guests keep the proven local Phase-2 reward path.
-           */
-          let coinsAwarded = 0;
-
-          if (
-            ach.coins &&
-            ach.coins > 0 &&
-            typeof addCoins === "function"
-          ) {
-            try {
-              const reward =
-                computeAchievementReward(
-                  ach.coins,
-                  achievementId
-                );
-
-              coinsAwarded =
-                reward.totalCoins;
-
-              if (coinsAwarded > 0) {
-                const coinReason =
-                  ach.group ===
-                  "streaks"
-                    ? "streak_achievement"
-                    : "achievement";
-
-                await addCoins(
-                  coinsAwarded,
-                  coinReason,
-                  {
-                    achievementId,
-                    baseCoins:
-                      reward.baseCoins,
-                    specialistBonus:
-                      reward.specialistBonus,
-                    aetherwyrmBonus:
-                      reward.aetherwyrmBonus,
-                    awardedCoins:
-                      reward.totalCoins,
-                    appliedCompanions:
-                      reward.appliedCompanions,
-                  }
-                );
-              }
-            } catch (e) {
-              console.warn(
-                "[Achievements] guest addCoins failed",
-                e
+              webWindow.dispatchEvent(
+                new WebEvent(
+                  ACHIEVEMENT_EVENT
+                )
               );
             }
-          }
-
-          finalizeLocalUnlock(
-            Date.now(),
-            coinsAwarded,
-            true
-          );
-        } finally {
-          unlockInFlightRef.current.delete(
-            achievementId
-          );
+          } catch {}
         }
-      };
-
-      void run();
+      } catch (e) {
+        console.warn("[Achievements] DeviceEventEmitter emit failed", e);
+      }
     },
-    [
-      addCoins,
-      computeAchievementReward,
-      persistPendingClaims,
-      persistUnlocked,
-      supabaseUserId,
-    ]
+    [addCoins, persistUnlocked, computeAchievementReward]
   );
 
   // ─────────────── DEVELOPMENT TEST HELPERS ───────────────
@@ -1376,10 +831,6 @@ export function AchievementsProvider({
       purchaseCountRef.current = 0;
       purchaseKeysRef.current =
         new Set();
-      pendingClaimsRef.current =
-        new Set();
-      unlockInFlightRef.current =
-        new Set();
       purchaseBaselineReadyRef.current =
         false;
       inventoryBaselineTotalRef.current =
@@ -1418,10 +869,6 @@ export function AchievementsProvider({
         ),
         storageKey(
           STORAGE_BASE_PURCHASE_KEYS,
-          null
-        ),
-        storageKey(
-          STORAGE_BASE_PENDING_CLAIMS,
           null
         ),
 
