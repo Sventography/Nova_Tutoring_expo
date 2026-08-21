@@ -15,12 +15,14 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 
 import { buildQuiz } from "../../_lib/quiz";
-import { classifyTopic } from "../../_lib/topicTaxonomy";
 import { getCardsById, toQA } from "../../_lib/flashcards";
 import { add as addQuizHistory } from "../../_lib/quizHistory"; // ✅ direct history logger
 import { safeLogQuiz } from "../../utils/quiz-history-bridge"; // ✅ bridge logger
 import { quizFinished } from "../../utils/achievements-bridge"; // ✅ achievements bridge
-import { useAchievements } from "../../context/AchievementsContext"; // ✅ achievements context
+import {
+  useAchievements,
+  AchieveEmitter,
+} from "../../context/AchievementsContext"; // ✅ achievements context / emitter
 import { useCoins } from "../../context/CoinsContext";
 import { useToast } from "../../context/ToastContext";
 import { useUser } from "../../context/UserContext";
@@ -132,15 +134,6 @@ export default function TopicQuiz() {
   const headerTitle = useMemo(
     () => (title ? String(title) : "Quiz"),
     [title]
-  );
-
-  const topicTaxonomy = useMemo(
-    () =>
-      classifyTopic(
-        String(id || ""),
-        headerTitle
-      ),
-    [id, headerTitle]
   );
 
   const {
@@ -490,19 +483,7 @@ export default function TopicQuiz() {
 
     if (ach && typeof (ach as any).onQuizFinished === "function") {
       try {
-        const maybePromise = (ach as any).onQuizFinished(
-          pct,
-          topicTaxonomy.subject,
-          {
-            topicId,
-            title: headerTitle,
-            discipline: topicTaxonomy.discipline,
-            correct,
-            total,
-            durationSec,
-            remainingSeconds: totalLeft,
-          }
-        );
+        const maybePromise = (ach as any).onQuizFinished(pct, headerTitle);
         if (maybePromise && typeof maybePromise?.catch === "function") {
           maybePromise.catch(() => {});
         }
@@ -510,14 +491,18 @@ export default function TopicQuiz() {
     }
 
     try {
-      quizFinished(
-        correct,
-        durationSec,
-        total,
-        topicTaxonomy.subject
-      );
+      quizFinished(correct, durationSec, total);
     } catch {}
-if (studyXpEligibleRef.current) {
+
+    try {
+      AchieveEmitter.emit("ACHIEVEMENT_EVENT", {
+        type: "quizFinished",
+        scorePct: pct,
+        subject: headerTitle,
+      });
+    } catch {}
+
+    if (studyXpEligibleRef.current) {
       void awardQuizStudyXp({
         topicId,
         scorePercent: pct,
@@ -729,7 +714,6 @@ if (studyXpEligibleRef.current) {
     totalLeft,
     id,
     headerTitle,
-    topicTaxonomy,
     ach,
     getDisplayName,
     addIslandXp,

@@ -16,10 +16,6 @@ import { ACHIEVEMENT_LIST } from "../constants/achievements";
 import { useCoins } from "./CoinsContext";
 import { useUser } from "./UserContext";
 import { useLegendaryCompanions } from "../hooks/useLegendaryCompanions";
-import {
-  recordQuizAchievementProgress,
-  type QuizAchievementMeta,
-} from "../_lib/quizAchievementProgress";
 
 const STORAGE_BASE_UNLOCKED = "@achieve/unlocked.v1";
 const STORAGE_BASE_QUIZ_COUNT = "@achieve/quizCount.v1";
@@ -41,11 +37,7 @@ type UnlockedMap = Record<string, number>; // id -> timestamp
 
 type AchievementsContextValue = {
   unlocked: UnlockedMap;
-  onQuizFinished: (
-    pct: number,
-    subject: string,
-    meta?: QuizAchievementMeta
-  ) => void;
+  onQuizFinished: (pct: number, subject: string) => void;
   onAskQuestion?: () => void;
   onFlashcardSaved?: () => void;
   onBrainPairCompleted?: () => void;
@@ -1237,17 +1229,8 @@ export function AchievementsProvider({
   // ─────────────── QUIZ ───────────────
 
   const handleQuizFinished = useCallback(
-    (
-      pct: number,
-      subject: string,
-      meta: QuizAchievementMeta = {}
-    ) => {
-      console.log("[Achievements] handleQuizFinished", {
-        pct,
-        subject,
-        topicId: meta.topicId ?? null,
-        discipline: meta.discipline ?? null,
-      });
+    (pct: number, subject: string) => {
+      console.log("[Achievements] handleQuizFinished", { pct, subject });
 
       if (pct >= 80 && !unlockedRef.current["quiz_80"]) unlock("quiz_80");
       if (pct >= 85 && !unlockedRef.current["quiz_85"]) unlock("quiz_85");
@@ -1256,7 +1239,7 @@ export function AchievementsProvider({
       if (pct >= 100 && !unlockedRef.current["quiz_100"]) unlock("quiz_100");
 
       quizCountRef.current += 1;
-      void persistQuizCount();
+      persistQuizCount();
       const total = quizCountRef.current;
 
       const quizTakenThresholds = [1, 5, 10, 25, 50, 100, 200];
@@ -1264,34 +1247,18 @@ export function AchievementsProvider({
         const tid = `quiz_taken_${n}`;
         if (total >= n && !unlockedRef.current[tid]) unlock(tid);
       }
-
-      void recordQuizAchievementProgress({
-        ownerId: supabaseUserId ?? "guest",
-        pct,
-        subject,
-        meta,
-        unlock,
-      });
     },
-    [unlock, persistQuizCount, supabaseUserId]
+    [unlock, persistQuizCount]
   );
 
   // Public API used by Quiz screens: emits a "quizFinished" event
-  const onQuizFinished = useCallback(
-    (
-      pct: number,
-      subject: string,
-      meta: QuizAchievementMeta = {}
-    ) => {
-      AchieveEmitter.emit(ACHIEVEMENT_EVENT, {
-        type: "quizFinished",
-        scorePct: pct,
-        subject,
-        meta,
-      });
-    },
-    []
-  );
+  const onQuizFinished = useCallback((pct: number, subject: string) => {
+    AchieveEmitter.emit(ACHIEVEMENT_EVENT, {
+      type: "quizFinished",
+      scorePct: pct,
+      subject,
+    });
+  }, []);
 
   // Listen to AchieveEmitter — handle both quizFinished payloads and id-based unlocks
   useEffect(() => {
@@ -1304,11 +1271,7 @@ export function AchievementsProvider({
       if (payload.type === "quizFinished") {
         const pct = Number(payload.scorePct ?? 0);
         const subject = String(payload.subject || "Quiz");
-        handleQuizFinished(
-          pct,
-          subject,
-          payload.meta ?? {}
-        );
+        handleQuizFinished(pct, subject);
         return;
       }
 

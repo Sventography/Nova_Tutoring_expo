@@ -1,13 +1,19 @@
 // app/constants/achievements.ts
 
 import { streakAchievementBaseCoins } from "../_lib/economy";
+import {
+  SUBJECT_KEYS,
+  SUBJECT_LABELS,
+  normalizeSubjectKey,
+  type SubjectKey,
+} from "../_lib/topicTaxonomy";
 
 export type Achievement = {
   id: string;
   title: string;
   desc?: string;
   coins: number;
-  group: string; // onboarding | ask | streaks | quiz | brainteasers | voice | shop | flashcards | relax
+  group: string;
 };
 
 function make(
@@ -20,33 +26,36 @@ function make(
   return { id, title, coins, group, desc };
 }
 
-// Normalize a subject string -> id-safe token
 export function subjectKey(s?: string) {
-  return (s || "")
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
+  return normalizeSubjectKey(s);
 }
 
-export const SUBJECTS = ["math", "science", "history", "language"]; // add more anytime
+export const SUBJECTS = [...SUBJECT_KEYS];
+
+function subjectLabel(sub: string): string {
+  const key = normalizeSubjectKey(sub);
+  return SUBJECT_LABELS[key];
+}
 
 export function buildAchievements() {
   const list: Achievement[] = [];
 
-  // ────────── ONBOARDING (removed) ──────────
-  // We used to have:
-  //   - first_login ("Welcome!")
-  //   - set_avatar ("New Look!")
-  // Those are removed so the app doesn’t show onboarding items
-  // that don’t match the current flow anymore.
-
-  // ────────── ASK milestones (1→1000) ──────────
-  for (let n of [
-    1, 5, 10, 20, 25, 50, 75, 100, 150, 200, 250, 300, 400, 500, 750, 1000,
+  // ────────── ASK milestones ──────────
+  for (const n of [
+    1, 5, 10, 20, 25, 50, 75, 100,
+    150, 200, 250, 300, 400, 500, 750, 1000,
   ]) {
     const coins =
-      n <= 25 ? 10 : n <= 100 ? 25 : n <= 300 ? 50 : n <= 750 ? 100 : 200;
+      n <= 25
+        ? 10
+        : n <= 100
+        ? 25
+        : n <= 300
+        ? 50
+        : n <= 750
+        ? 100
+        : 200;
+
     list.push(
       make(
         `ask_${n}`,
@@ -58,29 +67,35 @@ export function buildAchievements() {
     );
   }
 
-  // ────────── STREAK ACHIEVEMENT BONUSES (2→365) ──────────
-  // These are one-time bonuses on top of the increasing daily streak payout.
-  for (let d of [2, 3, 5, 7, 10, 14, 21, 30, 50, 75, 100, 150, 200, 250, 300, 365]) {
-    const coins = streakAchievementBaseCoins(d);
+  // ────────── STREAK BONUSES ──────────
+  for (const d of [
+    2, 3, 5, 7, 10, 14, 21, 30,
+    50, 75, 100, 150, 200, 250, 300, 365,
+  ]) {
     list.push(
       make(
         `streak_${d}`,
         `Daily Streak: ${d}`,
-        coins,
+        streakAchievementBaseCoins(d),
         "streaks",
         `Opened Nova ${d} days in a row. Includes a one-time streak milestone bonus.`
       )
     );
   }
 
-  // ────────── QUIZ performance (global) ──────────
-  for (let pct of [80, 85, 90, 95, 100]) {
-    let coins: number;
-    if (pct === 80) coins = 60;
-    else if (pct === 85) coins = 80;
-    else if (pct === 90) coins = 110;
-    else if (pct === 95) coins = 150;
-    else coins = 250; // 100% — one-time achievement reward, separate from daily perfect bonus
+  // ────────── GLOBAL QUIZ PERFORMANCE ──────────
+  for (const pct of [80, 85, 90, 95, 100]) {
+    const coins =
+      pct === 80
+        ? 60
+        : pct === 85
+        ? 80
+        : pct === 90
+        ? 110
+        : pct === 95
+        ? 150
+        : 250;
+
     list.push(
       make(
         `quiz_${pct}`,
@@ -92,32 +107,41 @@ export function buildAchievements() {
     );
   }
 
-  // ────────── QUIZ performance (per subject) ──────────
+  // ────────── PER-SUBJECT QUIZ PERFORMANCE ──────────
   for (const sub of SUBJECTS) {
-    for (let pct of [80, 85, 90, 95, 100]) {
-      let coins: number;
-      if (pct === 80) coins = 70; // slight premium over global
-      else if (pct === 85) coins = 90;
-      else if (pct === 90) coins = 120;
-      else if (pct === 95) coins = 160;
-      else coins = 275; // 100% subject = premium
-      const id = `quiz_${sub}_${pct}`;
-      const title = `${titleCase(sub)} Master ${pct}%`;
+    for (const pct of [80, 85, 90, 95, 100]) {
+      const coins =
+        pct === 80
+          ? 70
+          : pct === 85
+          ? 90
+          : pct === 90
+          ? 120
+          : pct === 95
+          ? 160
+          : 275;
+
       list.push(
         make(
-          id,
-          title,
+          `quiz_${sub}_${pct}`,
+          `${subjectLabel(sub)} Master ${pct}%`,
           coins,
           "quiz",
-          `Scored ${pct}%+ in ${titleCase(sub)}.`
+          `Scored ${pct}%+ in ${subjectLabel(sub)}.`
         )
       );
     }
   }
 
-  // ────────── QUIZ volume (global taken count) ──────────
-  for (let n of [1, 5, 10, 25, 50, 100, 200]) {
-    const coins = n <= 10 ? 20 : n <= 50 ? 50 : 120;
+  // ────────── GLOBAL QUIZ VOLUME ──────────
+  for (const n of [1, 5, 10, 25, 50, 100, 200]) {
+    const coins =
+      n <= 10
+        ? 20
+        : n <= 50
+        ? 50
+        : 120;
+
     list.push(
       make(
         `quiz_taken_${n}`,
@@ -129,19 +153,173 @@ export function buildAchievements() {
     );
   }
 
-  // ────────── QUIZ volume (per subject taken count) ──────────
+  // ────────── PER-SUBJECT QUIZ VOLUME ──────────
   for (const sub of SUBJECTS) {
-    for (let n of [1, 5, 10, 25, 50, 100, 200]) {
-      const coins = n <= 10 ? 25 : n <= 50 ? 60 : 140;
-      const id = `quiz_taken_${sub}_${n}`;
-      const title = `${titleCase(sub)} Quizzes: ${n}`;
-      list.push(make(id, title, coins, "quiz"));
+    for (const n of [1, 5, 10, 25, 50, 100, 200]) {
+      const coins =
+        n <= 10
+          ? 25
+          : n <= 50
+          ? 60
+          : 140;
+
+      list.push(
+        make(
+          `quiz_taken_${sub}_${n}`,
+          `${subjectLabel(sub)} Quizzes: ${n}`,
+          coins,
+          "quiz",
+          `Completed ${n} ${subjectLabel(sub)} quiz${n === 1 ? "" : "zes"}.`
+        )
+      );
     }
   }
 
-  // ────────── BRAINTEASERS daily pair ──────────
-  for (let n of [1, 3, 5, 10, 20, 50, 100]) {
-    const coins = n <= 10 ? 30 : n <= 50 ? 70 : 150;
+  // ────────── QUIZ ACCURACY / LONG-TERM PROGRESS ──────────
+  for (const n of [25, 100, 250, 500, 1000, 2500]) {
+    const coins =
+      n <= 25
+        ? 15
+        : n <= 100
+        ? 25
+        : n <= 250
+        ? 40
+        : n <= 500
+        ? 70
+        : n <= 1000
+        ? 120
+        : 250;
+
+    list.push(
+      make(
+        `quiz_correct_${n}`,
+        `${n.toLocaleString()} Correct Answers`,
+        coins,
+        "quiz",
+        `Answered ${n.toLocaleString()} quiz questions correctly in total.`
+      )
+    );
+  }
+
+  // ────────── REPEATED PERFECT SCORES ──────────
+  for (const n of [3, 5, 10, 25, 50]) {
+    const coins =
+      n <= 3
+        ? 25
+        : n <= 5
+        ? 40
+        : n <= 10
+        ? 70
+        : n <= 25
+        ? 140
+        : 250;
+
+    list.push(
+      make(
+        `quiz_perfect_${n}`,
+        `Perfect Quizzes: ${n}`,
+        coins,
+        "quiz",
+        `Earned a 100% score on ${n} quizzes.`
+      )
+    );
+  }
+
+  // ────────── TOPIC EXPLORATION ──────────
+  for (const n of [3, 5, 10, 25, 50, 100]) {
+    const coins =
+      n <= 3
+        ? 15
+        : n <= 5
+        ? 25
+        : n <= 10
+        ? 40
+        : n <= 25
+        ? 75
+        : n <= 50
+        ? 125
+        : 225;
+
+    list.push(
+      make(
+        `quiz_topics_${n}`,
+        `Topic Explorer: ${n}`,
+        coins,
+        "quiz",
+        `Completed quizzes across ${n} different topics.`
+      )
+    );
+  }
+
+  // ────────── SUBJECT BREADTH ──────────
+  for (const n of [3, 5, 8, 10]) {
+    const coins =
+      n <= 3
+        ? 25
+        : n <= 5
+        ? 50
+        : n <= 8
+        ? 90
+        : 150;
+
+    list.push(
+      make(
+        `quiz_subjects_${n}`,
+        `Renaissance Learner: ${n} Subjects`,
+        coins,
+        "quiz",
+        `Completed quizzes in ${n} different subject families.`
+      )
+    );
+  }
+
+  list.push(
+    make(
+      "quiz_multisubject_90_3",
+      "Triple Threat",
+      60,
+      "quiz",
+      "Scored 90%+ in three different subject families."
+    ),
+    make(
+      "quiz_multisubject_90_5",
+      "Five-Star Scholar",
+      120,
+      "quiz",
+      "Scored 90%+ in five different subject families."
+    ),
+    make(
+      "quiz_perfect_subjects_3",
+      "Perfectly Versatile",
+      90,
+      "quiz",
+      "Earned a perfect quiz score in three different subject families."
+    ),
+    make(
+      "quiz_speed_90",
+      "Fast & Accurate",
+      30,
+      "quiz",
+      "Scored 90%+ while finishing a quiz in three minutes or less."
+    ),
+    make(
+      "quiz_clutch_80",
+      "Clutch Finish",
+      30,
+      "quiz",
+      "Scored 80%+ with 15 seconds or less remaining."
+    )
+  );
+
+  // ────────── BRAINTEASERS ──────────
+  for (const n of [1, 3, 5, 10, 20, 50, 100]) {
+    const coins =
+      n <= 10
+        ? 30
+        : n <= 50
+        ? 70
+        : 150;
+
     list.push(
       make(
         `brain_pair_${n}`,
@@ -153,23 +331,18 @@ export function buildAchievements() {
     );
   }
 
-  // ────────── VOICE usage ──────────
-  for (let n of [1, 5, 10, 25, 50, 100]) {
-    const coins = n <= 10 ? 25 : n <= 50 ? 60 : 120;
-    list.push(
-      make(
-        `voice_${n}`,
-        `Voice Sessions: ${n}`,
-        coins,
-        "voice",
-        `Used voice input ${n} times.`
-      )
-    );
-  }
+  // Voice achievements intentionally removed from the visible/claimable app
+  // catalog until Nova actually ships a voice-input flow.
 
-  // ────────── SHOP purchases ──────────
-  for (let n of [1, 3, 5, 10, 20]) {
-    const coins = n <= 5 ? 50 : n <= 10 ? 100 : 200;
+  // ────────── SHOP PURCHASES ──────────
+  for (const n of [1, 3, 5, 10, 20]) {
+    const coins =
+      n <= 5
+        ? 50
+        : n <= 10
+        ? 100
+        : 200;
+
     list.push(
       make(
         `purchase_${n}`,
@@ -181,9 +354,15 @@ export function buildAchievements() {
     );
   }
 
-  // ────────── FLASHCARDS (saved to Collections) ──────────
-  for (let n of [1, 5, 10, 25, 50, 100, 200]) {
-    const coins = n <= 10 ? 15 : n <= 50 ? 40 : 100;
+  // ────────── FLASHCARDS ──────────
+  for (const n of [1, 5, 10, 25, 50, 100, 200]) {
+    const coins =
+      n <= 10
+        ? 15
+        : n <= 50
+        ? 40
+        : 100;
+
     list.push(
       make(
         `flashcards_saved_${n}`,
@@ -195,11 +374,17 @@ export function buildAchievements() {
     );
   }
 
-  // ────────── RELAX time (minutes) ──────────
-  // total accumulated minutes in Relax screen
-  for (let mins of [5, 10, 20, 30, 60, 120]) {
+  // ────────── RELAX TIME ──────────
+  for (const mins of [5, 10, 20, 30, 60, 120]) {
     const coins =
-      mins <= 10 ? 20 : mins <= 30 ? 40 : mins <= 60 ? 80 : 160;
+      mins <= 10
+        ? 20
+        : mins <= 30
+        ? 40
+        : mins <= 60
+        ? 80
+        : 160;
+
     list.push(
       make(
         `relax_minutes_${mins}`,
@@ -212,19 +397,29 @@ export function buildAchievements() {
   }
 
   const map: Record<string, Achievement> = {};
-  for (const a of list) map[a.id] = a;
-  return { LIST: list, MAP: map };
-}
+  for (const achievement of list) {
+    map[achievement.id] = achievement;
+  }
 
-function titleCase(s: string) {
-  return s.replace(/\b\w/g, (c) => c.toUpperCase());
+  return {
+    LIST: list,
+    MAP: map,
+  };
 }
 
 const BUILT = buildAchievements();
+
 export const ACHIEVEMENTS = BUILT.MAP;
 export const ACHIEVEMENT_LIST = BUILT.LIST;
 
-export const SUBJECT_COLORS = {
+export const SUBJECT_COLORS: Record<
+  SubjectKey,
+  {
+    bg: string;
+    border: string;
+    text: string;
+  }
+> = {
   math: {
     bg: "rgba(0,229,255,0.10)",
     border: "rgba(0,229,255,0.85)",
@@ -244,5 +439,35 @@ export const SUBJECT_COLORS = {
     bg: "rgba(153,102,255,0.10)",
     border: "rgba(153,102,255,0.85)",
     text: "#dbc8ff",
+  },
+  computer_science: {
+    bg: "rgba(0,190,255,0.10)",
+    border: "rgba(0,190,255,0.85)",
+    text: "#b8ecff",
+  },
+  social_science: {
+    bg: "rgba(255,120,180,0.10)",
+    border: "rgba(255,120,180,0.85)",
+    text: "#ffd0e5",
+  },
+  business: {
+    bg: "rgba(255,210,70,0.10)",
+    border: "rgba(255,210,70,0.85)",
+    text: "#ffe9a0",
+  },
+  health: {
+    bg: "rgba(70,255,180,0.10)",
+    border: "rgba(70,255,180,0.85)",
+    text: "#baffdf",
+  },
+  arts_humanities: {
+    bg: "rgba(220,120,255,0.10)",
+    border: "rgba(220,120,255,0.85)",
+    text: "#edc8ff",
+  },
+  general: {
+    bg: "rgba(200,210,220,0.10)",
+    border: "rgba(200,210,220,0.70)",
+    text: "#e7edf2",
   },
 };
