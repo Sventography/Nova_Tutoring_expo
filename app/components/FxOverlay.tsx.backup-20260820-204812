@@ -370,7 +370,10 @@ export default function FxOverlay() {
     );
   }
 
-  if (!enabled) {
+  if (
+    !enabled ||
+    freeDefaultActive
+  ) {
     return null;
   }
 

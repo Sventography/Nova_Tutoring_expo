@@ -379,29 +379,12 @@ export default function TopicQuiz() {
     if (autoRef.current) clearTimeout(autoRef.current);
     autoRef.current = null;
 
-    if (totalTimerRef.current) {
-      clearInterval(totalTimerRef.current);
-      totalTimerRef.current = null;
-    }
-
-    // Build a genuinely fresh quiz for every retake.
-    // This reshuffles both question order and answer positions.
-    const raw = getCardsById(String(id));
-    const built = buildQuiz(raw as any, QUIZ_LEN);
-
-    if (!built.length) {
-      setNoData(true);
-      return;
-    }
-
-    setItems(built);
     setIdx(0);
     setCorrect(0);
     setSelected(null);
     setLocked(false);
     setDone(false);
     setTotalLeft(quizTotalTime);
-    setNoData(false);
 
     loggedRef.current = false;
     notifiedRef.current = false;
