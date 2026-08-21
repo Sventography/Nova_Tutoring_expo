@@ -35,9 +35,6 @@ import {
   useQuizCoinEconomy,
   type QuizPerfectBonusAwardResult,
 } from "../../hooks/useQuizCoinEconomy";
-import {
-  useServerQuizAchievementAttempt,
-} from "../../hooks/useServerQuizAchievementAttempt";
 
 type QItem = { question: string; choices: string[]; answer: string };
 
@@ -144,21 +141,6 @@ export default function TopicQuiz() {
         headerTitle
       ),
     [id, headerTitle]
-  );
-
-  const {
-    serverBacked:
-      serverBackedQuizAchievements,
-    recordAnswer:
-      recordServerQuizAchievementAnswer,
-    finishAttempt:
-      finishServerQuizAchievementAttempt,
-    beginNewAttempt:
-      beginNewServerQuizAchievementAttempt,
-  } = useServerQuizAchievementAttempt(
-    String(id || headerTitle),
-    topicTaxonomy.subject,
-    headerTitle
   );
 
   const {
@@ -337,16 +319,6 @@ export default function TopicQuiz() {
     const chosen = current.choices[i];
     const isCorrect = chosen === current.answer;
 
-    void recordServerQuizAchievementAnswer(
-      idx,
-      isCorrect
-    ).catch((error) => {
-      console.warn(
-        "[QuizAchievements] answer sync failed",
-        error
-      );
-    });
-
     if (isCorrect) {
       setCorrect((c) => c + 1);
 
@@ -448,15 +420,6 @@ export default function TopicQuiz() {
     setPerfectBonusAward(null);
     setLastXp(null);
     setStudyAward(null);
-
-    void beginNewServerQuizAchievementAttempt().catch(
-      (error) => {
-        console.warn(
-          "[QuizAchievements] retake begin failed",
-          error
-        );
-      }
-    );
   }
 
   const mm = Math.floor(totalLeft / 60);
@@ -525,95 +488,35 @@ export default function TopicQuiz() {
       percent: pct,
     }).catch(() => {});
 
-    if (serverBackedQuizAchievements) {
-      void finishServerQuizAchievementAttempt()
-        .then((result) => {
-          if (!result.completed) {
-            console.log(
-              "[QuizAchievements] incomplete attempt; no quiz achievements counted",
-              {
-                answered:
-                  result.answeredCount,
-                correct:
-                  result.correctCount,
-              }
-            );
-            return;
-          }
-
-          console.log(
-            "[QuizAchievements] server finish",
-            {
-              scorePct: result.scorePct,
-              correct: result.correctCount,
-              achievements:
-                result.achievementIds,
-            }
-          );
-
-          if (
-            result.achievementIds.length > 0 &&
-            typeof (ach as any)
-              .onServerQuizAchievementsEligible ===
-              "function"
-          ) {
-            (
-              ach as any
-            ).onServerQuizAchievementsEligible(
-              result.achievementIds
-            );
-          }
-        })
-        .catch((error) => {
-          console.warn(
-            "[QuizAchievements] server finish failed",
-            error
-          );
-        });
-    } else {
-      if (
-        ach &&
-        typeof (ach as any).onQuizFinished ===
-          "function"
-      ) {
-        try {
-          const maybePromise = (
-            ach as any
-          ).onQuizFinished(
-            pct,
-            topicTaxonomy.subject,
-            {
-              topicId,
-              title: headerTitle,
-              discipline:
-                topicTaxonomy.discipline,
-              correct,
-              total,
-              durationSec,
-              remainingSeconds:
-                totalLeft,
-            }
-          );
-
-          if (
-            maybePromise &&
-            typeof maybePromise?.catch ===
-              "function"
-          ) {
-            maybePromise.catch(() => {});
-          }
-        } catch {}
-      }
-
+    if (ach && typeof (ach as any).onQuizFinished === "function") {
       try {
-        quizFinished(
-          correct,
-          durationSec,
-          total,
-          topicTaxonomy.subject
+        const maybePromise = (ach as any).onQuizFinished(
+          pct,
+          topicTaxonomy.subject,
+          {
+            topicId,
+            title: headerTitle,
+            discipline: topicTaxonomy.discipline,
+            correct,
+            total,
+            durationSec,
+            remainingSeconds: totalLeft,
+          }
         );
+        if (maybePromise && typeof maybePromise?.catch === "function") {
+          maybePromise.catch(() => {});
+        }
       } catch {}
     }
+
+    try {
+      quizFinished(
+        correct,
+        durationSec,
+        total,
+        topicTaxonomy.subject
+      );
+    } catch {}
 if (studyXpEligibleRef.current) {
       void awardQuizStudyXp({
         topicId,
@@ -827,8 +730,6 @@ if (studyXpEligibleRef.current) {
     id,
     headerTitle,
     topicTaxonomy,
-    serverBackedQuizAchievements,
-    finishServerQuizAchievementAttempt,
     ach,
     getDisplayName,
     addIslandXp,

@@ -46,9 +46,6 @@ type AchievementsContextValue = {
     subject: string,
     meta?: QuizAchievementMeta
   ) => void;
-  onServerQuizAchievementsEligible?: (
-    achievementIds: string[]
-  ) => void;
   onAskQuestion?: () => void;
   onFlashcardSaved?: () => void;
   onBrainPairCompleted?: () => void;
@@ -1252,13 +1249,6 @@ export function AchievementsProvider({
         discipline: meta.discipline ?? null,
       });
 
-      if (supabaseUserId) {
-        console.log(
-          "[Achievements] signed-in quiz progress is server-managed"
-        );
-        return;
-      }
-
       if (pct >= 80 && !unlockedRef.current["quiz_80"]) unlock("quiz_80");
       if (pct >= 85 && !unlockedRef.current["quiz_85"]) unlock("quiz_85");
       if (pct >= 90 && !unlockedRef.current["quiz_90"]) unlock("quiz_90");
@@ -1324,114 +1314,12 @@ export function AchievementsProvider({
 
       // Direct unlock from achievements-bridge: { id }
       if (payload.id && typeof payload.id === "string") {
-        if (
-          supabaseUserId &&
-          payload.id.startsWith("quiz_")
-        ) {
-          console.log(
-            "[Achievements] ignored legacy direct quiz unlock:",
-            payload.id
-          );
-          return;
-        }
-
         unlock(payload.id);
       }
     });
 
     return () => sub.remove();
-  }, [
-    hydrated,
-    handleQuizFinished,
-    supabaseUserId,
-    unlock,
-  ]);
-
-  const onServerQuizAchievementsEligible =
-    useCallback(
-      (achievementIds: string[]) => {
-        const ids = Array.from(
-          new Set(
-            (achievementIds || [])
-              .map((value) =>
-                String(value || "").trim()
-              )
-              .filter(Boolean)
-          )
-        );
-
-        for (const achievementId of ids) {
-          if (
-            !unlockedRef.current[
-              achievementId
-            ]
-          ) {
-            unlock(achievementId);
-          }
-        }
-      },
-      [unlock]
-    );
-
-  // Recover server-earned eligibility if a finish response was interrupted
-  // after Supabase committed but before the app received it.
-  useEffect(() => {
-    if (!hydrated || !supabaseUserId) {
-      return;
-    }
-
-    let cancelled = false;
-
-    void supabase
-      .rpc(
-        "nova_pending_achievement_eligibility"
-      )
-      .then(({ data, error }) => {
-        if (cancelled) return;
-
-        if (error) {
-          console.warn(
-            "[Achievements] pending eligibility sync failed",
-            error
-          );
-          return;
-        }
-
-        const rows = Array.isArray(data)
-          ? data
-          : data
-          ? [data]
-          : [];
-
-        const ids = rows
-          .map((row: any) =>
-            String(
-              row?.achievement_id || ""
-            ).trim()
-          )
-          .filter(Boolean);
-
-        onServerQuizAchievementsEligible(
-          ids
-        );
-      })
-      .catch((error) => {
-        if (!cancelled) {
-          console.warn(
-            "[Achievements] pending eligibility sync exception",
-            error
-          );
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    hydrated,
-    onServerQuizAchievementsEligible,
-    supabaseUserId,
-  ]);
+  }, [hydrated, handleQuizFinished, unlock]);
 
   // ─────────────── ASK ───────────────
 
@@ -1589,7 +1477,6 @@ export function AchievementsProvider({
     () => ({
       unlocked,
       onQuizFinished,
-      onServerQuizAchievementsEligible,
       onAskQuestion,
       onFlashcardSaved,
       onBrainPairCompleted,
@@ -1605,7 +1492,6 @@ export function AchievementsProvider({
     [
       unlocked,
       onQuizFinished,
-      onServerQuizAchievementsEligible,
       onAskQuestion,
       onFlashcardSaved,
       onBrainPairCompleted,
