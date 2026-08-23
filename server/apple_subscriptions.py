@@ -1053,6 +1053,540 @@ def _notification_entitlement_status(
   return "active"
 
 
+
+def _subscription_row_for_user(
+  supabase_url: str,
+  service_role_key: str,
+  user_id: str,
+) -> dict[str, Any] | None:
+  rows = _get_rows(
+    supabase_url,
+    service_role_key,
+    "ai_subscriptions",
+    {
+      "user_id":
+        f"eq.{user_id}",
+      "select": (
+        "user_id,plan_id,status,"
+        "apple_product_id,"
+        "original_transaction_id,"
+        "latest_transaction_id,"
+        "period_start,period_end,"
+        "verified_at"
+      ),
+      "limit": "1",
+    },
+  )
+
+  return rows[0] if rows else None
+
+
+def _api_exception_is_not_found(
+  error: Exception,
+) -> bool:
+  if (
+    APIException is None
+    or not isinstance(
+      error,
+      APIException,
+    )
+  ):
+    return False
+
+  raw_error = getattr(
+    error,
+    "raw_api_error",
+    None,
+  )
+
+  http_status = getattr(
+    error,
+    "http_status_code",
+    None,
+  )
+
+  return (
+    raw_error
+      == TRANSACTION_NOT_FOUND_ERROR
+    or http_status == 404
+  )
+
+
+def _lookup_current_subscription(
+  any_transaction_id: str,
+):
+  """
+  Ask Apple for the CURRENT auto-renewable subscription status.
+
+  Get Transaction Info only describes one transaction. Auto-renewals create
+  newer transactions, so it cannot by itself keep a long-lived entitlement
+  current. Apple's Get All Subscription Statuses endpoint is designed for
+  this reconciliation.
+  """
+  config = _apple_configuration()
+
+  status = (
+    apple_subscription_configuration_status()
+  )
+
+  if not status["sandbox_ready"]:
+    raise RuntimeError(
+      "Apple subscription verification "
+      "is not fully configured."
+    )
+
+  clients = _build_apple_clients(
+    config
+  )
+
+  last_not_found: Exception | None = None
+
+  for environment_name in (
+    "production",
+    "sandbox",
+  ):
+    pair = clients.get(
+      environment_name
+    )
+
+    if not pair:
+      continue
+
+    client, verifier = pair
+
+    try:
+      response = (
+        client.get_all_subscription_statuses(
+          any_transaction_id
+        )
+      )
+    except Exception as error:
+      if _api_exception_is_not_found(
+        error
+      ):
+        last_not_found = error
+        continue
+
+      raise
+
+    candidates: list[
+      tuple[
+        int,
+        int,
+        int,
+        Any,
+        Any,
+        str,
+      ]
+    ] = []
+
+    for group in (
+      getattr(
+        response,
+        "data",
+        None,
+      )
+      or []
+    ):
+      for item in (
+        getattr(
+          group,
+          "lastTransactions",
+          None,
+        )
+        or []
+      ):
+        signed_transaction = _text(
+          getattr(
+            item,
+            "signedTransactionInfo",
+            None,
+          )
+        )
+
+        if not signed_transaction:
+          continue
+
+        transaction = (
+          verifier
+          .verify_and_decode_signed_transaction(
+            signed_transaction
+          )
+        )
+
+        product_id = _text(
+          getattr(
+            transaction,
+            "productId",
+            None,
+          )
+        )
+
+        if (
+          product_id
+          not in APPLE_PLAN_BY_PRODUCT_ID
+        ):
+          continue
+
+        raw_status = _safe_int(
+          getattr(
+            item,
+            "rawStatus",
+            None,
+          )
+        )
+
+        entitlement_status = (
+          APPLE_NOTIFICATION_STATUS_BY_RAW.get(
+            raw_status or 0,
+            "expired",
+          )
+        )
+
+        signed_renewal = _text(
+          getattr(
+            item,
+            "signedRenewalInfo",
+            None,
+          )
+        )
+
+        renewal = (
+          verifier
+          .verify_and_decode_renewal_info(
+            signed_renewal
+          )
+          if signed_renewal
+          else None
+        )
+
+        purchase_ms = (
+          _safe_int(
+            getattr(
+              transaction,
+              "purchaseDate",
+              None,
+            )
+          )
+          or 0
+        )
+
+        expires_ms = (
+          _safe_int(
+            getattr(
+              transaction,
+              "expiresDate",
+              None,
+            )
+          )
+          or 0
+        )
+
+        status_priority = {
+          "active": 50,
+          "grace_period": 40,
+          "billing_retry": 30,
+          "expired": 20,
+          "revoked": 10,
+        }.get(
+          entitlement_status,
+          0,
+        )
+
+        candidates.append(
+          (
+            status_priority,
+            expires_ms,
+            purchase_ms,
+            transaction,
+            renewal,
+            entitlement_status,
+          )
+        )
+
+    if candidates:
+      candidates.sort(
+        key=lambda value: (
+          value[0],
+          value[1],
+          value[2],
+        ),
+        reverse=True,
+      )
+
+      (
+        _priority,
+        _expires_ms,
+        _purchase_ms,
+        transaction,
+        renewal,
+        entitlement_status,
+      ) = candidates[0]
+
+      return (
+        environment_name,
+        transaction,
+        renewal,
+        entitlement_status,
+      )
+
+    raise LookupError(
+      "Apple returned no Nova AI "
+      "subscription status for this customer."
+    )
+
+  if last_not_found:
+    raise LookupError(
+      "Apple could not find the saved "
+      "subscription in production or sandbox."
+    ) from last_not_found
+
+  raise LookupError(
+    "Apple could not find the saved subscription."
+  )
+
+
+def _refresh_saved_subscription_from_apple(
+  *,
+  supabase_url: str,
+  service_role_key: str,
+  user_id: str,
+) -> dict[str, Any]:
+  existing = _subscription_row_for_user(
+    supabase_url,
+    service_role_key,
+    user_id,
+  )
+
+  if not existing:
+    return {
+      "ok": True,
+      "verified": False,
+      "entitlement_active": False,
+      "plan_id": "free",
+      "purchased_plan_id": "free",
+      "status": "free",
+      "reason": "no_subscription",
+    }
+
+  original_transaction_id = _text(
+    existing.get(
+      "original_transaction_id"
+    )
+  )
+
+  latest_transaction_id = _text(
+    existing.get(
+      "latest_transaction_id"
+    )
+  )
+
+  lookup_id = (
+    original_transaction_id
+    or latest_transaction_id
+  )
+
+  if not lookup_id:
+    return {
+      "ok": True,
+      "verified": False,
+      "entitlement_active": False,
+      "plan_id": "free",
+      "purchased_plan_id":
+        _text(
+          existing.get("plan_id")
+        )
+        or "free",
+      "status":
+        _text(
+          existing.get("status")
+        )
+        or "expired",
+      "reason":
+        "missing_transaction_identifier",
+    }
+
+  (
+    environment_name,
+    transaction,
+    _renewal,
+    entitlement_status,
+  ) = _lookup_current_subscription(
+    lookup_id
+  )
+
+  product_id = _text(
+    getattr(
+      transaction,
+      "productId",
+      None,
+    )
+  )
+
+  plan_id = (
+    APPLE_PLAN_BY_PRODUCT_ID.get(
+      product_id
+    )
+  )
+
+  if not plan_id:
+    raise RuntimeError(
+      "Apple returned a subscription "
+      "that is not a Nova AI plan."
+    )
+
+  verified_original_transaction_id = _text(
+    getattr(
+      transaction,
+      "originalTransactionId",
+      None,
+    )
+  )
+
+  verified_transaction_id = _text(
+    getattr(
+      transaction,
+      "transactionId",
+      None,
+    )
+  )
+
+  if not (
+    verified_original_transaction_id
+    and verified_transaction_id
+  ):
+    raise RuntimeError(
+      "Apple returned incomplete "
+      "subscription identifiers."
+    )
+
+  if (
+    original_transaction_id
+    and verified_original_transaction_id
+      != original_transaction_id
+  ):
+    raise PermissionError(
+      "Apple returned a different "
+      "subscription ownership chain."
+    )
+
+  app_account_token = _uuid_text(
+    getattr(
+      transaction,
+      "appAccountToken",
+      None,
+    )
+  )
+
+  if (
+    app_account_token
+    and app_account_token != user_id
+  ):
+    raise PermissionError(
+      "Apple subscription ownership "
+      "does not match this Nova account."
+    )
+
+  purchase_ms = _safe_int(
+    getattr(
+      transaction,
+      "purchaseDate",
+      None,
+    )
+  )
+
+  expires_ms = _safe_int(
+    getattr(
+      transaction,
+      "expiresDate",
+      None,
+    )
+  )
+
+  if not (
+    purchase_ms
+    and expires_ms
+  ):
+    raise RuntimeError(
+      "Apple returned incomplete "
+      "subscription dates."
+    )
+
+  saved = _persist_subscription(
+    supabase_url=
+      supabase_url,
+    service_role_key=
+      service_role_key,
+    user_id=
+      user_id,
+    plan_id=
+      plan_id,
+    product_id=
+      product_id,
+    original_transaction_id=
+      verified_original_transaction_id,
+    latest_transaction_id=
+      verified_transaction_id,
+    purchase_ms=
+      purchase_ms,
+    expires_ms=
+      expires_ms,
+    status=
+      entitlement_status,
+  )
+
+  active = (
+    entitlement_status in {
+      "active",
+      "grace_period",
+      "billing_retry",
+    }
+  )
+
+  (
+    monthly_limit,
+    memory_limit,
+  ) = APPLE_LIMITS_BY_PLAN[
+    plan_id
+  ]
+
+  return {
+    "ok": True,
+    "verified": True,
+    "entitlement_active":
+      active,
+    "plan_id":
+      plan_id
+      if active
+      else "free",
+    "purchased_plan_id":
+      plan_id,
+    "product_id":
+      product_id,
+    "status":
+      entitlement_status,
+    "environment":
+      environment_name,
+    "original_transaction_id":
+      verified_original_transaction_id,
+    "latest_transaction_id":
+      verified_transaction_id,
+    "period_start":
+      saved.get("period_start"),
+    "period_end":
+      saved.get("period_end"),
+    "monthly_question_limit": (
+      monthly_limit
+      if active
+      else 5
+    ),
+    "memory_message_limit": (
+      memory_limit
+      if active
+      else 5
+    ),
+  }
+
 def register_apple_subscription_routes(
   app: Flask,
   *,
@@ -1079,6 +1613,165 @@ def register_apple_subscription_routes(
         APPLE_PLAN_BY_PRODUCT_ID.keys()
       ),
     )
+
+
+
+  @app.post(
+    "/api/apple-subscriptions/refresh"
+  )
+  def refresh_apple_subscription():
+    """
+    Reconcile the signed-in Nova account with Apple's current subscription
+    status. The app never supplies an arbitrary transaction identifier here.
+    """
+    if not (
+      supabase_url
+      and service_role_key
+    ):
+      return jsonify(
+        ok=False,
+        error=(
+          "Subscription storage "
+          "is not configured."
+        ),
+      ), 503
+
+    access_token = (
+      extract_bearer_token()
+    )
+
+    if not access_token:
+      return jsonify(
+        ok=False,
+        error=(
+          "A signed-in Nova account "
+          "is required."
+        ),
+      ), 401
+
+    try:
+      verified_user = (
+        verify_access_token(
+          access_token
+        )
+      )
+    except Exception as error:
+      print(
+        "[apple-subscriptions] "
+        "refresh auth exception:",
+        repr(error),
+      )
+
+      return jsonify(
+        ok=False,
+        error=(
+          "Nova could not verify "
+          "the signed-in account."
+        ),
+      ), 503
+
+    user_id = _uuid_text(
+      (verified_user or {}).get("id")
+    )
+
+    if not user_id:
+      return jsonify(
+        ok=False,
+        error=(
+          "The signed-in Nova account "
+          "could not be verified."
+        ),
+      ), 401
+
+    try:
+      result = (
+        _refresh_saved_subscription_from_apple(
+          supabase_url=
+            supabase_url,
+          service_role_key=
+            service_role_key,
+          user_id=
+            user_id,
+        )
+      )
+
+      print(
+        "[apple-subscriptions] "
+        "current status refreshed:",
+        {
+          "user_id":
+            user_id,
+          "plan_id":
+            result.get(
+              "purchased_plan_id"
+            ),
+          "status":
+            result.get("status"),
+          "period_end":
+            result.get(
+              "period_end"
+            ),
+          "environment":
+            result.get(
+              "environment"
+            ),
+        },
+      )
+
+      return jsonify(
+        **result
+      ), 200
+
+    except LookupError as error:
+      print(
+        "[apple-subscriptions] "
+        "refresh lookup failed:",
+        repr(error),
+      )
+
+      return jsonify(
+        ok=False,
+        error=str(error),
+      ), 404
+
+    except PermissionError as error:
+      print(
+        "[apple-subscriptions] "
+        "refresh ownership conflict:",
+        repr(error),
+      )
+
+      return jsonify(
+        ok=False,
+        error=str(error),
+      ), 409
+
+    except RuntimeError as error:
+      print(
+        "[apple-subscriptions] "
+        "refresh configuration/error:",
+        repr(error),
+      )
+
+      return jsonify(
+        ok=False,
+        error=str(error),
+      ), 503
+
+    except Exception as error:
+      print(
+        "[apple-subscriptions] "
+        "refresh failed:",
+        repr(error),
+      )
+
+      return jsonify(
+        ok=False,
+        error=(
+          "Nova could not refresh "
+          "the Apple subscription."
+        ),
+      ), 502
 
 
   @app.post(

@@ -1234,6 +1234,8 @@ export default function Ask() {
     periodEnd: aiPeriodEnd,
     loading: aiPlanLoading,
     refresh: refreshAiPlan,
+    applyUsageSnapshot:
+      applyAiUsageSnapshot,
   } = useAiPlan();
 
   const validKeys = PERSONALITY_OPTIONS.map((option) => option.key);
@@ -1566,8 +1568,56 @@ export default function Ask() {
               }
             }
 
-            // Supabase is authoritative for signed-in Nova AI usage.
+            // Supabase remains authoritative for signed-in Nova AI usage.
             await refreshAiPlan();
+
+            /*
+             * /api/ask returns the post-finalization usage counters from the
+             * trusted backend. Apply them after the broader refresh so the UI
+             * cannot remain one successful request behind.
+             */
+            const responseQuestionsUsed =
+              Number(
+                apiRes.data
+                  .ai_questions_used
+              );
+
+            const responseQuestionsReserved =
+              Number(
+                apiRes.data
+                  .ai_questions_reserved
+              );
+
+            if (
+              Number.isFinite(
+                responseQuestionsUsed
+              ) &&
+              Number.isFinite(
+                responseQuestionsReserved
+              )
+            ) {
+              applyAiUsageSnapshot({
+                questionsUsed:
+                  Math.max(
+                    0,
+                    Math.trunc(
+                      responseQuestionsUsed
+                    )
+                  ),
+                questionsReserved:
+                  Math.max(
+                    0,
+                    Math.trunc(
+                      responseQuestionsReserved
+                    )
+                  ),
+                periodEnd:
+                  apiRes.data
+                    .ai_period_end ??
+                  aiPeriodEnd ??
+                  null,
+              });
+            }
           }
 
           // XP drip is okay to keep (Island bar will be greyed in v1 anyway)
@@ -1600,6 +1650,8 @@ export default function Ask() {
       aiLimitReached,
       isAiGuest,
       refreshAiPlan,
+      applyAiUsageSnapshot,
+      aiPeriodEnd,
       refreshGuestAiUsage,
     ]
   );

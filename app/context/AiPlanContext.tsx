@@ -23,8 +23,10 @@ import React, {
   useState,
   type ReactNode,
 } from "react";
+import { AppState } from "react-native";
 
 import { supabase } from "../lib/supabase";
+import { refreshNovaAiSubscriptionOnServer } from "../_lib/aiSubscriptionIap";
 import { useUser } from "./UserContext";
 
 import {
@@ -93,6 +95,12 @@ type ProfileMemoryRow = {
   ask_memory_limit?: number | string | null;
 };
 
+export type AiUsageSnapshot = {
+  questionsUsed: number;
+  questionsReserved: number;
+  periodEnd?: string | null;
+};
+
 export type AiPlanContextValue = {
   ready: boolean;
   loading: boolean;
@@ -123,6 +131,8 @@ export type AiPlanContextValue = {
   guestTrialQuestionLimit: number;
 
   refresh: () => Promise<void>;
+  applyUsageSnapshot:
+    (snapshot: AiUsageSnapshot) => void;
 };
 
 const AiPlanContext =
@@ -562,13 +572,136 @@ export function AiPlanProvider({
           return;
         }
 
-        const subscription =
+        let subscription =
           subscriptionResult.data as unknown as
             AiSubscriptionDatabaseRow | null;
 
         const profile =
           profileResult.data as unknown as
             ProfileMemoryRow | null;
+
+        /*
+         * Apple auto-renewals create newer transactions. If our saved paid
+         * period has ended, do not demote the customer to Free until the
+         * trusted backend asks Apple for the CURRENT subscription status.
+         *
+         * The client never supplies a transaction id to this endpoint and
+         * never grants itself a paid plan.
+         */
+        const storedPlanId =
+          isAiPlanId(
+            subscription?.plan_id
+          )
+            ? subscription!.plan_id
+            : "free";
+
+        const storedStatus =
+          normalizeSubscriptionStatus(
+            subscription?.status,
+            "free"
+          );
+
+        const shouldReconcileApple =
+          storedPlanId !== "free" &&
+          (
+            storedStatus ===
+              "expired" ||
+            isExpired(
+              subscription?.period_end
+            )
+          );
+
+        if (shouldReconcileApple) {
+          try {
+            const refreshed =
+              await refreshNovaAiSubscriptionOnServer();
+
+            if (
+              requestVersion !==
+              requestVersionRef.current
+            ) {
+              return;
+            }
+
+            if (refreshed?.verified) {
+              const refreshedPlanId =
+                isAiPlanId(
+                  refreshed?.purchased_plan_id
+                )
+                  ? refreshed
+                      .purchased_plan_id
+                  : isAiPlanId(
+                      refreshed?.plan_id
+                    )
+                  ? refreshed.plan_id
+                  : storedPlanId;
+
+              subscription = {
+                ...(subscription || {}),
+                plan_id:
+                  refreshedPlanId,
+                status:
+                  refreshed?.status ??
+                  subscription?.status ??
+                  null,
+                apple_product_id:
+                  refreshed?.product_id ??
+                  subscription
+                    ?.apple_product_id ??
+                  null,
+                original_transaction_id:
+                  refreshed
+                    ?.original_transaction_id ??
+                  subscription
+                    ?.original_transaction_id ??
+                  null,
+                latest_transaction_id:
+                  refreshed
+                    ?.latest_transaction_id ??
+                  subscription
+                    ?.latest_transaction_id ??
+                  null,
+                period_start:
+                  refreshed?.period_start ??
+                  subscription
+                    ?.period_start ??
+                  null,
+                period_end:
+                  refreshed?.period_end ??
+                  subscription
+                    ?.period_end ??
+                  null,
+                verified_at:
+                  new Date()
+                    .toISOString(),
+                user_id:
+                  subscription?.user_id ??
+                  supabaseUserId,
+              };
+
+              if (__DEV__) {
+                console.log(
+                  "[AiPlanContext] Apple entitlement reconciled",
+                  {
+                    planId:
+                      refreshedPlanId,
+                    status:
+                      refreshed?.status,
+                    periodEnd:
+                      refreshed?.period_end,
+                    environment:
+                      refreshed?.environment,
+                  }
+                );
+              }
+            }
+          } catch (reconcileError) {
+            console.warn(
+              "[AiPlanContext] Apple entitlement reconciliation failed",
+              reconcileError
+            );
+          }
+        }
 
         const rawStatus =
           normalizeSubscriptionStatus(
@@ -865,6 +998,38 @@ export function AiPlanProvider({
       userReady,
     ]);
 
+  const applyUsageSnapshot =
+    useCallback(
+      (
+        snapshot: AiUsageSnapshot
+      ) => {
+        setQuestionsUsed(
+          safeInteger(
+            snapshot.questionsUsed,
+            0
+          )
+        );
+
+        setQuestionsReserved(
+          safeInteger(
+            snapshot.questionsReserved,
+            0
+          )
+        );
+
+        if (
+          snapshot.periodEnd !==
+            undefined
+        ) {
+          setPeriodEnd(
+            snapshot.periodEnd ??
+              null
+          );
+        }
+      },
+      []
+    );
+
   useEffect(() => {
     if (!userReady) {
       return;
@@ -873,6 +1038,41 @@ export function AiPlanProvider({
     void refresh();
   }, [
     refresh,
+    userReady,
+  ]);
+
+  useEffect(() => {
+    if (
+      !userReady ||
+      !supabaseUserId
+    ) {
+      return;
+    }
+
+    const appStateSubscription =
+      AppState.addEventListener(
+        "change",
+        (state) => {
+          if (state !== "active") {
+            return;
+          }
+
+          if (__DEV__) {
+            console.log(
+              "[AiPlanContext] app active — refreshing entitlement"
+            );
+          }
+
+          void refresh();
+        }
+      );
+
+    return () => {
+      appStateSubscription.remove();
+    };
+  }, [
+    refresh,
+    supabaseUserId,
     userReady,
   ]);
 
@@ -942,6 +1142,7 @@ export function AiPlanProvider({
           GUEST_TRIAL_QUESTION_LIMIT,
 
         refresh,
+        applyUsageSnapshot,
       }),
       [
         ready,
@@ -964,6 +1165,7 @@ export function AiPlanProvider({
         lastQuestionAt,
         verifiedAt,
         refresh,
+        applyUsageSnapshot,
       ]
     );
 

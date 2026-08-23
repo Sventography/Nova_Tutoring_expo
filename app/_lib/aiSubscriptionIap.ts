@@ -480,3 +480,84 @@ export async function openNovaAiSubscriptionManagement(): Promise<void> {
     openSubscriptions({})
   );
 }
+
+
+export async function refreshNovaAiSubscriptionOnServer(): Promise<any> {
+  const {
+    data: sessionData,
+    error: sessionError,
+  } = await supabase.auth.getSession();
+
+  if (sessionError) {
+    throw new Error(
+      "Nova could not read your signed-in session."
+    );
+  }
+
+  const accessToken =
+    sessionData.session?.access_token ||
+    "";
+
+  if (!accessToken) {
+    throw new Error(
+      "Sign in to your Nova account before refreshing this subscription."
+    );
+  }
+
+  let response: Response;
+
+  try {
+    response = await fetch(
+      `${BACKEND_BASE_URL}/api/apple-subscriptions/refresh`,
+      {
+        method: "POST",
+        headers: {
+          Authorization:
+            `Bearer ${accessToken}`,
+          "Content-Type":
+            "application/json",
+        },
+        body: JSON.stringify({}),
+      }
+    );
+  } catch (networkError: any) {
+    throw new Error(
+      String(
+        networkError?.message ||
+          "Nova could not reach the subscription server."
+      )
+    );
+  }
+
+  const raw =
+    await response.text();
+
+  let payload: any = {};
+
+  try {
+    payload = raw
+      ? JSON.parse(raw)
+      : {};
+  } catch {
+    payload = {};
+  }
+
+  if (
+    !response.ok ||
+    payload?.ok === false
+  ) {
+    const error: any =
+      new Error(
+        payload?.error ||
+          raw ||
+          "Nova could not refresh the Apple subscription."
+      );
+
+    error.status =
+      response.status;
+
+    throw error;
+  }
+
+  return payload;
+}
