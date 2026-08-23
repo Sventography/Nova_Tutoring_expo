@@ -20,8 +20,6 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "../context/ThemeContext";
 import { useLegendaryCompanions } from "../hooks/useLegendaryCompanions";
 import { useIsland } from "../context/IslandContext";
-import { useAchievements } from "../context/AchievementsContext";
-import { useServerBrainteaserEconomy } from "../hooks/useServerBrainteaserEconomy";
 
 function norm(s: string) {
   return (s ?? "")
@@ -281,17 +279,9 @@ export default function BrainteasersTab() {
   } = useLegendaryCompanions();
   const { addIslandXp } =
     useIsland();
-  const achievements = useAchievements();
-  const onServerAchievementsEligible =
-    achievements.onServerQuizAchievementsEligible;
 
-  const serverBrainteaser =
-    useServerBrainteaserEconomy();
-
-
-  const [pair, setPair] =
-    useState<Riddle[]>(() => todayPair());
-
+  const pairRef = useRef<Riddle[]>(todayPair());
+  const pair = pairRef.current;
 
   const [idx, setIdx] = useState(0);
   const [answer, setAnswer] = useState("");
@@ -308,147 +298,17 @@ export default function BrainteasersTab() {
   const inputRef = useRef<TextInput | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
-
-    void (async () => {
-      if (serverBrainteaser.serverBacked) {
-        setLocked(true);
-
-        try {
-          const localDone =
-            (await AsyncStorage.getItem(
-              STORAGE_DONE
-            )) === "1";
-
-          if (localDone) {
-            if (!cancelled) {
-              setLeftToday(0);
-              setBanner(
-                "You’ve done today’s 2 riddles. Come back tomorrow ✨"
-              );
-              setLocked(true);
-            }
-            return;
-          }
-
-          const status =
-            await serverBrainteaser.loadStatus();
-
-          if (cancelled) return;
-
-          setPair([
-            { q: status.question0, a: "" },
-            { q: status.question1, a: "" },
-          ]);
-
-          setLeftToday(
-            Math.max(
-              0,
-              2 - status.answeredCount
-            )
-          );
-
-          setResults(
-            [
-              status.slot0Answered
-                ? status.slot0Correct
-                : null,
-              status.slot1Answered
-                ? status.slot1Correct
-                : null,
-            ].filter(
-              (value): value is boolean =>
-                value !== null
-            )
-          );
-
-          setCorrectMap({
-            ...(status.slot0Correct
-              ? { [status.question0]: true }
-              : {}),
-            ...(status.slot1Correct
-              ? { [status.question1]: true }
-              : {}),
-          });
-
-          if (status.achievementIds.length) {
-            onServerAchievementsEligible?.(
-              status.achievementIds
-            );
-          }
-
-          if (status.answeredCount >= 2) {
-            setIdx(1);
-            setBanner(
-              "You’ve done today’s 2 riddles. Come back tomorrow ✨"
-            );
-            setLocked(true);
-          } else {
-            setIdx(
-              status.answeredCount >= 1
-                ? 1
-                : 0
-            );
-            setAnswer("");
-            setLocked(false);
-          }
-        } catch (error) {
-          console.warn(
-            "[Brainteasers] server status failed",
-            error
-          );
-
-          if (!cancelled) {
-            setLeftToday(0);
-            setBanner(
-              "Couldn’t verify today’s Brainteasers. Try again when Nova reconnects."
-            );
-            setLocked(true);
-          }
-        }
-
-        return;
-      }
-
+    (async () => {
       const used = await getCount();
-      if (cancelled) return;
-
-      setLeftToday(
-        Math.max(0, 2 - used)
-      );
-
-      const cm = JSON.parse(
-        (await AsyncStorage.getItem(
-          STORAGE_CORRECT
-        )) || "{}"
-      );
-
-      if (cancelled) return;
-
+      setLeftToday(Math.max(0, 2 - used));
+      const cm = JSON.parse((await AsyncStorage.getItem(STORAGE_CORRECT)) || "{}");
       setCorrectMap(cm);
-
-      if (
-        used >= 2 ||
-        (cm[pair[0].q] &&
-          cm[pair[1].q])
-      ) {
-        setBanner(
-          "You’ve done today’s 2 riddles. Come back tomorrow ✨"
-        );
+      if (used >= 2 || (cm[pair[0].q] && cm[pair[1].q])) {
+        setBanner("You’ve done today’s 2 riddles. Come back tomorrow ✨");
         setLocked(true);
       }
     })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    STORAGE_CORRECT,
-    STORAGE_DONE,
-    onServerAchievementsEligible,
-    serverBrainteaser.loadStatus,
-    serverBrainteaser.serverBacked,
-  ]);
+  }, [STORAGE_CORRECT, pair, pair[0].q, pair[1].q]);
 
   function show(msg: string, ms = 1400) {
     setBanner(msg);
@@ -465,154 +325,6 @@ export default function BrainteasersTab() {
 
     const cur = pair[idx];
     if (!cur) return;
-
-    if (serverBrainteaser.serverBacked) {
-      setLocked(true);
-
-      try {
-        const award =
-          await serverBrainteaser.submitAnswer({
-            slot: idx,
-            question: cur.q,
-            answer,
-          });
-
-        setPair([
-          { q: award.question0, a: "" },
-          { q: award.question1, a: "" },
-        ]);
-
-        setLeftToday(
-          Math.max(
-            0,
-            2 - award.answeredCount
-          )
-        );
-
-        const nextResults: boolean[] = [];
-
-        if (award.slot0Answered) {
-          nextResults.push(
-            award.slot0Correct
-          );
-        }
-
-        if (award.slot1Answered) {
-          nextResults.push(
-            award.slot1Correct
-          );
-        }
-
-        setResults(nextResults);
-
-        setCorrectMap({
-          ...(award.slot0Correct
-            ? { [award.question0]: true }
-            : {}),
-          ...(award.slot1Correct
-            ? { [award.question1]: true }
-            : {}),
-        });
-
-        if (award.achievementIds.length) {
-          onServerAchievementsEligible?.(
-            award.achievementIds
-          );
-        }
-
-        if (
-          award.newlySubmitted &&
-          award.isCorrect
-        ) {
-          const label =
-            `Correct! +${award.answerCoins} coins`;
-
-          toast.success(label);
-          show(label);
-
-          if (addIslandXp) {
-            void addIslandXp(
-              5,
-              "brainteaser_correct",
-              {
-                serverBacked: true,
-                dayKey: award.dayKey,
-                slot: award.submittedSlot,
-              }
-            );
-          }
-        } else if (
-          award.newlySubmitted &&
-          !award.isCorrect
-        ) {
-          show(
-            `Close! Answer: ${award.correctAnswer}`,
-            1600
-          );
-        }
-
-        if (idx === 0) {
-          setTimeout(() => {
-            setIdx(1);
-            setAnswer("");
-            setLocked(false);
-            setTimeout(
-              () =>
-                inputRef.current?.focus?.(),
-              50
-            );
-          }, 900);
-
-          return;
-        }
-
-        setTimeout(() => {
-          if (
-            award.newlySubmitted &&
-            award.perfectBonusCoins > 0
-          ) {
-            const label =
-              `Perfect! +${award.perfectBonusCoins} bonus`;
-
-            toast.success(label);
-            show(`${label} ✨`, 1800);
-
-            if (addIslandXp) {
-              void addIslandXp(
-                5,
-                "brainteaser_pair_bonus",
-                {
-                  serverBacked: true,
-                  dayKey: award.dayKey,
-                  perfectPair: true,
-                }
-              );
-            }
-          } else {
-            show(
-              "Nice try! See you tomorrow ✨",
-              1800
-            );
-          }
-
-          setLocked(true);
-        }, 900);
-
-        return;
-      } catch (error) {
-        console.warn(
-          "[Brainteasers] server submission failed",
-          error
-        );
-
-        show(
-          "Couldn’t verify that answer. Your coins were not changed.",
-          2200
-        );
-        setLocked(false);
-        return;
-      }
-    }
 
     setLocked(true);
     const alreadyCorrect = !!correctMap[cur.q];
@@ -759,7 +471,7 @@ export default function BrainteasersTab() {
               autoCorrect={false}
               returnKeyType="done"
               onSubmitEditing={submit}
-              editable={!locked && left > 0 && (!serverBrainteaser.serverBacked || leftToday !== null)}
+              editable={!locked && left > 0}
             />
             <Pressable
               style={[
@@ -781,7 +493,7 @@ export default function BrainteasersTab() {
                     },
               ]}
               onPress={submit}
-              disabled={!answer || locked || (serverBrainteaser.serverBacked && leftToday === null)}
+              disabled={!answer || locked}
             >
               <Text style={[S.btnTxt, { color: tokens.text }]}>
                 {locked ? "…" : "Submit"}
