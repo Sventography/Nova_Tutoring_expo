@@ -22,7 +22,6 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { useTheme } from "../context/ThemeContext";
 import { useAchievements } from "../context/AchievementsContext";
-import { useServerAskAchievements } from "../hooks/useServerAskAchievements";
 import { useUser } from "../context/UserContext";
 import { useIsland } from "../context/IslandContext";
 import { usePurchases } from "../context/PurchasesContext";
@@ -1198,18 +1197,7 @@ function prettyMemoryTier(tier: string | null, limit: number | null): string {
 
 export default function Ask() {
   const { tokens } = useTheme() as any;
-  const {
-    onAskQuestion,
-    onServerQuizAchievementsEligible,
-  } = useAchievements() as any;
-
-  const {
-    serverBacked:
-      askAchievementsServerBacked,
-    refreshEligibility:
-      refreshServerAskAchievements,
-  } = useServerAskAchievements();
-
+  const { onAskQuestion } = useAchievements() as any;
   const {
     askPersonality,
     setAskPersonality,
@@ -1496,14 +1484,9 @@ export default function Ask() {
             setMemoryLimit(apiRes.data.ask_memory_limit);
           }
 
-          if (isAiGuest) {
-            /*
-             * Guests keep the existing local achievement path.
-             * There is no authenticated server identity to own their
-             * permanent Ask achievement progress.
-             */
-            onAskQuestion?.();
+          onAskQuestion?.();
 
+          if (isAiGuest) {
             setGuestQuestionsUsed(
               Math.max(
                 0,
@@ -1518,54 +1501,6 @@ export default function Ask() {
             );
             await refreshGuestAiUsage();
           } else {
-            /*
-             * Signed-in Ask achievement progress is now server-owned.
-             * The trusted backend finalizes ai_usage_events before it
-             * returns a successful answer. We only fetch eligibility here;
-             * the client never increments the signed-in Ask counter.
-             */
-            if (!askAchievementsServerBacked) {
-              console.warn(
-                "[AskAchievements] signed-in Ask returned without a server-backed user identity"
-              );
-            } else {
-              try {
-                const askStatus =
-                  await refreshServerAskAchievements();
-
-                if (
-                  askStatus.achievementIds.length
-                ) {
-                  onServerQuizAchievementsEligible?.(
-                    askStatus.achievementIds
-                  );
-                }
-
-                if (__DEV__) {
-                  console.log(
-                    "[AskAchievements] server progress",
-                    {
-                      successfulQuestions:
-                        askStatus.successfulQuestions,
-                      achievements:
-                        askStatus.achievementIds,
-                    }
-                  );
-                }
-              } catch (achievementError) {
-                /*
-                 * Keep a valid AI answer even if the immediate achievement
-                 * refresh fails. The server already recorded progress, and
-                 * Phase 3D pending-eligibility recovery can surface it after
-                 * reconnect/restart.
-                 */
-                console.warn(
-                  "[AskAchievements] eligibility refresh failed",
-                  achievementError
-                );
-              }
-            }
-
             // Supabase is authoritative for signed-in Nova AI usage.
             await refreshAiPlan();
           }
@@ -1589,9 +1524,6 @@ export default function Ask() {
       loading,
       messages,
       onAskQuestion,
-      onServerQuizAchievementsEligible,
-      askAchievementsServerBacked,
-      refreshServerAskAchievements,
       addIslandXp,
       activePersonality,
       memoryLimit,
