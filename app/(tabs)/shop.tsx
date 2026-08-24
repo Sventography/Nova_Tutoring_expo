@@ -175,6 +175,23 @@ const REQUIRES_SHIPPING = new Set<Category>([
   "tangibles",
 ]);
 
+// NOVA_MERCH_REWARDS_PHASE1
+// Apple-purchasable Nova Coins are digital-only. Physical merchandise uses
+// a separate earned-only reward balance, wired in the next economy phase.
+function isPhysicalMerchItem(item: any): boolean {
+  const category = item?.category as Category | undefined;
+
+  return !!(
+    category &&
+    (REQUIRES_SHIPPING.has(category) ||
+      (category === "bundle" &&
+        !!(item as any)?.meta?.requiresShipping))
+  );
+}
+
+const NOVA_REWARDS_PHASE1_MESSAGE =
+  "Nova Coins are for digital items only. Physical merchandise will use earned Nova Rewards, with cash checkout for any remaining amount.";
+
 const NEON_BORDER = "#00E5FF";
 
 // Companion IAP lock is OFF so every digital item can use the same Apple IAP path.
@@ -1305,7 +1322,9 @@ function ItemDetailModal({
       ? altImages[item.altImageKey]
       : item.image || (hasAlt ? altImages[item.altImageKey] : null);
 
-  const priceCoins = item.priceCoins ?? item.coinPrice ?? null;
+  const priceCoins = isPhysicalMerchItem(item)
+    ? null
+    : item.priceCoins ?? item.coinPrice ?? null;
   const priceUSD =
     item.category === "companions"
       ? getCompanionUsdPrice(item)
@@ -4512,6 +4531,18 @@ export default function Shop() {
   }, []);
 
   function buyWithCoins(it: any, meta?: { size?: string }) {
+    if (isPhysicalMerchItem(it)) {
+      Alert.alert(
+        "Nova Rewards",
+        NOVA_REWARDS_PHASE1_MESSAGE
+      );
+      track("shop_blocked_physical_coin_purchase", {
+        sku: it?.id,
+        category: it?.category,
+      });
+      return;
+    }
+
     const price = it.priceCoins ?? 0;
     if (!price) return;
 
@@ -4685,6 +4716,21 @@ export default function Shop() {
   async function handleAddressConfirm(addr: AddressPayload) {
     const it = pendingItem;
     if (!it) return;
+
+    if (isPhysicalMerchItem(it)) {
+      setAddressVisible(false);
+      setPendingItem(null);
+      setPendingSize(null);
+      Alert.alert(
+        "Nova Rewards",
+        NOVA_REWARDS_PHASE1_MESSAGE
+      );
+      track("shop_blocked_legacy_coin_address_checkout", {
+        sku: it?.id,
+        category: it?.category,
+      });
+      return;
+    }
 
     try {
       setAddressSubmitting(true);
@@ -5577,6 +5623,63 @@ export default function Shop() {
               </Text>
             </Pressable>
           )
+        ) : isPhysicalMerchItem(it) ? (
+          <View style={{ gap: 8, opacity: locked ? 0.6 : 1 }}>
+            <View
+              style={{
+                borderRadius: 10,
+                borderWidth: 1,
+                borderColor: color,
+                paddingHorizontal: 10,
+                paddingVertical: 8,
+                backgroundColor: "rgba(56,189,248,0.08)",
+              }}
+            >
+              <Text
+                style={{
+                  color,
+                  fontWeight: "900",
+                  fontSize: 11,
+                  marginBottom: 3,
+                }}
+              >
+                NOVA REWARDS
+              </Text>
+              <Text
+                style={{
+                  color: tokensLocal.text as any,
+                  fontSize: 10,
+                  lineHeight: 14,
+                  fontWeight: "700",
+                }}
+              >
+                Earned-only merch discounts are being added. Nova Coins stay
+                digital-only.
+              </Text>
+            </View>
+
+            <Pressable
+              disabled={locked}
+              onPress={() => {
+                const chosen =
+                  sizeCtl.get(sizeKey) || (getSizesFor(sizeKey)[0] ?? null);
+                void moneyBuy(it, { size: chosen as any });
+              }}
+              style={({ pressed }) => ({
+                alignItems: "center",
+                paddingVertical: 10,
+                borderRadius: 10,
+                borderWidth: 1,
+                borderColor: color,
+                backgroundColor: "transparent",
+                opacity: pressed ? 0.9 : 1,
+              })}
+            >
+              <Text style={{ color: color, fontWeight: "800" }}>
+                ${it.priceUSD?.toFixed(0)}
+              </Text>
+            </Pressable>
+          </View>
         ) : (
           <View
             style={{

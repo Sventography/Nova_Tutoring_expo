@@ -110,7 +110,7 @@ export default function Tutorial() {
         key: "usecoins",
         title: "Use Coins",
         body:
-          "Spend coins on themes, cursors, companions, and shop items.",
+          "Spend coins on digital themes, cursors, companions, and other in-app items.",
         image: require("../assets/tutorial/nova_use_coins.png"),
         slot: "center",
         stageH: 0.62,
@@ -120,7 +120,7 @@ export default function Tutorial() {
         key: "shipping",
         title: "Checkout & Shipping",
         body:
-          "For tangible items, enter and review your shipping information at checkout.",
+          "Nova Coins are digital-only. Physical merchandise will use separate earned-only Nova Rewards and a shipping checkout.",
         image: require("../assets/tutorial/nova_shipping_screen.png"),
         slot: "bottom",
         stageH: 0.68,
