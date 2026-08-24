@@ -29,6 +29,7 @@ import { useUser } from "../context/UserContext";
 import { usePurchases } from "../context/PurchasesContext";
 import { useCompanion } from "../context/CompanionContext";
 import { useAiPlan } from "../context/AiPlanContext";
+import { useMerchRewards } from "../hooks/useMerchRewards";
 
 import {
   catalog,
@@ -2311,6 +2312,12 @@ function CompanionEffectOverlay({
 /* --------------------------------- Screen -------------------------------- */
 export default function Shop() {
   const { coins, setCoins } = useCoins();
+  const {
+    balance: merchRewards,
+    loading: merchRewardsLoading,
+    error: merchRewardsError,
+    refresh: refreshMerchRewards,
+  } = useMerchRewards();
   const { tokens, setThemeById, themeId } = useTheme();
   const { cursorId, setCursorById } = useCursor();
   const {
@@ -2323,6 +2330,21 @@ export default function Shop() {
   const isAuthenticated =
     !!supabaseUserId &&
     !!session?.user?.id;
+
+  // NOVA_MERCH_REWARDS_PHASE2B
+  // Learning rewards are written server-side. Refresh when the signed-in
+  // account or coin balance changes so returning from a rewarded activity
+  // updates the Shop without giving the client any mint/spend authority.
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    void refreshMerchRewards();
+  }, [
+    isAuthenticated,
+    coins,
+    refreshMerchRewards,
+    supabaseUserId,
+  ]);
+
   const { purchases, isOwned, grant } = usePurchases();
   const {
     activeCompanionId: equippedCompanionId,
@@ -5653,8 +5675,13 @@ export default function Shop() {
                   fontWeight: "700",
                 }}
               >
-                Earned-only merch discounts are being added. Nova Coins stay
-                digital-only.
+                {!isAuthenticated
+                  ? "Sign in to earn Nova Rewards through learning. Nova Coins stay digital-only."
+                  : merchRewardsLoading
+                  ? "Loading your earned-only Nova Rewards balance…"
+                  : merchRewardsError
+                  ? "Rewards are temporarily unavailable. Cash checkout still works."
+                  : `${merchRewards.toLocaleString()} available · Earn more by learning. Redemption is coming next.`}
               </Text>
             </View>
 
@@ -5796,30 +5823,89 @@ export default function Shop() {
 
           <View
             style={{
-              flexDirection: "row",
-              alignItems: "center",
-              paddingHorizontal: 12,
-              paddingVertical: 6,
-              borderRadius: 999,
-              borderWidth: 1,
-              borderColor: tokens.pillBorder as any,
-              backgroundColor: tokens.pillBg as any,
-              shadowColor: "#000",
-              shadowOpacity: tokens.isDark ? 0.12 : 0.1,
-              shadowRadius: 6,
-              shadowOffset: { width: 0, height: 2 },
-              elevation: 2,
+              alignItems: "flex-end",
+              rowGap: 6,
             }}
           >
-            <Text
+            <View
               style={{
-                color: tokens.pillText as any,
-                fontSize: 14,
-                fontWeight: "800",
+                flexDirection: "row",
+                alignItems: "center",
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                borderRadius: 999,
+                borderWidth: 1,
+                borderColor: tokens.pillBorder as any,
+                backgroundColor: tokens.pillBg as any,
+                shadowColor: "#000",
+                shadowOpacity: tokens.isDark ? 0.12 : 0.1,
+                shadowRadius: 6,
+                shadowOffset: { width: 0, height: 2 },
+                elevation: 2,
               }}
             >
-              {(coins ?? 0).toLocaleString()} coins
-            </Text>
+              <Text
+                style={{
+                  color: tokens.pillText as any,
+                  fontSize: 14,
+                  fontWeight: "800",
+                }}
+              >
+                {(coins ?? 0).toLocaleString()} coins
+              </Text>
+            </View>
+
+            <Pressable
+              disabled={!isAuthenticated || merchRewardsLoading}
+              onPress={() => void refreshMerchRewards()}
+              accessibilityRole="button"
+              accessibilityLabel={
+                isAuthenticated
+                  ? `${merchRewards.toLocaleString()} Nova Rewards`
+                  : "Sign in to earn Nova Rewards"
+              }
+              accessibilityHint={
+                isAuthenticated
+                  ? "Refresh your earned Nova Rewards balance"
+                  : "Nova Rewards require a signed-in account"
+              }
+              style={({ pressed }) => ({
+                flexDirection: "row",
+                alignItems: "center",
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                borderRadius: 999,
+                borderWidth: 1,
+                borderColor: tokens.isDark
+                  ? "#A78BFA"
+                  : "#7C3AED",
+                backgroundColor: tokens.isDark
+                  ? "rgba(124,58,237,0.18)"
+                  : "rgba(124,58,237,0.08)",
+                opacity:
+                  pressed && isAuthenticated
+                    ? 0.78
+                    : 1,
+              })}
+            >
+              <Text
+                style={{
+                  color: tokens.isDark
+                    ? "#DDD6FE"
+                    : "#6D28D9",
+                  fontSize: 12,
+                  fontWeight: "900",
+                }}
+              >
+                {merchRewardsLoading && isAuthenticated
+                  ? "★ Rewards…"
+                  : merchRewardsError && isAuthenticated
+                  ? "★ Rewards unavailable"
+                  : isAuthenticated
+                  ? `★ ${merchRewards.toLocaleString()} rewards`
+                  : "★ Sign in for Rewards"}
+              </Text>
+            </Pressable>
           </View>
         </View>
 

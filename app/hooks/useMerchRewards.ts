@@ -1,6 +1,8 @@
 // NOVA_MERCH_REWARDS_PHASE1
+// NOVA_MERCH_REWARDS_PHASE2B
 // Earned-only physical-merch reward balance.
 // The client can read status but cannot mint or spend rewards directly.
+// Trusted learning-event credits remain entirely server-authoritative.
 
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
