@@ -36,6 +36,10 @@ from apple_subscriptions import (
   apple_subscription_configuration_status,
   register_apple_subscription_routes,
 )
+from merch_checkout import (
+  merch_checkout_configuration_status,
+  register_merch_checkout_routes,
+)
 
 # -------------------------------------------------
 # Optional deps (Stripe, dotenv, OpenAI)
@@ -94,6 +98,17 @@ except Exception as e:
 
 # Stripe
 STRIPE_SECRET_KEY = (os.getenv("STRIPE_SECRET_KEY") or "").strip()
+MERCH_STRIPE_WEBHOOK_SECRET = (
+  os.getenv("MERCH_STRIPE_WEBHOOK_SECRET")
+  or os.getenv("STRIPE_MERCH_WEBHOOK_SECRET")
+  or ""
+).strip()
+MERCH_CHECKOUT_ENABLED = (
+  (os.getenv("MERCH_CHECKOUT_ENABLED") or "")
+  .strip()
+  .lower()
+  in ("1", "true", "yes", "on")
+)
 
 # Supabase
 _raw_supabase_url = (
@@ -638,6 +653,19 @@ register_apple_subscription_routes(
   app,
   supabase_url=SUPABASE_URL,
   service_role_key=SUPABASE_SERVICE_ROLE_KEY,
+  extract_bearer_token=_extract_bearer_token,
+  verify_access_token=_verify_supabase_access_token,
+)
+
+# NOVA_MERCH_REWARDS_PHASE3B1
+register_merch_checkout_routes(
+  app,
+  supabase_url=SUPABASE_URL,
+  service_role_key=SUPABASE_SERVICE_ROLE_KEY,
+  stripe_module=stripe,
+  stripe_secret_key=STRIPE_SECRET_KEY,
+  webhook_secret=MERCH_STRIPE_WEBHOOK_SECRET,
+  checkout_enabled=MERCH_CHECKOUT_ENABLED,
   extract_bearer_token=_extract_bearer_token,
   verify_access_token=_verify_supabase_access_token,
 )
@@ -2210,6 +2238,9 @@ def health():
     email_logo_url=bool(EMAIL_LOGO_URL),
     apple_subscriptions=(
       apple_subscription_configuration_status()
+    ),
+    merch_checkout=(
+      merch_checkout_configuration_status()
     ),
   )
 
