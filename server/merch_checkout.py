@@ -663,6 +663,24 @@ def register_merch_checkout_routes(
         event_type = str(event.get("type") or "")
         data_object = (event.get("data") or {}).get("object") or {}
 
+        nova_checkout_events = (
+            "checkout.session.completed",
+            "checkout.session.async_payment_succeeded",
+            "checkout.session.expired",
+            "checkout.session.async_payment_failed",
+        )
+
+        # This Stripe account may also receive non-Nova Checkout events.
+        # A valid Nova merch session always carries nova_merch_order_id.
+        # Ignore unrelated Checkout Sessions instead of returning 500/retrying.
+        if event_type in nova_checkout_events:
+            metadata = data_object.get("metadata") or {}
+            order_id = str(
+                metadata.get("nova_merch_order_id") or ""
+            ).strip()
+            if not order_id:
+                return jsonify(ok=True, ignored=True)
+
         try:
             if event_type in (
                 "checkout.session.completed",
@@ -674,12 +692,7 @@ def register_merch_checkout_routes(
                 "checkout.session.expired",
                 "checkout.session.async_payment_failed",
             ):
-                metadata = data_object.get("metadata") or {}
-                order_id = str(
-                    metadata.get("nova_merch_order_id") or ""
-                ).strip()
-                if order_id:
-                    _cancel_order(order_id, "expired")
+                _cancel_order(order_id, "expired")
 
         except Exception as error:
             # Return non-2xx so Stripe retries a transient finalization failure.
