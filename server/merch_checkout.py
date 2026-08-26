@@ -249,8 +249,16 @@ def register_merch_checkout_routes(
             return bool(data[0])
         return bool(data)
 
+    def _stripe_value(obj: Any, key: str, default: Any = None) -> Any:
+        if isinstance(obj, dict):
+            return obj.get(key, default)
+        try:
+            return getattr(obj, key)
+        except (AttributeError, KeyError):
+            return default
+
     def _finalize_session(session: Any):
-        metadata = getattr(session, "metadata", None) or {}
+        metadata = _stripe_value(session, "metadata", {}) or {}
         if not isinstance(metadata, dict):
             try:
                 metadata = dict(metadata)
@@ -261,11 +269,13 @@ def register_merch_checkout_routes(
         if not order_id:
             raise RuntimeError("Stripe session is missing Nova merch order metadata.")
 
-        session_id = str(getattr(session, "id", "") or "").strip()
-        amount_total = getattr(session, "amount_total", None)
-        currency = str(getattr(session, "currency", "") or "").lower().strip()
+        session_id = str(_stripe_value(session, "id", "") or "").strip()
+        amount_total = _stripe_value(session, "amount_total", None)
+        currency = str(
+            _stripe_value(session, "currency", "") or ""
+        ).lower().strip()
         payment_status = str(
-            getattr(session, "payment_status", "") or ""
+            _stripe_value(session, "payment_status", "") or ""
         ).lower().strip()
 
         if payment_status != "paid":
@@ -660,8 +670,9 @@ def register_merch_checkout_routes(
             print("[merch] invalid Stripe webhook:", repr(error))
             return jsonify(ok=False, error="Invalid webhook."), 400
 
-        event_type = str(event.get("type") or "")
-        data_object = (event.get("data") or {}).get("object") or {}
+        event_type = str(_stripe_value(event, "type", "") or "")
+        event_data = _stripe_value(event, "data", {}) or {}
+        data_object = _stripe_value(event_data, "object", {}) or {}
 
         nova_checkout_events = (
             "checkout.session.completed",
@@ -674,7 +685,12 @@ def register_merch_checkout_routes(
         # A valid Nova merch session always carries nova_merch_order_id.
         # Ignore unrelated Checkout Sessions instead of returning 500/retrying.
         if event_type in nova_checkout_events:
-            metadata = data_object.get("metadata") or {}
+            metadata = _stripe_value(data_object, "metadata", {}) or {}
+            if not isinstance(metadata, dict):
+                try:
+                    metadata = dict(metadata)
+                except Exception:
+                    metadata = {}
             order_id = str(
                 metadata.get("nova_merch_order_id") or ""
             ).strip()
