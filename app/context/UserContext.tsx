@@ -580,8 +580,17 @@ async function seedProfileIfNeeded(
       updated_at: new Date().toISOString(),
     };
 
+    /*
+     * Seed is CREATE-ONLY.
+     *
+     * Never let startup/profile hydration overwrite an existing profile with
+     * seed defaults such as avatar_url=null or ask_memory_limit=0. If another
+     * auth/profile path already created this user's row, ON CONFLICT must do
+     * nothing.
+     */
     const { error } = await supabase.from("profiles").upsert(row, {
       onConflict: "id",
+      ignoreDuplicates: true,
     });
 
     if (error) {
