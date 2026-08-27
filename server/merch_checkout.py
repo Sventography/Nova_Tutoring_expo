@@ -13,6 +13,11 @@ import requests
 from flask import Response, jsonify, request
 
 
+FLAT_SHIPPING_CENTS = 695
+ALLOWED_SHIPPING_COUNTRIES = ("US",)
+MERCH_POLICY_VERSION = "3B1.5"
+
+
 _CONFIG = {
     "registered": False,
     "stripe": False,
@@ -152,7 +157,8 @@ def register_merch_checkout_routes(
                     "id,user_id,sku,title_snapshot,category_snapshot,"
                     "unit_price_cents,merchandise_subtotal_cents,"
                     "reward_points_reserved,reward_discount_cents,"
-                    "merchandise_cash_due_cents,currency,size,shipping,"
+                    "merchandise_cash_due_cents,shipping_amount_cents,"
+                    "tax_amount_cents,payment_total_cents,currency,size,shipping,"
                     "status,payment_provider,payment_reference,metadata,"
                     "created_at,paid_at"
                 ),
@@ -229,6 +235,12 @@ def register_merch_checkout_routes(
                 "Missing shipping fields: " + ", ".join(missing)
             )
 
+        shipping["country"] = str(shipping["country"]).upper()
+        if shipping["country"] not in ALLOWED_SHIPPING_COUNTRIES:
+            raise ValueError(
+                "Nova merchandise currently ships only within the United States."
+            )
+
         return shipping
 
     def _cancel_token_hash(token: str) -> str:
@@ -257,25 +269,121 @@ def register_merch_checkout_routes(
         except (AttributeError, KeyError):
             return default
 
+    def _stripe_mapping(value: Any) -> dict:
+        if isinstance(value, dict):
+            return value
+        try:
+            return dict(value or {})
+        except Exception:
+            return {}
+
+    def _stripe_shipping_snapshot(session: Any) -> dict:
+        # Basil (2025-03-31+) moved shipping_details under
+        # collected_information. Keep a legacy fallback for older Session
+        # objects returned by an older account API version.
+        collected = _stripe_mapping(
+            _stripe_value(session, "collected_information", {})
+        )
+        details = _stripe_mapping(
+            collected.get("shipping_details")
+            or _stripe_value(session, "shipping_details", {})
+        )
+        address = _stripe_mapping(details.get("address"))
+        customer = _stripe_mapping(
+            _stripe_value(session, "customer_details", {})
+        )
+
+        snapshot = {
+            "name": str(details.get("name") or "").strip(),
+            "phone": str(
+                details.get("phone")
+                or customer.get("phone")
+                or ""
+            ).strip(),
+            "email": str(customer.get("email") or "").strip(),
+            "address1": str(address.get("line1") or "").strip(),
+            "address2": str(address.get("line2") or "").strip(),
+            "city": str(address.get("city") or "").strip(),
+            "state": str(address.get("state") or "").strip(),
+            "postalCode": str(
+                address.get("postal_code") or ""
+            ).strip(),
+            "country": str(
+                address.get("country") or ""
+            ).upper().strip(),
+            "source": "stripe_checkout",
+        }
+
+        required = (
+            "name",
+            "address1",
+            "city",
+            "state",
+            "postalCode",
+            "country",
+        )
+
+        missing = [
+            key for key in required
+            if not snapshot.get(key)
+        ]
+
+        if missing:
+            raise RuntimeError(
+                "Paid Stripe session is missing shipping fields: "
+                + ", ".join(missing)
+            )
+
+        if snapshot["country"] not in ALLOWED_SHIPPING_COUNTRIES:
+            raise RuntimeError(
+                "Paid Stripe session has a non-US shipping address."
+            )
+
+        return snapshot
+
     def _finalize_session(session: Any):
         metadata = _stripe_value(session, "metadata", {}) or {}
+
         if not isinstance(metadata, dict):
             try:
                 metadata = dict(metadata)
             except Exception:
                 metadata = {}
 
-        order_id = str(metadata.get("nova_merch_order_id") or "").strip()
-        if not order_id:
-            raise RuntimeError("Stripe session is missing Nova merch order metadata.")
+        order_id = str(
+            metadata.get("nova_merch_order_id") or ""
+        ).strip()
 
-        session_id = str(_stripe_value(session, "id", "") or "").strip()
-        amount_total = _stripe_value(session, "amount_total", None)
+        if not order_id:
+            raise RuntimeError(
+                "Stripe session is missing Nova merch order metadata."
+            )
+
+        session_id = str(
+            _stripe_value(session, "id", "") or ""
+        ).strip()
+
+        amount_subtotal = _stripe_value(
+            session,
+            "amount_subtotal",
+            None,
+        )
+        amount_total = _stripe_value(
+            session,
+            "amount_total",
+            None,
+        )
+
         currency = str(
             _stripe_value(session, "currency", "") or ""
         ).lower().strip()
+
         payment_status = str(
-            _stripe_value(session, "payment_status", "") or ""
+            _stripe_value(
+                session,
+                "payment_status",
+                "",
+            ) or ""
         ).lower().strip()
 
         if payment_status != "paid":
@@ -285,8 +393,125 @@ def register_merch_checkout_routes(
                 "payment_status": payment_status,
             }
 
-        if not isinstance(amount_total, int) or amount_total < 0:
-            raise RuntimeError("Stripe session has no valid paid amount.")
+        if (
+            not isinstance(amount_subtotal, int)
+            or amount_subtotal < 0
+        ):
+            raise RuntimeError(
+                "Stripe session has no valid merchandise subtotal."
+            )
+
+        if (
+            not isinstance(amount_total, int)
+            or amount_total < 0
+        ):
+            raise RuntimeError(
+                "Stripe session has no valid paid amount."
+            )
+
+        order = _get_order(order_id)
+
+        if not order:
+            raise RuntimeError(
+                "Stripe session references an unknown Nova order."
+            )
+
+        expected_cash_due = int(
+            order.get("merchandise_cash_due_cents") or 0
+        )
+
+        expected_shipping = int(
+            order.get("shipping_amount_cents") or 0
+        )
+
+        if expected_shipping != FLAT_SHIPPING_CENTS:
+            raise RuntimeError(
+                "Nova order does not contain the expected "
+                "flat shipping amount."
+            )
+
+        total_details = _stripe_mapping(
+            _stripe_value(
+                session,
+                "total_details",
+                {},
+            )
+        )
+
+        amount_shipping = total_details.get(
+            "amount_shipping"
+        )
+        amount_tax = total_details.get(
+            "amount_tax"
+        )
+        amount_discount = total_details.get(
+            "amount_discount"
+        )
+
+        if amount_subtotal != expected_cash_due:
+            raise RuntimeError(
+                "Stripe merchandise subtotal does not match "
+                "Nova's server quote."
+            )
+
+        if amount_shipping != expected_shipping:
+            raise RuntimeError(
+                "Stripe shipping amount does not match "
+                "Nova's server shipping."
+            )
+
+        if amount_discount not in (0, None):
+            raise RuntimeError(
+                "Unexpected Stripe discount on Nova checkout."
+            )
+
+        if (
+            not isinstance(amount_tax, int)
+            or amount_tax < 0
+        ):
+            raise RuntimeError(
+                "Stripe session has no valid automatic-tax amount."
+            )
+
+        automatic_tax = _stripe_mapping(
+            _stripe_value(
+                session,
+                "automatic_tax",
+                {},
+            )
+        )
+
+        if automatic_tax.get("enabled") is not True:
+            raise RuntimeError(
+                "Stripe automatic tax was not enabled."
+            )
+
+        if automatic_tax.get("status") != "complete":
+            raise RuntimeError(
+                "Stripe automatic tax is not complete."
+            )
+
+        expected_total = (
+            expected_cash_due
+            + expected_shipping
+            + amount_tax
+        )
+
+        if amount_total != expected_total:
+            raise RuntimeError(
+                "Stripe paid total does not equal "
+                "merchandise + shipping + tax."
+            )
+
+        stripe_shipping = _stripe_shipping_snapshot(
+            session
+        )
+
+        _rest_patch(
+            "merch_orders",
+            {"id": f"eq.{order_id}"},
+            {"shipping": stripe_shipping},
+        )
 
         result = _one_rpc_row(
             _rpc(
@@ -307,9 +532,14 @@ def register_merch_checkout_routes(
             "reward_points_debited": int(
                 result.get("reward_points_debited") or 0
             ),
-            "wallet_balance": int(result.get("wallet_balance") or 0),
+            "wallet_balance": int(
+                result.get("wallet_balance") or 0
+            ),
             "order_status": result.get("order_status"),
             "payment_status": payment_status,
+            "shipping_amount_cents": expected_shipping,
+            "tax_amount_cents": amount_tax,
+            "payment_total_cents": amount_total,
         }
 
     @app.get("/api/merch/config")
@@ -319,6 +549,11 @@ def register_merch_checkout_routes(
             configured=merch_checkout_configuration_status(),
             rewards_to_cent=2,
             max_discount_percent=25,
+            flat_shipping_cents=FLAT_SHIPPING_CENTS,
+            automatic_tax=True,
+            allowed_shipping_countries=list(
+                ALLOWED_SHIPPING_COUNTRIES
+            ),
             app_checkout_enabled=bool(checkout_enabled),
         )
 
@@ -352,6 +587,17 @@ def register_merch_checkout_routes(
             "price_id",
             "unit_amount",
             "unitPrice",
+            "shipping_amount",
+            "shippingAmount",
+            "shipping_cents",
+            "shippingCents",
+            "tax_amount",
+            "taxAmount",
+            "tax_cents",
+            "taxCents",
+            "total",
+            "total_cents",
+            "totalCents",
         }
         supplied_forbidden = sorted(
             key for key in forbidden_price_keys if key in body
@@ -435,10 +681,29 @@ def register_merch_checkout_routes(
         discount_cents = int(order_row.get("reward_discount_cents") or 0)
         title = str(order_row.get("title") or sku)
 
-        if not order_id or cash_due <= 0:
+        order_snapshot = (
+            _get_order(order_id)
+            if order_id
+            else None
+        )
+
+        shipping_cents = int(
+            (order_snapshot or {}).get(
+                "shipping_amount_cents"
+            ) or 0
+        )
+
+        if (
+            not order_id
+            or cash_due <= 0
+            or shipping_cents != FLAT_SHIPPING_CENTS
+        ):
             if order_id:
                 try:
-                    _cancel_order(order_id, "invalid_server_quote")
+                    _cancel_order(
+                        order_id,
+                        "invalid_server_quote_or_shipping",
+                    )
                 except Exception:
                     pass
             return jsonify(
@@ -477,11 +742,40 @@ def register_merch_checkout_routes(
                                         else ""
                                     )
                                 ),
+                                "tax_code": "txcd_99999999",
                             },
+                            "tax_behavior": "exclusive",
                         },
                         "quantity": 1,
                     }
                 ],
+                automatic_tax={
+                    "enabled": True,
+                },
+                shipping_address_collection={
+                    "allowed_countries": list(
+                        ALLOWED_SHIPPING_COUNTRIES
+                    ),
+                },
+                shipping_options=[
+                    {
+                        "shipping_rate_data": {
+                            "type": "fixed_amount",
+                            "fixed_amount": {
+                                "amount": shipping_cents,
+                                "currency": currency,
+                            },
+                            "display_name": (
+                                "Nova flat shipping"
+                            ),
+                            "tax_behavior": "exclusive",
+                            "tax_code": "txcd_92010001",
+                        },
+                    }
+                ],
+                phone_number_collection={
+                    "enabled": True,
+                },
                 success_url=success_url,
                 cancel_url=cancel_url,
                 expires_at=int(time.time()) + (35 * 60),
@@ -493,7 +787,15 @@ def register_merch_checkout_routes(
                     "nova_reward_points_reserved": str(reward_points),
                     "nova_reward_discount_cents": str(discount_cents),
                     "nova_cash_due_cents": str(cash_due),
-                    "nova_policy_version": "3B1",
+                    "nova_shipping_cents": str(
+                        shipping_cents
+                    ),
+                    "nova_tax_provider": (
+                        "stripe_automatic_tax"
+                    ),
+                    "nova_policy_version": (
+                        MERCH_POLICY_VERSION
+                    ),
                 },
             )
         except Exception as error:
@@ -546,6 +848,11 @@ def register_merch_checkout_routes(
             rewardPointsReserved=reward_points,
             rewardDiscountCents=discount_cents,
             merchandiseCashDueCents=cash_due,
+            shippingAmountCents=shipping_cents,
+            preTaxTotalCents=(
+                cash_due + shipping_cents
+            ),
+            taxCalculatedAtCheckout=True,
             expiresAt=order_row.get("expires_at"),
         )
 
