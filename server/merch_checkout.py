@@ -23,6 +23,7 @@ _CONFIG = {
     "stripe": False,
     "webhook_secret": False,
     "supabase": False,
+    "notifications": False,
     "checkout_enabled": False,
 }
 
@@ -39,6 +40,9 @@ def register_merch_checkout_routes(
     stripe_module,
     stripe_secret_key: str,
     webhook_secret: str,
+    resend_api_key: str,
+    resend_from_email: str,
+    shop_owner_email: str,
     checkout_enabled: bool = False,
     extract_bearer_token: Callable[[], str | None],
     verify_access_token: Callable[[str], dict | None],
@@ -58,12 +62,18 @@ def register_merch_checkout_routes(
     service_key = (service_role_key or "").strip()
     stripe_key = (stripe_secret_key or "").strip()
     webhook_key = (webhook_secret or "").strip()
+    resend_key = (resend_api_key or "").strip()
+    resend_from = (resend_from_email or "").strip()
+    owner_email = (shop_owner_email or "").strip()
 
     _CONFIG.update(
         registered=True,
         stripe=bool(stripe_module and stripe_key),
         webhook_secret=bool(webhook_key),
         supabase=bool(base and service_key),
+        notifications=bool(
+            resend_key and resend_from and owner_email
+        ),
         checkout_enabled=bool(checkout_enabled),
     )
 
@@ -341,6 +351,369 @@ def register_merch_checkout_routes(
 
         return snapshot
 
+    def _lookup_auth_email(user_id: str) -> str:
+        if not (base and service_key and user_id):
+            return ""
+        try:
+            response = requests.get(
+                f"{base}/auth/v1/admin/users/{user_id}",
+                headers={
+                    "apikey": service_key,
+                    "Authorization": f"Bearer {service_key}",
+                },
+                timeout=15,
+            )
+            if response.status_code != 200:
+                return ""
+            data = response.json()
+            return (
+                str(data.get("email") or "").strip()
+                if isinstance(data, dict)
+                else ""
+            )
+        except Exception as error:
+            print("[merch-email] auth lookup warning:", repr(error))
+            return ""
+
+    def _money(cents: Any, currency: str) -> str:
+        value = int(cents or 0)
+        code = str(currency or "usd").upper()
+        if code == "USD":
+            return f"${value / 100:.2f}"
+        return f"{value / 100:.2f} {code}"
+
+    def _notification_payload(
+        *,
+        kind: str,
+        order: dict,
+        recipient: str,
+    ) -> dict:
+        shipping = (
+            order.get("shipping")
+            if isinstance(order.get("shipping"), dict)
+            else {}
+        )
+        title = str(
+            order.get("title_snapshot")
+            or order.get("sku")
+            or "Nova merchandise"
+        ).strip()
+        order_id = str(order.get("id") or "").strip()
+        sku = str(order.get("sku") or "").strip()
+        size = str(order.get("size") or "").strip()
+        currency = str(order.get("currency") or "usd").lower()
+        name = str(shipping.get("name") or "Nova learner").strip()
+        phone = str(shipping.get("phone") or "").strip()
+        email_address = str(shipping.get("email") or "").strip()
+
+        address = [
+            name,
+            str(shipping.get("address1") or "").strip(),
+            str(shipping.get("address2") or "").strip(),
+            " ".join(
+                x for x in (
+                    str(shipping.get("city") or "").strip(),
+                    str(shipping.get("state") or "").strip(),
+                    str(shipping.get("postalCode") or "").strip(),
+                ) if x
+            ),
+            str(shipping.get("country") or "").strip(),
+        ]
+        address_text = "\n".join(x for x in address if x)
+
+        subtotal = _money(
+            order.get("merchandise_subtotal_cents"), currency
+        )
+        discount = _money(
+            order.get("reward_discount_cents"), currency
+        )
+        cash_due = _money(
+            order.get("merchandise_cash_due_cents"), currency
+        )
+        shipping_amount = _money(
+            order.get("shipping_amount_cents"), currency
+        )
+        tax_amount = _money(
+            order.get("tax_amount_cents"), currency
+        )
+        total = _money(
+            order.get("payment_total_cents"), currency
+        )
+        rewards = int(order.get("reward_points_reserved") or 0)
+        stripe_ref = str(
+            order.get("payment_reference") or ""
+        ).strip()
+
+        common = [
+            f"Order ID: {order_id}",
+            f"Item: {title}",
+            f"SKU: {sku}",
+        ]
+        if size:
+            common.append(f"Size: {size}")
+
+        common.extend([
+            "",
+            f"Merchandise subtotal: {subtotal}",
+            f"Nova Rewards used: {rewards}",
+            f"Nova Rewards discount: -{discount}",
+            f"Merchandise cash due: {cash_due}",
+            f"Shipping: {shipping_amount}",
+            f"Tax: {tax_amount}",
+            f"Total paid: {total}",
+            "",
+            "Ship to:",
+            address_text,
+        ])
+
+        if kind == "customer_confirmation":
+            subject = f"Nova Tutoring order confirmed — {title}"
+            lines = [
+                f"Hi {name},",
+                "",
+                "Your Nova Tutoring merchandise payment is confirmed.",
+                "",
+                *common,
+                "",
+                (
+                    "Nova Rewards discount merchandise only. "
+                    "Shipping and tax are paid separately in cash."
+                ),
+                "",
+                "Thank you for supporting Nova Tutoring.",
+            ]
+        elif kind == "owner_fulfillment":
+            subject = (
+                "PAID Nova merchandise order — "
+                f"{title} — {order_id[:8]}"
+            )
+            lines = [
+                (
+                    "A Nova merchandise order has been PAID "
+                    "and is ready for fulfillment."
+                ),
+                "",
+                *common,
+                "",
+                f"Customer email: {email_address or '(not available)'}",
+                f"Customer phone: {phone or '(not available)'}",
+                f"Stripe reference: {stripe_ref}",
+                "",
+                (
+                    "Do not mark fulfilled until the physical order "
+                    "is actually shipped/handled."
+                ),
+            ]
+        else:
+            raise RuntimeError("Unknown merchandise notification kind.")
+
+        body_text = "\n".join(lines)
+        body_html = (
+            "<!doctype html><html><body>"
+            "<pre style=\"font-family:Arial,sans-serif;"
+            "white-space:pre-wrap;line-height:1.5\">"
+            + html.escape(body_text)
+            + "</pre></body></html>"
+        )
+
+        return {
+            "from": resend_from,
+            "to": [recipient],
+            "subject": subject,
+            "text": body_text,
+            "html": body_html,
+        }
+
+    def _send_notification(
+        *,
+        kind: str,
+        order: dict,
+        recipient: str,
+    ) -> dict:
+        order_id = str(order.get("id") or "").strip()
+        recipient = str(recipient or "").strip()
+        if not order_id or not recipient:
+            raise RuntimeError(
+                "Merchandise notification is missing order/recipient."
+            )
+        if not (resend_key and resend_from):
+            raise RuntimeError(
+                "Resend merchandise notifications are not configured."
+            )
+
+        idempotency_key = (
+            f"nova-merch/{kind}/{order_id}"
+        )
+        proposed_payload = _notification_payload(
+            kind=kind,
+            order=order,
+            recipient=recipient,
+        )
+
+        claim = _one_rpc_row(
+            _rpc(
+                "nova_claim_merch_notification",
+                {
+                    "p_order_id": order_id,
+                    "p_kind": kind,
+                    "p_recipient": recipient,
+                    "p_idempotency_key": idempotency_key,
+                    "p_payload": proposed_payload,
+                    "p_lease_seconds": 300,
+                },
+            )
+        )
+
+        status = str(
+            claim.get("notification_status") or ""
+        ).strip()
+
+        if not bool(claim.get("claimed")):
+            if status == "sent":
+                return {"status": "sent", "sent": True}
+            raise RuntimeError(
+                f"Notification {kind} is already being delivered; "
+                "Stripe should retry."
+            )
+
+        frozen_payload = claim.get("payload")
+        frozen_key = str(
+            claim.get("idempotency_key") or ""
+        ).strip()
+
+        if not isinstance(frozen_payload, dict) or not frozen_key:
+            _rpc(
+                "nova_fail_merch_notification",
+                {
+                    "p_order_id": order_id,
+                    "p_kind": kind,
+                    "p_error": "Frozen notification payload/key invalid.",
+                },
+            )
+            raise RuntimeError(
+                "Frozen merchandise notification payload/key is invalid."
+            )
+
+        try:
+            response = requests.post(
+                "https://api.resend.com/emails",
+                headers={
+                    "Authorization": f"Bearer {resend_key}",
+                    "Content-Type": "application/json",
+                    "Idempotency-Key": frozen_key,
+                },
+                json=frozen_payload,
+                timeout=15,
+            )
+            if response.status_code >= 400:
+                raise RuntimeError(
+                    f"Resend HTTP {response.status_code}: "
+                    f"{response.text[:500]}"
+                )
+
+            provider_id = ""
+            try:
+                response_data = response.json()
+                if isinstance(response_data, dict):
+                    provider_id = str(
+                        response_data.get("id") or ""
+                    ).strip()
+            except Exception:
+                pass
+
+            completed = _rpc(
+                "nova_complete_merch_notification",
+                {
+                    "p_order_id": order_id,
+                    "p_kind": kind,
+                    "p_provider_message_id": provider_id or None,
+                },
+            )
+            if completed is False:
+                raise RuntimeError(
+                    "Could not mark merchandise notification sent."
+                )
+
+            print(
+                "[merch-email] sent:",
+                kind,
+                order_id,
+            )
+            return {"status": "sent", "sent": True}
+
+        except Exception as error:
+            try:
+                _rpc(
+                    "nova_fail_merch_notification",
+                    {
+                        "p_order_id": order_id,
+                        "p_kind": kind,
+                        "p_error": str(error)[:1500],
+                    },
+                )
+            except Exception as mark_error:
+                print(
+                    "[merch-email] failure-state warning:",
+                    repr(mark_error),
+                )
+            raise
+
+    def _deliver_paid_order_notifications(
+        order_id: str,
+    ) -> dict:
+        if not (
+            resend_key
+            and resend_from
+            and owner_email
+        ):
+            raise RuntimeError(
+                "Paid merchandise notifications are not configured."
+            )
+
+        order = _get_order(order_id)
+        if not order:
+            raise RuntimeError("Paid merchandise order was not found.")
+        if str(order.get("status") or "") not in (
+            "paid",
+            "fulfilled",
+        ):
+            raise RuntimeError(
+                "Merchandise notification requires a paid order."
+            )
+
+        shipping = (
+            order.get("shipping")
+            if isinstance(order.get("shipping"), dict)
+            else {}
+        )
+        customer_email = str(
+            shipping.get("email") or ""
+        ).strip()
+        if not customer_email:
+            customer_email = _lookup_auth_email(
+                str(order.get("user_id") or "").strip()
+            )
+        if not customer_email:
+            raise RuntimeError(
+                "Paid merchandise order has no trusted customer email."
+            )
+
+        owner_result = _send_notification(
+            kind="owner_fulfillment",
+            order=order,
+            recipient=owner_email,
+        )
+        customer_result = _send_notification(
+            kind="customer_confirmation",
+            order=order,
+            recipient=customer_email,
+        )
+        return {
+            "owner": owner_result,
+            "customer": customer_result,
+        }
+
+
     def _finalize_session(session: Any):
         metadata = _stripe_value(session, "metadata", {}) or {}
 
@@ -566,9 +939,37 @@ def register_merch_checkout_routes(
                 error="Nova merchandise checkout is not enabled yet.",
             ), 503
 
+        if not (
+            webhook_key
+            and resend_key
+            and resend_from
+            and owner_email
+        ):
+            return jsonify(
+                ok=False,
+                code="MERCH_FULFILLMENT_NOT_CONFIGURED",
+                error=(
+                    "Physical checkout is temporarily unavailable "
+                    "while order notifications are configured."
+                ),
+            ), 503
+
         user, auth_error = _authenticated_user()
         if auth_error:
             return auth_error
+
+        customer_email = str(
+            (user or {}).get("email") or ""
+        ).strip()
+        if not customer_email:
+            return jsonify(
+                ok=False,
+                code="CUSTOMER_EMAIL_REQUIRED",
+                error=(
+                    "A verified account email is required "
+                    "for physical merchandise orders."
+                ),
+            ), 400
 
         if not (stripe_module and stripe_key):
             return jsonify(
@@ -727,6 +1128,7 @@ def register_merch_checkout_routes(
             session = stripe_module.checkout.Session.create(
                 mode="payment",
                 payment_method_types=["card"],
+                customer_email=customer_email,
                 line_items=[
                     {
                         "price_data": {
@@ -1009,7 +1411,19 @@ def register_merch_checkout_routes(
                 "checkout.session.completed",
                 "checkout.session.async_payment_succeeded",
             ):
-                _finalize_session(data_object)
+                finalize_result = _finalize_session(
+                    data_object
+                )
+
+                if (
+                    finalize_result.get("order_status")
+                    in ("paid", "fulfilled")
+                    or finalize_result.get("payment_status")
+                    == "paid"
+                ):
+                    _deliver_paid_order_notifications(
+                        str(finalize_result.get("order_id"))
+                    )
 
             elif event_type in (
                 "checkout.session.expired",
