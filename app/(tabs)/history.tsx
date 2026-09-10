@@ -16,7 +16,7 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 
 import * as QuizHistoryModule from "../_lib/quizHistory";
 import {
@@ -311,11 +311,7 @@ async function loadFromQuizHistoryModule(): Promise<RawHistoryRecord[]> {
 }
 
 function looksLikeQuizHistoryKey(key: string): boolean {
-  const normalized = String(key || "").toLowerCase();
-  return (
-    (normalized.includes("quiz") && normalized.includes("history")) ||
-    normalized.includes("quizhistory")
-  );
+  return String(key || "").toLowerCase() === "@nova/quizhistory.v1";
 }
 
 async function loadFromAsyncStorageFallback(): Promise<RawHistoryRecord[]> {
@@ -543,6 +539,7 @@ function plural(value: number, one: string, many = `${one}s`): string {
 }
 
 export default function HistoryScreen() {
+  const router = useRouter();
   const [records, setRecords] = useState<HistoryRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState<"subject" | "recent">("subject");
@@ -663,9 +660,37 @@ export default function HistoryScreen() {
           </View>
 
           {records.length > 0 ? (
+            <>
+            <Pressable
+              onPress={() => router.push("/focus-practice" as any)}
+              style={{
+                minHeight: 40,
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: "rgba(0,229,255,0.38)",
+                backgroundColor: "rgba(0,229,255,0.10)",
+                paddingHorizontal: 12,
+                paddingVertical: 8,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Text
+                style={{
+                  color: CYAN,
+                  fontSize: 10,
+                  fontWeight: "900",
+                  letterSpacing: 0.5,
+                }}
+              >
+                Focus Practice
+              </Text>
+            </Pressable>
+
             <Pressable style={styles.clearButton} onPress={askClear}>
               <Text style={styles.clearButtonText}>Clear</Text>
             </Pressable>
+                      </>
           ) : null}
         </View>
 

@@ -1,5 +1,6 @@
 // app/_lib/quizHistory.ts
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { supabase } from "../lib/supabase";
 
 export type QuizHistoryEntry = {
   id: string;
@@ -11,7 +12,30 @@ export type QuizHistoryEntry = {
   finishedAt: string; // ISO string
 };
 
-const KEY = "@nova/quizHistory.v1";
+const LEGACY_KEY = "@nova/quizHistory.v1";
+
+async function getScopedQuizHistoryKey(): Promise<string> {
+  try {
+    const { data } = await supabase.auth.getSession();
+    const userId = data.session?.user?.id;
+    return userId ? `${LEGACY_KEY}:${userId}` : `${LEGACY_KEY}:guest`;
+  } catch {
+    return `${LEGACY_KEY}:guest`;
+  }
+}
+
+async function readQuizHistoryRaw(): Promise<string | null> {
+  const key = await getScopedQuizHistoryKey();
+  const scoped = await AsyncStorage.getItem(key);
+  if (scoped !== null) return scoped;
+  const legacy = await AsyncStorage.getItem(LEGACY_KEY);
+  if (legacy !== null) {
+    await AsyncStorage.setItem(key, legacy);
+    await AsyncStorage.removeItem(LEGACY_KEY);
+    return legacy;
+  }
+  return null;
+}
 
 function normalizeEntry(raw: any): QuizHistoryEntry | null {
   if (!raw) return null;
@@ -48,7 +72,7 @@ function normalizeEntry(raw: any): QuizHistoryEntry | null {
 
 export async function getAll(): Promise<QuizHistoryEntry[]> {
   try {
-    const raw = await AsyncStorage.getItem(KEY);
+    const raw = await readQuizHistoryRaw();
     console.log("[quizHistory] raw =", raw);
     const arr = raw ? JSON.parse(raw) : [];
     if (!Array.isArray(arr)) return [];
@@ -89,10 +113,12 @@ export async function add(e: AddParams) {
   list.unshift(entry);
   const trimmed = list.slice(0, 200);
 
-  await AsyncStorage.setItem(KEY, JSON.stringify(trimmed));
+  const key = await getScopedQuizHistoryKey();
+  await AsyncStorage.setItem(key, JSON.stringify(trimmed));
   console.log("[quizHistory.add] stored, new length =", trimmed.length);
 }
 
 export async function clear() {
-  await AsyncStorage.removeItem(KEY);
+  const key = await getScopedQuizHistoryKey();
+  await AsyncStorage.removeItem(key);
 }

@@ -18,6 +18,10 @@ import { buildQuiz } from "../../_lib/quiz";
 import { classifyTopic } from "../../_lib/topicTaxonomy";
 import { getCardsById, toQA } from "../../_lib/flashcards";
 import { add as addQuizHistory } from "../../_lib/quizHistory"; // ✅ direct history logger
+import {
+  recordFocusCorrect,
+  recordFocusMistake,
+} from "../../_lib/focusPractice";
 import { safeLogQuiz } from "../../utils/quiz-history-bridge"; // ✅ bridge logger
 import { quizFinished } from "../../utils/achievements-bridge"; // ✅ achievements bridge
 import { useAchievements } from "../../context/AchievementsContext"; // ✅ achievements context
@@ -336,6 +340,27 @@ export default function TopicQuiz() {
 
     const chosen = current.choices[i];
     const isCorrect = chosen === current.answer;
+
+    // Focus Practice: remember exact missed questions for targeted review.
+    if (isCorrect) {
+      void recordFocusCorrect({
+        topicId: String(id || headerTitle),
+        question: current.question,
+      }).catch((error) => {
+        console.warn("[FocusPractice] correct-answer sync failed", error);
+      });
+    } else {
+      void recordFocusMistake({
+        topicId: String(id || headerTitle),
+        topicTitle: headerTitle,
+        question: current.question,
+        correctAnswer: current.answer,
+        chosenAnswer: chosen,
+        choices: current.choices,
+      }).catch((error) => {
+        console.warn("[FocusPractice] mistake sync failed", error);
+      });
+    }
 
     void recordServerQuizAchievementAnswer(
       idx,
