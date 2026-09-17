@@ -41,20 +41,20 @@ type SatelliteShellProps = {
  * The four level-gated Island expansions occupy the west, east, north, and
  * south approaches and reach roughly 7.4 world units from the Island center.
  *
- * These six legendary satellites therefore use a rotated 9-unit orbit.
- * Their 0.84-unit footprints remain outside every current and future expansion
- * footprint, and neighboring legendary islands remain about 9 units apart.
+ * These six legendary satellites now use a 36-unit safe orbit outside the enlarged main Island.
+ * Their small footprints remain clearly separated from the 24-unit-radius main Island,
+ * preserving the intended floating-satellite look.
  *
  * The scene increases its full-view camera distance whenever a legendary
  * satellite is present, so the wider safe orbit remains visible.
  */
 export const LEGENDARY_SATELLITE_POSITIONS = {
-  mechaOwl: [12.95, 1.5, 6.51] as Vec3,
-  chronoFox: [0.85, 1.56, 14.46] as Vec3,
-  axolotlOracle: [-12.11, 1.48, 7.97] as Vec3,
-  astralNova: [-12.95, 1.52, -6.51] as Vec3,
-  celestra: [-0.85, 1.64, -14.46] as Vec3,
-  aetherwyrm: [12.11, 1.7, -7.97] as Vec3,
+  mechaOwl: [32.17, 2.4, 16.17] as Vec3,
+  chronoFox: [2.11, 2.45, 35.94] as Vec3,
+  axolotlOracle: [-30.07, 2.35, 19.79] as Vec3,
+  astralNova: [-32.17, 2.43, -16.17] as Vec3,
+  celestra: [-2.11, 2.53, -35.94] as Vec3,
+  aetherwyrm: [30.07, 2.57, -19.79] as Vec3,
 } as const;
 
 export const LEGENDARY_ISLAND_INFO: Record<

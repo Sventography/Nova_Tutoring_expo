@@ -20,6 +20,7 @@ import { Ionicons } from "@expo/vector-icons";
 import {
   Canvas,
   useFrame,
+  useThree,
 } from "@react-three/fiber/native";
 import * as THREE from "three";
 
@@ -27,6 +28,16 @@ import {
   ISLAND_MILESTONES,
   type IslandMilestone,
 } from "../../context/IslandContext";
+import {
+  useIslandBuilder,
+  type IslandPlacement,
+} from "../../context/IslandBuilderContext";
+import { useIslandDecorations } from "../../context/IslandDecorationContext";
+import { useIslandKeepsakes } from "../../context/IslandKeepsakeContext";
+import IslandDecorationLayer from "./IslandDecorationLayer";
+import {
+  clampIslandBuildPosition,
+} from "../../_lib/islandBuilderBounds";
 
 import LegendarySatelliteIslands, {
   getLegendaryIslandInfo,
@@ -64,6 +75,7 @@ type Props = {
   selectedDiscoveryKey: string | null;
   discoveries: Island3DDiscovery[];
   legendaryCompanionIds?: string[];
+  builderPlacements?: IslandPlacement[];
   onSelectMilestone: (
     milestoneId: string
   ) => void;
@@ -417,9 +429,9 @@ function paletteForDate(
       celestialColor: "#ffd7a0",
       celestialGlow: "#ff9f68",
       celestialPosition: [
-        -6 + t * 4,
-        3.5 + t * 2,
-        -8,
+        -11 + t * 4,
+        11.5 + t * 2.2,
+        -21.5,
       ],
       celestialKind: "sun",
       cloudOpacity: 0.58,
@@ -442,13 +454,13 @@ function paletteForDate(
       celestialColor: "#fff4b0",
       celestialGlow: "#ffd84d",
       celestialPosition: [
-        -5 + arc * 10,
-        6.6 +
+        -11 + arc * 22,
+        13 +
           Math.sin(
             arc * Math.PI
           ) *
-            1.2,
-        -8,
+            3.2,
+        -21.5,
       ],
       celestialKind: "sun",
       cloudOpacity: 0.9,
@@ -482,9 +494,9 @@ function paletteForDate(
       celestialColor: "#ffcb8a",
       celestialGlow: "#ff7a59",
       celestialPosition: [
-        4 + t * 2,
-        5 - t * 2.2,
-        -8,
+        7 + t * 4,
+        13 - t * 1.8,
+        -21.5,
       ],
       celestialKind: "sun",
       cloudOpacity:
@@ -511,13 +523,13 @@ function paletteForDate(
     celestialColor: "#e7efff",
     celestialGlow: "#8ab4ff",
     celestialPosition: [
-      -5 + moonArc * 10,
-      5.4 +
+      -11 + moonArc * 22,
+      13 +
         Math.sin(
           moonArc * Math.PI
         ) *
-          0.9,
-      -8,
+          3,
+      -22,
     ],
     celestialKind: "moon",
     cloudOpacity: 0.3,
@@ -1313,9 +1325,18 @@ function Cloud({
   );
 }
 
-function IslandBase() {
+function IslandBase({
+  onDeselect,
+}: {
+  onDeselect?: () => void;
+}) {
   return (
-    <group>
+    <group
+      onClick={(event) => {
+        event.stopPropagation();
+        onDeselect?.();
+      }}
+    >
       <mesh
         position={[
           0,
@@ -1325,43 +1346,23 @@ function IslandBase() {
       >
         <cylinderGeometry
           args={[
-            6.85,
-            6.2,
-            1.05,
-            56,
+            24,
+            23.4,
+            1.08,
+            112,
           ]}
         />
         <meshStandardMaterial
           color="#3ba86c"
-          roughness={0.9}
+          roughness={0.92}
         />
       </mesh>
 
+      {/* A deep brown floating-earth mountain hangs beneath the green land. */}
       <mesh
         position={[
           0,
-          0.72,
-          0,
-        ]}
-      >
-        <cylinderGeometry
-          args={[
-            6.7,
-            6.8,
-            0.24,
-            56,
-          ]}
-        />
-        <meshStandardMaterial
-          color="#72dc91"
-          roughness={0.84}
-        />
-      </mesh>
-
-      <mesh
-        position={[
-          0,
-          -2.5,
+          -7.15,
           0,
         ]}
         rotation={[
@@ -1372,79 +1373,97 @@ function IslandBase() {
       >
         <coneGeometry
           args={[
-            6.25,
-            5.5,
-            48,
+            23.4,
+            15.6,
+            64,
           ]}
         />
         <meshStandardMaterial
-          color="#644638"
+          color="#6b4938"
           roughness={1}
+          flatShading
         />
       </mesh>
 
       <mesh
         position={[
-          -1.45,
-          -2.0,
-          0.85,
+          0,
+          -8.1,
+          0,
         ]}
         rotation={[
           Math.PI,
-          0,
+          0.18,
           0,
         ]}
         scale={[
           0.82,
-          0.82,
+          1.06,
           0.82,
         ]}
       >
         <coneGeometry
           args={[
-            3.0,
-            4.5,
-            28,
+            20.4,
+            13.1,
+            48,
           ]}
         />
         <meshStandardMaterial
-          color="#765547"
+          color="#4f352c"
           roughness={1}
+          flatShading
         />
       </mesh>
 
       {[
-        [-4.4, -1.15, 1.45],
-        [3.65, -1.3, -1.9],
-        [0.55, -2.55, 2.0],
+        [-7.4, -4.8, 3.4, 0.38, 1.08],
+        [6.7, -5.0, 4.1, 0.34, 1.0],
+        [-4.6, -5.25, -6.1, 0.32, 0.94],
+        [5.5, -4.9, -5.4, 0.35, 0.98],
+        [0.2, -7.2, 7.2, 0.22, 0.8],
+        [-0.8, -7.45, -7.0, 0.24, 0.76],
       ].map(
-        (position, index) => (
+        ([
+          x,
+          y,
+          z,
+          width,
+          height,
+        ], index) => (
           <mesh
-            key={index}
-            position={
-              position as Vec3
-            }
+            key={`floating-rock-rib-${index}`}
+            position={[
+              x,
+              y,
+              z,
+            ]}
             rotation={[
               Math.PI,
-              index * 0.8,
+              index * 0.48,
               0,
             ]}
             scale={[
-              0.5,
-              0.5,
-              0.5,
+              width,
+              height,
+              width,
             ]}
           >
             <coneGeometry
               args={[
-                1.5,
-                3.2,
-                14,
+                8.2,
+                8.4,
+                10,
               ]}
             />
             <meshStandardMaterial
-              color="#52382f"
+              color={
+                index % 2
+                  ? "#5b3d30"
+                  : "#76513d"
+              }
               roughness={1}
+              flatShading
             />
           </mesh>
         )
@@ -1701,7 +1720,7 @@ function IslandExpansions({
           0.34,
           1.35,
         ]}
-        grassColor="#3ca66a"
+        grassColor="#3ba86c"
         stoneColor="#604137"
       />
 
@@ -1728,7 +1747,7 @@ function IslandExpansions({
           0.34,
           1.28,
         ]}
-        grassColor="#369f69"
+        grassColor="#3ba86c"
         stoneColor="#594039"
       />
 
@@ -1755,7 +1774,7 @@ function IslandExpansions({
           0.34,
           4.05,
         ]}
-        grassColor="#389f68"
+        grassColor="#3ba86c"
         stoneColor="#564039"
       />
 
@@ -1782,7 +1801,7 @@ function IslandExpansions({
           0.34,
           3.95,
         ]}
-        grassColor="#41a96e"
+        grassColor="#3ba86c"
         stoneColor="#62443a"
       />
     </>
@@ -7419,27 +7438,224 @@ function MysteryBeacon({
   );
 }
 
+function ScreenSpaceTapTarget({
+  pixels = 78,
+  y = 0.72,
+  minWorld = 0.9,
+  maxWorld = 5.2,
+}: {
+  pixels?: number;
+  y?: number;
+  minWorld?: number;
+  maxWorld?: number;
+}) {
+  const ref =
+    useRef<THREE.Sprite>(
+      null
+    );
+
+  const {
+    camera,
+    size,
+  } = useThree();
+
+  const worldPosition =
+    useMemo(
+      () =>
+        new THREE.Vector3(),
+      []
+    );
+
+  const worldScale =
+    useMemo(
+      () =>
+        new THREE.Vector3(),
+      []
+    );
+
+  useFrame(() => {
+    if (!ref.current) {
+      return;
+    }
+
+    ref.current.getWorldPosition(
+      worldPosition
+    );
+
+    const distance =
+      Math.max(
+        0.01,
+        camera.position.distanceTo(
+          worldPosition
+        )
+      );
+
+    let desiredWorldSize =
+      minWorld;
+
+    const perspective =
+      camera as THREE.PerspectiveCamera;
+
+    if (
+      perspective.isPerspectiveCamera
+    ) {
+      const visibleWorldHeight =
+        2 *
+        Math.tan(
+          THREE.MathUtils.degToRad(
+            perspective.fov
+          ) / 2
+        ) *
+        distance;
+
+      desiredWorldSize =
+        visibleWorldHeight *
+        (pixels /
+          Math.max(
+            1,
+            size.height
+          ));
+    } else {
+      const orthographic =
+        camera as THREE.OrthographicCamera;
+
+      if (
+        orthographic.isOrthographicCamera
+      ) {
+        const visibleWorldHeight =
+          Math.abs(
+            orthographic.top -
+              orthographic.bottom
+          ) /
+          Math.max(
+            0.01,
+            orthographic.zoom
+          );
+
+        desiredWorldSize =
+          visibleWorldHeight *
+          (pixels /
+            Math.max(
+              1,
+              size.height
+            ));
+      }
+    }
+
+    const clampedWorldSize =
+      THREE.MathUtils.clamp(
+        desiredWorldSize,
+        minWorld,
+        maxWorld
+      );
+
+    const parent =
+      ref.current.parent;
+
+    if (parent) {
+      parent.getWorldScale(
+        worldScale
+      );
+    } else {
+      worldScale.set(
+        1,
+        1,
+        1
+      );
+    }
+
+    const inheritedScale =
+      Math.max(
+        0.01,
+        Math.abs(
+          worldScale.x
+        ),
+        Math.abs(
+          worldScale.y
+        ),
+        Math.abs(
+          worldScale.z
+        )
+      );
+
+    const localSize =
+      clampedWorldSize /
+      inheritedScale;
+
+    ref.current.scale.set(
+      localSize,
+      localSize,
+      1
+    );
+  });
+
+  return (
+    <sprite
+      ref={ref}
+      position={[
+        0,
+        y,
+        0,
+      ]}
+    >
+      <spriteMaterial
+        color="#ffffff"
+        transparent
+        opacity={0.001}
+        depthWrite={false}
+        depthTest={false}
+      />
+    </sprite>
+  );
+}
+
 function LandmarkObject({
   milestone,
   level,
   selected,
+  placement,
+  builderEnabled,
+  onBuilderDragStart,
   onSelect,
 }: {
   milestone: IslandMilestone;
   level: number;
   selected: boolean;
+  placement: IslandPlacement | null;
+  builderEnabled: boolean;
+  onBuilderDragStart: (
+    milestoneId: string
+  ) => void;
   onSelect: (
     milestoneId: string,
     position: Vec3
   ) => void;
 }) {
-  const position =
+  const fallbackPosition =
     LANDMARK_POSITIONS[
       milestone.id
     ] ?? DEFAULT_TARGET;
 
   const unlocked =
     level >= milestone.level;
+
+  const transform =
+    placement?.transform;
+
+  const position: Vec3 =
+    transform
+      ? [
+          transform.x,
+          transform.y,
+          transform.z,
+        ]
+      : fallbackPosition;
+
+  const rotationY =
+    transform?.rotationY ?? 0;
+
+  const placementScale =
+    transform?.scale ?? 1;
 
   const object = (() => {
     if (!unlocked) {
@@ -7502,15 +7718,62 @@ function LandmarkObject({
 
   return (
     <group
+      visible={
+        unlocked &&
+        !(
+          builderEnabled &&
+          unlocked &&
+          !placement
+        )
+      }
       position={position}
+      rotation={[
+        0,
+        rotationY,
+        0,
+      ]}
+      scale={placementScale}
+      onPointerDown={(event) => {
+        if (
+          builderEnabled &&
+          unlocked &&
+          placement &&
+          selected
+        ) {
+          event.stopPropagation();
+          onBuilderDragStart(
+            milestone.id
+          );
+        }
+      }}
       onClick={(event) => {
         event.stopPropagation();
+
+        if (
+          builderEnabled &&
+          unlocked &&
+          !placement
+        ) {
+          return;
+        }
+
         onSelect(
           milestone.id,
           position
         );
       }}
     >
+      {builderEnabled &&
+      unlocked &&
+      placement ? (
+        <ScreenSpaceTapTarget
+          pixels={96}
+          y={0.92}
+          minWorld={1.35}
+          maxWorld={7.2}
+        />
+      ) : null}
+
       {unlocked ? (
         <>
           {selected ? (
@@ -8911,55 +9174,131 @@ function BurstCrystalClusterKeepsake({
 }
 
 function StarTossTargetKeepsake() {
-  const star = useRef<THREE.Group>(null);
+  const targetRing = useRef<THREE.Mesh>(null);
+  const impactRing = useRef<THREE.Mesh>(null);
+  const thrownStar = useRef<THREE.Group>(null);
 
-  useFrame((_, delta) => {
-    if (star.current) {
-      star.current.rotation.y += delta * 0.75;
+  useFrame(({ clock }, delta) => {
+    const time = clock.elapsedTime;
+
+    if (targetRing.current) {
+      targetRing.current.rotation.z += delta * 0.42;
+    }
+
+    if (impactRing.current) {
+      const pulse =
+        1 + Math.max(0, Math.sin(time * 2.4)) * 0.22;
+      impactRing.current.scale.set(pulse, pulse, pulse);
+      const material =
+        impactRing.current.material as THREE.MeshBasicMaterial;
+      material.opacity =
+        0.12 +
+        Math.max(0, Math.sin(time * 2.4)) * 0.38;
+    }
+
+    if (thrownStar.current) {
+      const cycle = (time * 0.42) % 1;
+      const eased = 1 - Math.pow(1 - cycle, 2);
+      thrownStar.current.position.set(
+        1.45 - eased * 1.45,
+        1.35 - eased * 0.76 + Math.sin(cycle * Math.PI) * 0.42,
+        0.72 - eased * 0.68
+      );
+      thrownStar.current.rotation.z += delta * 4.2;
+      thrownStar.current.rotation.y += delta * 2.4;
+      const starScale =
+        cycle > 0.9 ? Math.max(0.2, (1 - cycle) * 10) : 1;
+      thrownStar.current.scale.setScalar(starScale);
     }
   });
 
   return (
-    <group scale={0.82}>
-      <mesh
-        position={[0, 0.54, 0]}
-        rotation={[Math.PI / 2, 0, 0]}
-      >
-        <torusGeometry args={[0.48, 0.075, 12, 42]} />
-        <meshStandardMaterial
-          color="#60a5fa"
-          emissive="#2563eb"
-          emissiveIntensity={0.42}
-          metalness={0.35}
-          roughness={0.28}
-        />
-      </mesh>
-
-      <mesh
-        position={[0, 0.54, 0]}
-        rotation={[Math.PI / 2, 0, 0]}
-      >
-        <torusGeometry args={[0.28, 0.045, 10, 36]} />
-        <meshBasicMaterial color="#fde68a" />
-      </mesh>
-
-      <group ref={star} position={[0, 0.54, 0.02]}>
-        <MiniStar scale={1.7} color="#fff3a8" />
-      </group>
-
-      <mesh position={[0, 0.12, 0]}>
-        <cylinderGeometry args={[0.055, 0.075, 0.84, 10]} />
+    <group scale={0.9}>
+      {/* Weighted stand and base. */}
+      <mesh position={[0, 0.2, 0]}>
+        <cylinderGeometry args={[0.06, 0.085, 1.15, 10]} />
         <meshStandardMaterial
           color="#475569"
-          metalness={0.45}
-          roughness={0.36}
+          metalness={0.48}
+          roughness={0.34}
         />
       </mesh>
 
-      <mesh position={[0, -0.28, 0]}>
-        <cylinderGeometry args={[0.3, 0.38, 0.12, 20]} />
+      <mesh position={[0, -0.34, 0]}>
+        <cylinderGeometry args={[0.34, 0.44, 0.14, 20]} />
         <meshStandardMaterial color="#334155" roughness={0.62} />
       </mesh>
+
+      {/* Glowing target board. */}
+      <mesh
+        position={[0, 0.72, 0]}
+        rotation={[Math.PI / 2, 0, 0]}
+      >
+        <cylinderGeometry args={[0.62, 0.62, 0.12, 40]} />
+        <meshStandardMaterial
+          color="#1d4ed8"
+          emissive="#1e40af"
+          emissiveIntensity={0.35}
+          metalness={0.24}
+          roughness={0.32}
+        />
+      </mesh>
+
+      <mesh
+        ref={targetRing}
+        position={[0, 0.79, 0.02]}
+        rotation={[Math.PI / 2, 0, 0]}
+      >
+        <torusGeometry args={[0.46, 0.055, 12, 42]} />
+        <meshStandardMaterial
+          color="#67e8f9"
+          emissive="#0891b2"
+          emissiveIntensity={1.15}
+        />
+      </mesh>
+
+      <mesh
+        position={[0, 0.8, 0.03]}
+        rotation={[Math.PI / 2, 0, 0]}
+      >
+        <torusGeometry args={[0.25, 0.042, 10, 36]} />
+        <meshStandardMaterial
+          color="#fde68a"
+          emissive="#facc15"
+          emissiveIntensity={0.75}
+        />
+      </mesh>
+
+      <group position={[0, 0.8, 0.1]}>
+        <MiniStar scale={1.65} color="#fff3a8" />
+      </group>
+
+      {/* Expanding impact ripple makes the target feel like it was just hit. */}
+      <mesh
+        ref={impactRing}
+        position={[0, 0.81, 0.09]}
+        rotation={[Math.PI / 2, 0, 0]}
+      >
+        <torusGeometry args={[0.68, 0.025, 8, 40]} />
+        <meshBasicMaterial
+          color="#fef08a"
+          transparent
+          opacity={0.2}
+          depthWrite={false}
+        />
+      </mesh>
+
+      {/* A star repeatedly flies into the target. */}
+      <group ref={thrownStar}>
+        <MiniStar scale={1.0} color="#ffffff" />
+      </group>
+
+      <pointLight
+        position={[0, 0.84, 0.45]}
+        color="#67e8f9"
+        intensity={0.45}
+        distance={3}
+      />
     </group>
   );
 }
@@ -10132,7 +10471,7 @@ function DiscoveryMarker({
       discovery
     );
 
-  const position =
+  const defaultPosition =
     discoveryWorldPosition(
       discovery,
       visualKey,
@@ -10147,6 +10486,71 @@ function DiscoveryMarker({
       visualKey
     );
 
+  const {
+    isEditing: builderEditing,
+  } = useIslandBuilder();
+
+  const {
+    selectPlacement: selectDecorationPlacement,
+  } = useIslandDecorations();
+
+  const keepsakes = useIslandKeepsakes();
+
+  useEffect(() => {
+    if (discovery.kind !== "keepsake") return;
+
+    keepsakes.registerKeepsake({
+      key: discovery.key,
+      title: discovery.title,
+      accent: discovery.accent,
+      defaultTransform: {
+        x: defaultPosition[0],
+        z: defaultPosition[2],
+        rotationY: 0,
+        scale: 1,
+      },
+    });
+  }, [
+    defaultPosition[0],
+    defaultPosition[2],
+    discovery.accent,
+    discovery.key,
+    discovery.kind,
+    discovery.title,
+    keepsakes.registerKeepsake,
+  ]);
+
+  const keepsakePlacement =
+    discovery.kind === "keepsake"
+      ? keepsakes.getPlacement(discovery.key)
+      : null;
+
+  if (
+    discovery.kind === "keepsake" &&
+    keepsakes.ready &&
+    keepsakePlacement &&
+    !keepsakePlacement.placed
+  ) {
+    return null;
+  }
+
+  const transform =
+    discovery.kind === "keepsake" &&
+    keepsakePlacement
+      ? keepsakePlacement.transform
+      : null;
+
+  const position: Vec3 = [
+    transform?.x ?? defaultPosition[0],
+    defaultPosition[1],
+    transform?.z ?? defaultPosition[2],
+  ];
+
+  const isBuilderSelected =
+    builderEditing &&
+    discovery.kind === "keepsake" &&
+    keepsakes.selectedKeepsakeKey === discovery.key;
+
   const marker =
     useRef<THREE.Group>(
       null
@@ -10158,17 +10562,14 @@ function DiscoveryMarker({
         return;
       }
 
-      /*
-       * Real keepsakes stay planted in the ground. Recognizable residents
-       * animate inside their own models. Only future unknown placeholders
-       * retain the original floating-and-spinning marker behavior.
-       */
       if (hasCustomVisual) {
         marker.current.position.y =
           position[1];
 
-        marker.current.rotation.y =
-          0;
+        if (discovery.kind !== "keepsake") {
+          marker.current.rotation.y =
+            0;
+        }
 
         return;
       }
@@ -10182,11 +10583,16 @@ function DiscoveryMarker({
         ) *
           0.08;
 
-      marker.current.rotation.y +=
-        discovery.kind ===
-        "keepsake"
-          ? 0.012
-          : 0.004;
+      if (
+        discovery.kind !== "keepsake" ||
+        !builderEditing
+      ) {
+        marker.current.rotation.y +=
+          discovery.kind ===
+          "keepsake"
+            ? 0.012
+            : 0.004;
+      }
     }
   );
 
@@ -10194,8 +10600,41 @@ function DiscoveryMarker({
     <group
       ref={marker}
       position={position}
+      rotation={[
+        0,
+        transform?.rotationY ?? 0,
+        0,
+      ]}
+      scale={
+        discovery.kind === "keepsake"
+          ? transform?.scale ?? 1
+          : 1
+      }
+      onPointerDown={(event) => {
+        if (
+          builderEditing &&
+          discovery.kind === "keepsake" &&
+          isBuilderSelected
+        ) {
+          event.stopPropagation();
+          keepsakes.armKeepsakeDrag(discovery.key);
+        }
+      }}
       onClick={(event) => {
         event.stopPropagation();
+
+        if (
+          builderEditing &&
+          discovery.kind === "keepsake"
+        ) {
+          selectDecorationPlacement(null);
+          keepsakes.selectKeepsake(discovery.key);
+          onSelect(
+            discovery.key,
+            position
+          );
+          return;
+        }
 
         onSelect(
           discovery.key,
@@ -10203,7 +10642,18 @@ function DiscoveryMarker({
         );
       }}
     >
-      {selected ? (
+      {builderEditing &&
+      discovery.kind ===
+        "keepsake" ? (
+        <ScreenSpaceTapTarget
+          pixels={82}
+          y={0.66}
+          minWorld={1.0}
+          maxWorld={5.4}
+        />
+      ) : null}
+
+      {(isBuilderSelected || selected) ? (
         <group
           scale={
             discovery.kind ===
@@ -10269,7 +10719,10 @@ function DiscoveryMarker({
           }
           transparent
           opacity={
-            hasCustomVisual
+            builderEditing &&
+            discovery.kind === "keepsake"
+              ? 0.12
+              : hasCustomVisual
               ? 0.045
               : 0.08
           }
@@ -10280,6 +10733,140 @@ function DiscoveryMarker({
   );
 }
 
+function BuilderSkyExtras({
+  cloudOpacity,
+  starsOpacity,
+}: {
+  cloudOpacity: number;
+  starsOpacity: number;
+}) {
+  const starPositions = useMemo(() => {
+    const values: number[] = [];
+
+    for (let index = 0; index < 112; index += 1) {
+      const angle =
+        ((index * 137.5) % 360) *
+        (Math.PI / 180);
+      const ring =
+        index < 34
+          ? 15 + ((index * 11) % 8)
+          : 24 + ((index * 17) % 16);
+
+      values.push(
+        Math.cos(angle) * ring,
+        6.5 + ((index * 23) % 115) / 10,
+        Math.sin(angle) * ring - (index % 3 === 0 ? 3 : 12)
+      );
+    }
+
+    return new Float32Array(values);
+  }, []);
+
+  return (
+    <>
+      {[
+        {
+          startX: -18,
+          y: 7.8,
+          z: -18,
+          speed: 0.1,
+          scale: 1.8,
+          opacity: 0.46,
+        },
+        {
+          startX: -10,
+          y: 10.2,
+          z: -24,
+          speed: 0.08,
+          scale: 2.1,
+          opacity: 0.36,
+        },
+        {
+          startX: 2,
+          y: 8.7,
+          z: -20,
+          speed: 0.11,
+          scale: 1.65,
+          opacity: 0.44,
+        },
+        {
+          startX: 14,
+          y: 9.6,
+          z: -26,
+          speed: 0.07,
+          scale: 2.25,
+          opacity: 0.34,
+        },
+        {
+          startX: -14,
+          y: 4.1,
+          z: 7,
+          speed: 0.16,
+          scale: 1.1,
+          opacity: 0.38,
+        },
+        {
+          startX: -3,
+          y: 3.6,
+          z: 9,
+          speed: 0.14,
+          scale: 0.95,
+          opacity: 0.34,
+        },
+        {
+          startX: 9,
+          y: 4.4,
+          z: 8,
+          speed: 0.13,
+          scale: 1.05,
+          opacity: 0.36,
+        },
+        {
+          startX: 17,
+          y: 5.1,
+          z: 5,
+          speed: 0.12,
+          scale: 1.2,
+          opacity: 0.3,
+        },
+      ].map((cloud, index) => (
+        <Cloud
+          key={`extra-cloud-${index}`}
+          startX={cloud.startX}
+          y={cloud.y}
+          z={cloud.z}
+          speed={cloud.speed}
+          scale={cloud.scale}
+          opacity={
+            cloudOpacity *
+            cloud.opacity
+          }
+        />
+      ))}
+
+      <points>
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            args={[
+              starPositions,
+              3,
+            ]}
+          />
+        </bufferGeometry>
+        <pointsMaterial
+          color="#f8fafc"
+          size={0.11}
+          transparent
+          opacity={starsOpacity * 0.82}
+          sizeAttenuation
+          depthWrite={false}
+        />
+      </points>
+    </>
+  );
+}
+
 function IslandWorld({
   level,
   palette,
@@ -10287,6 +10874,8 @@ function IslandWorld({
   selectedDiscoveryKey,
   discoveries,
   legendaryCompanionIds,
+  builderPlacements,
+  onBuilderDragStart,
   selectedLegendaryId,
   onSelectMilestone,
   onSelectDiscovery,
@@ -10301,6 +10890,10 @@ function IslandWorld({
   selectedDiscoveryKey: string | null;
   discoveries: Island3DDiscovery[];
   legendaryCompanionIds: string[];
+  builderPlacements?: IslandPlacement[];
+  onBuilderDragStart: (
+    milestoneId: string
+  ) => void;
   selectedLegendaryId: LegendaryIslandId | null;
   onSelectMilestone: (
     milestoneId: string,
@@ -10319,14 +10912,36 @@ function IslandWorld({
     projection: NovaOverlayProjection
   ) => void;
 }) {
+  const builderEnabled =
+    Array.isArray(
+      builderPlacements
+    );
+
+  const builderPlacementByItemId =
+    useMemo(
+      () =>
+        new Map(
+          (
+            builderPlacements ??
+            []
+          ).map(
+            (placement) => [
+              placement.itemId,
+              placement,
+            ]
+          )
+        ),
+      [builderPlacements]
+    );
+
   return (
     <>
       <fog
         attach="fog"
         args={[
           palette.skyTop,
-          13,
-          34,
+          40,
+          110,
         ]}
       />
 
@@ -10369,6 +10984,15 @@ function IslandWorld({
 
       <StarField
         opacity={
+          palette.starsOpacity
+        }
+      />
+
+      <BuilderSkyExtras
+        cloudOpacity={
+          palette.cloudOpacity
+        }
+        starsOpacity={
           palette.starsOpacity
         }
       />
@@ -10472,10 +11096,28 @@ function IslandWorld({
           0,
         ]}
       >
-        <IslandBase />
+        <IslandBase
+        onDeselect={() =>
+          onSelectMilestone(
+            "__nova_builder_clear_selection__",
+            DEFAULT_TARGET
+          )
+        }
+      />
+
+
 
         <IslandExpansions
           level={level}
+        />
+
+        <IslandDecorationLayer
+          onSelectDecoration={() =>
+            onSelectMilestone(
+              "__nova_builder_clear_selection__",
+              DEFAULT_TARGET
+            )
+          }
         />
 
         <MagicWisps
@@ -10525,6 +11167,17 @@ function IslandWorld({
                 milestone
               }
               level={level}
+              placement={
+                builderPlacementByItemId.get(
+                  milestone.id
+                ) ?? null
+              }
+              builderEnabled={
+                builderEnabled
+              }
+              onBuilderDragStart={
+                onBuilderDragStart
+              }
               selected={
                 selectedMilestoneId ===
                   milestone.id &&
@@ -10573,6 +11226,7 @@ function IslandWorld({
   );
 }
 
+// NOVA_ISLAND_EXPANSION_PACK_1
 export default function NovaIsland3DScene({
   level,
   height = 450,
@@ -10580,10 +11234,30 @@ export default function NovaIsland3DScene({
   selectedDiscoveryKey,
   discoveries,
   legendaryCompanionIds = [],
+  builderPlacements,
   onSelectMilestone,
   onSelectDiscovery,
   onInteractionChange,
 }: Props) {
+  const {
+    isEditing: builderEditing,
+    movePlacement,
+  } = useIslandBuilder();
+
+  const {
+    movePlacement: moveDecorationPlacement,
+    selectPlacement: selectDecorationPlacement,
+    getArmedDecorationDrag,
+    clearDecorationDrag,
+  } = useIslandDecorations();
+
+  const {
+    moveKeepsake,
+    selectKeepsake,
+    getArmedKeepsakeDrag,
+    clearKeepsakeDrag,
+  } = useIslandKeepsakes();
+
   const [now, setNow] =
     useState(
       () => new Date()
@@ -10598,20 +11272,20 @@ export default function NovaIsland3DScene({
 
   const expansionViewDistance =
     level >= 21
-      ? 28.5
+      ? 39
       : level >= 18
-      ? 27
+      ? 36.5
       : level >= 15
-      ? 25.5
+      ? 34
       : level >= 12
-      ? 24
-      : 20.5;
+      ? 31.5
+      : 28;
 
   const fullViewDistance =
     legendaryCompanionIds.length > 0
       ? Math.max(
           expansionViewDistance,
-          33.5
+          64
         )
       : expansionViewDistance;
 
@@ -10640,7 +11314,45 @@ export default function NovaIsland3DScene({
       polar: 0.98,
       distance: fullViewDistance,
       pinchDistance: 0,
+      targetX: DEFAULT_TARGET[0],
+      targetY: DEFAULT_TARGET[1],
+      targetZ: DEFAULT_TARGET[2],
+      touchX: 0,
+      touchY: 0,
     });
+
+  const twoFingerGestureRef =
+    useRef<{
+      centerX: number;
+      centerY: number;
+      pinchDistance: number;
+      azimuth: number;
+      polar: number;
+      distance: number;
+    } | null>(null);
+
+  const builderDragRef =
+    useRef<{
+      placementId: string;
+      itemId: string;
+      x: number;
+      z: number;
+      scale: number;
+    } | null>(null);
+
+  const pendingBuilderMoveRef =
+    useRef<{
+      placementId: string;
+      x: number;
+      z: number;
+    } | null>(null);
+
+  const builderMoveFrameRef =
+    useRef<
+      ReturnType<
+        typeof requestAnimationFrame
+      > | null
+    >(null);
 
   const interactionActiveRef =
     useRef(false);
@@ -10736,6 +11448,39 @@ export default function NovaIsland3DScene({
     selectedLegendaryId,
   ]);
 
+  useEffect(() => {
+    if (selectedLegendaryId) {
+      return;
+    }
+
+    controlsRef.current.desiredTarget =
+      [...DEFAULT_TARGET];
+
+    controlsRef.current.desiredDistance =
+      builderEditing
+        ? Math.max(
+            fullViewDistance,
+            54
+          )
+        : fullViewDistance;
+
+    if (builderEditing) {
+      controlsRef.current.desiredAzimuth =
+        0.58;
+      controlsRef.current.desiredPolar =
+        0.82;
+    }
+
+    velocityRef.current = {
+      azimuth: 0,
+      polar: 0,
+    };
+  }, [
+    builderEditing,
+    fullViewDistance,
+    selectedLegendaryId,
+  ]);
+
   const focusPosition =
     useCallback(
       (
@@ -10771,7 +11516,12 @@ export default function NovaIsland3DScene({
         ];
 
       controlsRef.current.desiredDistance =
-        fullViewDistance;
+        builderEditing
+          ? Math.max(
+              fullViewDistance,
+              32
+            )
+          : fullViewDistance;
 
       controlsRef.current.desiredAzimuth =
         0.58;
@@ -10783,7 +11533,7 @@ export default function NovaIsland3DScene({
         azimuth: 0,
         polar: 0,
       };
-    }, [fullViewDistance]);
+    }, [builderEditing, fullViewDistance]);
 
   const selectMilestone =
     useCallback(
@@ -10795,18 +11545,30 @@ export default function NovaIsland3DScene({
           null
         );
 
+        selectDecorationPlacement(
+          null
+        );
+        selectKeepsake(
+          null
+        );
+
         onSelectMilestone(
           milestoneId
         );
 
-        focusPosition(
-          position,
-          7.3
-        );
+        if (!builderEditing) {
+          focusPosition(
+            position,
+            7.3
+          );
+        }
       },
       [
+        builderEditing,
         focusPosition,
         onSelectMilestone,
+        selectDecorationPlacement,
+        selectKeepsake,
       ]
     );
 
@@ -10824,12 +11586,15 @@ export default function NovaIsland3DScene({
           discoveryKey
         );
 
-        focusPosition(
-          position,
-          6.2
-        );
+        if (!builderEditing) {
+          focusPosition(
+            position,
+            6.2
+          );
+        }
       },
       [
+        builderEditing,
         focusPosition,
         onSelectDiscovery,
       ]
@@ -10850,6 +11615,112 @@ export default function NovaIsland3DScene({
         );
       },
       [focusPosition]
+    );
+
+  const queueBuilderMove =
+    useCallback(
+      (
+        placementId: string,
+        x: number,
+        z: number
+      ) => {
+        pendingBuilderMoveRef.current = {
+          placementId,
+          x,
+          z,
+        };
+
+        if (
+          builderMoveFrameRef.current !==
+          null
+        ) {
+          return;
+        }
+
+        builderMoveFrameRef.current =
+          requestAnimationFrame(
+            () => {
+              builderMoveFrameRef.current =
+                null;
+
+              const pending =
+                pendingBuilderMoveRef.current;
+
+              pendingBuilderMoveRef.current =
+                null;
+
+              if (!pending) {
+                return;
+              }
+
+              movePlacement(
+                pending.placementId,
+                {
+                  x: pending.x,
+                  z: pending.z,
+                }
+              );
+            }
+          );
+      },
+      [movePlacement]
+    );
+
+  useEffect(
+    () => () => {
+      if (
+        builderMoveFrameRef.current !==
+        null
+      ) {
+        cancelAnimationFrame(
+          builderMoveFrameRef.current
+        );
+      }
+    },
+    []
+  );
+
+  const startBuilderDrag =
+    useCallback(
+      (milestoneId: string) => {
+        if (!builderEditing) {
+          return;
+        }
+
+        const placement =
+          (
+            builderPlacements ??
+            []
+          ).find(
+            (item) =>
+              item.itemId ===
+              milestoneId
+          );
+
+        if (!placement) {
+          return;
+        }
+
+        builderDragRef.current = {
+          placementId:
+            placement.placementId,
+          itemId:
+            placement.itemId,
+          x: placement.transform.x,
+          z: placement.transform.z,
+          scale:
+            placement.transform.scale,
+        };
+
+        onSelectMilestone(
+          milestoneId
+        );
+      },
+      [
+        builderEditing,
+        builderPlacements,
+        onSelectMilestone,
+      ]
     );
 
   const panResponder =
@@ -10873,10 +11744,10 @@ export default function NovaIsland3DScene({
                   2 ||
                 Math.abs(
                   gesture.dx
-                ) > 1.5 ||
+                ) > 4 ||
                 Math.abs(
                   gesture.dy
-                ) > 1.5
+                ) > 4
               );
             },
 
@@ -10894,10 +11765,10 @@ export default function NovaIsland3DScene({
                   2 ||
                 Math.abs(
                   gesture.dx
-                ) > 1.5 ||
+                ) > 4 ||
                 Math.abs(
                   gesture.dy
-                ) > 1.5
+                ) > 4
               );
             },
 
@@ -10927,7 +11798,25 @@ export default function NovaIsland3DScene({
                         .nativeEvent
                         .touches
                     ),
+                  targetX:
+                    controlsRef
+                      .current
+                      .desiredTarget[0],
+                  targetY:
+                    controlsRef
+                      .current
+                      .desiredTarget[1],
+                  targetZ:
+                    controlsRef
+                      .current
+                      .desiredTarget[2],
+                  touchX:
+                    event.nativeEvent.touches[0]?.pageX ?? 0,
+                  touchY:
+                    event.nativeEvent.touches[0]?.pageY ?? 0,
                 };
+
+              twoFingerGestureRef.current = null;
 
               velocityRef.current =
                 {
@@ -10937,99 +11826,177 @@ export default function NovaIsland3DScene({
             },
 
           onPanResponderMove:
-            (
-              event,
-              gesture
-            ) => {
-              const touches =
-                event.nativeEvent
-                  .touches;
+            (event, _gesture) => {
+              const touches = event.nativeEvent.touches;
 
-              if (
-                touches.length >= 2
-              ) {
-                const currentPinch =
-                  distanceBetweenTouches(
-                    touches
-                  );
+              if (touches.length >= 2) {
+                builderDragRef.current = null;
+                clearDecorationDrag();
+                clearKeepsakeDrag();
 
-                const startingPinch =
-                  Math.max(
-                    1,
-                    gestureStartRef
-                      .current
-                      .pinchDistance
-                  );
+                const t0 = touches[0];
+                const t1 = touches[1];
+                const centerX = (t0.pageX + t1.pageX) / 2;
+                const centerY = (t0.pageY + t1.pageY) / 2;
+                const pinch = distanceBetweenTouches(touches);
 
-                const ratio =
-                  currentPinch /
-                  startingPinch;
+                if (!twoFingerGestureRef.current) {
+                  twoFingerGestureRef.current = {
+                    centerX,
+                    centerY,
+                    pinchDistance: Math.max(1, pinch),
+                    azimuth: controlsRef.current.desiredAzimuth,
+                    polar: controlsRef.current.desiredPolar,
+                    distance: controlsRef.current.desiredDistance,
+                  };
+                  velocityRef.current = { azimuth: 0, polar: 0 };
+                  return;
+                }
 
-                const pinchTarget =
-                  clamp(
-                    gestureStartRef
-                      .current
-                      .distance /
-                      Math.pow(
-                        ratio,
-                        0.72
-                      ),
-                    6,
-                    35
-                  );
+                const s = twoFingerGestureRef.current;
+                const dx = centerX - s.centerX;
+                const dy = centerY - s.centerY;
 
-                controlsRef.current.desiredDistance =
-                  damp(
-                    controlsRef.current.desiredDistance,
-                    pinchTarget,
-                    15,
-                    1 / 60
-                  );
+                controlsRef.current.desiredAzimuth =
+                  s.azimuth - dx * 0.0042;
 
+                controlsRef.current.desiredPolar =
+                  clamp(s.polar + dy * 0.0027, 0.38, 1.34);
+
+                if (pinch > 0 && s.pinchDistance > 0) {
+                  const ratio = pinch / s.pinchDistance;
+                  controlsRef.current.desiredDistance =
+                    clamp(s.distance / Math.pow(ratio, 0.82), 6.5, 90);
+                }
+
+                velocityRef.current = { azimuth: 0, polar: 0 };
                 return;
               }
 
-              controlsRef.current.desiredAzimuth =
-                gestureStartRef
-                  .current
-                  .azimuth -
-                gesture.dx *
-                  0.0062;
+              const touch = touches[0];
+              if (!touch) return;
 
-              controlsRef.current.desiredPolar =
+              if (twoFingerGestureRef.current) {
+                twoFingerGestureRef.current = null;
+                gestureStartRef.current = {
+                  azimuth: controlsRef.current.desiredAzimuth,
+                  polar: controlsRef.current.desiredPolar,
+                  distance: controlsRef.current.desiredDistance,
+                  pinchDistance: 0,
+                  targetX: controlsRef.current.desiredTarget[0],
+                  targetY: controlsRef.current.desiredTarget[1],
+                  targetZ: controlsRef.current.desiredTarget[2],
+                  touchX: touch.pageX,
+                  touchY: touch.pageY,
+                };
+                return;
+              }
+
+              const dx = touch.pageX - gestureStartRef.current.touchX;
+              const dy = touch.pageY - gestureStartRef.current.touchY;
+              const azimuth = gestureStartRef.current.azimuth;
+              const unitsPerPixel =
+                clamp(gestureStartRef.current.distance / 1250, 0.007, 0.02);
+
+              const rightX = Math.cos(azimuth);
+              const rightZ = -Math.sin(azimuth);
+              const downX = Math.sin(azimuth);
+              const downZ = Math.cos(azimuth);
+
+              const deltaX =
+                (dx * rightX + dy * downX) * unitsPerPixel;
+              const deltaZ =
+                (dx * rightZ + dy * downZ) * unitsPerPixel;
+
+              if (builderEditing) {
+                const landmarkDrag = builderDragRef.current;
+                const decorationDrag = getArmedDecorationDrag();
+                const keepsakeDrag = getArmedKeepsakeDrag();
+
+                if (landmarkDrag) {
+                  const next = clampIslandBuildPosition(
+                    landmarkDrag.x + deltaX,
+                    landmarkDrag.z + deltaZ,
+                    landmarkDrag.scale,
+                    landmarkDrag.itemId
+                  );
+                  queueBuilderMove(
+                    landmarkDrag.placementId,
+                    next.x,
+                    next.z
+                  );
+                  velocityRef.current = { azimuth: 0, polar: 0 };
+                  return;
+                }
+
+                if (decorationDrag) {
+                  const next = clampIslandBuildPosition(
+                    decorationDrag.transform.x + deltaX,
+                    decorationDrag.transform.z + deltaZ,
+                    decorationDrag.transform.scale,
+                    decorationDrag.itemId
+                  );
+                  moveDecorationPlacement(
+                    decorationDrag.placementId,
+                    { x: next.x, z: next.z }
+                  );
+                  velocityRef.current = { azimuth: 0, polar: 0 };
+                  return;
+                }
+
+                if (keepsakeDrag) {
+                  const next = clampIslandBuildPosition(
+                    keepsakeDrag.transform.x + deltaX,
+                    keepsakeDrag.transform.z + deltaZ,
+                    keepsakeDrag.transform.scale,
+                    keepsakeDrag.key
+                  );
+                  moveKeepsake(
+                    keepsakeDrag.key,
+                    { x: next.x, z: next.z }
+                  );
+                  velocityRef.current = { azimuth: 0, polar: 0 };
+                  return;
+                }
+              }
+
+              controlsRef.current.desiredTarget = [
                 clamp(
-                  gestureStartRef
-                    .current
-                    .polar +
-                    gesture.dy *
-                      0.0038,
-                  0.5,
-                  1.34
-                );
+                  gestureStartRef.current.targetX - deltaX,
+                  -21,
+                  21
+                ),
+                gestureStartRef.current.targetY,
+                clamp(
+                  gestureStartRef.current.targetZ - deltaZ,
+                  -21,
+                  21
+                ),
+              ];
+
+              velocityRef.current = { azimuth: 0, polar: 0 };
             },
 
           onPanResponderRelease:
-            (
-              _,
-              gesture
-            ) => {
-              velocityRef.current =
-                {
-                  azimuth:
-                    -gesture.vx *
-                    0.62,
-                  polar:
-                    gesture.vy *
-                    0.34,
-                };
+            () => {
+              builderDragRef.current = null;
+              clearDecorationDrag();
+              clearKeepsakeDrag();
+              twoFingerGestureRef.current = null;
 
-              setInteractionActive(
-                false
-              );
+              velocityRef.current = {
+                azimuth: 0,
+                polar: 0,
+              };
+
+              setInteractionActive(false);
             },
 
           onPanResponderTerminate:
             () => {
+              builderDragRef.current =
+                null;
+
               velocityRef.current =
                 {
                   azimuth: 0,
@@ -11051,7 +12018,7 @@ export default function NovaIsland3DScene({
           onShouldBlockNativeResponder:
             () => true,
         }),
-      [setInteractionActive]
+      [builderEditing, clearDecorationDrag, clearKeepsakeDrag, getArmedDecorationDrag, getArmedKeepsakeDrag, moveDecorationPlacement, moveKeepsake, queueBuilderMove, setInteractionActive]
     );
 
   const selectedMilestone =
@@ -11153,16 +12120,24 @@ export default function NovaIsland3DScene({
           true
         )
       }
-      onTouchEnd={() =>
+      onTouchEnd={() => {
+        builderDragRef.current =
+          null;
+        clearDecorationDrag();
+                  clearKeepsakeDrag();
         setInteractionActive(
           false
-        )
-      }
-      onTouchCancel={() =>
+        );
+      }}
+      onTouchCancel={() => {
+        builderDragRef.current =
+          null;
+        clearDecorationDrag();
+                  clearKeepsakeDrag();
         setInteractionActive(
           false
-        )
-      }
+        );
+      }}
       {...panResponder.panHandlers}
     >
       <LinearGradient
@@ -11176,6 +12151,14 @@ export default function NovaIsland3DScene({
       />
 
       <Canvas
+        onPointerMissed={() => {
+          if (builderEditing) {
+            selectMilestone(
+              "__nova_builder_clear_selection__",
+              DEFAULT_TARGET
+            );
+          }
+        }}
         style={
           StyleSheet.absoluteFill
         }
@@ -11212,6 +12195,12 @@ export default function NovaIsland3DScene({
           }
           legendaryCompanionIds={
             legendaryCompanionIds
+          }
+          builderPlacements={
+            builderPlacements
+          }
+          onBuilderDragStart={
+            startBuilderDrag
           }
           selectedLegendaryId={
             selectedLegendaryId

@@ -31,6 +31,9 @@ import {
   type IslandMilestone,
   useIsland,
 } from "../context/IslandContext";
+import { useIslandBuilder } from "../context/IslandBuilderContext";
+import IslandBuilderPanel from "../components/island3d/IslandBuilderPanel";
+import IslandBuilderSceneControls from "../components/island3d/IslandBuilderSceneControls";
 import { useCompanion } from "../context/CompanionContext";
 import { COMPANIONS } from "../_lib/companionsCatalog";
 import {
@@ -762,6 +765,26 @@ export default function IslandScreen() {
     refreshIsland,
   } = useIsland();
 
+  const islandBuilder = useIslandBuilder();
+  const [
+    selectedBuilderPlacementId,
+    setSelectedBuilderPlacementId,
+  ] = useState<string | null>(null);
+
+  const selectedBuilderPlacement =
+    useMemo(
+      () =>
+        islandBuilder.placements.find(
+          (placement) =>
+            placement.placementId ===
+            selectedBuilderPlacementId
+        ) ?? null,
+      [
+        islandBuilder.placements,
+        selectedBuilderPlacementId,
+      ]
+    );
+
   const contentWidth = Math.min(Math.max(width - 24, 300), 720);
 
   const friendshipSummaries =
@@ -1121,16 +1144,25 @@ export default function IslandScreen() {
         <View style={styles.sceneCard}>
           <NovaIsland3DScene
             height={
-              contentWidth >= 560
+              islandBuilder.isEditing
+                ? contentWidth >= 560
+                  ? 640
+                  : 570
+                : contentWidth >= 560
                 ? 520
                 : 460
             }
             level={islandLevel}
             selectedMilestoneId={
-              selectedId
+              islandBuilder.isEditing
+                ? selectedBuilderPlacement?.itemId ??
+                  ""
+                : selectedId
             }
             selectedDiscoveryKey={
-              selectedDiscoveryKey
+              islandBuilder.isEditing
+                ? null
+                : selectedDiscoveryKey
             }
             discoveries={
               sceneDiscoveries
@@ -1138,12 +1170,45 @@ export default function IslandScreen() {
             legendaryCompanionIds={
               ownedCompanions
             }
+            builderPlacements={
+              islandBuilder.ready
+                ? islandBuilder.placements
+                : undefined
+            }
             onInteractionChange={
               setSceneInteracting
             }
             onSelectMilestone={(
               milestoneId
             ) => {
+              if (
+                islandBuilder.isEditing
+              ) {
+                if (
+                  milestoneId ===
+                  "__nova_builder_clear_selection__"
+                ) {
+                  setSelectedBuilderPlacementId(
+                    null
+                  );
+                  return;
+                }
+
+                const placement =
+                  islandBuilder.placements.find(
+                    (item) =>
+                      item.itemId ===
+                      milestoneId
+                  );
+
+                if (placement) {
+                  setSelectedBuilderPlacementId(
+                    placement.placementId
+                  );
+                }
+                return;
+              }
+
               const milestone =
                 ISLAND_MILESTONES.find(
                   (item) =>
@@ -1158,6 +1223,15 @@ export default function IslandScreen() {
             onSelectDiscovery={(
               discoveryKey
             ) => {
+              if (
+                islandBuilder.isEditing
+              ) {
+                setSelectedBuilderPlacementId(
+                  null
+                );
+                return;
+              }
+
               const discovery =
                 friendshipDiscoveries.find(
                   (item) =>
@@ -1171,6 +1245,12 @@ export default function IslandScreen() {
                 );
               }
             }}
+          />
+
+          <IslandBuilderSceneControls
+            selectedPlacementId={
+              selectedBuilderPlacementId
+            }
           />
 
           <Animated.View
@@ -1202,6 +1282,15 @@ export default function IslandScreen() {
             </Text>
           </Animated.View>
         </View>
+
+        <IslandBuilderPanel
+          selectedPlacementId={
+            selectedBuilderPlacementId
+          }
+          onSelectPlacement={
+            setSelectedBuilderPlacementId
+          }
+        />
 
         {selectedDiscovery ? (
           <View

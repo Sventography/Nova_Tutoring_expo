@@ -34,7 +34,7 @@ export type IslandPlacement = {
 export type IslandInventory = Record<string, number>;
 
 type BuilderState = {
-  version: 1;
+  version: 2;
   placements: IslandPlacement[];
   inventory: IslandInventory;
   grantedCatalogIds: string[];
@@ -75,7 +75,15 @@ type IslandBuilderContextValue = {
 const IslandBuilderContext =
   createContext<IslandBuilderContextValue | undefined>(undefined);
 
-const STATE_PREFIX = "@island/builder/state.v1";
+/*
+ * v2 intentionally starts a fresh builder snapshot.
+ *
+ * Phase 1A was not exposed in the UI yet, so no player could have customized
+ * its v1 state. Starting fresh lets us safely discard any v1 snapshot that
+ * may have been seeded while IslandContext was still at its temporary Level 1
+ * pre-hydration value.
+ */
+const STATE_PREFIX = "@island/builder/state.v2";
 
 function stateKey(userId: string | null): string {
   return `${STATE_PREFIX}:${userId || "guest"}`;
@@ -103,19 +111,19 @@ function normalizedTransform(
   };
 
   return {
-    x: clamp(num(value?.x, fallback.x), -14, 14),
+    x: clamp(num(value?.x, fallback.x), -22, 22),
     y: clamp(num(value?.y, fallback.y), -2, 8),
-    z: clamp(num(value?.z, fallback.z), -14, 14),
+    z: clamp(num(value?.z, fallback.z), -22, 22),
     rotationY: normalizedRotation(
       value?.rotationY ?? fallback.rotationY
     ),
-    scale: clamp(num(value?.scale, fallback.scale), 0.5, 2),
+    scale: clamp(num(value?.scale, fallback.scale), 0.5, 4),
   };
 }
 
 function cloneState(state: BuilderState): BuilderState {
   return {
-    version: 1,
+    version: 2,
     placements: state.placements.map((placement) => ({
       ...placement,
       transform: { ...placement.transform },
@@ -137,7 +145,7 @@ function defaultStateForLevel(islandLevel: number): BuilderState {
   const unlocked = getUnlockedIslandBuilderItems(islandLevel);
 
   return {
-    version: 1,
+    version: 2,
     placements: unlocked.map((item, index) => ({
       placementId: newPlacementId(item.id, index),
       itemId: item.id,
@@ -234,7 +242,7 @@ function normalizeStoredState(
 
   return reconcileUnlocks(
     {
-      version: 1,
+      version: 2,
       placements,
       inventory,
       grantedCatalogIds,
@@ -293,8 +301,14 @@ export function IslandBuilderProvider({
 }: {
   children: ReactNode;
 }) {
-  const { islandLevel } = useIsland();
-  const { supabaseUserId } = (useUser() || {}) as any;
+  const {
+    islandLevel,
+    ready: islandReady,
+  } = useIsland();
+  const {
+    supabaseUserId,
+    ready: userReady,
+  } = (useUser() || {}) as any;
   const userId = supabaseUserId ? String(supabaseUserId) : null;
 
   const [ready, setReady] = useState(false);
@@ -325,6 +339,17 @@ export function IslandBuilderProvider({
   );
 
   useEffect(() => {
+    /*
+     * Never seed the builder from IslandContext's temporary pre-hydration
+     * Level 1 snapshot. Wait until IslandContext has resolved the real local /
+     * Supabase progress first; then the initial default layout contains every
+     * landmark the player had already unlocked.
+     */
+    if (!userReady || !islandReady) {
+      setReady(false);
+      return;
+    }
+
     let cancelled = false;
     setReady(false);
     setDraft(null);
@@ -357,7 +382,12 @@ export function IslandBuilderProvider({
     return () => {
       cancelled = true;
     };
-  }, [persist, userId]);
+  }, [
+    persist,
+    userId,
+    userReady,
+    islandReady,
+  ]);
 
   useEffect(() => {
     if (!ready) return;
