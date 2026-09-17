@@ -59,4 +59,4 @@ __pycache__/
 *.pyc
 
 # Local Nova development backups
-backups/v13/
+backups/
