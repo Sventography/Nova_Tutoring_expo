@@ -20,6 +20,8 @@ import { CompanionProvider } from "./context/CompanionContext";
 import { StreakProvider } from "./context/StreakContext";
 import { IslandProvider } from "./context/IslandContext";
 import { IslandBuilderProvider } from "./context/IslandBuilderContext";
+import { IslandDecorationProvider } from "./context/IslandDecorationContext";
+import { IslandKeepsakeProvider } from "./context/IslandKeepsakeContext";
 import { StudyProgressProvider } from "./context/StudyProgressContext";
 
 function ThemeGate({ children }: { children: React.ReactNode }) {
@@ -52,6 +54,8 @@ export function AppProviders(props: any) {
           <IslandProvider>
             <IslandBuilderProvider>
               <CoinsProvider>
+                <IslandDecorationProvider>
+                  <IslandKeepsakeProvider>
             <PurchasesProvider>
               <CompanionProvider>
                 <StreakProvider>
@@ -73,6 +77,8 @@ export function AppProviders(props: any) {
                 </StreakProvider>
               </CompanionProvider>
             </PurchasesProvider>
+                  </IslandKeepsakeProvider>
+                </IslandDecorationProvider>
               </CoinsProvider>
             </IslandBuilderProvider>
           </IslandProvider>

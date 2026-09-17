@@ -601,22 +601,26 @@ export function StreakProvider({ children }: { children: ReactNode }) {
           nextCount = prevCount || 1;
         } else if (diff === 1) {
           nextCount = prevCount + 1;
-        } else if (diff && diff > 1) {
+
+          // NOVA_AXOLOTL_REARM_V1
+          // A normal consecutive login re-arms the one-use guest shield.
           if (hasAxolotl) {
             try {
-              const lastUsed = await AsyncStorage.getItem(axolotlKey);
-              let canUseShield = false;
+              await AsyncStorage.removeItem(axolotlKey);
+            } catch (err) {
+              console.warn(
+                "[StreakContext] Axolotl Oracle re-arm error:",
+                err
+              );
+            }
+          }
+        } else if (diff === 2) {
+          // Exactly one missed login day may be protected once.
+          if (hasAxolotl) {
+            try {
+              const shieldSpent = await AsyncStorage.getItem(axolotlKey);
 
-              if (!lastUsed) {
-                canUseShield = true;
-              } else {
-                const since = daysBetween(lastUsed, nowId);
-                if (since === null || since >= 7) {
-                  canUseShield = true;
-                }
-              }
-
-              if (canUseShield) {
+              if (!shieldSpent) {
                 nextCount = prevCount + 1;
                 usedShield = true;
                 await AsyncStorage.setItem(axolotlKey, nowId);
@@ -635,6 +639,9 @@ export function StreakProvider({ children }: { children: ReactNode }) {
           if (!usedShield) {
             nextCount = 1;
           }
+        } else if (diff && diff > 2) {
+          // More than one missed login day always breaks the streak.
+          nextCount = 1;
         }
       }
 

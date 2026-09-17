@@ -10,7 +10,6 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 import AppProviders from "./AppProviders";
 import { AiPlanProvider } from "./context/AiPlanContext";
-import { StreakProvider } from "./context/StreakContext";
 import ThemeOverlay from "./components/ThemeOverlay";
 import { FxProvider } from "./context/FxProvider";
 import { coinsAutoBoot } from "./utils/coins-autoboot";
@@ -24,12 +23,10 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <AppProviders>
         <AiPlanProvider>
-          <StreakProvider>
-            <FxProvider>
+          <FxProvider>
               <ThemeOverlay />
               <Slot />
             </FxProvider>
-          </StreakProvider>
         </AiPlanProvider>
       </AppProviders>
     </GestureHandlerRootView>

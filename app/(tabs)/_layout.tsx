@@ -352,7 +352,7 @@ function getLegendaryPresentation(
       secondary: "#F0ABFC",
       background: "rgba(7,15,38,0.96)",
       emblem: "◉",
-      abilityLabel: "Streak shield · once per 7 days",
+      abilityLabel: "Protects one missed day · re-arms after a consecutive login",
       arrivalLine:
         "The Oracle awakens. Your streak is under protection.",
       activationLine:
