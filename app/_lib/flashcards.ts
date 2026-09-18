@@ -1,4 +1,10 @@
-export type Card = { question?: string; answer?: string; front?: string; back?: string };
+export type Card = {
+  question?: string;
+  answer?: string;
+  front?: string;
+  back?: string;
+  explanation?: string;
+};
 export type TopicMeta = { id: string; title: string; count: number };
 
 // Expo/Metro supports importing JSON directly.
@@ -7,7 +13,15 @@ import data from "./topics-data.json";
 function toQA(card: Card) {
   const q = (card.question ?? card.front)?.toString();
   const a = (card.answer ?? card.back)?.toString();
-  return q && a ? { question: q, answer: a } : null;
+  const explanation = card.explanation?.toString().trim();
+
+  return q && a
+    ? {
+        question: q,
+        answer: a,
+        explanation: explanation || undefined,
+      }
+    : null;
 }
 
 const TOPICS = (data as any)?.topics ?? [];

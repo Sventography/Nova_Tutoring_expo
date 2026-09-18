@@ -4,6 +4,7 @@ export type QuizItem = {
   question: string;
   answer: string;
   choices: string[];
+  explanation?: string;
 };
 
 type RawCard = {
@@ -15,6 +16,7 @@ type RawCard = {
   a?: unknown;
   term?: unknown;
   definition?: unknown;
+  explanation?: unknown;
 };
 
 const FALLBACK_DISTRACTORS = [
@@ -49,6 +51,7 @@ function normalized(value: unknown): string {
 function toPair(card: RawCard): {
   question: string;
   answer: string;
+  explanation?: string;
 } | null {
   const question = clean(
     card?.question ??
@@ -64,8 +67,14 @@ function toPair(card: RawCard): {
       card?.definition
   );
 
+  const explanation = clean(card?.explanation);
+
   return question && answer
-    ? { question, answer }
+    ? {
+        question,
+        answer,
+        explanation: explanation || undefined,
+      }
     : null;
 }
 
@@ -116,6 +125,7 @@ export function buildQuiz(
       (pair): pair is {
         question: string;
         answer: string;
+        explanation?: string;
       } => !!pair
     );
 
@@ -173,6 +183,7 @@ export function buildQuiz(
       question: pair.question,
       answer: pair.answer,
       choices,
+      explanation: pair.explanation,
     };
   });
 }

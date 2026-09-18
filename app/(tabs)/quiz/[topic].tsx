@@ -43,11 +43,18 @@ import {
   useServerQuizAchievementAttempt,
 } from "../../hooks/useServerQuizAchievementAttempt";
 
-type QItem = { question: string; choices: string[]; answer: string };
+type QItem = {
+  question: string;
+  choices: string[];
+  answer: string;
+  explanation?: string;
+};
 
 const QUIZ_LEN = 20;
 const BASE_TOTAL_TIME = 300; // 5 min
 const ADVANCE_DELAY = 650;
+const NEED_HELP_WRONG_STREAK = 3; // NOVA_NEED_HELP_PHASE1_V3
+const NEED_HELP_TOTAL_WRONG_THRESHOLD = 8;
 
 const ASTRAL_TOPIC_BONUS_KEY_PREFIX =
   "@nova/astral-topic-certificate-bonus:v1";
@@ -116,6 +123,14 @@ export default function TopicQuiz() {
   const [done, setDone] = useState(false);
   const autoRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const totalTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [needHelpMode, setNeedHelpMode] =
+    useState<"mid" | "end" | null>(null);
+  const [showAnswerFeedback, setShowAnswerFeedback] =
+    useState(false); // NOVA_WRONG_ANSWER_TEACHING_V1
+  const wrongStreakRef = useRef(0);
+  const wrongTotalRef = useRef(0);
+  const midNeedHelpShownRef = useRef(false);
+  const pendingNeedHelpAfterFeedbackRef = useRef(false);
 
   const loggedRef = useRef(false);
   const notifiedRef = useRef(false);
@@ -271,6 +286,12 @@ export default function TopicQuiz() {
 
           loggedRef.current = false;
           notifiedRef.current = false;
+          wrongStreakRef.current = 0;
+          wrongTotalRef.current = 0;
+          midNeedHelpShownRef.current = false;
+          pendingNeedHelpAfterFeedbackRef.current = false;
+          setNeedHelpMode(null);
+          setShowAnswerFeedback(false);
           certificateCreatedRef.current = false;
           astralBonusGivenRef.current = false;
           studyXpEligibleRef.current = false;
@@ -299,7 +320,13 @@ export default function TopicQuiz() {
 
   // Total timer
   useEffect(() => {
-    if (loading || done || noData) return;
+    if (
+      loading ||
+      done ||
+      noData ||
+      needHelpMode === "mid" ||
+      showAnswerFeedback
+    ) return;
 
     if (totalTimerRef.current) clearInterval(totalTimerRef.current);
     totalTimerRef.current = setInterval(() => {
@@ -319,7 +346,13 @@ export default function TopicQuiz() {
       if (totalTimerRef.current) clearInterval(totalTimerRef.current);
       totalTimerRef.current = null;
     };
-  }, [loading, done, noData]);
+  }, [
+    loading,
+    done,
+    noData,
+    needHelpMode,
+    showAnswerFeedback,
+  ]);
 
   function next() {
     if (idx + 1 >= total) {
@@ -340,6 +373,23 @@ export default function TopicQuiz() {
 
     const chosen = current.choices[i];
     const isCorrect = chosen === current.answer;
+
+    if (isCorrect) {
+      wrongStreakRef.current = 0;
+    } else {
+      wrongStreakRef.current += 1;
+      wrongTotalRef.current += 1;
+    }
+
+    const shouldOfferMidQuizHelp =
+      !isCorrect &&
+      idx + 1 < total &&
+      !midNeedHelpShownRef.current &&
+      wrongStreakRef.current >= NEED_HELP_WRONG_STREAK;
+
+    if (shouldOfferMidQuizHelp) {
+      midNeedHelpShownRef.current = true;
+    }
 
     // Focus Practice: remember exact missed questions for targeted review.
     if (isCorrect) {
@@ -427,10 +477,66 @@ export default function TopicQuiz() {
     }
 
     if (autoRef.current) clearTimeout(autoRef.current);
-    autoRef.current = setTimeout(next, ADVANCE_DELAY);
+
+    if (!isCorrect) {
+      pendingNeedHelpAfterFeedbackRef.current =
+        shouldOfferMidQuizHelp;
+      setShowAnswerFeedback(true);
+      return;
+    }
+
+    autoRef.current = setTimeout(() => {
+      autoRef.current = null;
+      next();
+    }, ADVANCE_DELAY);
+  }
+
+  function continueAfterAnswerFeedback() {
+    setShowAnswerFeedback(false);
+
+    const shouldOfferNeedHelp =
+      pendingNeedHelpAfterFeedbackRef.current;
+
+    pendingNeedHelpAfterFeedbackRef.current = false;
+
+    if (shouldOfferNeedHelp) {
+      setNeedHelpMode("mid");
+      return;
+    }
+
+    next();
+  }
+
+  function continueAfterNeedHelp() {
+    setNeedHelpMode(null);
+    next();
+  }
+
+  function openFocusPracticeFromNeedHelp() {
+    if (autoRef.current) clearTimeout(autoRef.current);
+    autoRef.current = null;
+    setNeedHelpMode(null);
+    setShowAnswerFeedback(false);
+    pendingNeedHelpAfterFeedbackRef.current = false;
+
+    if (!done) {
+      studyXpEligibleRef.current = false;
+    }
+
+    router.replace("/focus-practice" as any);
+  }
+
+  function dismissEndNeedHelp() {
+    setNeedHelpMode(null);
+    setShowCongrats(true);
   }
 
   function finishNow() {
+    if (autoRef.current) clearTimeout(autoRef.current);
+    autoRef.current = null;
+    setNeedHelpMode(null);
+    setShowAnswerFeedback(false);
+    pendingNeedHelpAfterFeedbackRef.current = false;
     studyXpEligibleRef.current = false;
     setDone(true);
   }
@@ -465,6 +571,12 @@ export default function TopicQuiz() {
 
     loggedRef.current = false;
     notifiedRef.current = false;
+    wrongStreakRef.current = 0;
+    wrongTotalRef.current = 0;
+    midNeedHelpShownRef.current = false;
+    pendingNeedHelpAfterFeedbackRef.current = false;
+    setNeedHelpMode(null);
+    setShowAnswerFeedback(false);
     certificateCreatedRef.current = false;
     astralBonusGivenRef.current = false;
     studyXpEligibleRef.current = false;
@@ -842,7 +954,16 @@ if (studyXpEligibleRef.current) {
 
     if (!notifiedRef.current) {
       notifiedRef.current = true;
-      setShowCongrats(true);
+
+      if (
+        wrongTotalRef.current >
+        NEED_HELP_TOTAL_WRONG_THRESHOLD
+      ) {
+        setShowCongrats(false);
+        setNeedHelpMode("end");
+      } else {
+        setShowCongrats(true);
+      }
     }
   }, [
     done,
@@ -987,6 +1108,43 @@ if (studyXpEligibleRef.current) {
             <Text style={S.btnTxt}>Start Over</Text>
           </Pressable>
         </View>
+
+        {needHelpMode === "end" ? (
+          <View style={S.modalBackdrop}>
+            <View style={S.modalCard}>
+              <Text style={S.modalTitle}>
+                Want some focused help?
+              </Text>
+              <Text style={S.modalText}>
+                You missed {wrongTotalRef.current} questions in this quiz.
+                Nova saved the questions that gave you trouble and can build
+                focused practice around them.
+              </Text>
+
+              <View style={S.modalButtons}>
+                <Pressable
+                  style={[S.btn, S.solid, { flex: 1 }]}
+                  onPress={openFocusPracticeFromNeedHelp}
+                >
+                  <Text style={S.btnTxt}>Open Focus Practice</Text>
+                </Pressable>
+
+                <View style={{ width: 10 }} />
+
+                <Pressable
+                  style={[S.btn, S.outline, { flex: 1 }]}
+                  onPress={dismissEndNeedHelp}
+                >
+                  <Text style={S.btnTxt}>Not Now</Text>
+                </Pressable>
+              </View>
+
+              <Text style={S.needHelpHint}>
+                Focus Practice uses your saved mistakes for targeted review.
+              </Text>
+            </View>
+          </View>
+        ) : null}
 
         {showCongrats && (
           <View style={S.modalBackdrop}>
@@ -1200,6 +1358,80 @@ if (studyXpEligibleRef.current) {
           <Text style={S.btnTxt}>Finish</Text>
         </Pressable>
       </View>
+
+      {showAnswerFeedback ? (
+        <View style={S.modalBackdrop}>
+          <View style={S.modalCard}>
+            <Text style={S.modalTitle}>
+              Let’s learn from that one
+            </Text>
+
+            <Text style={S.feedbackLabel}>
+              Your answer
+            </Text>
+            <Text style={S.feedbackWrong}>
+              {selected != null
+                ? current.choices[selected]
+                : "No answer selected"}
+            </Text>
+
+            <Text style={S.feedbackLabel}>
+              Correct answer
+            </Text>
+            <Text style={S.feedbackCorrect}>
+              {current.answer}
+            </Text>
+
+            <Text style={S.feedbackLabel}>Why</Text>
+            <Text style={S.feedbackWhy}>
+              {current.explanation ||
+                "A detailed explanation has not been added to this question yet. The correct answer above is still saved for Focus Practice."}
+            </Text>
+
+            <Pressable
+              style={[S.btn, S.solid]}
+              onPress={continueAfterAnswerFeedback}
+            >
+              <Text style={S.btnTxt}>Continue</Text>
+            </Pressable>
+          </View>
+        </View>
+      ) : null}
+
+      {needHelpMode === "mid" ? (
+        <View style={S.modalBackdrop}>
+          <View style={S.modalCard}>
+            <Text style={S.modalTitle}>Need a little help?</Text>
+            <Text style={S.modalText}>
+              You missed 3 questions in a row. Nova has been saving the
+              questions that give you trouble and can turn them into focused
+              practice.
+            </Text>
+
+            <View style={S.modalButtons}>
+              <Pressable
+                style={[S.btn, S.solid, { flex: 1 }]}
+                onPress={openFocusPracticeFromNeedHelp}
+              >
+                <Text style={S.btnTxt}>Practice Now</Text>
+              </Pressable>
+
+              <View style={{ width: 10 }} />
+
+              <Pressable
+                style={[S.btn, S.outline, { flex: 1 }]}
+                onPress={continueAfterNeedHelp}
+              >
+                <Text style={S.btnTxt}>Keep Going</Text>
+              </Pressable>
+            </View>
+
+            <Text style={S.needHelpHint}>
+              Nova only gives this mid-quiz suggestion once per attempt.
+            </Text>
+          </View>
+        </View>
+      ) : null}
     </Shell>
   );
 }
@@ -1575,6 +1807,45 @@ export const S = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+  },
+  needHelpHint: {
+    marginTop: 12,
+    color: "#9BDFFF",
+    fontSize: 11,
+    fontWeight: "700",
+    lineHeight: 16,
+    textAlign: "center",
+    opacity: 0.9,
+  },
+  feedbackLabel: {
+    marginTop: 8,
+    marginBottom: 4,
+    color: "#9BDFFF",
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+  },
+  feedbackWrong: {
+    marginBottom: 8,
+    color: "#FF9B9B",
+    fontSize: 15,
+    fontWeight: "800",
+    lineHeight: 21,
+  },
+  feedbackCorrect: {
+    marginBottom: 8,
+    color: NEON,
+    fontSize: 15,
+    fontWeight: "900",
+    lineHeight: 21,
+  },
+  feedbackWhy: {
+    marginBottom: 16,
+    color: "#E2F7FB",
+    fontSize: 14,
+    fontWeight: "700",
+    lineHeight: 20,
   },
 
 
