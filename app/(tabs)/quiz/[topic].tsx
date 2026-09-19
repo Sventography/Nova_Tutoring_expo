@@ -31,6 +31,7 @@ import { useUser } from "../../context/UserContext";
 import { createCertificate } from "../../utils/certificates";
 import { useIsland } from "../../context/IslandContext";
 import { useLegendaryCompanions } from "../../hooks/useLegendaryCompanions";
+import { emitDailyQuestProgress } from "../../_lib/dailyQuestEvents";
 import {
   useStudyProgress,
   type StudyQuizAward,
@@ -425,6 +426,11 @@ export default function TopicQuiz() {
     if (isCorrect) {
       setCorrect((c) => c + 1);
 
+      emitDailyQuestProgress({
+        type: "quiz_correct",
+        amount: 1,
+      });
+
       // 🪙 Normal quiz coins are now protected by both a per-topic daily
       // allowance and an all-quiz daily allowance. Legendary bonuses still
       // apply on top of the base quota.
@@ -616,6 +622,22 @@ export default function TopicQuiz() {
 
     // The guarded direct certificate writer below is the single source of truth.
     loggedRef.current = true;
+
+    if (studyXpEligibleRef.current) {
+      emitDailyQuestProgress({
+        type: "quiz_completed",
+        amount: 1,
+        scorePercent: pct,
+      });
+
+      if (pct >= 80) {
+        emitDailyQuestProgress({
+          type: "quiz_score_80",
+          amount: 1,
+          scorePercent: pct,
+        });
+      }
+    }
 
     // 🏆 A perfect score gets the full Daily Perfect Bonus once per topic/day.
     // This bonus is intentionally separate from the normal correct-answer quota.

@@ -19,6 +19,7 @@ import { useCoins } from "../context/CoinsContext";
 import { useUser } from "../context/UserContext";
 import { useStreak } from "../context/StreakContext";
 import { useFx } from "../context/FxProvider";
+import { useDailyQuests } from "../context/DailyQuestsContext";
 
 const COIN_IMG = require("../assets/coin.png");
 const ACCOUNT_ROUTE = "/(tabs)/account";
@@ -30,6 +31,7 @@ export default function HeaderBar() {
   const router = useRouter();
 
   const { enabled: fxOn, toggle: toggleFx } = useFx();
+  const { claimableCount, allComplete, bonusClaimed } = useDailyQuests();
   const { coins = 0 } = useCoins();
   const { loaded, count, todayChecked, markToday } =
     (useStreak() || {}) as any;
@@ -112,6 +114,14 @@ export default function HeaderBar() {
     }
   };
 
+  const goDailyQuests = () => {
+    try {
+      (router as any).push?.("/daily-quests");
+    } catch {
+      (router as any).replace?.("/daily-quests");
+    }
+  };
+
   const onShare = async () => {
     const url =
       "https://novatutoring-eoq65leh2-contactnovatutoring-8350s-projects.vercel.app";
@@ -176,6 +186,40 @@ export default function HeaderBar() {
       </Pressable>
 
       <View style={S.right}>
+        <Pressable
+          onPress={goDailyQuests}
+          hitSlop={hit}
+          style={S.iconBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Open Daily Quests"
+        >
+          <Ionicons
+            name={
+              claimableCount > 0 ||
+              (allComplete && !bonusClaimed)
+                ? "clipboard"
+                : "clipboard-outline"
+            }
+            size={iconSize}
+            color={
+              claimableCount > 0 ||
+              (allComplete && !bonusClaimed)
+                ? "#FDE047"
+                : "#8ecae6"
+            }
+          />
+
+          {(claimableCount > 0 ||
+            (allComplete && !bonusClaimed)) && (
+            <View style={S.questBadge}>
+              <Text style={S.questBadgeText}>
+                {claimableCount +
+                  (allComplete && !bonusClaimed ? 1 : 0)}
+              </Text>
+            </View>
+          )}
+        </Pressable>
+
         <Pressable
           onPress={() => {
             console.log("FX clicked from HeaderBar");
@@ -280,6 +324,26 @@ const S = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.25)",
     borderWidth: 1,
     borderColor: "rgba(0,229,255,0.2)",
+  },
+
+  questBadge: {
+    position: "absolute",
+    top: -5,
+    right: -5,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    paddingHorizontal: 3,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#DC2626",
+    borderWidth: 1,
+    borderColor: "#FCA5A5",
+  },
+  questBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 9,
+    fontWeight: "900",
   },
 
   bottomGlow: {

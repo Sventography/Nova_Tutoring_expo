@@ -27,6 +27,7 @@ import { useTheme } from "../context/ThemeContext";
 import { useCursor } from "../context/CursorContext";
 import { useUser } from "../context/UserContext";
 import { usePurchases } from "../context/PurchasesContext";
+import { useDailyDeal } from "../context/DailyDealContext";
 import { useCompanion } from "../context/CompanionContext";
 import { useAiPlan } from "../context/AiPlanContext";
 import { useMerchRewards } from "../hooks/useMerchRewards";
@@ -2346,6 +2347,7 @@ export default function Shop() {
   ]);
 
   const { purchases, isOwned, grant } = usePurchases();
+  const { deal: dailyDeal } = useDailyDeal();
   const {
     activeCompanionId: equippedCompanionId,
     ownedCompanions: ownedCompanionIds,
@@ -2372,6 +2374,12 @@ export default function Shop() {
 
   const isOwnedAny = useMemo(() => makeIsOwnedAny(isOwned), [isOwned, purchases]);
   const grantAny = useMemo(() => makeGrantAny(grant), [grant]);
+
+  const dailyDealItem = useMemo(
+    () => dailyDeal ? catalog.find(item => item.id === dailyDeal.itemId) || null : null,
+    [dailyDeal]
+  );
+  const dailyDealOwned = !!dailyDealItem && isOwnedAny(dailyDealItem.id);
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [need, setNeed] = useState<number>(0);
@@ -4552,7 +4560,10 @@ export default function Shop() {
     return byCat;
   }, []);
 
-  function buyWithCoins(it: any, meta?: { size?: string }) {
+  function buyWithCoins(
+    it: any,
+    meta?: { size?: string; dailyDeal?: boolean }
+  ) {
     if (isPhysicalMerchItem(it)) {
       Alert.alert(
         "Nova Rewards",
@@ -4565,7 +4576,11 @@ export default function Shop() {
       return;
     }
 
-    const price = it.priceCoins ?? 0;
+    const basePrice = it.priceCoins ?? 0;
+    const price =
+      meta?.dailyDeal === true && dailyDeal?.itemId === it?.id
+        ? dailyDeal.discountedCoinPrice
+        : basePrice;
     if (!price) return;
 
     if (isComingSoon(it)) {
@@ -5908,6 +5923,41 @@ export default function Shop() {
             </Pressable>
           </View>
         </View>
+
+        {dailyDeal && dailyDealItem ? (
+          <View style={{
+            marginTop:16,marginBottom:6,borderRadius:18,borderWidth:1,
+            borderColor:"#FACC15",backgroundColor:"rgba(250,204,21,0.08)",padding:16
+          }}>
+            <Text style={{color:"#FDE047",fontSize:10,fontWeight:"900",letterSpacing:1.2}}>
+              TODAY'S NOVA DEAL · {dailyDeal.discountPercent}% OFF
+            </Text>
+            <Text style={{color:tokens.titleText as any,fontSize:18,fontWeight:"900",marginTop:5}}>
+              {dailyDeal.title}
+            </Text>
+            <View style={{flexDirection:"row",alignItems:"baseline",columnGap:10,marginTop:6,flexWrap:"wrap"}}>
+              <Text style={{color:tokens.cardText as any,fontSize:12,fontWeight:"700",textDecorationLine:"line-through"}}>
+                {dailyDeal.originalCoinPrice.toLocaleString()} coins
+              </Text>
+              <Text style={{color:"#FACC15",fontSize:17,fontWeight:"900"}}>
+                {dailyDeal.discountedCoinPrice.toLocaleString()} coins
+              </Text>
+            </View>
+            {dailyDealOwned ? (
+              <Text style={{color:"#86EFAC",fontSize:12,fontWeight:"800",marginTop:10}}>Owned ✓</Text>
+            ) : (
+              <Pressable
+                onPress={() => buyWithCoins(dailyDealItem, { dailyDeal: true })}
+                style={({pressed}) => ({
+                  marginTop:12,alignSelf:"flex-start",paddingHorizontal:15,paddingVertical:9,
+                  borderRadius:999,backgroundColor:pressed ? "rgba(8,145,178,0.72)" : "#0891B2"
+                })}
+              >
+                <Text style={{color:"#FFF",fontSize:12,fontWeight:"900"}}>Unlock Today's Deal</Text>
+              </Pressable>
+            )}
+          </View>
+        ) : null}
 
         {Platform.OS !== "web" && (
           <Pressable

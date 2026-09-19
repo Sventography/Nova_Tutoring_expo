@@ -32,6 +32,7 @@ import ScrollableTabBar from "../components/ScrollableTabBar";
 import HeaderBar from "../components/HeaderBar";
 import StarTrailOverlay from "../components/StarTrailOverlay";
 import ToastHost from "../components/ToastHost";
+import DailyWelcomeModal from "../components/DailyWelcomeModal";
 import AchievementsAutoTracker from "../context/AchievementsAutoTracker";
 import AchievementsCoinsBridge from "../context/AchievementsCoinsBridge";
 import FxOverlay from "../components/FxOverlay";
@@ -3435,6 +3436,7 @@ export default function TabsLayout() {
     <>
       <GlobalTextDefaults />
       <ToastHost />
+      <DailyWelcomeModal />
       <InnerTabsLayout />
       {Platform.OS === "web" ? <CursorOverlay /> : null}
     </>
