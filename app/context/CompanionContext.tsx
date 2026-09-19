@@ -50,6 +50,9 @@ export type CompanionDailyStatus = {
   tapsRemaining: number;
   petsRemaining: number;
   activitiesRemaining: number;
+  friendshipPointsEarned: number;
+  friendshipPointsRemaining: number;
+  friendshipPointCap: number;
 };
 
 type DailyEntry = {
@@ -130,6 +133,13 @@ const FRIENDSHIP_POINTS_PER_ACTION: Record<
   activity: 2,
 };
 
+/*
+ * Official friendship rule:
+ * each regular companion can earn at most
+ * 10 friendship points per local calendar day.
+ */
+const DAILY_FRIENDSHIP_POINT_CAP = 10;
+
 const MAX_FRIENDSHIP_POINTS = 120;
 
 function storageKey(userId: string | null): string {
@@ -202,6 +212,20 @@ function sanitizePoints(value: unknown): number {
   return Math.min(
     MAX_FRIENDSHIP_POINTS,
     sanitizeCount(value)
+  );
+}
+
+function dailyFriendshipPoints(
+  entry: DailyEntry
+): number {
+  return Math.min(
+    DAILY_FRIENDSHIP_POINT_CAP,
+    entry.tap *
+      FRIENDSHIP_POINTS_PER_ACTION.tap +
+      entry.pet *
+        FRIENDSHIP_POINTS_PER_ACTION.pet +
+      entry.activity *
+        FRIENDSHIP_POINTS_PER_ACTION.activity
   );
 }
 
@@ -710,9 +734,16 @@ export const CompanionProvider: React.FC<
       const currentEntry =
         currentDaily.companions[id] ||
         emptyDailyEntry();
-      const cap = DAILY_CAPS[kind];
 
-      if (currentEntry[kind] >= cap) {
+      const dailyPointsEarned =
+        dailyFriendshipPoints(
+          currentEntry
+        );
+
+      if (
+        dailyPointsEarned >=
+        DAILY_FRIENDSHIP_POINT_CAP
+      ) {
         return {
           points: currentPoints,
           level: previousProgress.level,
@@ -725,11 +756,40 @@ export const CompanionProvider: React.FC<
         };
       }
 
+      const cap = DAILY_CAPS[kind];
+
+      if (currentEntry[kind] >= cap) {
+        return {
+          points: currentPoints,
+          level: previousProgress.level,
+          leveledUp: false,
+          awardedPoints: 0,
+          dailyCapReached: false,
+          maxed: false,
+          nextLevelAt:
+            previousProgress.nextLevelAt,
+        };
+      }
+
       const requestedIncrease =
         FRIENDSHIP_POINTS_PER_ACTION[kind];
+
+      const dailyRemaining =
+        Math.max(
+          0,
+          DAILY_FRIENDSHIP_POINT_CAP -
+            dailyPointsEarned
+        );
+
+      const grantedIncrease =
+        Math.min(
+          requestedIncrease,
+          dailyRemaining
+        );
+
       const nextPoints = Math.min(
         MAX_FRIENDSHIP_POINTS,
-        currentPoints + requestedIncrease
+        currentPoints + grantedIncrease
       );
       const awardedPoints =
         nextPoints - currentPoints;
@@ -779,7 +839,10 @@ export const CompanionProvider: React.FC<
           nextProgress.level >
           previousProgress.level,
         awardedPoints,
-        dailyCapReached: false,
+        dailyCapReached:
+          dailyPointsEarned +
+            awardedPoints >=
+          DAILY_FRIENDSHIP_POINT_CAP,
         maxed:
           nextPoints >=
           MAX_FRIENDSHIP_POINTS,

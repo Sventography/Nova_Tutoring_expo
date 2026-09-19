@@ -21,6 +21,7 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import NovaIsland3DScene, {
   type Island3DDiscovery,
@@ -34,7 +35,9 @@ import {
 import { useIslandBuilder } from "../context/IslandBuilderContext";
 import IslandBuilderPanel from "../components/island3d/IslandBuilderPanel";
 import IslandBuilderSceneControls from "../components/island3d/IslandBuilderSceneControls";
+import NovaGuideOverlay from "../components/NovaGuideOverlay";
 import { useCompanion } from "../context/CompanionContext";
+import { useUser } from "../context/UserContext";
 import { COMPANIONS } from "../_lib/companionsCatalog";
 import {
   getCommonCompanionFriendshipProfile,
@@ -44,6 +47,9 @@ import {
   type CompanionIslandKeepsake,
   type CompanionIslandResident,
 } from "../_lib/commonCompanionFriendship";
+
+const ISLAND_GUIDE_PREFIX =
+  "@nova/islandBuilderGuide.v1:";
 
 const XP_SOURCES = [
   {
@@ -741,6 +747,9 @@ function IslandScene({
 export default function IslandScreen() {
   const { width } = useWindowDimensions();
   const {
+    supabaseUserId,
+  } = useUser();
+  const {
     friendshipPoints,
     ownedCompanions,
   } = useCompanion();
@@ -766,6 +775,79 @@ export default function IslandScreen() {
   } = useIsland();
 
   const islandBuilder = useIslandBuilder();
+
+  const islandGuideOwner =
+    supabaseUserId || "guest";
+
+  const [
+    showIslandGuide,
+    setShowIslandGuide,
+  ] = useState(false);
+
+  useEffect(() => {
+    if (!islandBuilder.ready) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const showGuideIfNeeded =
+      async () => {
+        const key =
+          `${ISLAND_GUIDE_PREFIX}${islandGuideOwner}`;
+
+        try {
+          const seen =
+            await AsyncStorage.getItem(
+              key
+            );
+
+          if (
+            cancelled ||
+            seen === "seen"
+          ) {
+            return;
+          }
+
+          await AsyncStorage.setItem(
+            key,
+            "seen"
+          );
+
+          if (!cancelled) {
+            setShowIslandGuide(
+              true
+            );
+          }
+        } catch (error) {
+          console.warn(
+            "[IslandGuide] state failed",
+            error
+          );
+
+          if (!cancelled) {
+            setShowIslandGuide(
+              true
+            );
+          }
+        }
+      };
+
+    const timer =
+      setTimeout(
+        showGuideIfNeeded,
+        550
+      );
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [
+    islandBuilder.ready,
+    islandGuideOwner,
+  ]);
+
   const [
     selectedBuilderPlacementId,
     setSelectedBuilderPlacementId,
@@ -1086,20 +1168,72 @@ export default function IslandScreen() {
             </Text>
           </View>
 
-          <Pressable
-            onPress={() => void refreshIsland()}
-            disabled={loading}
-            style={({ pressed }) => [
-              styles.refresh,
-              { opacity: loading ? 0.55 : pressed ? 0.72 : 1 },
-            ]}
+          <View
+            style={
+              styles.headerActions
+            }
           >
-            {loading ? (
-              <ActivityIndicator size="small" color="#67e8f9" />
-            ) : (
-              <Ionicons name="refresh" color="#67e8f9" size={20} />
-            )}
-          </Pressable>
+            <Pressable
+              onPress={() =>
+                setShowIslandGuide(
+                  true
+                )
+              }
+              style={({
+                pressed,
+              }) => [
+                styles.help,
+                {
+                  opacity:
+                    pressed
+                      ? 0.72
+                      : 1,
+                },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Island Builder help"
+            >
+              <Ionicons
+                name="help"
+                color="#c4b5fd"
+                size={20}
+              />
+            </Pressable>
+
+            <Pressable
+              onPress={() =>
+                void refreshIsland()
+              }
+              disabled={loading}
+              style={({
+                pressed,
+              }) => [
+                styles.refresh,
+                {
+                  opacity: loading
+                    ? 0.55
+                    : pressed
+                    ? 0.72
+                    : 1,
+                },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Refresh island"
+            >
+              {loading ? (
+                <ActivityIndicator
+                  size="small"
+                  color="#67e8f9"
+                />
+              ) : (
+                <Ionicons
+                  name="refresh"
+                  color="#67e8f9"
+                  size={20}
+                />
+              )}
+            </Pressable>
+          </View>
         </View>
 
         <View style={styles.progressCard}>
@@ -1755,6 +1889,104 @@ export default function IslandScreen() {
           feed this island. Every point of XP now has somewhere to live. 💫
         </Text>
       </ScrollView>
+
+      <NovaGuideOverlay
+        visible={
+          showIslandGuide
+        }
+        onDismiss={() =>
+          setShowIslandGuide(
+            false
+          )
+        }
+        pose="welcome"
+        eyebrow="ISLAND BUILDER"
+        title="Your island is yours to shape"
+        message="Your learning grows this world. Here are the basics for exploring and building."
+        dismissLabel="Got It"
+      >
+        <View
+          style={
+            styles.guideTips
+          }
+        >
+          <View
+            style={
+              styles.guideTip
+            }
+          >
+            <Ionicons
+              name="hand-left-outline"
+              color="#67e8f9"
+              size={18}
+            />
+            <Text
+              style={
+                styles.guideTipText
+              }
+            >
+              Drag to move around and explore your island.
+            </Text>
+          </View>
+
+          <View
+            style={
+              styles.guideTip
+            }
+          >
+            <Ionicons
+              name="move-outline"
+              color="#67e8f9"
+              size={18}
+            />
+            <Text
+              style={
+                styles.guideTipText
+              }
+            >
+              Use two fingers to orbit, and pinch to zoom.
+            </Text>
+          </View>
+
+          <View
+            style={
+              styles.guideTip
+            }
+          >
+            <Ionicons
+              name="sparkles-outline"
+              color="#67e8f9"
+              size={18}
+            />
+            <Text
+              style={
+                styles.guideTipText
+              }
+            >
+              Tap items to select them, then use Builder controls to place and adjust decorations.
+            </Text>
+          </View>
+
+          <View
+            style={
+              styles.guideTip
+            }
+          >
+            <Ionicons
+              name="school-outline"
+              color="#67e8f9"
+              size={18}
+            />
+            <Text
+              style={
+                styles.guideTipText
+              }
+            >
+              Keep learning to raise your Island Level and reveal new places, rewards, and companions.
+            </Text>
+          </View>
+        </View>
+      </NovaGuideOverlay>
     </LinearGradient>
   );
 }
@@ -1810,6 +2042,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     marginTop: 3,
+  },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  help: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#c4b5fd73",
+    backgroundColor: "#7c3aed21",
+    alignItems: "center",
+    justifyContent: "center",
   },
   refresh: {
     width: 42,
@@ -2254,6 +2501,27 @@ const styles = StyleSheet.create({
   friendshipUnlockText: {
     fontSize: 8.5,
     fontWeight: "900",
+  },
+  guideTips: {
+    gap: 10,
+  },
+  guideTip: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    borderRadius: 13,
+    borderWidth: 1,
+    borderColor: "rgba(103,232,249,0.20)",
+    backgroundColor: "rgba(8,145,178,0.08)",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  guideTipText: {
+    flex: 1,
+    color: "#D8F7FF",
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: "700",
   },
   footer: {
     color: "#7dd3fc",
