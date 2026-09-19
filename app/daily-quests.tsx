@@ -153,7 +153,7 @@ export default function DailyQuestsScreen() {
             >
               Learn a little today,
               earn a little today.
-              Quests reset at midnight.
+              New quests arrive at midnight.
             </Text>
           </View>
         </View>

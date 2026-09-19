@@ -67,34 +67,124 @@ type DailyQuestsContextValue = {
 const STORAGE_PREFIX =
   "@nova/dailyQuests.v1:";
 
-const QUESTS: QuestDefinition[] = [
-  {
-    id: "complete_quiz",
-    title: "Finish a Quiz",
-    description:
-      "Complete all questions in any quiz.",
-    target: 1,
-    baseRewardCoins: 15,
-  },
-  {
-    id: "quiz_correct_10",
-    title: "10 Correct Answers",
-    description:
-      "Answer 10 quiz questions correctly today.",
-    target: 10,
-    baseRewardCoins: 25,
-  },
-  {
-    id: "quiz_score_80",
-    title: "Score 80%+",
-    description:
-      "Finish a quiz with a score of at least 80%.",
-    target: 1,
-    baseRewardCoins: 20,
-  },
-];
+const QUIZ_COMPLETION_VARIANTS:
+  QuestDefinition[] = [
+    {
+      id: "complete_quiz",
+      title: "Finish a Quiz",
+      description:
+        "Complete all questions in any quiz.",
+      target: 1,
+      baseRewardCoins: 15,
+    },
+    {
+      id: "complete_quiz",
+      title: "Finish 2 Quizzes",
+      description:
+        "Complete two full quizzes today.",
+      target: 2,
+      baseRewardCoins: 20,
+    },
+  ];
+
+const CORRECT_ANSWER_VARIANTS:
+  QuestDefinition[] = [
+    {
+      id: "quiz_correct_10",
+      title: "5 Correct Answers",
+      description:
+        "Answer 5 quiz questions correctly today.",
+      target: 5,
+      baseRewardCoins: 20,
+    },
+    {
+      id: "quiz_correct_10",
+      title: "10 Correct Answers",
+      description:
+        "Answer 10 quiz questions correctly today.",
+      target: 10,
+      baseRewardCoins: 25,
+    },
+    {
+      id: "quiz_correct_10",
+      title: "15 Correct Answers",
+      description:
+        "Answer 15 quiz questions correctly today.",
+      target: 15,
+      baseRewardCoins: 30,
+    },
+  ];
+
+const SCORE_80_VARIANTS:
+  QuestDefinition[] = [
+    {
+      id: "quiz_score_80",
+      title: "Score 80%+",
+      description:
+        "Finish a quiz with a score of at least 80%.",
+      target: 1,
+      baseRewardCoins: 20,
+    },
+    {
+      id: "quiz_score_80",
+      title: "Two Strong Quizzes",
+      description:
+        "Score at least 80% on two quizzes today.",
+      target: 2,
+      baseRewardCoins: 25,
+    },
+  ];
 
 const BONUS_BASE_COINS = 40;
+
+function dayNumberFromKey(
+  value: string
+): number {
+  const [
+    y,
+    m,
+    d,
+  ] = value
+    .split("-")
+    .map(Number);
+
+  return Math.floor(
+    Date.UTC(
+      y,
+      m - 1,
+      d
+    ) /
+      86_400_000
+  );
+}
+
+function getDailyQuestDefinitions(
+  value: string
+): QuestDefinition[] {
+  const day =
+    dayNumberFromKey(
+      value
+    );
+
+  return [
+    QUIZ_COMPLETION_VARIANTS[
+      Math.abs(day) %
+        QUIZ_COMPLETION_VARIANTS.length
+    ],
+    CORRECT_ANSWER_VARIANTS[
+      Math.abs(day) %
+        CORRECT_ANSWER_VARIANTS.length
+    ],
+    SCORE_80_VARIANTS[
+      Math.abs(
+        Math.floor(
+          day / 2
+        )
+      ) %
+        SCORE_80_VARIANTS.length
+    ],
+  ];
+}
 
 const DailyQuestsContext =
   createContext<
@@ -241,6 +331,17 @@ export function DailyQuestsProvider({
     ready,
     setReady,
   ] = useState(false);
+
+  const questDefinitions =
+    useMemo(
+      () =>
+        getDailyQuestDefinitions(
+          dateKey
+        ),
+      [
+        dateKey,
+      ]
+    );
 
   const stateRef =
     useRef(state);
@@ -418,36 +519,54 @@ export function DailyQuestsProvider({
               ...previous.progress,
             };
 
+            const advanceQuest =
+              (
+                id:
+                  DailyQuestId
+              ) => {
+                const definition =
+                  questDefinitions.find(
+                    (quest) =>
+                      quest.id ===
+                      id
+                  );
+
+                const target =
+                  definition?.target ||
+                  1;
+
+                progress[id] =
+                  Math.min(
+                    target,
+                    (
+                      progress[id] ||
+                      0
+                    ) +
+                      amount
+                  );
+              };
+
             if (
               event.type ===
               "quiz_correct"
             ) {
-              progress.quiz_correct_10 =
-                Math.min(
-                  10,
-                  progress.quiz_correct_10 +
-                    amount
-                );
+              advanceQuest(
+                "quiz_correct_10"
+              );
             } else if (
               event.type ===
               "quiz_completed"
             ) {
-              progress.complete_quiz =
-                Math.min(
-                  1,
-                  progress.complete_quiz +
-                    amount
-                );
+              advanceQuest(
+                "complete_quiz"
+              );
             } else if (
               event.type ===
               "quiz_score_80"
             ) {
-              progress.quiz_score_80 =
-                Math.min(
-                  1,
-                  progress.quiz_score_80 +
-                    amount
-                );
+              advanceQuest(
+                "quiz_score_80"
+              );
             }
 
             return {
@@ -463,6 +582,7 @@ export function DailyQuestsProvider({
   }, [
     ready,
     dateKey,
+    questDefinitions,
   ]);
 
   const rewardFor = useCallback(
@@ -481,7 +601,7 @@ export function DailyQuestsProvider({
   const quests =
     useMemo<DailyQuestView[]>(
       () =>
-        QUESTS.map(
+        questDefinitions.map(
           (quest) => {
             const progress =
               Math.min(
@@ -511,6 +631,7 @@ export function DailyQuestsProvider({
       [
         state,
         rewardFor,
+        questDefinitions,
       ]
     );
 
@@ -529,7 +650,7 @@ export function DailyQuestsProvider({
 
   const allComplete =
     completedCount ===
-    QUESTS.length;
+    questDefinitions.length;
 
   const bonusRewardCoins =
     rewardFor(
@@ -576,7 +697,7 @@ export function DailyQuestsProvider({
         }
 
         const definition =
-          QUESTS.find(
+          questDefinitions.find(
             (quest) =>
               quest.id === id
           );
@@ -663,6 +784,7 @@ export function DailyQuestsProvider({
         dateKey,
         persistStateNow,
         rewardFor,
+        questDefinitions,
       ]
     );
 
@@ -684,7 +806,7 @@ export function DailyQuestsProvider({
           stateRef.current;
 
         const complete =
-          QUESTS.every(
+          questDefinitions.every(
             (quest) =>
               (
                 current.progress[
@@ -754,6 +876,7 @@ export function DailyQuestsProvider({
         dateKey,
         persistStateNow,
         rewardFor,
+        questDefinitions,
       ]
     );
 
