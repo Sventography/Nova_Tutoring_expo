@@ -186,6 +186,23 @@ function getDailyQuestDefinitions(
   ];
 }
 
+function questLineupKey(
+  value: string
+): string {
+  const quests =
+    getDailyQuestDefinitions(
+      value
+    );
+
+  return [
+    ...quests.map(
+      (quest) =>
+        `${quest.id}-${quest.target}-${quest.baseRewardCoins}`
+    ),
+    `bonus-${BONUS_BASE_COINS}`,
+  ].join("_");
+}
+
 const DailyQuestsContext =
   createContext<
     DailyQuestsContextValue | null
@@ -286,11 +303,20 @@ function normalizeState(
   };
 }
 
-function storageKey(
+function legacyStorageKey(
   owner: string,
   dateKey: string
 ) {
   return `${STORAGE_PREFIX}${owner}:${dateKey}`;
+}
+
+function storageKey(
+  owner: string,
+  dateKey: string
+) {
+  return `${STORAGE_PREFIX}${owner}:${dateKey}:${questLineupKey(
+    dateKey
+  )}`;
 }
 
 export function DailyQuestsProvider({
@@ -412,23 +438,70 @@ export function DailyQuestsProvider({
       setReady(false);
 
       try {
-        const raw =
-          await AsyncStorage.getItem(
-            storageKey(
-              owner,
-              dateKey
-            )
+        const signedKey =
+          storageKey(
+            owner,
+            dateKey
           );
 
-        const next =
-          raw
-            ? normalizeState(
-                JSON.parse(raw),
+        const raw =
+          await AsyncStorage.getItem(
+            signedKey
+          );
+
+        let next:
+          StoredState;
+
+        if (raw) {
+          next =
+            normalizeState(
+              JSON.parse(raw),
+              dateKey
+            );
+        } else {
+          const legacyRaw =
+            await AsyncStorage.getItem(
+              legacyStorageKey(
+                owner,
                 dateKey
               )
-            : blankState(
+            );
+
+          if (legacyRaw) {
+            const legacy =
+              normalizeState(
+                JSON.parse(
+                  legacyRaw
+                ),
                 dateKey
               );
+
+            /*
+             * A quest definition may have changed
+             * while keeping the same quest id.
+             * Keep today's measurable progress,
+             * but never carry incompatible claims
+             * or an old bonus into the new lineup.
+             */
+            next = {
+              ...legacy,
+              claimed:
+                blankClaimed(),
+              bonusClaimed:
+                false,
+            };
+
+            await AsyncStorage.setItem(
+              signedKey,
+              JSON.stringify(next)
+            );
+          } else {
+            next =
+              blankState(
+                dateKey
+              );
+          }
+        }
 
         if (!cancelled) {
           stateRef.current =
@@ -464,7 +537,13 @@ export function DailyQuestsProvider({
   ]);
 
   useEffect(() => {
-    if (!ready) return;
+    if (
+      !ready ||
+      state.dateKey !==
+        dateKey
+    ) {
+      return;
+    }
 
     AsyncStorage.setItem(
       storageKey(

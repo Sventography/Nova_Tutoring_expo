@@ -20,6 +20,7 @@ import { useUser } from "../context/UserContext";
 import { useStreak } from "../context/StreakContext";
 import { useFx } from "../context/FxProvider";
 import { useDailyQuests } from "../context/DailyQuestsContext";
+import { useNovaEvents } from "../context/EventsContext";
 
 const COIN_IMG = require("../assets/coin.png");
 const ACCOUNT_ROUTE = "/(tabs)/account";
@@ -32,6 +33,10 @@ export default function HeaderBar() {
 
   const { enabled: fxOn, toggle: toggleFx } = useFx();
   const { claimableCount, allComplete, bonusClaimed } = useDailyQuests();
+  const {
+    activeEvent,
+    unclaimedRewardCount,
+  } = useNovaEvents();
   const { coins = 0 } = useCoins();
   const { loaded, count, todayChecked, markToday } =
     (useStreak() || {}) as any;
@@ -119,6 +124,14 @@ export default function HeaderBar() {
       (router as any).push?.("/daily-quests");
     } catch {
       (router as any).replace?.("/daily-quests");
+    }
+  };
+
+  const goEvents = () => {
+    try {
+      (router as any).push?.("/events");
+    } catch {
+      (router as any).replace?.("/events");
     }
   };
 
@@ -215,6 +228,36 @@ export default function HeaderBar() {
               <Text style={S.questBadgeText}>
                 {claimableCount +
                   (allComplete && !bonusClaimed ? 1 : 0)}
+              </Text>
+            </View>
+          )}
+        </Pressable>
+
+        <Pressable
+          onPress={goEvents}
+          hitSlop={hit}
+          style={S.iconBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Open Nova Events"
+        >
+          <Ionicons
+            name={
+              activeEvent
+                ? "calendar"
+                : "calendar-outline"
+            }
+            size={iconSize}
+            color={
+              activeEvent
+                ? "#C4B5FD"
+                : "#8ecae6"
+            }
+          />
+
+          {unclaimedRewardCount > 0 && (
+            <View style={S.eventBadge}>
+              <Text style={S.questBadgeText}>
+                {unclaimedRewardCount}
               </Text>
             </View>
           )}
@@ -344,6 +387,20 @@ const S = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 9,
     fontWeight: "900",
+  },
+  eventBadge: {
+    position: "absolute",
+    top: -5,
+    right: -5,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    paddingHorizontal: 3,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#7C3AED",
+    borderWidth: 1,
+    borderColor: "#C4B5FD",
   },
 
   bottomGlow: {

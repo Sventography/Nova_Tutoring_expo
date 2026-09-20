@@ -25,6 +25,7 @@ import { IslandKeepsakeProvider } from "./context/IslandKeepsakeContext";
 import { StudyProgressProvider } from "./context/StudyProgressContext";
 import { DailyDealProvider } from "./context/DailyDealContext";
 import { DailyQuestsProvider } from "./context/DailyQuestsContext";
+import { EventsProvider } from "./context/EventsContext";
 
 function ThemeGate({ children }: { children: React.ReactNode }) {
   const { themeId } = useTheme();
@@ -62,6 +63,7 @@ export function AppProviders(props: any) {
               <DailyDealProvider>
                 <CompanionProvider>
                 <DailyQuestsProvider>
+                  <EventsProvider>
                   <StreakProvider>
                   <ThemeProvider>
                     <ThemeGate>
@@ -79,6 +81,7 @@ export function AppProviders(props: any) {
                     </ThemeGate>
                   </ThemeProvider>
                 </StreakProvider>
+                  </EventsProvider>
                 </DailyQuestsProvider>
                 </CompanionProvider>
               </DailyDealProvider>

@@ -37,7 +37,10 @@ async function readQuizHistoryRaw(): Promise<string | null> {
   return null;
 }
 
-function normalizeEntry(raw: any): QuizHistoryEntry | null {
+function normalizeEntry(
+  raw: any,
+  defaultFinishedAtNow = false
+): QuizHistoryEntry | null {
   if (!raw) return null;
   const topicId = String(raw.topicId || "");
   const title = String(raw.title || topicId || "Quiz");
@@ -49,10 +52,24 @@ function normalizeEntry(raw: any): QuizHistoryEntry | null {
       : total
       ? Math.round((correct / total) * 100)
       : 0;
+  const rawFinishedAt =
+    raw.finishedAt ||
+    raw.finishedAtISO ||
+    raw.completedAt ||
+    raw.completed_at ||
+    raw.createdAt ||
+    raw.created_at ||
+    raw.timestamp ||
+    raw.date ||
+    "";
+
   const finishedAt =
-    typeof raw.finishedAt === "string" && raw.finishedAt
-      ? raw.finishedAt
-      : new Date().toISOString();
+    typeof rawFinishedAt === "string" &&
+    rawFinishedAt.trim()
+      ? rawFinishedAt.trim()
+      : defaultFinishedAtNow
+      ? new Date().toISOString()
+      : "";
 
   const id =
     typeof raw.id === "string" && raw.id
@@ -104,7 +121,10 @@ type AddParams = {
 };
 
 export async function add(e: AddParams) {
-  const entry = normalizeEntry(e);
+  const entry = normalizeEntry(
+    e,
+    true
+  );
   if (!entry) return;
 
   console.log("[quizHistory.add] adding entry", entry);

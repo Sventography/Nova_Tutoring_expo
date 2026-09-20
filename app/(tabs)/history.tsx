@@ -193,6 +193,10 @@ function normalizeRecord(
 
   const completedAt = normalizeTimestamp(
     pickFirst(raw, [
+      "finishedAt",
+      "finished_at",
+      "finishedAtISO",
+      "finished_at_iso",
       "completedAt",
       "completed_at",
       "createdAt",
