@@ -4,6 +4,7 @@ import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-nati
 import { Ionicons } from "@expo/vector-icons";
 
 import { useCoins } from "../../context/CoinsContext";
+import { useIsland } from "../../context/IslandContext";
 import { useIslandDecorations } from "../../context/IslandDecorationContext";
 
 type ShopFilter =
@@ -48,6 +49,7 @@ function Header({ title, subtitle, icon, open, onToggle }: {
 
 export default function IslandDecorationShopPanel() {
   const { coins } = useCoins();
+  const { islandLevel } = useIsland();
   const {
     catalog,
     placements,
@@ -64,13 +66,26 @@ export default function IslandDecorationShopPanel() {
   const [message, setMessage] = useState<string | null>(null);
   const [filter, setFilter] = useState<ShopFilter>("all");
 
-  const visibleCatalog = useMemo(
-    () =>
+  const visibleCatalog = useMemo(() => {
+    const filtered =
       filter === "all"
         ? catalog
-        : catalog.filter((item) => item.category === filter),
-    [catalog, filter]
-  );
+        : catalog.filter(
+            (item) => item.category === filter
+          );
+
+    return [...filtered].sort((a, b) => {
+      if (a.unlockLevel !== b.unlockLevel) {
+        return a.unlockLevel - b.unlockLevel;
+      }
+
+      if (a.price !== b.price) {
+        return a.price - b.price;
+      }
+
+      return a.title.localeCompare(b.title);
+    });
+  }, [catalog, filter]);
 
   const selectedItem = useMemo(
     () =>
@@ -103,6 +118,8 @@ export default function IslandDecorationShopPanel() {
         setMessage(`${selectedItem.title} purchased! It is waiting in Decoration Inventory.`);
         setInventoryMessage(`${selectedItem.title} is ready to PLACE whenever you want it.`);
         setInventoryOpen(true);
+      } else if (result.reason === "locked") {
+        setMessage(`Reach Island Level ${selectedItem.unlockLevel} to buy this decoration.`);
       } else if (result.reason === "insufficient_coins") {
         setMessage("You do not have enough coins for this decoration.");
       } else {
@@ -199,21 +216,49 @@ export default function IslandDecorationShopPanel() {
             </ScrollView>
 
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
-              {visibleCatalog.map((item) => (
-                <Pressable
-                  key={item.id}
-                  onPress={() => { setSelectedItemId(item.id); setMessage(null); }}
-                  style={({ pressed }) => [
-                    styles.item,
-                    item.id === selectedItem?.id && { borderColor: item.accent },
-                    pressed && styles.pressed,
-                  ]}
-                >
-                  <Text style={styles.emojiSmall}>{item.previewEmoji}</Text>
-                  <Text numberOfLines={2} style={styles.itemTitle}>{item.shortTitle}</Text>
-                  <Text style={[styles.price, { color: item.accent }]}>{item.price} 🪙</Text>
-                </Pressable>
-              ))}
+              {visibleCatalog.map((item) => {
+                const locked =
+                  islandLevel < item.unlockLevel;
+
+                return (
+                  <Pressable
+                    key={item.id}
+                    onPress={() => {
+                      setSelectedItemId(item.id);
+                      setMessage(null);
+                    }}
+                    style={({ pressed }) => [
+                      styles.item,
+                      locked && styles.itemLocked,
+                      item.id === selectedItem?.id && {
+                        borderColor: item.accent,
+                      },
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <Text style={styles.emojiSmall}>
+                      {locked ? "🔒" : item.previewEmoji}
+                    </Text>
+                    <Text numberOfLines={2} style={styles.itemTitle}>
+                      {item.shortTitle}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.price,
+                        {
+                          color: locked
+                            ? "#94a3b8"
+                            : item.accent,
+                        },
+                      ]}
+                    >
+                      {locked
+                        ? `LEVEL ${item.unlockLevel}`
+                        : `${item.price} 🪙`}
+                    </Text>
+                  </Pressable>
+                );
+              })}
             </ScrollView>
 
             {selectedItem ? (
@@ -233,13 +278,41 @@ export default function IslandDecorationShopPanel() {
                     </Text>
                   </View>
                   <Text style={styles.detailBody}>{selectedItem.description}</Text>
+                  {islandLevel < selectedItem.unlockLevel ? (
+                    <View style={styles.lockNotice}>
+                      <Ionicons
+                        name="lock-closed"
+                        size={13}
+                        color="#fde68a"
+                      />
+                      <Text style={styles.lockNoticeText}>
+                        Unlocks at Island Level {selectedItem.unlockLevel}
+                      </Text>
+                    </View>
+                  ) : null}
                   <Pressable
                     onPress={() => void buy()}
-                    disabled={buying}
-                    style={({ pressed }) => [styles.buy, buying && styles.disabled, pressed && !buying && styles.pressed]}
+                    disabled={
+                      buying ||
+                      islandLevel < selectedItem.unlockLevel
+                    }
+                    style={({ pressed }) => [
+                      styles.buy,
+                      (buying ||
+                        islandLevel < selectedItem.unlockLevel) &&
+                        styles.disabled,
+                      pressed &&
+                        !buying &&
+                        islandLevel >= selectedItem.unlockLevel &&
+                        styles.pressed,
+                    ]}
                   >
                     <Text style={styles.buyText}>
-                      {buying ? "BUYING…" : `BUY FOR ${selectedItem.price} COINS`}
+                      {islandLevel < selectedItem.unlockLevel
+                        ? `UNLOCKS AT LEVEL ${selectedItem.unlockLevel}`
+                        : buying
+                        ? "BUYING…"
+                        : `BUY FOR ${selectedItem.price} COINS`}
                     </Text>
                   </Pressable>
                 </View>
@@ -334,6 +407,7 @@ const styles = StyleSheet.create({
   filterTextActive: { color: "#67e8f9" },
   row: { gap: 8, paddingRight: 8 },
   item: { width: 104, minHeight: 104, borderRadius: 14, borderWidth: 1, borderColor: "rgba(148,163,184,0.18)", backgroundColor: "rgba(2,6,23,0.54)", padding: 9 },
+  itemLocked: { opacity: 0.62, backgroundColor: "rgba(15,23,42,0.72)" },
   emojiSmall: { fontSize: 27 },
   itemTitle: { marginTop: 6, color: "#f8fafc", fontSize: 11, lineHeight: 14, fontWeight: "900" },
   price: { marginTop: 5, fontSize: 10, fontWeight: "900" },
@@ -346,6 +420,8 @@ const styles = StyleSheet.create({
   metaRow: { marginTop: 4, flexDirection: "row", flexWrap: "wrap", gap: 5 },
   metaChip: { color: "#cbd5e1", fontSize: 8, fontWeight: "900", letterSpacing: 0.4 },
   detailBody: { marginTop: 3, color: "#94a3b8", fontSize: 10, lineHeight: 14 },
+  lockNotice: { marginTop: 7, minHeight: 30, borderRadius: 10, borderWidth: 1, borderColor: "rgba(253,230,138,0.22)", backgroundColor: "rgba(120,53,15,0.12)", paddingHorizontal: 9, flexDirection: "row", alignItems: "center", gap: 6 },
+  lockNoticeText: { color: "#fde68a", fontSize: 9, fontWeight: "900" },
   buy: { marginTop: 8, minHeight: 35, borderRadius: 11, backgroundColor: "#67e8f9", alignItems: "center", justifyContent: "center", paddingHorizontal: 10 },
   buyText: { color: "#020617", fontSize: 9, fontWeight: "900" },
   message: { borderRadius: 11, borderWidth: 1, borderColor: "rgba(125,211,252,0.20)", backgroundColor: "rgba(14,116,144,0.10)", padding: 8, flexDirection: "row", alignItems: "center", gap: 7 },

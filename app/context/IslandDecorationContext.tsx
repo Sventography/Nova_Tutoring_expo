@@ -18,6 +18,7 @@ import {
 } from "../_lib/islandDecorationCatalog";
 import { clampIslandBuildPosition } from "../_lib/islandBuilderBounds";
 import { useCoins } from "./CoinsContext";
+import { useIsland } from "./IslandContext";
 import { useUser } from "./UserContext";
 
 export type IslandDecorationTransform = {
@@ -45,7 +46,7 @@ type DecorationState = {
 type PurchaseResult = {
   ok: boolean;
   placementId?: string;
-  reason?: "not_ready" | "not_editing" | "unknown_item" | "insufficient_coins" | "save_failed";
+  reason?: "not_ready" | "not_editing" | "unknown_item" | "locked" | "insufficient_coins" | "save_failed";
 };
 
 type ContextValue = {
@@ -194,6 +195,7 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
   } = (useUser() || {}) as any;
   const userId = supabaseUserId ? String(supabaseUserId) : null;
   const { coins, ready: coinsReady, addCoins } = useCoins();
+  const { islandLevel } = useIsland();
 
   const [ready, setReady] = useState(false);
   const [committed, setCommitted] = useState<DecorationState>(emptyState);
@@ -347,6 +349,9 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
 
       const item = ISLAND_DECORATION_CATALOG_BY_ID[itemId];
       if (!item) return { ok: false, reason: "unknown_item" };
+      if (islandLevel < item.unlockLevel) {
+        return { ok: false, reason: "locked" };
+      }
       if (coins < item.price) return { ok: false, reason: "insufficient_coins" };
 
       try {
@@ -386,7 +391,7 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
         return { ok: false, reason: "save_failed" };
       }
     },
-    [addCoins, coins, coinsReady, persist, ready]
+    [addCoins, coins, coinsReady, islandLevel, persist, ready]
   );
 
   const movePlacement = useCallback(
