@@ -73,6 +73,28 @@ const BLUE = "#0B2239";
 const BLACK = "#000000";
 const NEON = "#39FF14"; // neon green
 
+function QuizShell({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <LinearGradient
+      colors={[BLACK, BLUE]}
+      style={{ flex: 1 }}
+    >
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={
+          S.container
+        }
+      >
+        {children}
+      </ScrollView>
+    </LinearGradient>
+  );
+}
+
 
 export default function TopicQuiz() {
   const { id = "", title = "" } =
@@ -605,12 +627,6 @@ export default function TopicQuiz() {
   const mm = Math.floor(totalLeft / 60);
   const ss = String(totalLeft % 60).padStart(2, "0");
 
-  const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-    <LinearGradient colors={[BLACK, BLUE]} style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={S.container}>{children}</ScrollView>
-    </LinearGradient>
-  );
-
   // When quiz is finished: history, achievements, certificate, island XP
   useEffect(() => {
     if (!done) return;
@@ -1015,20 +1031,20 @@ if (studyXpEligibleRef.current) {
 
   if (loading) {
     return (
-      <Shell>
+      <QuizShell>
         <View style={S.center}>
           <ActivityIndicator color={CYAN} />
           <Text style={[S.dim, { color: CYAN }]}>
             Loading {headerTitle}…
           </Text>
         </View>
-      </Shell>
+      </QuizShell>
     );
   }
 
   if (noData) {
     return (
-      <Shell>
+      <QuizShell>
         <Text style={S.title}>{headerTitle}</Text>
         <Text style={S.result}>
           No questions are available for this topic yet.
@@ -1040,7 +1056,7 @@ if (studyXpEligibleRef.current) {
         >
           <Text style={S.btnTxt}>Topics</Text>
         </Pressable>
-      </Shell>
+      </QuizShell>
     );
   }
 
@@ -1049,7 +1065,7 @@ if (studyXpEligibleRef.current) {
     const earnedCert = pct >= 80;
 
     return (
-      <Shell>
+      <QuizShell>
         <Text style={S.title}>{headerTitle}</Text>
         <Text style={S.result}>
           Score: {correct} / {total} ({pct}%).
@@ -1226,13 +1242,13 @@ if (studyXpEligibleRef.current) {
             </View>
           </View>
         )}
-      </Shell>
+      </QuizShell>
     );
   }
 
   // Active quiz view
   return (
-    <Shell>
+    <QuizShell>
       <View style={S.headerRow}>
         <Text style={S.title}>{headerTitle}</Text>
         <Text style={[S.meta, totalLeft <= 20 ? S.danger : undefined]}>
@@ -1454,7 +1470,7 @@ if (studyXpEligibleRef.current) {
           </View>
         </View>
       ) : null}
-    </Shell>
+    </QuizShell>
   );
 }
 
