@@ -17,6 +17,7 @@ import {
   LinearGradient,
 } from "expo-linear-gradient";
 import {
+  useLocalSearchParams,
   useRouter,
 } from "expo-router";
 import {
@@ -34,6 +35,11 @@ import {
 export default function DailyQuestsScreen() {
   const router =
     useRouter();
+  const params =
+    useLocalSearchParams<{
+      from?: string;
+      returnTo?: string;
+    }>();
   const insets =
     useSafeAreaInsets();
   const {
@@ -56,6 +62,40 @@ export default function DailyQuestsScreen() {
   ] = useState<
     string | null
   >(null);
+
+  const goBack =
+    () => {
+      const returnTo =
+        typeof params.returnTo ===
+        "string"
+          ? params.returnTo
+          : "";
+
+      if (
+        returnTo.startsWith("/") &&
+        !returnTo.startsWith("//") &&
+        !returnTo.startsWith(
+          "/daily-quests"
+        )
+      ) {
+        router.replace(
+          returnTo as any
+        );
+        return;
+      }
+
+      if (
+        params.from ===
+        "island"
+      ) {
+        router.replace(
+          "/island" as any
+        );
+        return;
+      }
+
+      router.back();
+    };
 
   const onClaimQuest =
     async (
@@ -125,8 +165,8 @@ export default function DailyQuestsScreen() {
       >
         <View style={styles.header}>
           <Pressable
-            onPress={() =>
-              router.back()
+            onPress={
+              goBack
             }
             style={styles.back}
           >

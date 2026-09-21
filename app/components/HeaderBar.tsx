@@ -13,7 +13,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
+import { usePathname, useRouter } from "expo-router";
 
 import { useCoins } from "../context/CoinsContext";
 import { useUser } from "../context/UserContext";
@@ -30,6 +30,7 @@ export default function HeaderBar() {
   const topPad = Platform.OS === "web" ? 12 : (insets?.top ?? 0) + 6;
 
   const router = useRouter();
+  const pathname = usePathname();
 
   const { enabled: fxOn, toggle: toggleFx } = useFx();
   const { claimableCount, allComplete, bonusClaimed } = useDailyQuests();
@@ -120,10 +121,25 @@ export default function HeaderBar() {
   };
 
   const goDailyQuests = () => {
+    const returnTo =
+      pathname &&
+      pathname !== "/daily-quests"
+        ? pathname
+        : "/ask";
+
+    const target =
+      `/daily-quests?returnTo=${encodeURIComponent(
+        returnTo
+      )}`;
+
     try {
-      (router as any).push?.("/daily-quests");
+      (router as any).push?.(
+        target
+      );
     } catch {
-      (router as any).replace?.("/daily-quests");
+      (router as any).replace?.(
+        target
+      );
     }
   };
 

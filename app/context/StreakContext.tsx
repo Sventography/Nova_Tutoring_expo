@@ -97,7 +97,15 @@ function firstRpcRow<T>(data: unknown): T | null {
 }
 
 function remoteRowToMeta(row: RemoteStreakStatus): StreakMeta {
-  const rawLast = row.last_day;
+  /*
+   * Some streak RPCs return the canonical date as day_key while
+   * status-style responses may return last_day. Treat both as the
+   * same server-authoritative streak date.
+   */
+  const rawLast =
+    row.last_day ??
+    row.day_key ??
+    null;
 
   return {
     count: safeNonNegativeInt(
@@ -491,10 +499,24 @@ export function StreakProvider({ children }: { children: ReactNode }) {
           );
         }
 
-        const nextMeta = remoteRowToMeta({
+        const remoteMeta = remoteRowToMeta({
           ...row,
           current_streak: row.streak_days,
         });
+
+        /*
+         * The mark RPC succeeded for eventKey streak:<today>.
+         * Even if an older/malformed server response omits both
+         * last_day and day_key, never leave todayChecked false:
+         * that would cause mounted UI effects to call this RPC
+         * repeatedly in a tight loop.
+         */
+        const nextMeta: StreakMeta = {
+          ...remoteMeta,
+          lastDate:
+            remoteMeta.lastDate ??
+            nowId,
+        };
 
         const nextLogs = new Set(logs);
         if (nextMeta.lastDate) {

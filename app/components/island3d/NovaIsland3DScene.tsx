@@ -72,6 +72,15 @@ type Props = {
   level: number;
   height?: number;
   learningPulseToken?: number;
+  dailyQuestReady?: boolean;
+  dailyQuestCompletedCount?: number;
+  dailyQuestTotalCount?: number;
+  dailyQuestClaimableCount?: number;
+  dailyQuestAllComplete?: boolean;
+  dailyQuestBonusClaimed?: boolean;
+  dailyQuestAllClaimed?: boolean;
+  dailyQuestCelebrationToken?: number;
+  onOpenDailyQuests?: () => void;
   selectedMilestoneId: string;
   selectedDiscoveryKey: string | null;
   discoveries: Island3DDiscovery[];
@@ -1354,8 +1363,8 @@ function IslandBase({
       >
         <cylinderGeometry
           args={[
-            24,
-            23.4,
+            30,
+            29.3,
             1.08,
             112,
           ]}
@@ -1370,7 +1379,7 @@ function IslandBase({
       <mesh
         position={[
           0,
-          -7.15,
+          -8.25,
           0,
         ]}
         rotation={[
@@ -1381,9 +1390,9 @@ function IslandBase({
       >
         <coneGeometry
           args={[
-            23.4,
-            15.6,
-            64,
+            29.3,
+            17.8,
+            72,
           ]}
         />
         <meshStandardMaterial
@@ -1396,7 +1405,7 @@ function IslandBase({
       <mesh
         position={[
           0,
-          -8.1,
+          -9.05,
           0,
         ]}
         rotation={[
@@ -1412,9 +1421,9 @@ function IslandBase({
       >
         <coneGeometry
           args={[
-            20.4,
-            13.1,
-            48,
+            25.2,
+            15.0,
+            56,
           ]}
         />
         <meshStandardMaterial
@@ -7775,10 +7784,19 @@ function LandmarkObject({
       unlocked &&
       placement ? (
         <ScreenSpaceTapTarget
-          pixels={96}
+          pixels={64}
           y={0.92}
-          minWorld={1.35}
-          maxWorld={7.2}
+          minWorld={1.05}
+          maxWorld={4.6}
+        />
+      ) : null}
+
+      {!builderEnabled && unlocked ? (
+        <ScreenSpaceTapTarget
+          pixels={52}
+          y={0.92}
+          minWorld={0.92}
+          maxWorld={3.7}
         />
       ) : null}
 
@@ -10240,7 +10258,7 @@ function FriendshipResidentVisual({
 
       case "balloon_bob":
         root.current.position.y +=
-          Math.sin(progress * Math.PI) * 0.48;
+          Math.sin(progress * Math.PI) * 0.58;
         root.current.rotation.z =
           Math.sin(progress * Math.PI * 2) * 0.12;
         break;
@@ -12206,10 +12224,23 @@ function DiscoveryMarker({
       discovery.kind ===
         "keepsake" ? (
         <ScreenSpaceTapTarget
-          pixels={82}
+          pixels={58}
           y={0.66}
-          minWorld={1.0}
-          maxWorld={5.4}
+          minWorld={0.9}
+          maxWorld={4.2}
+        />
+      ) : null}
+
+      {!builderEditing ? (
+        <ScreenSpaceTapTarget
+          pixels={48}
+          y={
+            discovery.kind === "resident"
+              ? 0.78
+              : 0.62
+          }
+          minWorld={0.78}
+          maxWorld={3.2}
         />
       ) : null}
 
@@ -13102,10 +13133,1001 @@ function IslandAmbientLife({
   );
 }
 
+function DailyQuestAwakenedAura({
+  active,
+  targetRef,
+}: {
+  active: boolean;
+  targetRef: {
+    current:
+      | THREE.Group
+      | null;
+  };
+}) {
+  type GoldMaterialRecord = {
+    material:
+      THREE.MeshStandardMaterial;
+    color: THREE.Color;
+    emissive: THREE.Color;
+    emissiveIntensity: number;
+    metalness: number;
+    roughness: number;
+  };
+
+  const originals =
+    useRef<
+      GoldMaterialRecord[]
+    >([]);
+
+  const goldAppliedRef =
+    useRef(false);
+
+  const captureMaterials =
+    useCallback(() => {
+      const root =
+        targetRef.current;
+
+      if (!root) {
+        return 0;
+      }
+
+      if (
+        originals.current.length >
+        0
+      ) {
+        return originals.current.length;
+      }
+
+      const seen =
+        new Set<
+          THREE.Material
+        >();
+
+      root.traverse(
+        (object) => {
+          const mesh =
+            object as THREE.Mesh;
+
+          const rawMaterial =
+            mesh.material;
+
+          if (!rawMaterial) {
+            return;
+          }
+
+          const materials =
+            Array.isArray(
+              rawMaterial
+            )
+              ? rawMaterial
+              : [
+                  rawMaterial,
+                ];
+
+          materials.forEach(
+            (candidate) => {
+              if (
+                !candidate ||
+                seen.has(
+                  candidate
+                )
+              ) {
+                return;
+              }
+
+              /*
+               * Do not use instanceof here.
+               * Expo/R3F can hand us materials created through a
+               * different Three module boundary, making instanceof
+               * fail even though the material is a real
+               * MeshStandardMaterial.
+               */
+              const standard =
+                candidate as
+                  THREE.MeshStandardMaterial;
+
+              if (
+                !(
+                  standard as any
+                ).isMeshStandardMaterial ||
+                !standard.color ||
+                !standard.emissive
+              ) {
+                return;
+              }
+
+              seen.add(
+                candidate
+              );
+
+              originals.current.push(
+                {
+                  material:
+                    standard,
+                  color:
+                    standard.color.clone(),
+                  emissive:
+                    standard.emissive.clone(),
+                  emissiveIntensity:
+                    standard.emissiveIntensity,
+                  metalness:
+                    standard.metalness,
+                  roughness:
+                    standard.roughness,
+                }
+              );
+            }
+          );
+        }
+      );
+
+      return originals.current.length;
+    }, [
+      targetRef,
+    ]);
+
+  const applyGold =
+    useCallback(() => {
+      const count =
+        captureMaterials();
+
+      if (count <= 0) {
+        return false;
+      }
+
+      originals.current.forEach(
+        (
+          {
+            material,
+            metalness,
+            roughness,
+          },
+          index
+        ) => {
+          const warm =
+            index % 4;
+
+          material.color.set(
+            warm === 0
+              ? "#f5d66f"
+              : warm === 1
+              ? "#ddaF35"
+              : warm === 2
+              ? "#bd851b"
+              : "#edc34d"
+          );
+
+          material.emissive.set(
+            "#754700"
+          );
+
+          material.emissiveIntensity =
+            0.16;
+
+          material.metalness =
+            Math.max(
+              metalness,
+              0.62
+            );
+
+          material.roughness =
+            Math.min(
+              roughness,
+              0.28
+            );
+
+          material.needsUpdate =
+            true;
+        }
+      );
+
+      const firstApplication =
+        !goldAppliedRef.current;
+
+      goldAppliedRef.current =
+        true;
+
+      if (
+        __DEV__ &&
+        firstApplication
+      ) {
+        console.log(
+          "[DailyQuestStation] gold materials applied:",
+          count
+        );
+      }
+
+      return true;
+    }, [
+      captureMaterials,
+    ]);
+
+  const restoreOriginals =
+    useCallback(() => {
+      originals.current.forEach(
+        ({
+          material,
+          color,
+          emissive,
+          emissiveIntensity,
+          metalness,
+          roughness,
+        }) => {
+          material.color.copy(
+            color
+          );
+
+          material.emissive.copy(
+            emissive
+          );
+
+          material.emissiveIntensity =
+            emissiveIntensity;
+
+          material.metalness =
+            metalness;
+
+          material.roughness =
+            roughness;
+
+          material.needsUpdate =
+            true;
+        }
+      );
+
+      goldAppliedRef.current =
+        false;
+    }, []);
+
+  useEffect(() => {
+    if (!active) {
+      restoreOriginals();
+      return;
+    }
+
+    /*
+     * Try immediately, then useFrame below as a guaranteed
+     * fallback if the R3F children are not attached yet.
+     */
+    void applyGold();
+
+    return () => {
+      restoreOriginals();
+    };
+  }, [
+    active,
+    applyGold,
+    restoreOriginals,
+  ]);
+
+  /*
+   * Some station materials also have declarative color/emissive props
+   * driven by rewardReady / bonusReady. Those props can update after the
+   * bonus is claimed while allClaimed remains true. Re-apply the real
+   * gold materials after every pavilion rerender so the completed-day
+   * state stays gold until the daily reset.
+   */
+  useEffect(() => {
+    if (active) {
+      void applyGold();
+    }
+  });
+
+  useFrame(
+    ({ clock }) => {
+      if (!active) {
+        return;
+      }
+
+      /*
+       * If the effect ran before the station's child meshes
+       * existed, capture/apply on the first render frame.
+       */
+      if (
+        !goldAppliedRef.current
+      ) {
+        if (!applyGold()) {
+          return;
+        }
+      }
+
+      const shimmer =
+        0.145 +
+        (
+          Math.sin(
+            clock.elapsedTime *
+              1.2
+          ) +
+          1
+        ) *
+          0.022;
+
+      originals.current.forEach(
+        ({
+          material,
+        }) => {
+          material.emissiveIntensity =
+            shimmer;
+        }
+      );
+    }
+  );
+
+  return null;
+}
+
+function DailyQuestStation({
+  ready,
+  completedCount,
+  totalCount,
+  claimableCount,
+  allComplete,
+  bonusClaimed,
+  allClaimed,
+  celebrationToken,
+  builderEditing,
+  onOpen,
+}: {
+  ready: boolean;
+  completedCount: number;
+  totalCount: number;
+  claimableCount: number;
+  allComplete: boolean;
+  bonusClaimed: boolean;
+  allClaimed: boolean;
+  celebrationToken: number;
+  builderEditing: boolean;
+  onOpen?: () => void;
+}) {
+  const chest = useRef<THREE.Group>(null);
+
+  const stationVisualRef =
+    useRef<THREE.Group>(
+      null
+    );
+  const lid = useRef<THREE.Group>(null);
+  const glow = useRef<THREE.PointLight>(null);
+
+
+  const celebrationStartedAt = useRef<number | null>(null);
+  const rocketGroup = useRef<THREE.Group>(null);
+  const burstGroup = useRef<THREE.Group>(null);
+  const celebrationLight = useRef<THREE.PointLight>(null);
+
+  const bonusReady =
+    ready &&
+    allComplete &&
+    !bonusClaimed;
+
+  const rewardReady =
+    ready &&
+    (
+      claimableCount > 0 ||
+      bonusReady
+    );
+
+  const safeTotal =
+    Math.max(1, totalCount);
+
+  const safeComplete =
+    Math.max(
+      0,
+      Math.min(
+        safeTotal,
+        completedCount
+      )
+    );
+
+  useEffect(() => {
+    if (!celebrationToken) {
+      return;
+    }
+
+    celebrationStartedAt.current =
+      Date.now() / 1000;
+
+    if (rocketGroup.current) {
+      rocketGroup.current.visible = true;
+      rocketGroup.current.position.y = 0;
+    }
+
+    if (burstGroup.current) {
+      burstGroup.current.visible = false;
+      burstGroup.current.scale.setScalar(0.1);
+    }
+  }, [celebrationToken]);
+
+
+
+  useFrame(({ clock }) => {
+    const time = clock.elapsedTime;
+
+    const celebrationElapsed =
+        celebrationStartedAt.current == null
+          ? -1
+          : Date.now() / 1000 - celebrationStartedAt.current;
+
+      if (celebrationElapsed >= 0) {
+        if (rocketGroup.current) {
+          if (celebrationElapsed < 0.9) {
+            const launch = celebrationElapsed / 0.9;
+            rocketGroup.current.visible = true;
+            rocketGroup.current.position.y = launch * 3.0;
+            rocketGroup.current.rotation.y = launch * 0.7;
+          } else {
+            rocketGroup.current.visible = false;
+          }
+        }
+
+        if (burstGroup.current) {
+          const burstTime = celebrationElapsed - 0.75;
+          if (burstTime >= 0 && burstTime < 2.35) {
+            const grow = Math.min(1, burstTime / 0.45);
+            const fade =
+              burstTime < 1.35
+                ? 1
+                : Math.max(0, 1 - (burstTime - 1.35) / 1.0);
+            burstGroup.current.visible = true;
+            burstGroup.current.position.y =
+              3.0 + Math.min(0.7, burstTime * 0.3);
+            burstGroup.current.rotation.z = burstTime * 0.85;
+            burstGroup.current.rotation.y = burstTime * 1.1;
+            burstGroup.current.scale.setScalar(
+              (0.18 + grow * 1.55) * Math.max(0.08, fade)
+            );
+          } else {
+            burstGroup.current.visible = false;
+          }
+        }
+
+        if (celebrationLight.current) {
+          celebrationLight.current.intensity =
+            celebrationElapsed < 3.1
+              ? 1.35 + Math.sin(celebrationElapsed * 10) * 0.45
+              : 0;
+        }
+
+        if (celebrationElapsed > 3.15) {
+          celebrationStartedAt.current = null;
+          if (rocketGroup.current) rocketGroup.current.visible = false;
+          if (burstGroup.current) burstGroup.current.visible = false;
+          if (celebrationLight.current) celebrationLight.current.intensity = 0;
+        }
+      }
+
+
+    if (chest.current) {
+      chest.current.position.y =
+        rewardReady
+          ? Math.sin(time * 2.1) * 0.035
+          : 0;
+
+      chest.current.rotation.y =
+        rewardReady
+          ? Math.sin(time * 1.2) * 0.035
+          : 0;
+    }
+
+    if (lid.current) {
+      const target =
+        bonusReady
+          ? -0.5
+          : rewardReady
+          ? -0.18
+          : 0;
+
+      lid.current.rotation.x =
+        THREE.MathUtils.lerp(
+          lid.current.rotation.x,
+          target,
+          0.08
+        );
+    }
+
+    if (glow.current) {
+      glow.current.intensity =
+        bonusReady
+          ? 1.45 +
+            Math.sin(time * 3.4) * 0.45
+          : rewardReady
+          ? 0.72 +
+            Math.sin(time * 2.5) * 0.24
+          : 0.08;
+    }
+  });
+
+  const handlePress =
+    (event: any) => {
+      event?.stopPropagation?.();
+
+      if (builderEditing) {
+        return;
+      }
+
+      onOpen?.();
+    };
+
+  return (
+    <group
+      ref={stationVisualRef}
+      position={[4.15, 1.03, 0.55]}
+      rotation={[0, -0.42, 0]}
+      scale={1.42}
+      onPointerDown={handlePress}
+    >
+      <DailyQuestAwakenedAura
+        active={allClaimed}
+        targetRef={
+          stationVisualRef
+        }
+      />
+      {/* Raised quest plaza so this reads as a destination, not clutter. */}
+      <mesh
+        position={[0.55, -0.04, 0.05]}
+        scale={[2.25, 0.12, 1.45]}
+      >
+        <cylinderGeometry
+          args={[1, 1, 1, 10]}
+        />
+        <meshStandardMaterial
+          color="#16324a"
+          emissive="#082f49"
+          emissiveIntensity={0.18}
+          roughness={0.78}
+        />
+      </mesh>
+
+      <mesh
+        position={[0.55, 0.035, 0.05]}
+        rotation={[
+          -Math.PI / 2,
+          0,
+          0,
+        ]}
+        scale={[2.04, 1.24, 1]}
+      >
+        <ringGeometry
+          args={[
+            0.82,
+            1,
+            36,
+          ]}
+        />
+        <meshBasicMaterial
+          color={
+            bonusReady
+              ? "#facc15"
+              : rewardReady
+              ? "#67e8f9"
+              : "#38bdf8"
+          }
+          transparent
+          opacity={
+            bonusReady
+              ? 0.78
+              : rewardReady
+              ? 0.58
+              : 0.28
+          }
+          side={THREE.DoubleSide}
+          depthWrite={false}
+        />
+      </mesh>
+
+      {/* Tall beacon makes the quest area visible from the default camera. */}
+      <group
+        position={[-0.95, 2.32, 0.02]}
+      >
+        <MiniStar
+          scale={
+            bonusReady
+              ? 0.88
+              : rewardReady
+              ? 0.7
+              : 0.56
+          }
+          color={
+            bonusReady
+              ? "#fef08a"
+              : rewardReady
+              ? "#67e8f9"
+              : "#bae6fd"
+          }
+        />
+        <pointLight
+          color={
+            bonusReady
+              ? "#facc15"
+              : "#67e8f9"
+          }
+          intensity={
+            bonusReady
+              ? 1.3
+              : rewardReady
+              ? 0.78
+              : 0.18
+          }
+          distance={4.5}
+        />
+      </group>
+
+      <group>
+        {[-0.72, 0.72].map(
+          (x) => (
+            <mesh
+              key={x}
+              position={[x, 0.62, 0]}
+              scale={[0.11, 0.8, 0.11]}
+            >
+              <boxGeometry args={[1, 1, 1]} />
+              <meshStandardMaterial
+                color="#6b4423"
+                roughness={0.86}
+              />
+            </mesh>
+          )
+        )}
+
+        <mesh
+          position={[0, 1.12, 0]}
+          scale={[2.05, 1.28, 0.18]}
+        >
+          <boxGeometry args={[1, 1, 1]} />
+          <meshStandardMaterial
+            color="#7c4a26"
+            roughness={0.82}
+          />
+        </mesh>
+
+        <mesh
+          position={[0, 1.84, 0.01]}
+          scale={[1.72, 0.16, 0.2]}
+        >
+          <boxGeometry args={[1, 1, 1]} />
+          <meshStandardMaterial
+            color="#facc15"
+            emissive="#ca8a04"
+            emissiveIntensity={
+              rewardReady ? 0.36 : 0.08
+            }
+            roughness={0.42}
+          />
+        </mesh>
+
+        {Array.from(
+          { length: safeTotal },
+          (_, index) => {
+            const done =
+              index < safeComplete;
+
+            const x =
+              (
+                index -
+                (safeTotal - 1) / 2
+              ) * 0.48;
+
+            return (
+              <group
+                key={`quest-seal-${index}`}
+                position={[x, 1.2, 0.1]}
+              >
+                <mesh
+                  rotation={[
+                    Math.PI / 2,
+                    0,
+                    0,
+                  ]}
+                >
+                  <cylinderGeometry
+                    args={[
+                      0.205,
+                      0.205,
+                      0.065,
+                      20,
+                    ]}
+                  />
+                  <meshStandardMaterial
+                    color={
+                      done
+                        ? "#67e8f9"
+                        : "#475569"
+                    }
+                    emissive={
+                      done
+                        ? "#0891b2"
+                        : "#0f172a"
+                    }
+                    emissiveIntensity={
+                      done ? 0.62 : 0.08
+                    }
+                    roughness={0.45}
+                  />
+                </mesh>
+
+                {done ? (
+                  <group position={[0, 0.02, 0.04]}>
+                    <MiniStar
+                      scale={0.4}
+                      color="#fef08a"
+                    />
+                  </group>
+                ) : null}
+              </group>
+            );
+          }
+        )}
+
+        <mesh
+          position={[0, 0.69, 0.11]}
+          scale={[1.52, 0.12, 0.09]}
+        >
+          <boxGeometry args={[1, 1, 1]} />
+          <meshStandardMaterial
+            color="#1e293b"
+            roughness={0.65}
+          />
+        </mesh>
+
+        {safeComplete > 0 ? (
+          <mesh
+            position={[
+              -0.76 +
+                (
+                  1.52 *
+                  safeComplete /
+                  safeTotal
+                ) / 2,
+              0.78,
+              0.15,
+            ]}
+            scale={[
+              1.52 *
+                safeComplete /
+                safeTotal,
+              0.07,
+              0.04,
+            ]}
+          >
+            <boxGeometry args={[1, 1, 1]} />
+            <meshStandardMaterial
+              color="#22d3ee"
+              emissive="#0891b2"
+              emissiveIntensity={0.48}
+            />
+          </mesh>
+        ) : null}
+      </group>
+
+      {/* Three star rockets */}
+      <group
+        ref={rocketGroup}
+        visible={false}
+        position={[0.4, 1.8, 0.2]}
+      >
+        {[-0.68, 0, 0.68].map((x, index) => (
+          <group
+            key={`quest-rocket-${index}`}
+            position={[x, index === 1 ? 0.14 : 0, 0]}
+          >
+            <MiniStar
+              scale={0.32}
+              color={index === 1 ? "#fef08a" : "#67e8f9"}
+            />
+            <mesh
+              position={[0, -0.32, 0]}
+              scale={[0.045, 0.3, 0.045]}
+            >
+              <coneGeometry args={[1, 1, 8]} />
+              <meshBasicMaterial
+                color={index === 1 ? "#fb923c" : "#22d3ee"}
+                transparent
+                opacity={0.92}
+              />
+            </mesh>
+          </group>
+        ))}
+      </group>
+
+      {/* Three compact starbursts */}
+      <group
+        ref={burstGroup}
+        visible={false}
+        position={[0.4, 4.8, 0.2]}
+      >
+        {[-0.72, 0, 0.72].map((x, burstIndex) => (
+          <group
+            key={`quest-burst-${burstIndex}`}
+            position={[x, burstIndex === 1 ? 0.3 : 0, 0]}
+          >
+            {[
+              [0, 0, 0],
+              [0.42, 0, 0],
+              [-0.42, 0, 0],
+              [0, 0.42, 0],
+              [0, -0.42, 0],
+              [0.3, 0.3, 0.05],
+              [-0.3, 0.3, -0.05],
+              [0.3, -0.3, -0.05],
+              [-0.3, -0.3, 0.05],
+            ].map((position, sparkIndex) => (
+              <group
+                key={`quest-burst-${burstIndex}-${sparkIndex}`}
+                position={position as Vec3}
+              >
+                <MiniStar
+                  scale={sparkIndex === 0 ? 0.32 : 0.18}
+                  color={
+                    burstIndex === 1
+                      ? sparkIndex % 2 === 0
+                        ? "#fef08a"
+                        : "#fb923c"
+                      : sparkIndex % 2 === 0
+                      ? "#67e8f9"
+                      : "#c4b5fd"
+                  }
+                />
+              </group>
+            ))}
+          </group>
+        ))}
+      </group>
+
+      <pointLight
+        ref={celebrationLight}
+        position={[0.4, 4.8, 0.25]}
+        color="#fef08a"
+        intensity={0}
+        distance={8}
+      />
+
+
+
+      <group
+        ref={chest}
+        position={[1.62, 0.3, 0.38]}
+        scale={0.94}
+      >
+        <mesh
+          position={[0, 0.28, 0]}
+          scale={[0.86, 0.5, 0.62]}
+        >
+          <boxGeometry args={[1, 1, 1]} />
+          <meshStandardMaterial
+            color="#7c2d12"
+            emissive={
+              rewardReady
+                ? "#9a3412"
+                : "#000000"
+            }
+            emissiveIntensity={
+              rewardReady ? 0.22 : 0
+            }
+            roughness={0.68}
+          />
+        </mesh>
+
+        <group
+          ref={lid}
+          position={[0, 0.57, -0.24]}
+        >
+          <mesh
+            position={[0, 0.13, 0.24]}
+            scale={[0.9, 0.28, 0.66]}
+          >
+            <boxGeometry args={[1, 1, 1]} />
+            <meshStandardMaterial
+              color="#92400e"
+              emissive={
+                bonusReady
+                  ? "#f59e0b"
+                  : "#000000"
+              }
+              emissiveIntensity={
+                bonusReady ? 0.34 : 0
+              }
+              roughness={0.58}
+            />
+          </mesh>
+        </group>
+
+        {[-0.31, 0.31].map(
+          (x) => (
+            <mesh
+              key={x}
+              position={[x, 0.32, 0.33]}
+              scale={[0.09, 0.58, 0.06]}
+            >
+              <boxGeometry args={[1, 1, 1]} />
+              <meshStandardMaterial
+                color="#facc15"
+                metalness={0.6}
+                roughness={0.3}
+              />
+            </mesh>
+          )
+        )}
+
+        <mesh
+          position={[0, 0.31, 0.34]}
+          scale={[0.18, 0.21, 0.07]}
+        >
+          <boxGeometry args={[1, 1, 1]} />
+          <meshStandardMaterial
+            color={
+              bonusReady
+                ? "#fef08a"
+                : rewardReady
+                ? "#67e8f9"
+                : "#facc15"
+            }
+            emissive={
+              bonusReady
+                ? "#f59e0b"
+                : rewardReady
+                ? "#0891b2"
+                : "#000000"
+            }
+            emissiveIntensity={
+              rewardReady ? 0.72 : 0
+            }
+            metalness={0.55}
+            roughness={0.25}
+          />
+        </mesh>
+
+        {rewardReady ? (
+          <group position={[0, 1.16, 0]}>
+            <MiniStar
+              scale={
+                bonusReady ? 0.68 : 0.48
+              }
+              color={
+                bonusReady
+                  ? "#fef08a"
+                  : "#67e8f9"
+              }
+            />
+          </group>
+        ) : null}
+
+        <pointLight
+          ref={glow}
+          position={[0, 0.8, 0.15]}
+          color={
+            bonusReady
+              ? "#facc15"
+              : "#67e8f9"
+          }
+          intensity={
+            rewardReady
+              ? bonusReady
+                ? 1.8
+                : 0.95
+              : 0.22
+          }
+          distance={
+            bonusReady ? 5 : 3.4
+          }
+        />
+      </group>
+    </group>
+  );
+}
+
 function IslandWorld({
   level,
   palette,
   learningPulseToken,
+  dailyQuestReady,
+  dailyQuestCompletedCount,
+  dailyQuestTotalCount,
+  dailyQuestClaimableCount,
+  dailyQuestAllComplete,
+  dailyQuestBonusClaimed,
+  dailyQuestAllClaimed,
+  dailyQuestCelebrationToken,
+  onOpenDailyQuests,
+  builderEditing,
   selectedMilestoneId,
   selectedDiscoveryKey,
   discoveries,
@@ -13123,6 +14145,16 @@ function IslandWorld({
   level: number;
   palette: TimePalette;
   learningPulseToken: number;
+  dailyQuestReady: boolean;
+  dailyQuestCompletedCount: number;
+  dailyQuestTotalCount: number;
+  dailyQuestClaimableCount: number;
+  dailyQuestAllComplete: boolean;
+  dailyQuestBonusClaimed: boolean;
+  dailyQuestAllClaimed: boolean;
+  dailyQuestCelebrationToken: number;
+  onOpenDailyQuests?: () => void;
+  builderEditing: boolean;
   selectedMilestoneId: string;
   selectedDiscoveryKey: string | null;
   discoveries: Island3DDiscovery[];
@@ -13365,6 +14397,37 @@ function IslandWorld({
           level={level}
         />
 
+        <DailyQuestStation
+          ready={dailyQuestReady}
+          completedCount={
+            dailyQuestCompletedCount
+          }
+          totalCount={
+            dailyQuestTotalCount
+          }
+          claimableCount={
+            dailyQuestClaimableCount
+          }
+          allComplete={
+            dailyQuestAllComplete
+          }
+          bonusClaimed={
+            dailyQuestBonusClaimed
+          }
+          allClaimed={
+            dailyQuestAllClaimed
+          }
+          celebrationToken={
+            dailyQuestCelebrationToken
+          }
+          builderEditing={
+            builderEditing
+          }
+          onOpen={
+            onOpenDailyQuests
+          }
+        />
+
         <LearningEnergyBurst
           triggerToken={
             learningPulseToken
@@ -13484,6 +14547,15 @@ export default function NovaIsland3DScene({
   level,
   height = 450,
   learningPulseToken = 0,
+  dailyQuestReady = false,
+  dailyQuestCompletedCount = 0,
+  dailyQuestTotalCount = 3,
+  dailyQuestClaimableCount = 0,
+  dailyQuestAllComplete = false,
+  dailyQuestBonusClaimed = false,
+  dailyQuestAllClaimed = false,
+  dailyQuestCelebrationToken = 0,
+  onOpenDailyQuests,
   selectedMilestoneId,
   selectedDiscoveryKey,
   discoveries,
@@ -13526,14 +14598,14 @@ export default function NovaIsland3DScene({
 
   const expansionViewDistance =
     level >= 21
-      ? 39
+      ? 46.5
       : level >= 18
-      ? 36.5
+      ? 43.5
       : level >= 15
-      ? 34
+      ? 40.5
       : level >= 12
-      ? 31.5
-      : 28;
+      ? 37.5
+      : 34.5;
 
   const fullViewDistance =
     legendaryCompanionIds.length > 0
@@ -14001,7 +15073,7 @@ export default function NovaIsland3DScene({
                 ) > 4 ||
                 Math.abs(
                   gesture.dy
-                ) > 4
+                ) > 8
               );
             },
 
@@ -14022,7 +15094,7 @@ export default function NovaIsland3DScene({
                 ) > 4 ||
                 Math.abs(
                   gesture.dy
-                ) > 4
+                ) > 8
               );
             },
 
@@ -14440,6 +15512,36 @@ export default function NovaIsland3DScene({
           palette={palette}
           learningPulseToken={
             learningPulseToken
+          }
+          dailyQuestReady={
+            dailyQuestReady
+          }
+          dailyQuestCompletedCount={
+            dailyQuestCompletedCount
+          }
+          dailyQuestTotalCount={
+            dailyQuestTotalCount
+          }
+          dailyQuestClaimableCount={
+            dailyQuestClaimableCount
+          }
+          dailyQuestAllComplete={
+            dailyQuestAllComplete
+          }
+          dailyQuestBonusClaimed={
+            dailyQuestBonusClaimed
+          }
+          dailyQuestAllClaimed={
+            dailyQuestAllClaimed
+          }
+          dailyQuestCelebrationToken={
+            dailyQuestCelebrationToken
+          }
+          onOpenDailyQuests={
+            onOpenDailyQuests
+          }
+          builderEditing={
+            builderEditing
           }
           selectedMilestoneId={
             selectedMilestoneId

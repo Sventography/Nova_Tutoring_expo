@@ -19,6 +19,7 @@ import {
   Image,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -39,6 +40,7 @@ import IslandBuilderSceneControls from "../components/island3d/IslandBuilderScen
 import NovaGuideOverlay from "../components/NovaGuideOverlay";
 import { useCompanion } from "../context/CompanionContext";
 import { useUser } from "../context/UserContext";
+import { useDailyQuests } from "../context/DailyQuestsContext";
 import { COMPANIONS } from "../_lib/companionsCatalog";
 import {
   getCommonCompanionFriendshipProfile,
@@ -50,10 +52,13 @@ import {
 } from "../_lib/commonCompanionFriendship";
 
 const ISLAND_GUIDE_PREFIX =
-  "@nova/islandBuilderGuide.v1:";
+  "@nova/islandGuide.v2:";
 
 const ISLAND_ALIVE_SEEN_PREFIX =
   "@nova/islandAliveSeen.v1:";
+
+const DAILY_QUEST_CELEBRATION_PREFIX =
+  "@nova/dailyQuestCelebration.v1:";
 
 const XP_SOURCES = [
   {
@@ -750,6 +755,9 @@ function IslandScene({
 
 export default function IslandScreen() {
   const { width } = useWindowDimensions();
+  const router = useRouter();
+  const dailyQuests =
+    useDailyQuests();
   const {
     supabaseUserId,
   } = useUser();
@@ -782,6 +790,44 @@ export default function IslandScreen() {
 
   const islandBuilder = useIslandBuilder();
 
+  const dailyQuestTotalCount =
+    Math.max(
+      1,
+      dailyQuests.quests.length
+    );
+
+  const dailyQuestBonusReady =
+    dailyQuests.ready &&
+    dailyQuests.allComplete &&
+    !dailyQuests.bonusClaimed;
+  const dailyQuestAllClaimed =
+    dailyQuests.ready &&
+    dailyQuests.quests.length > 0 &&
+    dailyQuests.quests.every(
+      (quest) =>
+        quest.claimed
+    );
+
+  const dailyQuestRewardReady =
+    dailyQuests.ready &&
+    (
+      dailyQuests.claimableCount > 0 ||
+      dailyQuestBonusReady
+    );
+
+  const openDailyQuests =
+    () => {
+      try {
+        if (Platform.OS !== "web") {
+          void Haptics.selectionAsync();
+        }
+      } catch {}
+
+      router.push(
+        "/daily-quests?from=island" as any
+      );
+    };
+
   const islandGuideOwner =
     supabaseUserId || "guest";
 
@@ -806,6 +852,14 @@ export default function IslandScreen() {
   ] = useState<string | null>(
     null
   );
+
+  const [
+    dailyQuestCelebrationToken,
+    setDailyQuestCelebrationToken,
+  ] = useState(0);
+
+  const dailyQuestCelebrationCheckRef =
+    useRef("");
 
   useEffect(() => {
     if (!ready) {
@@ -936,6 +990,80 @@ export default function IslandScreen() {
     islandGuideOwner,
     islandLevel,
     ready,
+  ]);
+
+  useEffect(() => {
+    if (
+      !dailyQuests.ready ||
+      !dailyQuests.allComplete
+    ) {
+      return;
+    }
+
+    const celebrationKey =
+      `${DAILY_QUEST_CELEBRATION_PREFIX}${islandGuideOwner}:${dailyQuests.dateKey}`;
+
+    if (
+      dailyQuestCelebrationCheckRef.current ===
+      celebrationKey
+    ) {
+      return;
+    }
+
+    dailyQuestCelebrationCheckRef.current =
+      celebrationKey;
+
+    let cancelled = false;
+
+    const runCelebrationCheck =
+      async () => {
+        try {
+          const seen =
+            await AsyncStorage.getItem(
+              celebrationKey
+            );
+
+          if (
+            cancelled ||
+            seen === "seen"
+          ) {
+            return;
+          }
+
+          await AsyncStorage.setItem(
+            celebrationKey,
+            "seen"
+          );
+
+          if (!cancelled) {
+            setDailyQuestCelebrationToken(
+              Date.now()
+            );
+          }
+        } catch (error) {
+          console.warn(
+            "[DailyQuestCelebration] state failed",
+            error
+          );
+
+          if (!cancelled) {
+            setDailyQuestCelebrationToken(
+              Date.now()
+            );
+          }
+        }
+      };
+
+    void runCelebrationCheck();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    dailyQuests.ready,
+    dailyQuests.allComplete,
+    dailyQuests.dateKey,
+    islandGuideOwner,
   ]);
 
   useEffect(() => {
@@ -1412,8 +1540,12 @@ export default function IslandScreen() {
       : null;
 
   const novaIslandMessage =
-    learningPulseSource ===
-      "quiz" &&
+    dailyQuestBonusReady
+      ? "The Daily Quest chest is blazing with bonus light. You finished every quest — there’s a bonus waiting for you."
+      : dailyQuests.claimableCount > 0
+      ? `The Daily Quest chest is glowing. You have ${dailyQuests.claimableCount} quest reward${dailyQuests.claimableCount === 1 ? "" : "s"} ready to claim.`
+      : learningPulseSource ===
+          "quiz" &&
     reactionTitle
       ? `That quiz sent fresh learning energy into the ${reactionTitle}. I love seeing the island react to your progress.`
       : learningPulseSource ===
@@ -1441,8 +1573,16 @@ export default function IslandScreen() {
     islandLevel;
 
   const islandHappenings =
-    hasTemporaryVisitor &&
-    visitingProfile
+    dailyQuestRewardReady
+      ? [
+          dailyQuestBonusReady
+            ? "The Daily Quest chest is blazing with bonus light."
+            : "The Daily Quest chest is humming with unclaimed rewards.",
+          "The quest board is tracking today’s learning goals.",
+          "Study Spirits keep circling the Daily Quest station.",
+        ]
+      : hasTemporaryVisitor &&
+        visitingProfile
       ? [
           `${visitingProfile.title} is visiting the central island.`,
           "Fireflies are drifting through the island air.",
@@ -1621,6 +1761,33 @@ export default function IslandScreen() {
             level={islandLevel}
             learningPulseToken={
               learningPulseToken
+            }
+            dailyQuestReady={
+              dailyQuests.ready
+            }
+            dailyQuestCompletedCount={
+              dailyQuests.completedCount
+            }
+            dailyQuestTotalCount={
+              dailyQuestTotalCount
+            }
+            dailyQuestClaimableCount={
+              dailyQuests.claimableCount
+            }
+            dailyQuestAllComplete={
+              dailyQuests.allComplete
+            }
+            dailyQuestBonusClaimed={
+              dailyQuests.bonusClaimed
+            }
+            dailyQuestAllClaimed={
+              dailyQuestAllClaimed
+            }
+            dailyQuestCelebrationToken={
+              dailyQuestCelebrationToken
+            }
+            onOpenDailyQuests={
+              openDailyQuests
             }
             selectedMilestoneId={
               sceneSelectedMilestoneId
@@ -2289,7 +2456,7 @@ export default function IslandScreen() {
         pose="welcome"
         eyebrow="ISLAND BUILDER"
         title="Your island is yours to shape"
-        message="Your learning grows this world. Here are the basics for exploring and building."
+        message="Your learning grows this world. Here are the basics for exploring, building, and using island features — including your Daily Quest pavilion."
         dismissLabel="Got It"
       >
         <View
@@ -2351,6 +2518,25 @@ export default function IslandScreen() {
               }
             >
               Tap items to select them, then use Builder controls to place and adjust decorations.
+            </Text>
+          </View>
+
+          <View
+            style={
+              styles.guideTip
+            }
+          >
+            <Ionicons
+              name="clipboard-outline"
+              color="#fde68a"
+              size={18}
+            />
+            <Text
+              style={
+                styles.guideTipText
+              }
+            >
+              The Daily Quest pavilion tracks your three daily goals. Its lights turn on as you complete quests, and the chest glows when rewards are ready. After you claim all three quest rewards, the pavilion turns gold for the rest of the day. Tap the pavilion anytime to open Daily Quests.
             </Text>
           </View>
 

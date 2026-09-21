@@ -2,8 +2,8 @@
 
 export type IslandBuildPoint = { x: number; z: number; clamped: boolean };
 
-export const NOVA_MAIN_ISLAND_RADIUS = 24;
-export const NOVA_MAIN_BUILD_RADIUS = 23.1;
+export const NOVA_MAIN_ISLAND_RADIUS = 30;
+export const NOVA_MAIN_BUILD_RADIUS = 29.0;
 
 const marginForScale = (scale: number): number =>
   0.38 + Math.max(0, scale - 1) * 0.34;
