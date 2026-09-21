@@ -155,6 +155,9 @@ type XpSource = "quiz" | "brainteasers" | "ask" | "login" | "other";
 export const COMPANION_ACTIVITY_EVENT =
   "companion:activity";
 
+export const ISLAND_ALIVE_SIGNAL_PREFIX =
+  "@nova/islandAliveSignal.v1:";
+
 function companionActivityForXpSource(
   source: XpSource
 ): CompanionActivityKey | null {
@@ -670,12 +673,27 @@ export function IslandProvider({ children }: { children: ReactNode }) {
         );
       }
 
+      const aliveSignalPromise =
+        source === "login"
+          ? Promise.resolve()
+          : AsyncStorage.setItem(
+              `${ISLAND_ALIVE_SIGNAL_PREFIX}${userId || "guest"}`,
+              JSON.stringify({
+                at: gain.at,
+                source,
+                amount,
+                reason: gain.reason,
+                islandLevel: nextLevel,
+              })
+            );
+
       await Promise.allSettled([
         persistLocal(snapshot, gain),
         persistRemote(nextXp, nextLevel),
+        aliveSignalPromise,
       ]);
     },
-    [persistLocal, persistRemote]
+    [persistLocal, persistRemote, userId]
   );
 
   const grantDailyLoginXpIfNeeded =

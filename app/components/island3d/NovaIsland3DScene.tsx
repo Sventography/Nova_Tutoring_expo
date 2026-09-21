@@ -71,6 +71,7 @@ export type Island3DDiscovery = {
 type Props = {
   level: number;
   height?: number;
+  learningPulseToken?: number;
   selectedMilestoneId: string;
   selectedDiscoveryKey: string | null;
   discoveries: Island3DDiscovery[];
@@ -267,6 +268,13 @@ const DISCOVERY_ZONE_POSITIONS: Record<
     1.75,
   ],
 };
+
+const EQUIPPED_VISITOR_ROUTE: Vec3[] = [
+  DISCOVERY_ZONE_POSITIONS.open_grass,
+  DISCOVERY_ZONE_POSITIONS.library,
+  DISCOVERY_ZONE_POSITIONS.garden,
+  DISCOVERY_ZONE_POSITIONS.grove,
+];
 
 const LANDMARK_LORE: Record<
   string,
@@ -8692,6 +8700,8 @@ function residentDisplayScale(
       return 0.5;
     case "sleepy_moon":
       return 0.52;
+    case "star_throw":
+      return 0.74;
     case "party_3d":
     case "party_3d_2":
       return 0.52;
@@ -9617,6 +9627,68 @@ function FriendshipKeepsakeVisual({
   }
 }
 
+type CompanionAmbientAction =
+  | "jump"
+  | "spin"
+  | "star_shot"
+  | "read"
+  | "heart_pop"
+  | "dream"
+  | "coin_burst"
+  | "balloon_bob"
+  | "party_burst"
+  | "blow_star"
+  | "star_burst";
+
+const COMPANION_ACTION_POOLS: Partial<
+  Record<
+    FriendshipVisualKey,
+    CompanionAmbientAction[]
+  >
+> = {
+  star_throw: ["jump", "spin", "star_shot", "read"],
+  nova_bunny: ["jump", "spin", "heart_pop", "read"],
+  sleepy_moon: ["jump", "spin", "dream", "read"],
+  balloons: ["balloon_bob", "spin", "jump"],
+  hearts: ["heart_pop", "spin", "jump"],
+  star_blow: ["blow_star", "spin", "jump"],
+  star_explode: ["star_burst", "jump", "spin"],
+  party_3d: ["party_burst", "spin", "jump"],
+  party_3d_2: ["party_burst", "spin", "jump"],
+  coins_rain: ["coin_burst", "spin", "jump"],
+  reading_buddy: ["read", "read", "jump", "spin"],
+};
+
+function companionActionDuration(
+  action: CompanionAmbientAction
+): number {
+  switch (action) {
+    case "read":
+      return 6.5;
+    case "star_shot":
+      return 3.0;
+    case "heart_pop":
+      return 3.2;
+    case "dream":
+      return 3.4;
+    case "coin_burst":
+      return 3.5;
+    case "balloon_bob":
+      return 4.6;
+    case "party_burst":
+      return 3.5;
+    case "blow_star":
+      return 3.0;
+    case "star_burst":
+      return 3.2;
+    case "spin":
+      return 1.55;
+    case "jump":
+    default:
+      return 1.15;
+  }
+}
+
 function FriendshipResidentVisual({
   visualKey,
   accent,
@@ -9626,6 +9698,23 @@ function FriendshipResidentVisual({
 }) {
   const root = useRef<THREE.Group>(null);
   const detail = useRef<THREE.Group>(null);
+  const actionFx = useRef<THREE.Group>(null);
+  const bookFx = useRef<THREE.Group>(null);
+
+  const ambientAction =
+    useRef<{
+      action: CompanionAmbientAction | null;
+      startedAt: number;
+      endsAt: number;
+      nextAt: number;
+      hasDoneSignature: boolean;
+    }>({
+      action: null,
+      startedAt: 0,
+      endsAt: 0,
+      nextAt: 0,
+      hasDoneSignature: false,
+    });
 
   useFrame(({ clock }, delta) => {
     if (!root.current) {
@@ -9744,14 +9833,46 @@ function FriendshipResidentVisual({
 
       case "party_3d":
         root.current.position.y =
-          0.14 + Math.sin(time * 2) * 0.045;
-        root.current.rotation.y += delta * 0.32;
+          0.12 +
+          Math.max(
+            0,
+            Math.sin(
+              time * 2.2
+            )
+          ) *
+            0.035;
+        root.current.rotation.y =
+          Math.sin(
+            time * 0.8
+          ) *
+            0.07;
+
+        if (detail.current) {
+          detail.current.rotation.y +=
+            delta * 0.75;
+        }
         break;
 
       case "party_3d_2":
         root.current.position.y =
-          0.14 + Math.sin(time * 2.15) * 0.05;
-        root.current.rotation.y += delta * 0.62;
+          0.12 +
+          Math.max(
+            0,
+            Math.sin(
+              time * 2.35
+            )
+          ) *
+            0.04;
+        root.current.rotation.y =
+          Math.sin(
+            time * 0.9
+          ) *
+            0.08;
+
+        if (detail.current) {
+          detail.current.rotation.y +=
+            delta * 1.0;
+        }
         break;
 
       case "coins_rain":
@@ -9776,6 +9897,398 @@ function FriendshipResidentVisual({
           0.1 + Math.sin(time * 1.3) * 0.04;
         root.current.rotation.y +=
           delta * 0.2;
+    }
+
+    const pool =
+      visualKey
+        ? COMPANION_ACTION_POOLS[
+            visualKey
+          ]
+        : undefined;
+
+    if (bookFx.current) {
+      bookFx.current.visible =
+        false;
+    }
+
+    if (actionFx.current) {
+      actionFx.current.visible =
+        false;
+    }
+
+    if (
+      visualKey ===
+        "star_throw" &&
+      detail.current
+    ) {
+      detail.current.visible =
+        false;
+    }
+
+    if (!pool?.length) {
+      return;
+    }
+
+    const state =
+      ambientAction.current;
+
+    if (state.nextAt <= 0) {
+      state.nextAt =
+        time +
+        3.5 +
+        Math.random() *
+          4.5;
+    }
+
+    if (
+      !state.action &&
+      time >= state.nextAt
+    ) {
+      const roll =
+        Math.random();
+
+      if (
+        visualKey === "star_throw" &&
+        !state.hasDoneSignature
+      ) {
+        state.action = "star_shot";
+        state.hasDoneSignature = true;
+      } else if (
+        visualKey === "nova_bunny" &&
+        !state.hasDoneSignature
+      ) {
+        state.action = "heart_pop";
+        state.hasDoneSignature = true;
+      } else if (
+        visualKey === "sleepy_moon" &&
+        !state.hasDoneSignature
+      ) {
+        state.action = "dream";
+        state.hasDoneSignature = true;
+      } else if (
+        visualKey === "balloons" &&
+        !state.hasDoneSignature
+      ) {
+        state.action = "balloon_bob";
+        state.hasDoneSignature = true;
+      } else if (
+        visualKey === "hearts" &&
+        !state.hasDoneSignature
+      ) {
+        state.action = "heart_pop";
+        state.hasDoneSignature = true;
+      } else if (
+        visualKey === "star_blow" &&
+        !state.hasDoneSignature
+      ) {
+        state.action = "blow_star";
+        state.hasDoneSignature = true;
+      } else if (
+        visualKey === "star_explode" &&
+        !state.hasDoneSignature
+      ) {
+        state.action = "star_burst";
+        state.hasDoneSignature = true;
+      } else if (
+        (visualKey === "party_3d" ||
+         visualKey === "party_3d_2") &&
+        !state.hasDoneSignature
+      ) {
+        state.action = "party_burst";
+        state.hasDoneSignature = true;
+      } else if (
+        visualKey === "coins_rain" &&
+        !state.hasDoneSignature
+      ) {
+        state.action = "coin_burst";
+        state.hasDoneSignature = true;
+      } else if (
+        visualKey === "reading_buddy" &&
+        !state.hasDoneSignature
+      ) {
+        state.action = "read";
+        state.hasDoneSignature = true;
+      } else if (visualKey === "star_throw") {
+        state.action = roll < 0.50 ? "star_shot" : roll < 0.78 ? "read" : roll < 0.89 ? "jump" : "spin";
+      } else if (visualKey === "nova_bunny") {
+        state.action = roll < 0.48 ? "heart_pop" : roll < 0.74 ? "read" : roll < 0.88 ? "jump" : "spin";
+      } else if (visualKey === "sleepy_moon") {
+        state.action = roll < 0.50 ? "dream" : roll < 0.76 ? "read" : roll < 0.89 ? "jump" : "spin";
+      } else if (visualKey === "balloons") {
+        state.action = roll < 0.68 ? "balloon_bob" : roll < 0.84 ? "spin" : "jump";
+      } else if (visualKey === "hearts") {
+        state.action = roll < 0.68 ? "heart_pop" : roll < 0.84 ? "spin" : "jump";
+      } else if (visualKey === "star_blow") {
+        state.action = roll < 0.68 ? "blow_star" : roll < 0.84 ? "spin" : "jump";
+      } else if (visualKey === "star_explode") {
+        state.action = roll < 0.70 ? "star_burst" : roll < 0.85 ? "jump" : "spin";
+      } else if (
+        visualKey === "party_3d" ||
+        visualKey === "party_3d_2"
+      ) {
+        state.action = roll < 0.68 ? "party_burst" : roll < 0.84 ? "spin" : "jump";
+      } else if (visualKey === "coins_rain") {
+        state.action = roll < 0.70 ? "coin_burst" : roll < 0.85 ? "spin" : "jump";
+      } else if (visualKey === "reading_buddy") {
+        state.action = roll < 0.72 ? "read" : roll < 0.86 ? "jump" : "spin";
+      } else {
+        state.action =
+          pool[
+            Math.floor(
+              Math.random() *
+                pool.length
+            )
+          ];
+      }
+
+      state.startedAt = time;
+      state.endsAt =
+        time +
+        companionActionDuration(
+          state.action
+        );
+    }
+
+    if (!state.action) {
+      root.current.rotation.x =
+        0;
+      return;
+    }
+
+    if (time >= state.endsAt) {
+      state.action = null;
+      state.startedAt = 0;
+      state.endsAt = 0;
+      state.nextAt =
+        time +
+        4.5 +
+        Math.random() *
+          7.5;
+      return;
+    }
+
+    const duration =
+      Math.max(
+        0.01,
+        state.endsAt -
+          state.startedAt
+      );
+
+    const progress =
+      Math.max(
+        0,
+        Math.min(
+          1,
+          (
+            time -
+            state.startedAt
+          ) /
+            duration
+        )
+      );
+
+    switch (state.action) {
+      case "jump":
+        root.current.position.y +=
+          Math.sin(
+            progress *
+              Math.PI
+          ) *
+          0.28;
+        break;
+
+      case "spin":
+        root.current.rotation.y +=
+          delta * 6.8;
+        break;
+
+      case "star_shot":
+        if (detail.current) {
+          detail.current.visible =
+            true;
+
+          const shot =
+            THREE.MathUtils.smoothstep(
+              progress,
+              0.08,
+              0.86
+            );
+
+          detail.current.position.set(
+            0.42 +
+              shot * 1.7,
+            0.92 +
+              Math.sin(
+                progress *
+                  Math.PI
+              ) *
+                0.62,
+            0.1
+          );
+
+          const shotScale =
+            1.0 +
+            Math.sin(
+              progress *
+                Math.PI
+            ) *
+              0.75;
+
+          detail.current.scale.setScalar(
+            shotScale
+          );
+
+          detail.current.rotation.z +=
+            delta * 7.5;
+          detail.current.rotation.y +=
+            delta * 4.2;
+        }
+        break;
+
+      case "read":
+        if (bookFx.current) {
+          bookFx.current.visible =
+            true;
+
+          bookFx.current.position.y =
+            0.48 +
+            Math.sin(
+              time * 1.8
+            ) *
+              0.025;
+
+          bookFx.current.rotation.z =
+            Math.sin(
+              time * 0.9
+            ) *
+              0.045;
+        }
+
+        root.current.rotation.x =
+          -0.08 +
+          Math.sin(
+            time * 0.7
+          ) *
+            0.02;
+        break;
+
+      case "heart_pop":
+        if (actionFx.current) {
+          actionFx.current.visible =
+            true;
+
+          const pulse =
+            0.72 +
+            Math.sin(
+              progress *
+                Math.PI
+            ) *
+              0.62;
+
+          actionFx.current.scale.setScalar(
+            pulse
+          );
+
+          actionFx.current.position.y =
+            0.78 +
+            progress *
+              0.5;
+        }
+        break;
+
+      case "dream":
+        if (actionFx.current) {
+          actionFx.current.visible =
+            true;
+
+          actionFx.current.position.y =
+            0.6 +
+            progress *
+              0.35;
+
+          actionFx.current.rotation.y +=
+            delta * 0.8;
+
+          const dreamPulse =
+            0.84 +
+            Math.sin(
+              progress *
+                Math.PI *
+                2
+            ) *
+              0.12;
+
+          actionFx.current.scale.setScalar(
+            dreamPulse
+          );
+        }
+
+      case "coin_burst":
+        if (actionFx.current) {
+          actionFx.current.visible = true;
+          actionFx.current.rotation.y += delta * 3.4;
+          actionFx.current.scale.setScalar(
+            0.82 +
+            Math.sin(progress * Math.PI) * 0.55
+          );
+          actionFx.current.position.y =
+            0.18 +
+            Math.sin(progress * Math.PI) * 0.5;
+        }
+        root.current.rotation.y += delta;
+        break;
+
+      case "balloon_bob":
+        root.current.position.y +=
+          Math.sin(progress * Math.PI) * 0.48;
+        root.current.rotation.z =
+          Math.sin(progress * Math.PI * 2) * 0.12;
+        break;
+
+      case "party_burst":
+        if (actionFx.current) {
+          actionFx.current.visible = true;
+          actionFx.current.rotation.y += delta * 4.2;
+          actionFx.current.rotation.z += delta * 2.0;
+          actionFx.current.scale.setScalar(
+            0.8 +
+            Math.sin(progress * Math.PI) * 0.7
+          );
+        }
+        root.current.rotation.y += delta * 2.8;
+        break;
+
+      case "blow_star":
+        if (detail.current) {
+          detail.current.visible = true;
+          const blown =
+            THREE.MathUtils.smoothstep(
+              progress,
+              0.08,
+              0.9
+            );
+          detail.current.position.set(
+            0.38 + blown * 1.35,
+            0.34 +
+              Math.sin(progress * Math.PI) * 0.34,
+            0.34
+          );
+          detail.current.rotation.z += delta * 6.0;
+        }
+        break;
+
+      case "star_burst":
+        if (detail.current) {
+          detail.current.visible = true;
+          detail.current.rotation.z += delta * 7.0;
+          detail.current.rotation.y += delta * 4.0;
+          detail.current.scale.setScalar(
+            0.8 +
+            Math.sin(progress * Math.PI) * 1.15
+          );
+        }
+        break;
+        break;
     }
   });
 
@@ -9860,7 +10373,62 @@ function FriendshipResidentVisual({
               emissiveIntensity={0.26}
             />
           </mesh>
-        </group>
+                  {/* Ambient action: heart pop */}
+          <group
+            ref={actionFx}
+            visible={false}
+            position={[
+              0,
+              0.82,
+              0.08,
+            ]}
+          >
+            <MiniHeart
+              scale={0.52}
+              color="#f9a8d4"
+            />
+            <MiniHeart
+              position={[
+                -0.28,
+                0.18,
+                0,
+              ]}
+              scale={0.3}
+              color="#c084fc"
+            />
+            <MiniHeart
+              position={[
+                0.27,
+                0.12,
+                0,
+              ]}
+              scale={0.28}
+              color="#fb7185"
+            />
+          </group>
+
+          {/* Ambient action: bunny reading */}
+          <group
+            ref={bookFx}
+            visible={false}
+            position={[
+              0,
+              0.48,
+              0.38,
+            ]}
+            rotation={[
+              -0.35,
+              0,
+              0,
+            ]}
+          >
+            <MiniBook
+              scale={0.74}
+              cover="#3b82f6"
+            />
+          </group>
+
+</group>
       );
 
     case "balloons":
@@ -9969,7 +10537,62 @@ function FriendshipResidentVisual({
               emissiveIntensity={0.24}
             />
           </mesh>
-        </group>
+                  {/* Ambient action: dream sparkles */}
+          <group
+            ref={actionFx}
+            visible={false}
+            position={[
+              0.35,
+              0.92,
+              0.08,
+            ]}
+          >
+            <MiniStar
+              scale={0.46}
+              color="#e9d5ff"
+            />
+            <MiniStar
+              position={[
+                0.28,
+                0.2,
+                -0.03,
+              ]}
+              scale={0.3}
+              color="#bfdbfe"
+            />
+            <MiniStar
+              position={[
+                -0.18,
+                0.34,
+                0.04,
+              ]}
+              scale={0.24}
+              color="#fef08a"
+            />
+          </group>
+
+          {/* Ambient action: moon reading */}
+          <group
+            ref={bookFx}
+            visible={false}
+            position={[
+              0,
+              0.32,
+              0.42,
+            ]}
+            rotation={[
+              -0.4,
+              0,
+              0,
+            ]}
+          >
+            <MiniBook
+              scale={0.72}
+              cover="#7c3aed"
+            />
+          </group>
+
+</group>
       );
 
     case "star_blow":
@@ -10281,23 +10904,354 @@ function FriendshipResidentVisual({
 
     case "star_throw":
       return (
-        <group ref={root} scale={0.76}>
-          <mesh position={[0, 0.35, 0]}>
-            <sphereGeometry args={[0.34, 20, 16]} />
+        <group
+          ref={root}
+          scale={0.72}
+        >
+          {/* Legs */}
+          {[-0.13, 0.13].map(
+            (x) => (
+              <group key={x}>
+                <mesh
+                  position={[
+                    x,
+                    0.18,
+                    0,
+                  ]}
+                  scale={[
+                    0.085,
+                    0.26,
+                    0.08,
+                  ]}
+                >
+                  <capsuleGeometry
+                    args={[
+                      0.45,
+                      0.72,
+                      6,
+                      10,
+                    ]}
+                  />
+                  <meshStandardMaterial
+                    color="#f5d0c5"
+                    roughness={0.72}
+                  />
+                </mesh>
+
+                <mesh
+                  position={[
+                    x,
+                    -0.015,
+                    0.075,
+                  ]}
+                  scale={[
+                    0.11,
+                    0.075,
+                    0.17,
+                  ]}
+                >
+                  <sphereGeometry
+                    args={[
+                      1,
+                      12,
+                      10,
+                    ]}
+                  />
+                  <meshStandardMaterial
+                    color="#7f1d1d"
+                    roughness={0.56}
+                  />
+                </mesh>
+              </group>
+            )
+          )}
+
+          {/* Red dress */}
+          <mesh
+            position={[
+              0,
+              0.49,
+              0,
+            ]}
+            scale={[
+              0.39,
+              0.54,
+              0.31,
+            ]}
+          >
+            <coneGeometry
+              args={[
+                0.72,
+                1.02,
+                22,
+              ]}
+            />
             <meshStandardMaterial
-              color={accent}
-              emissive="#2563eb"
-              emissiveIntensity={0.24}
-              roughness={0.46}
+              color="#dc2626"
+              emissive="#991b1b"
+              emissiveIntensity={0.13}
+              roughness={0.48}
             />
           </mesh>
 
-          {eyes}
+          {/* Gold dress trim */}
+          <mesh
+            position={[
+              0,
+              0.18,
+              0,
+            ]}
+            rotation={[
+              Math.PI / 2,
+              0,
+              0,
+            ]}
+          >
+            <torusGeometry
+              args={[
+                0.29,
+                0.03,
+                8,
+                28,
+              ]}
+            />
+            <meshBasicMaterial
+              color="#fde68a"
+            />
+          </mesh>
 
-          <group ref={detail} position={[0.5, 0.5, 0]}>
-            <MiniStar color="#fff3a8" />
+          {/* Left arm */}
+          <mesh
+            position={[
+              -0.31,
+              0.63,
+              0.02,
+            ]}
+            rotation={[
+              0,
+              0,
+              0.52,
+            ]}
+            scale={[
+              0.073,
+              0.29,
+              0.073,
+            ]}
+          >
+            <capsuleGeometry
+              args={[
+                0.5,
+                0.68,
+                6,
+                10,
+              ]}
+            />
+            <meshStandardMaterial
+              color="#f5d0c5"
+              roughness={0.72}
+            />
+          </mesh>
+
+          {/* Throwing arm raised up */}
+          <mesh
+            position={[
+              0.3,
+              0.79,
+              0.02,
+            ]}
+            rotation={[
+              0,
+              0,
+              -0.72,
+            ]}
+            scale={[
+              0.073,
+              0.34,
+              0.073,
+            ]}
+          >
+            <capsuleGeometry
+              args={[
+                0.5,
+                0.72,
+                6,
+                10,
+              ]}
+            />
+            <meshStandardMaterial
+              color="#f5d0c5"
+              roughness={0.72}
+            />
+          </mesh>
+
+          {/* Hair mass behind head */}
+          <mesh
+            position={[
+              0,
+              1.04,
+              -0.08,
+            ]}
+            scale={[
+              0.43,
+              0.5,
+              0.33,
+            ]}
+          >
+            <sphereGeometry
+              args={[
+                0.62,
+                22,
+                18,
+              ]}
+            />
+            <meshStandardMaterial
+              color="#17131f"
+              roughness={0.66}
+            />
+          </mesh>
+
+          {/* Face */}
+          <mesh
+            position={[
+              0,
+              1.05,
+              0.105,
+            ]}
+            scale={[
+              0.32,
+              0.35,
+              0.28,
+            ]}
+          >
+            <sphereGeometry
+              args={[
+                0.62,
+                22,
+                18,
+              ]}
+            />
+            <meshStandardMaterial
+              color="#f5d0c5"
+              roughness={0.74}
+            />
+          </mesh>
+
+          {/* Long side hair */}
+          {[-0.25, 0.25].map(
+            (x) => (
+              <mesh
+                key={x}
+                position={[
+                  x,
+                  0.93,
+                  0.025,
+                ]}
+                scale={[
+                  0.13,
+                  0.42,
+                  0.13,
+                ]}
+                rotation={[
+                  0,
+                  0,
+                  x < 0
+                    ? 0.16
+                    : -0.16,
+                ]}
+              >
+                <capsuleGeometry
+                  args={[
+                    0.42,
+                    0.72,
+                    6,
+                    10,
+                  ]}
+                />
+                <meshStandardMaterial
+                  color="#17131f"
+                  roughness={0.64}
+                />
+              </mesh>
+            )
+          )}
+
+          {/* Intentionally faceless for a clean stylized chibi look. */}
+
+          {/* Star hair accent */}
+          <group
+            position={[
+              -0.27,
+              1.37,
+              0.02,
+            ]}
+          >
+            <MiniStar
+              scale={0.54}
+              color="#fde68a"
+            />
           </group>
-        </group>
+
+          {/* Glowing star in the throwing hand */}
+          <group
+            position={[
+              0.54,
+              1.02,
+              0.03,
+            ]}
+          >
+            <MiniStar
+              scale={0.62}
+              color="#fff3a8"
+            />
+          </group>
+
+          {/* Animated thrown star */}
+          <group
+            ref={detail}
+            position={[
+              0.7,
+              0.75,
+              0.1,
+            ]}
+          >
+            <MiniStar
+              scale={0.48}
+              color="#67e8f9"
+            />
+          </group>
+
+          <pointLight
+            position={[
+              0.48,
+              0.92,
+              0.22,
+            ]}
+            color="#fde68a"
+            intensity={0.22}
+            distance={2.2}
+          />
+                  {/* Ambient action: Star Toss reading */}
+          <group
+            ref={bookFx}
+            visible={false}
+            position={[
+              0,
+              0.54,
+              0.4,
+            ]}
+            rotation={[
+              -0.38,
+              0,
+              0,
+            ]}
+          >
+            <MiniBook
+              scale={0.7}
+              cover="#dc2626"
+            />
+          </group>
+
+</group>
       );
 
     case "party_3d":
@@ -10305,57 +11259,431 @@ function FriendshipResidentVisual({
       const neon =
         visualKey === "party_3d_2";
 
+      const dressColor =
+        neon
+          ? "#7c3aed"
+          : "#dc2626";
+
+      const trimColor =
+        neon
+          ? "#22d3ee"
+          : "#fef08a";
+
       return (
-        <group ref={root} scale={0.72}>
-          <mesh position={[0, 0.35, 0]}>
-            <sphereGeometry args={[0.34, 20, 16]} />
+        <group
+          ref={root}
+          scale={0.72}
+        >
+          {[-0.13, 0.13].map(
+            (x) => (
+              <group key={x}>
+                <mesh
+                  position={[
+                    x,
+                    0.18,
+                    0,
+                  ]}
+                  scale={[
+                    0.085,
+                    0.27,
+                    0.08,
+                  ]}
+                >
+                  <capsuleGeometry
+                    args={[
+                      0.45,
+                      0.75,
+                      6,
+                      10,
+                    ]}
+                  />
+                  <meshStandardMaterial
+                    color="#f5d0c5"
+                    roughness={0.72}
+                  />
+                </mesh>
+
+                <mesh
+                  position={[
+                    x,
+                    -0.02,
+                    0.06,
+                  ]}
+                  scale={[
+                    0.11,
+                    0.08,
+                    0.17,
+                  ]}
+                >
+                  <sphereGeometry
+                    args={[
+                      1,
+                      12,
+                      10,
+                    ]}
+                  />
+                  <meshStandardMaterial
+                    color={
+                      neon
+                        ? "#1e1b4b"
+                        : "#7f1d1d"
+                    }
+                    roughness={0.55}
+                  />
+                </mesh>
+              </group>
+            )
+          )}
+
+          {/* Party dress */}
+          <mesh
+            position={[
+              0,
+              0.48,
+              0,
+            ]}
+            scale={[
+              0.4,
+              0.54,
+              0.32,
+            ]}
+          >
+            <coneGeometry
+              args={[
+                0.72,
+                1.0,
+                22,
+              ]}
+            />
             <meshStandardMaterial
-              color={accent}
-              emissive={neon ? "#7c3aed" : "#be185d"}
-              emissiveIntensity={neon ? 0.5 : 0.24}
-              metalness={neon ? 0.32 : 0.12}
-              roughness={0.36}
+              color={dressColor}
+              emissive={
+                neon
+                  ? "#4c1d95"
+                  : "#991b1b"
+              }
+              emissiveIntensity={
+                neon
+                  ? 0.38
+                  : 0.12
+              }
+              roughness={0.5}
             />
           </mesh>
 
           <mesh
-            position={[0, 0.86, 0]}
-            rotation={[0, 0, -0.12]}
+            position={[
+              0,
+              0.18,
+              0,
+            ]}
+            rotation={[
+              Math.PI / 2,
+              0,
+              0,
+            ]}
           >
-            <coneGeometry args={[0.24, 0.56, 18]} />
-            <meshStandardMaterial
-              color={neon ? "#22d3ee" : "#facc15"}
-              emissive={neon ? "#0891b2" : "#ca8a04"}
-              emissiveIntensity={0.28}
+            <torusGeometry
+              args={[
+                0.3,
+                0.035,
+                8,
+                28,
+              ]}
+            />
+            <meshBasicMaterial
+              color={trimColor}
             />
           </mesh>
 
-          {[
-            [-0.45, 0.58, 0.08, "#38bdf8"],
-            [0.44, 0.54, -0.04, "#facc15"],
-            [-0.3, 0.12, -0.1, "#f472b6"],
-          ].map(([x, y, z, color], index) => (
-            <mesh
-              key={index}
-              position={[x as number, y as number, z as number]}
-              rotation={[0, 0, index * 0.7]}
-              scale={[0.055, 0.11, 0.035]}
-            >
-              <boxGeometry args={[1, 1, 1]} />
-              <meshBasicMaterial color={color as string} />
-            </mesh>
-          ))}
+          {/* Arms */}
+          {[-1, 1].map(
+            (side) => (
+              <mesh
+                key={side}
+                position={[
+                  side * 0.34,
+                  0.62,
+                  0.02,
+                ]}
+                rotation={[
+                  0,
+                  0,
+                  side * -0.58,
+                ]}
+                scale={[
+                  0.075,
+                  0.3,
+                  0.075,
+                ]}
+              >
+                <capsuleGeometry
+                  args={[
+                    0.5,
+                    0.7,
+                    6,
+                    10,
+                  ]}
+                />
+                <meshStandardMaterial
+                  color="#f5d0c5"
+                  roughness={0.72}
+                />
+              </mesh>
+            )
+          )}
 
-          {neon ? (
-            <mesh
-              position={[0, 0.35, 0]}
-              rotation={[Math.PI / 2, 0, 0]}
-            >
-              <torusGeometry args={[0.48, 0.035, 8, 30]} />
-              <meshBasicMaterial color="#67e8f9" />
-            </mesh>
-          ) : null}
-        </group>
+          {/* Hair behind the head */}
+          <mesh
+            position={[
+              0,
+              1.03,
+              -0.08,
+            ]}
+            scale={[
+              0.42,
+              0.5,
+              0.32,
+            ]}
+          >
+            <sphereGeometry
+              args={[
+                0.62,
+                22,
+                18,
+              ]}
+            />
+            <meshStandardMaterial
+              color="#17131f"
+              roughness={0.66}
+            />
+          </mesh>
+
+          {/* Face */}
+          <mesh
+            position={[
+              0,
+              1.05,
+              0.11,
+            ]}
+            scale={[
+              0.32,
+              0.35,
+              0.28,
+            ]}
+          >
+            <sphereGeometry
+              args={[
+                0.62,
+                22,
+                18,
+              ]}
+            />
+            <meshStandardMaterial
+              color="#f5d0c5"
+              roughness={0.74}
+            />
+          </mesh>
+
+          {/* Side hair */}
+          {[-0.25, 0.25].map(
+            (x) => (
+              <mesh
+                key={x}
+                position={[
+                  x,
+                  0.94,
+                  0.04,
+                ]}
+                scale={[
+                  0.13,
+                  0.4,
+                  0.13,
+                ]}
+                rotation={[
+                  0,
+                  0,
+                  x < 0
+                    ? 0.16
+                    : -0.16,
+                ]}
+              >
+                <capsuleGeometry
+                  args={[
+                    0.42,
+                    0.7,
+                    6,
+                    10,
+                  ]}
+                />
+                <meshStandardMaterial
+                  color="#17131f"
+                  roughness={0.64}
+                />
+              </mesh>
+            )
+          )}
+
+          {/* Eyes */}
+          {[-0.105, 0.105].map(
+            (x) => (
+              <group key={x}>
+                <mesh
+                  position={[
+                    x,
+                    1.08,
+                    0.285,
+                  ]}
+                  scale={[
+                    0.048,
+                    0.065,
+                    0.025,
+                  ]}
+                >
+                  <sphereGeometry
+                    args={[
+                      1,
+                      12,
+                      10,
+                    ]}
+                  />
+                  <meshBasicMaterial
+                    color="#261a2b"
+                  />
+                </mesh>
+
+                <mesh
+                  position={[
+                    x - 0.012,
+                    1.1,
+                    0.311,
+                  ]}
+                  scale={[
+                    0.012,
+                    0.018,
+                    0.009,
+                  ]}
+                >
+                  <sphereGeometry
+                    args={[
+                      1,
+                      8,
+                      8,
+                    ]}
+                  />
+                  <meshBasicMaterial
+                    color="#ffffff"
+                  />
+                </mesh>
+              </group>
+            )
+          )}
+
+          <mesh
+            position={[
+              0,
+              0.98,
+              0.306,
+            ]}
+            rotation={[
+              Math.PI / 2,
+              0,
+              0,
+            ]}
+            scale={[
+              1,
+              0.65,
+              1,
+            ]}
+          >
+            <torusGeometry
+              args={[
+                0.055,
+                0.012,
+                7,
+                16,
+                Math.PI,
+              ]}
+            />
+            <meshBasicMaterial
+              color="#9f1239"
+            />
+          </mesh>
+
+          <group
+            position={[
+              neon
+                ? 0.26
+                : -0.27,
+              1.37,
+              0.02,
+            ]}
+          >
+            <MiniStar
+              scale={0.58}
+              color={trimColor}
+            />
+          </group>
+
+          {/* Orbiting celebration stars */}
+          <group
+            ref={detail}
+            position={[
+              0,
+              0.85,
+              0,
+            ]}
+          >
+            <MiniStar
+              position={[
+                -0.48,
+                0.12,
+                0,
+              ]}
+              scale={0.42}
+              color="#fde68a"
+            />
+            <MiniStar
+              position={[
+                0.46,
+                -0.06,
+                0.04,
+              ]}
+              scale={0.34}
+              color={
+                neon
+                  ? "#67e8f9"
+                  : "#f9a8d4"
+              }
+            />
+          </group>
+
+          <pointLight
+            position={[
+              0,
+              0.8,
+              0.3,
+            ]}
+            color={trimColor}
+            intensity={
+              neon
+                ? 0.3
+                : 0.16
+            }
+            distance={2.2}
+          />
+                  {/* Ambient action: party burst */}
+          <group
+            ref={actionFx}
+            visible={false}
+            position={[0, 0.76, 0]}
+          >
+            <MiniStar position={[-0.5, 0.1, 0]} scale={0.42} color="#fde68a" />
+            <MiniStar position={[0.48, 0.18, 0.04]} scale={0.38} color="#67e8f9" />
+            <MiniHeart position={[0, 0.48, 0]} scale={0.38} color="#f9a8d4" />
+          </group>
+
+</group>
       );
     }
 
@@ -10380,7 +11708,18 @@ function FriendshipResidentVisual({
             rotation={[1.4, 0.2, 0]}
             scale={0.8}
           />
-        </group>
+                  {/* Ambient action: coin burst */}
+          <group
+            ref={actionFx}
+            visible={false}
+            position={[0, 0.52, 0]}
+          >
+            <MiniCoin position={[-0.46, 0.08, 0]} rotation={[1.1, 0.3, 0]} scale={0.9} />
+            <MiniCoin position={[0.45, 0.22, 0.04]} rotation={[0.8, 0.1, 0.5]} scale={1.05} />
+            <MiniCoin position={[0, 0.52, -0.05]} rotation={[1.4, 0.2, 0]} scale={0.8} />
+          </group>
+
+</group>
       );
 
     case "reading_buddy":
@@ -10546,6 +11885,12 @@ function DiscoveryMarker({
     transform?.z ?? defaultPosition[2],
   ];
 
+  const isEquippedVisitor =
+    discovery.kind === "resident" &&
+    discovery.key.startsWith(
+      "equipped-visitor:"
+    );
+
   const isBuilderSelected =
     builderEditing &&
     discovery.kind === "keepsake" &&
@@ -10556,20 +11901,226 @@ function DiscoveryMarker({
       null
     );
 
+  const residentRoam =
+    useMemo(
+      () => ({
+        phase:
+          (
+            index *
+              2.17 +
+            discovery.key.length *
+              0.37
+          ) %
+          11.5,
+        cycle:
+          10.5 +
+          (index % 4) *
+            1.35,
+        pause:
+          2.1 +
+          (index % 3) *
+            0.35,
+        radiusX:
+          0.5 +
+          (index % 3) *
+            0.13,
+        radiusZ:
+          0.38 +
+          (index % 4) *
+            0.09,
+      }),
+      [
+        discovery.key,
+        index,
+      ]
+    );
+
   useFrame(
-    ({ clock }) => {
+    ({ clock }, delta) => {
       if (!marker.current) {
         return;
       }
 
+      if (
+        discovery.kind ===
+        "resident"
+      ) {
+        const cycleTime =
+          (
+            clock.elapsedTime +
+            residentRoam.phase
+          ) %
+          residentRoam.cycle;
+
+        let targetX =
+          position[0];
+        let targetZ =
+          position[2];
+
+        if (
+          isEquippedVisitor &&
+          !selected
+        ) {
+          const rawRoute =
+            (
+              clock.elapsedTime +
+              residentRoam.phase
+            ) /
+            6.8;
+
+          const routeIndex =
+            Math.floor(
+              rawRoute
+            ) %
+            EQUIPPED_VISITOR_ROUTE.length;
+
+          const nextRouteIndex =
+            (
+              routeIndex +
+              1
+            ) %
+            EQUIPPED_VISITOR_ROUTE.length;
+
+          const localRoute =
+            rawRoute -
+            Math.floor(
+              rawRoute
+            );
+
+          const routeMove =
+            THREE.MathUtils.smoothstep(
+              localRoute,
+              0.18,
+              0.82
+            );
+
+          const from =
+            EQUIPPED_VISITOR_ROUTE[
+              routeIndex
+            ];
+
+          const to =
+            EQUIPPED_VISITOR_ROUTE[
+              nextRouteIndex
+            ];
+
+          targetX =
+            THREE.MathUtils.lerp(
+              from[0],
+              to[0],
+              routeMove
+            );
+
+          targetZ =
+            THREE.MathUtils.lerp(
+              from[2],
+              to[2],
+              routeMove
+            );
+        } else if (
+          !selected &&
+          cycleTime >
+            residentRoam.pause
+        ) {
+          const moveProgress =
+            (
+              cycleTime -
+              residentRoam.pause
+            ) /
+            (
+              residentRoam.cycle -
+              residentRoam.pause
+            );
+
+          const angle =
+            moveProgress *
+            Math.PI *
+            2;
+
+          targetX +=
+            (
+              Math.cos(
+                angle
+              ) -
+              1
+            ) *
+            residentRoam.radiusX;
+
+          targetZ +=
+            Math.sin(
+              angle
+            ) *
+            residentRoam.radiusZ;
+        }
+
+        const previousX =
+          marker.current.position.x;
+        const previousZ =
+          marker.current.position.z;
+
+        const blend =
+          1 -
+          Math.exp(
+            -delta *
+              2.6
+          );
+
+        marker.current.position.x =
+          THREE.MathUtils.lerp(
+            previousX,
+            targetX,
+            blend
+          );
+
+        marker.current.position.z =
+          THREE.MathUtils.lerp(
+            previousZ,
+            targetZ,
+            blend
+          );
+
+        marker.current.position.y =
+          position[1] +
+          (
+            hasCustomVisual
+              ? 0
+              : Math.sin(
+                  clock.elapsedTime *
+                    1.9 +
+                    index
+                ) *
+                0.06
+          );
+
+        const dx =
+          marker.current.position.x -
+          previousX;
+        const dz =
+          marker.current.position.z -
+          previousZ;
+
+        if (
+          Math.abs(dx) +
+            Math.abs(dz) >
+          0.0005
+        ) {
+          marker.current.rotation.y =
+            Math.atan2(
+              dx,
+              dz
+            );
+        }
+
+        return;
+      }
+
       if (hasCustomVisual) {
+        marker.current.position.x =
+          position[0];
         marker.current.position.y =
           position[1];
-
-        if (discovery.kind !== "keepsake") {
-          marker.current.rotation.y =
-            0;
-        }
+        marker.current.position.z =
+          position[2];
 
         return;
       }
@@ -10583,15 +12134,9 @@ function DiscoveryMarker({
         ) *
           0.08;
 
-      if (
-        discovery.kind !== "keepsake" ||
-        !builderEditing
-      ) {
+      if (!builderEditing) {
         marker.current.rotation.y +=
-          discovery.kind ===
-          "keepsake"
-            ? 0.012
-            : 0.004;
+          0.012;
       }
     }
   );
@@ -10636,9 +12181,24 @@ function DiscoveryMarker({
           return;
         }
 
+        const livePosition:
+          Vec3 =
+          discovery.kind ===
+            "resident" &&
+          marker.current
+            ? [
+                marker.current
+                  .position.x,
+                marker.current
+                  .position.y,
+                marker.current
+                  .position.z,
+              ]
+            : position;
+
         onSelect(
           discovery.key,
-          position
+          livePosition
         );
       }}
     >
@@ -10867,9 +12427,685 @@ function BuilderSkyExtras({
   );
 }
 
+function LearningEnergyBurst({
+  triggerToken,
+}: {
+  triggerToken: number;
+}) {
+  const root =
+    useRef<THREE.Group>(
+      null
+    );
+  const points =
+    useRef<THREE.Points>(
+      null
+    );
+  const ringA =
+    useRef<THREE.Mesh>(
+      null
+    );
+  const ringB =
+    useRef<THREE.Mesh>(
+      null
+    );
+  const light =
+    useRef<THREE.PointLight>(
+      null
+    );
+  const startedAt =
+    useRef<number | null>(
+      null
+    );
+
+  const positions =
+    useMemo(() => {
+      const values: number[] =
+        [];
+
+      for (
+        let index = 0;
+        index < 54;
+        index += 1
+      ) {
+        const angle =
+          (
+            index *
+            137.5
+          ) *
+          (
+            Math.PI /
+            180
+          );
+
+        const radius =
+          0.7 +
+          (
+            (index * 31) %
+            25
+          ) /
+            10;
+
+        values.push(
+          Math.cos(angle) *
+            radius,
+          0.2 +
+            (
+              (index * 17) %
+              25
+            ) /
+              10,
+          Math.sin(angle) *
+            radius
+        );
+      }
+
+      return new Float32Array(
+        values
+      );
+    }, []);
+
+  useEffect(() => {
+    if (!triggerToken) {
+      return;
+    }
+
+    startedAt.current =
+      Date.now() /
+      1000;
+
+    if (root.current) {
+      root.current.visible =
+        true;
+      root.current.position.y =
+        0;
+      root.current.rotation.y =
+        0;
+    }
+  }, [triggerToken]);
+
+  useFrame((_, delta) => {
+    if (
+      !root.current ||
+      startedAt.current ==
+        null
+    ) {
+      return;
+    }
+
+    const elapsed =
+      Date.now() /
+        1000 -
+      startedAt.current;
+
+    const duration = 4.4;
+
+    if (
+      elapsed >=
+      duration
+    ) {
+      root.current.visible =
+        false;
+      startedAt.current =
+        null;
+      return;
+    }
+
+    const progress =
+      Math.max(
+        0,
+        Math.min(
+          1,
+          elapsed /
+            duration
+        )
+      );
+
+    const fade =
+      1 -
+      progress;
+
+    root.current.rotation.y +=
+      delta *
+      (
+        0.45 +
+        fade *
+          0.7
+      );
+
+    if (points.current) {
+      points.current.position.y =
+        progress *
+        1.8;
+
+      const scale =
+        0.72 +
+        progress *
+          0.7;
+
+      points.current.scale.setScalar(
+        scale
+      );
+
+      (
+        points.current
+          .material as THREE.PointsMaterial
+      ).opacity =
+        Math.min(
+          1,
+          fade *
+            1.35
+        );
+    }
+
+    if (ringA.current) {
+      const scale =
+        0.45 +
+        progress *
+          4.1;
+
+      ringA.current.scale.set(
+        scale,
+        scale,
+        scale
+      );
+
+      (
+        ringA.current
+          .material as THREE.MeshBasicMaterial
+      ).opacity =
+        fade *
+        0.55;
+    }
+
+    if (ringB.current) {
+      const delayed =
+        Math.max(
+          0,
+          progress -
+            0.16
+        ) /
+        0.84;
+
+      const scale =
+        0.35 +
+        delayed *
+          3.3;
+
+      ringB.current.scale.set(
+        scale,
+        scale,
+        scale
+      );
+
+      (
+        ringB.current
+          .material as THREE.MeshBasicMaterial
+      ).opacity =
+        Math.max(
+          0,
+          1 -
+            delayed
+        ) *
+        0.38;
+    }
+
+    if (light.current) {
+      light.current.intensity =
+        fade *
+        2.1;
+    }
+  });
+
+  return (
+    <group
+      ref={root}
+      visible={false}
+      position={[0, 0, 0]}
+    >
+      <points
+        ref={points}
+        position={[0, 0.6, 0]}
+      >
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            args={[
+              positions,
+              3,
+            ]}
+          />
+        </bufferGeometry>
+
+        <pointsMaterial
+          color="#a5f3fc"
+          size={0.13}
+          transparent
+          opacity={0}
+          sizeAttenuation
+          depthWrite={false}
+        />
+      </points>
+
+      <mesh
+        ref={ringA}
+        position={[0, 0.12, 0]}
+        rotation={[
+          -Math.PI / 2,
+          0,
+          0,
+        ]}
+      >
+        <ringGeometry
+          args={[
+            0.76,
+            0.9,
+            48,
+          ]}
+        />
+        <meshBasicMaterial
+          color="#67e8f9"
+          transparent
+          opacity={0}
+          side={THREE.DoubleSide}
+          depthWrite={false}
+        />
+      </mesh>
+
+      <mesh
+        ref={ringB}
+        position={[0, 0.18, 0]}
+        rotation={[
+          -Math.PI / 2,
+          0,
+          0,
+        ]}
+      >
+        <ringGeometry
+          args={[
+            1.05,
+            1.14,
+            48,
+          ]}
+        />
+        <meshBasicMaterial
+          color="#c4b5fd"
+          transparent
+          opacity={0}
+          side={THREE.DoubleSide}
+          depthWrite={false}
+        />
+      </mesh>
+
+      <pointLight
+        ref={light}
+        position={[0, 2.2, 0]}
+        color="#67e8f9"
+        intensity={0}
+        distance={12}
+      />
+    </group>
+  );
+}
+
+function StudySpirit({
+  route,
+  index,
+}: {
+  route: Vec3[];
+  index: number;
+}) {
+  const root = useRef<THREE.Group>(null);
+  const tail = useRef<THREE.Group>(null);
+
+  useFrame(({ clock }, delta) => {
+    if (!root.current || route.length < 2) {
+      return;
+    }
+
+    const time =
+      clock.elapsedTime +
+      index * 2.35;
+
+    const segmentDuration =
+      5.4 +
+      (index % 3) * 0.8;
+
+    const raw =
+      time / segmentDuration;
+
+    const segment =
+      Math.floor(raw) %
+      route.length;
+
+    const nextSegment =
+      (segment + 1) %
+      route.length;
+
+    const local =
+      raw - Math.floor(raw);
+
+    const moving =
+      THREE.MathUtils.smoothstep(
+        local,
+        0.16,
+        0.84
+      );
+
+    const from = route[segment];
+    const to = route[nextSegment];
+
+    const x =
+      THREE.MathUtils.lerp(
+        from[0],
+        to[0],
+        moving
+      );
+
+    const z =
+      THREE.MathUtils.lerp(
+        from[2],
+        to[2],
+        moving
+      );
+
+    const groundY =
+      THREE.MathUtils.lerp(
+        from[1],
+        to[1],
+        moving
+      );
+
+    root.current.position.set(
+      x,
+      groundY +
+        0.44 +
+        Math.sin(time * 2.2) *
+          0.07,
+      z
+    );
+
+    root.current.rotation.y =
+      Math.atan2(
+        to[0] - from[0],
+        to[2] - from[2]
+      );
+
+    if (tail.current) {
+      tail.current.rotation.z +=
+        delta *
+        (index % 2 ? -1.8 : 1.8);
+    }
+  });
+
+  const bodyColor =
+    [
+      "#67e8f9",
+      "#c4b5fd",
+      "#fde68a",
+      "#86efac",
+    ][index % 4];
+
+  return (
+    <group
+      ref={root}
+      scale={
+        0.72 +
+        (index % 2) * 0.08
+      }
+    >
+      <mesh position={[0, 0.16, 0]}>
+        <sphereGeometry
+          args={[0.18, 14, 12]}
+        />
+        <meshStandardMaterial
+          color={bodyColor}
+          emissive={bodyColor}
+          emissiveIntensity={0.62}
+          roughness={0.42}
+        />
+      </mesh>
+
+      <mesh position={[0, 0.41, 0]}>
+        <sphereGeometry
+          args={[0.12, 14, 12]}
+        />
+        <meshStandardMaterial
+          color="#f8fafc"
+          emissive={bodyColor}
+          emissiveIntensity={0.34}
+          roughness={0.5}
+        />
+      </mesh>
+
+      <mesh position={[-0.045, 0.43, 0.105]}>
+        <sphereGeometry
+          args={[0.015, 8, 8]}
+        />
+        <meshBasicMaterial color="#172033" />
+      </mesh>
+
+      <mesh position={[0.045, 0.43, 0.105]}>
+        <sphereGeometry
+          args={[0.015, 8, 8]}
+        />
+        <meshBasicMaterial color="#172033" />
+      </mesh>
+
+      <group
+        ref={tail}
+        position={[0, 0.08, -0.18]}
+      >
+        <mesh
+          rotation={[Math.PI / 2, 0, 0]}
+        >
+          <torusGeometry
+            args={[
+              0.12,
+              0.025,
+              8,
+              18,
+              Math.PI * 1.45,
+            ]}
+          />
+          <meshBasicMaterial
+            color={bodyColor}
+            transparent
+            opacity={0.78}
+          />
+        </mesh>
+      </group>
+
+      <pointLight
+        position={[0, 0.28, 0]}
+        color={bodyColor}
+        intensity={0.28}
+        distance={2.4}
+      />
+    </group>
+  );
+}
+
+function AmbientFireflies({
+  level,
+}: {
+  level: number;
+}) {
+  const root = useRef<THREE.Group>(null);
+
+  const positions =
+    useMemo(() => {
+      const count =
+        Math.min(
+          42,
+          16 + level * 2
+        );
+
+      const values: number[] = [];
+
+      for (
+        let index = 0;
+        index < count;
+        index += 1
+      ) {
+        const angle =
+          index *
+          137.5 *
+          (Math.PI / 180);
+
+        const radius =
+          2.3 +
+          ((index * 19) % 43) /
+            10;
+
+        values.push(
+          Math.cos(angle) * radius,
+          0.7 +
+            ((index * 13) % 20) /
+              10,
+          Math.sin(angle) * radius
+        );
+      }
+
+      return new Float32Array(
+        values
+      );
+    }, [level]);
+
+  useFrame(({ clock }, delta) => {
+    if (!root.current) {
+      return;
+    }
+
+    root.current.rotation.y +=
+      delta * 0.035;
+
+    root.current.position.y =
+      Math.sin(
+        clock.elapsedTime * 0.55
+      ) * 0.06;
+  });
+
+  return (
+    <group ref={root}>
+      <points>
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            args={[positions, 3]}
+          />
+        </bufferGeometry>
+        <pointsMaterial
+          color="#fde68a"
+          size={0.08}
+          transparent
+          opacity={0.66}
+          sizeAttenuation
+          depthWrite={false}
+        />
+      </points>
+    </group>
+  );
+}
+
+function IslandAmbientLife({
+  level,
+}: {
+  level: number;
+}) {
+  const unlocked =
+    useMemo(
+      () =>
+        ISLAND_MILESTONES
+          .filter(
+            (milestone) =>
+              milestone.level <= level
+          )
+          .map(
+            (milestone) =>
+              LANDMARK_POSITIONS[
+                milestone.id
+              ]
+          )
+          .filter(Boolean) as Vec3[],
+      [level]
+    );
+
+  const routePoints =
+    unlocked.length >= 2
+      ? unlocked
+      : [
+          LANDMARK_POSITIONS.study_grove,
+          NOVA_PEDESTAL_WORLD,
+        ];
+
+  const spiritCount =
+    Math.max(
+      2,
+      Math.min(
+        5,
+        2 +
+          Math.floor(level / 4)
+      )
+    );
+
+  const routes =
+    useMemo(
+      () =>
+        Array.from(
+          { length: spiritCount },
+          (_, index) => {
+            const length =
+              routePoints.length;
+
+            return [
+              routePoints[
+                index % length
+              ],
+              routePoints[
+                (
+                  index +
+                  1 +
+                  (index % 2)
+                ) %
+                  length
+              ],
+              routePoints[
+                (
+                  index +
+                  2 +
+                  (index % 3)
+                ) %
+                  length
+              ],
+            ];
+          }
+        ),
+      [routePoints, spiritCount]
+    );
+
+  return (
+    <>
+      <AmbientFireflies
+        level={level}
+      />
+
+      {routes.map(
+        (route, index) => (
+          <StudySpirit
+            key={`study-spirit-${index}`}
+            route={route}
+            index={index}
+          />
+        )
+      )}
+    </>
+  );
+}
+
 function IslandWorld({
   level,
   palette,
+  learningPulseToken,
   selectedMilestoneId,
   selectedDiscoveryKey,
   discoveries,
@@ -10886,6 +13122,7 @@ function IslandWorld({
 }: {
   level: number;
   palette: TimePalette;
+  learningPulseToken: number;
   selectedMilestoneId: string;
   selectedDiscoveryKey: string | null;
   discoveries: Island3DDiscovery[];
@@ -11124,6 +13361,22 @@ function IslandWorld({
           level={level}
         />
 
+        <IslandAmbientLife
+          level={level}
+        />
+
+        <LearningEnergyBurst
+          triggerToken={
+            learningPulseToken
+          }
+        />
+
+        <LearningEnergyBurst
+          triggerToken={
+            learningPulseToken
+          }
+        />
+
         <LegendarySatelliteIslands
           ownedCompanionIds={
             legendaryCompanionIds
@@ -11230,6 +13483,7 @@ function IslandWorld({
 export default function NovaIsland3DScene({
   level,
   height = 450,
+  learningPulseToken = 0,
   selectedMilestoneId,
   selectedDiscoveryKey,
   discoveries,
@@ -12184,6 +14438,9 @@ export default function NovaIsland3DScene({
         <IslandWorld
           level={level}
           palette={palette}
+          learningPulseToken={
+            learningPulseToken
+          }
           selectedMilestoneId={
             selectedMilestoneId
           }

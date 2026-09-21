@@ -28,6 +28,7 @@ import NovaIsland3DScene, {
 } from "../components/island3d/NovaIsland3DScene";
 
 import {
+  ISLAND_ALIVE_SIGNAL_PREFIX,
   ISLAND_MILESTONES,
   type IslandMilestone,
   useIsland,
@@ -50,6 +51,9 @@ import {
 
 const ISLAND_GUIDE_PREFIX =
   "@nova/islandBuilderGuide.v1:";
+
+const ISLAND_ALIVE_SEEN_PREFIX =
+  "@nova/islandAliveSeen.v1:";
 
 const XP_SOURCES = [
   {
@@ -750,6 +754,8 @@ export default function IslandScreen() {
     supabaseUserId,
   } = useUser();
   const {
+    activeCompanionId,
+    activeCompanion,
     friendshipPoints,
     ownedCompanions,
   } = useCompanion();
@@ -783,6 +789,171 @@ export default function IslandScreen() {
     showIslandGuide,
     setShowIslandGuide,
   ] = useState(false);
+
+  const [
+    learningPulseToken,
+    setLearningPulseToken,
+  ] = useState(0);
+
+  const [
+    learningPulseSource,
+    setLearningPulseSource,
+  ] = useState("");
+
+  const [
+    reactionMilestoneId,
+    setReactionMilestoneId,
+  ] = useState<string | null>(
+    null
+  );
+
+  useEffect(() => {
+    if (!ready) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const consumeLearningSignal =
+      async () => {
+        const signalKey =
+          `${ISLAND_ALIVE_SIGNAL_PREFIX}${islandGuideOwner}`;
+        const seenKey =
+          `${ISLAND_ALIVE_SEEN_PREFIX}${islandGuideOwner}`;
+
+        try {
+          const [
+            rawSignal,
+            rawSeen,
+          ] =
+            await Promise.all([
+              AsyncStorage.getItem(
+                signalKey
+              ),
+              AsyncStorage.getItem(
+                seenKey
+              ),
+            ]);
+
+          if (
+            cancelled ||
+            !rawSignal
+          ) {
+            return;
+          }
+
+          const parsed =
+            JSON.parse(
+              rawSignal
+            );
+
+          const signalAt =
+            Number(
+              parsed?.at || 0
+            );
+
+          const seenAt =
+            Number(
+              rawSeen || 0
+            );
+
+          const ageMs =
+            Date.now() -
+            signalAt;
+
+          if (
+            !Number.isFinite(
+              signalAt
+            ) ||
+            signalAt <= 0 ||
+            signalAt <= seenAt ||
+            ageMs < 0 ||
+            ageMs >
+              24 * 60 * 60 * 1000
+          ) {
+            return;
+          }
+
+          const source =
+            String(
+              parsed?.source ||
+                "other"
+            );
+
+          setLearningPulseSource(
+            source
+          );
+
+          const preferredMilestone =
+            source === "quiz"
+              ? "nova_library"
+              : source === "ask"
+              ? "study_grove"
+              : source ===
+                "brainteasers"
+              ? "whisperwind_mill"
+              : "starlight_garden";
+
+          const preferred =
+            ISLAND_MILESTONES.find(
+              (milestone) =>
+                milestone.id ===
+                preferredMilestone
+            );
+
+          setReactionMilestoneId(
+            preferred &&
+              preferred.level <=
+                islandLevel
+              ? preferred.id
+              : "study_grove"
+          );
+
+          setLearningPulseToken(
+            signalAt
+          );
+
+          await AsyncStorage.setItem(
+            seenKey,
+            String(
+              signalAt
+            )
+          );
+        } catch (error) {
+          console.warn(
+            "[IslandAlive] could not consume learning signal",
+            error
+          );
+        }
+      };
+
+    void consumeLearningSignal();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    islandGuideOwner,
+    islandLevel,
+    ready,
+  ]);
+
+  useEffect(() => {
+    if (!reactionMilestoneId) {
+      return;
+    }
+
+    const timer =
+      setTimeout(() => {
+        setReactionMilestoneId(
+          null
+        );
+      }, 6500);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [reactionMilestoneId]);
 
   useEffect(() => {
     if (!islandBuilder.ready) {
@@ -1020,19 +1191,78 @@ export default function IslandScreen() {
 
   const sceneDiscoveries =
     useMemo<Island3DDiscovery[]>(
-      () =>
-        friendshipDiscoveries.map(
-          (item) => ({
-            key: item.key,
-            kind: item.kind,
-            title: item.title,
-            accent: item.accent,
-            zone: item.zone,
+      () => {
+        const base =
+          friendshipDiscoveries.map(
+            (item) => ({
+              key: item.key,
+              kind: item.kind,
+              title: item.title,
+              accent: item.accent,
+              zone: item.zone,
+              companionId:
+                item.companionId,
+            })
+          );
+
+        const visitorProfile =
+          getCommonCompanionFriendshipProfile(
+            activeCompanionId
+          );
+
+        if (
+          !visitorProfile ||
+          !activeCompanion
+        ) {
+          return base;
+        }
+
+        const visitorPoints =
+          Number(
+            friendshipPoints[
+              visitorProfile.id
+            ] ??
+              friendshipPoints[
+                activeCompanionId ||
+                  ""
+              ] ??
+              0
+          );
+
+        const permanentResident =
+          getIslandResidentForCompanion(
+            visitorProfile.id,
+            visitorPoints
+          );
+
+        if (permanentResident) {
+          return base;
+        }
+
+        return [
+          ...base,
+          {
+            key:
+              `equipped-visitor:${visitorProfile.id}`,
+            kind:
+              "resident" as const,
+            title:
+              `${visitorProfile.title} is visiting`,
+            accent:
+              visitorProfile.accent,
+            zone:
+              "open_grass" as const,
             companionId:
-              item.companionId,
-          })
-        ),
-      [friendshipDiscoveries]
+              visitorProfile.id,
+          },
+        ];
+      },
+      [
+        activeCompanion,
+        activeCompanionId,
+        friendshipDiscoveries,
+        friendshipPoints,
+      ]
     );
 
   const latestUnlockedId = useMemo(
@@ -1136,6 +1366,108 @@ export default function IslandScreen() {
       discovery.key
     );
   };
+
+  const visitingProfile =
+    getCommonCompanionFriendshipProfile(
+      activeCompanionId
+    );
+
+  const visitingPoints =
+    visitingProfile
+      ? Number(
+          friendshipPoints[
+            visitingProfile.id
+          ] ??
+            friendshipPoints[
+              activeCompanionId ||
+                ""
+            ] ??
+            0
+        )
+      : 0;
+
+  const visitingResident =
+    visitingProfile
+      ? getIslandResidentForCompanion(
+          visitingProfile.id,
+          visitingPoints
+        )
+      : null;
+
+  const hasTemporaryVisitor =
+    !!(
+      visitingProfile &&
+      activeCompanion &&
+      !visitingResident
+    );
+
+  const reactionTitle =
+    reactionMilestoneId
+      ? ISLAND_MILESTONES.find(
+          (milestone) =>
+            milestone.id ===
+            reactionMilestoneId
+        )?.shortTitle ??
+        "island"
+      : null;
+
+  const novaIslandMessage =
+    learningPulseSource ===
+      "quiz" &&
+    reactionTitle
+      ? `That quiz sent fresh learning energy into the ${reactionTitle}. I love seeing the island react to your progress.`
+      : learningPulseSource ===
+          "ask" &&
+        reactionTitle
+      ? `That question woke up the ${reactionTitle}. Curiosity really does power this place.`
+      : learningPulseSource ===
+          "brainteasers" &&
+        reactionTitle
+      ? `Nice work — that brainteaser gave the ${reactionTitle} a little extra spark.`
+      : hasTemporaryVisitor &&
+        visitingProfile
+      ? `${visitingProfile.title} stopped by to explore with you. At Friendship Level 6, this companion can become a permanent island resident.`
+      : totalToday > 0
+      ? `The island is still carrying ${totalToday} XP of learning energy from today. The Study Spirits have plenty to do.`
+      : nextUnlock
+      ? `Keep learning. I can already feel something forming for Island Level ${nextUnlock.level}.`
+      : "The island is awake. Explore for a bit — the Study Spirits are making their rounds.";
+
+  const happeningSeed =
+    Math.floor(
+      Date.now() /
+        (60 * 60 * 1000)
+    ) +
+    islandLevel;
+
+  const islandHappenings =
+    hasTemporaryVisitor &&
+    visitingProfile
+      ? [
+          `${visitingProfile.title} is visiting the central island.`,
+          "Fireflies are drifting through the island air.",
+          "Study Spirits are traveling between your unlocked landmarks.",
+        ]
+      : [
+          "Study Spirits are traveling between your unlocked landmarks.",
+          "Fireflies are drifting through the island air.",
+          "Learning energy is circulating around the central island.",
+        ];
+
+  const islandHappening =
+    islandHappenings[
+      Math.abs(
+        happeningSeed
+      ) %
+        islandHappenings.length
+    ];
+
+  const sceneSelectedMilestoneId =
+    islandBuilder.isEditing
+      ? selectedBuilderPlacement?.itemId ??
+        ""
+      : reactionMilestoneId ??
+        selectedId;
 
   return (
     <LinearGradient
@@ -1287,11 +1619,11 @@ export default function IslandScreen() {
                 : 460
             }
             level={islandLevel}
+            learningPulseToken={
+              learningPulseToken
+            }
             selectedMilestoneId={
-              islandBuilder.isEditing
-                ? selectedBuilderPlacement?.itemId ??
-                  ""
-                : selectedId
+              sceneSelectedMilestoneId
             }
             selectedDiscoveryKey={
               islandBuilder.isEditing
@@ -1416,6 +1748,61 @@ export default function IslandScreen() {
             </Text>
           </Animated.View>
         </View>
+
+        {!islandBuilder.isEditing ? (
+          <View
+            style={
+              styles.alivePanel
+            }
+          >
+            <View
+              style={
+                styles.aliveNovaRow
+              }
+            >
+              <View
+                style={
+                  styles.aliveNovaBadge
+                }
+              >
+                <Text
+                  style={
+                    styles.aliveNovaBadgeText
+                  }
+                >
+                  NOVA
+                </Text>
+              </View>
+
+              <Text
+                style={
+                  styles.aliveNovaText
+                }
+              >
+                {novaIslandMessage}
+              </Text>
+            </View>
+
+            <View
+              style={
+                styles.aliveActivityRow
+              }
+            >
+              <Ionicons
+                name="sparkles"
+                color="#fde68a"
+                size={15}
+              />
+              <Text
+                style={
+                  styles.aliveActivityText
+                }
+              >
+                {islandHappening}
+              </Text>
+            </View>
+          </View>
+        ) : null}
 
         <IslandBuilderPanel
           selectedPlacementId={
@@ -1993,6 +2380,63 @@ export default function IslandScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+
+  alivePanel: {
+    marginTop: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor:
+      "rgba(103,232,249,0.24)",
+    backgroundColor:
+      "rgba(15,23,42,0.76)",
+    paddingHorizontal: 13,
+    paddingVertical: 12,
+    gap: 10,
+  },
+  aliveNovaRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+  },
+  aliveNovaBadge: {
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor:
+      "rgba(34,211,238,0.14)",
+    borderWidth: 1,
+    borderColor:
+      "rgba(103,232,249,0.28)",
+  },
+  aliveNovaBadgeText: {
+    color: "#67e8f9",
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 0.8,
+  },
+  aliveNovaText: {
+    flex: 1,
+    color: "#e2e8f0",
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: "700",
+  },
+  aliveActivityRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderTopWidth: 1,
+    borderTopColor:
+      "rgba(148,163,184,0.14)",
+    paddingTop: 9,
+  },
+  aliveActivityText: {
+    flex: 1,
+    color: "#cbd5e1",
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: "700",
+  },
   content: {
     alignSelf: "center",
     paddingTop: 18,
