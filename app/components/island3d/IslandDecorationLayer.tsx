@@ -1276,8 +1276,14 @@ function DecorationTapTarget({
 
 export default function IslandDecorationLayer({
   onSelectDecoration,
+  onInspectDecoration,
+  inspectedPlacementId = null,
 }: {
   onSelectDecoration?: () => void;
+  onInspectDecoration?: (
+    placementId: string
+  ) => void;
+  inspectedPlacementId?: string | null;
 }) {
   const { isEditing } = useIslandBuilder();
   const keepsakes = useIslandKeepsakes();
@@ -1293,7 +1299,14 @@ export default function IslandDecorationLayer({
       {placements.map((placement) => {
         const item = ISLAND_DECORATION_CATALOG_BY_ID[placement.itemId];
         if (!item) return null;
-        const selected = selectedPlacementId === placement.placementId;
+        const selected =
+          selectedPlacementId ===
+          placement.placementId;
+
+        const inspected =
+          !isEditing &&
+          inspectedPlacementId ===
+            placement.placementId;
 
         return (
           <group
@@ -1308,8 +1321,14 @@ export default function IslandDecorationLayer({
               }
             }}
             onClick={(event) => {
-              if (!isEditing) return;
               event.stopPropagation();
+
+              if (!isEditing) {
+                onInspectDecoration?.(
+                  placement.placementId
+                );
+                return;
+              }
 
               onSelectDecoration?.();
               keepsakes.selectKeepsake(null);
@@ -1318,17 +1337,30 @@ export default function IslandDecorationLayer({
               );
             }}
           >
-            {selected ? (
-              <mesh position={[0, 0.03, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-                <ringGeometry args={[0.72, 0.86, 36]} />
-                <meshBasicMaterial color="#67e8f9" transparent opacity={0.82} side={THREE.DoubleSide} />
+            {selected || inspected ? (
+              <mesh
+                position={[0, 0.03, 0]}
+                rotation={[-Math.PI / 2, 0, 0]}
+              >
+                <ringGeometry
+                  args={[0.72, 0.86, 36]}
+                />
+                <meshBasicMaterial
+                  color={
+                    inspected
+                      ? item.accent
+                      : "#67e8f9"
+                  }
+                  transparent
+                  opacity={0.82}
+                  side={THREE.DoubleSide}
+                />
               </mesh>
             ) : null}
-            {isEditing ? (
-              <DecorationTapTarget
-                item={item}
-              />
-            ) : null}
+
+            <DecorationTapTarget
+              item={item}
+            />
             <Model item={item} />
           </group>
         );

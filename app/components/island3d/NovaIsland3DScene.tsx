@@ -38,6 +38,9 @@ import IslandDecorationLayer from "./IslandDecorationLayer";
 import {
   clampIslandBuildPosition,
 } from "../../_lib/islandBuilderBounds";
+import {
+  ISLAND_DECORATION_CATALOG_BY_ID,
+} from "../../_lib/islandDecorationCatalog";
 
 import LegendarySatelliteIslands, {
   getLegendaryIslandInfo,
@@ -83,6 +86,7 @@ type Props = {
   onOpenDailyQuests?: () => void;
   selectedMilestoneId: string;
   selectedDiscoveryKey: string | null;
+  selectedDecorationPlacementId?: string | null;
   discoveries: Island3DDiscovery[];
   legendaryCompanionIds?: string[];
   builderPlacements?: IslandPlacement[];
@@ -91,6 +95,9 @@ type Props = {
   ) => void;
   onSelectDiscovery: (
     discoveryKey: string
+  ) => void;
+  onSelectDecoration?: (
+    placementId: string | null
   ) => void;
   onInteractionChange?: (
     active: boolean
@@ -14130,6 +14137,7 @@ function IslandWorld({
   builderEditing,
   selectedMilestoneId,
   selectedDiscoveryKey,
+  selectedDecorationPlacementId,
   discoveries,
   legendaryCompanionIds,
   builderPlacements,
@@ -14137,6 +14145,7 @@ function IslandWorld({
   selectedLegendaryId,
   onSelectMilestone,
   onSelectDiscovery,
+  onSelectDecoration,
   onSelectLegendary,
   controlsRef,
   velocityRef,
@@ -14157,6 +14166,7 @@ function IslandWorld({
   builderEditing: boolean;
   selectedMilestoneId: string;
   selectedDiscoveryKey: string | null;
+  selectedDecorationPlacementId: string | null;
   discoveries: Island3DDiscovery[];
   legendaryCompanionIds: string[];
   builderPlacements?: IslandPlacement[];
@@ -14171,6 +14181,9 @@ function IslandWorld({
   onSelectDiscovery: (
     discoveryKey: string,
     position: Vec3
+  ) => void;
+  onSelectDecoration: (
+    placementId: string
   ) => void;
   onSelectLegendary: (
     legendary: LegendaryIslandInfo
@@ -14381,6 +14394,12 @@ function IslandWorld({
         />
 
         <IslandDecorationLayer
+          inspectedPlacementId={
+            selectedDecorationPlacementId
+          }
+          onInspectDecoration={
+            onSelectDecoration
+          }
           onSelectDecoration={() =>
             onSelectMilestone(
               "__nova_builder_clear_selection__",
@@ -14558,11 +14577,13 @@ export default function NovaIsland3DScene({
   onOpenDailyQuests,
   selectedMilestoneId,
   selectedDiscoveryKey,
+  selectedDecorationPlacementId = null,
   discoveries,
   legendaryCompanionIds = [],
   builderPlacements,
   onSelectMilestone,
   onSelectDiscovery,
+  onSelectDecoration,
   onInteractionChange,
 }: Props) {
   const {
@@ -14571,6 +14592,7 @@ export default function NovaIsland3DScene({
   } = useIslandBuilder();
 
   const {
+    placements: decorationPlacements,
     movePlacement: moveDecorationPlacement,
     selectPlacement: selectDecorationPlacement,
     getArmedDecorationDrag,
@@ -14877,10 +14899,25 @@ export default function NovaIsland3DScene({
         selectKeepsake(
           null
         );
+        onSelectDecoration?.(
+          null
+        );
 
         onSelectMilestone(
           milestoneId
         );
+
+        /*
+         * Clicking the island's blank grass uses this sentinel only to
+         * deselect things. It must never focus DEFAULT_TARGET, because that
+         * point sits near Lunis and makes the camera appear to snap to him.
+         */
+        if (
+          milestoneId ===
+          "__nova_builder_clear_selection__"
+        ) {
+          return;
+        }
 
         if (!builderEditing) {
           focusPosition(
@@ -14892,6 +14929,7 @@ export default function NovaIsland3DScene({
       [
         builderEditing,
         focusPosition,
+        onSelectDecoration,
         onSelectMilestone,
         selectDecorationPlacement,
         selectKeepsake,
@@ -14905,6 +14943,10 @@ export default function NovaIsland3DScene({
         position: Vec3
       ) => {
         setSelectedLegendaryId(
+          null
+        );
+
+        onSelectDecoration?.(
           null
         );
 
@@ -14922,11 +14964,62 @@ export default function NovaIsland3DScene({
       [
         builderEditing,
         focusPosition,
+        onSelectDecoration,
         onSelectDiscovery,
       ]
     );
 
-  const selectLegendary =
+    const selectDecoration =
+    useCallback(
+      (
+        placementId: string
+      ) => {
+        if (builderEditing) {
+          return;
+        }
+
+        const placement =
+          decorationPlacements.find(
+            (item) =>
+              item.placementId ===
+              placementId
+          );
+
+        if (!placement) {
+          return;
+        }
+
+        setSelectedLegendaryId(
+          null
+        );
+
+        selectKeepsake(
+          null
+        );
+
+        onSelectDecoration?.(
+          placementId
+        );
+
+        focusPosition(
+          [
+            placement.transform.x,
+            0.72,
+            placement.transform.z,
+          ],
+          6.4
+        );
+      },
+      [
+        builderEditing,
+        decorationPlacements,
+        focusPosition,
+        onSelectDecoration,
+        selectKeepsake,
+      ]
+    );
+
+const selectLegendary =
     useCallback(
       (
         legendary: LegendaryIslandInfo
@@ -14935,12 +15028,19 @@ export default function NovaIsland3DScene({
           legendary.id
         );
 
+        onSelectDecoration?.(
+          null
+        );
+
         focusPosition(
           legendary.position,
           5.25
         );
       },
-      [focusPosition]
+      [
+        focusPosition,
+        onSelectDecoration,
+      ]
     );
 
   const queueBuilderMove =
@@ -15367,12 +15467,27 @@ export default function NovaIsland3DScene({
       selectedLegendaryId
     );
 
+  const selectedDecorationPlacement =
+    decorationPlacements.find(
+      (placement) =>
+        placement.placementId ===
+        selectedDecorationPlacementId
+    ) ?? null;
+
+  const selectedDecoration =
+    selectedDecorationPlacement
+      ? ISLAND_DECORATION_CATALOG_BY_ID[
+          selectedDecorationPlacement.itemId
+        ] ?? null
+      : null;
+
   const unlocked =
     level >=
     selectedMilestone.level;
 
   const selectedTitle =
     selectedLegendary?.title ??
+    selectedDecoration?.title ??
     selectedDiscovery?.title ??
     (unlocked
       ? selectedMilestone.title
@@ -15381,6 +15496,8 @@ export default function NovaIsland3DScene({
   const selectedLore =
     selectedLegendary
       ? selectedLegendary.description
+      : selectedDecoration
+      ? selectedDecoration.description
       : selectedDiscovery
       ? selectedDiscovery.kind ===
         "resident"
@@ -15396,6 +15513,8 @@ export default function NovaIsland3DScene({
   const selectedStatusLabel =
     selectedLegendary
       ? "LEGENDARY"
+      : selectedDecoration
+      ? selectedDecoration.rarity.toUpperCase()
       : selectedDiscovery
       ? selectedDiscovery.kind ===
         "resident"
@@ -15408,6 +15527,8 @@ export default function NovaIsland3DScene({
   const selectedStatusBackground =
     selectedLegendary
       ? `${selectedLegendary.accent}33`
+      : selectedDecoration
+      ? `${selectedDecoration.accent}33`
       : selectedDiscovery
       ? selectedDiscovery.kind ===
         "resident"
@@ -15419,6 +15540,7 @@ export default function NovaIsland3DScene({
 
   const selectedStatusColor =
     selectedLegendary?.accent ??
+    selectedDecoration?.accent ??
     (selectedDiscovery
       ? selectedDiscovery.kind ===
         "resident"
@@ -15549,6 +15671,9 @@ export default function NovaIsland3DScene({
           selectedDiscoveryKey={
             selectedDiscoveryKey
           }
+          selectedDecorationPlacementId={
+            selectedDecorationPlacementId
+          }
           discoveries={
             discoveries
           }
@@ -15569,6 +15694,9 @@ export default function NovaIsland3DScene({
           }
           onSelectDiscovery={
             selectDiscovery
+          }
+          onSelectDecoration={
+            selectDecoration
           }
           onSelectLegendary={
             selectLegendary

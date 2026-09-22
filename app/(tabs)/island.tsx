@@ -35,6 +35,7 @@ import {
   useIsland,
 } from "../context/IslandContext";
 import { useIslandBuilder } from "../context/IslandBuilderContext";
+import { useIslandDecorations } from "../context/IslandDecorationContext";
 import IslandBuilderPanel from "../components/island3d/IslandBuilderPanel";
 import IslandBuilderSceneControls from "../components/island3d/IslandBuilderSceneControls";
 import NovaGuideOverlay from "../components/NovaGuideOverlay";
@@ -42,6 +43,9 @@ import { useCompanion } from "../context/CompanionContext";
 import { useUser } from "../context/UserContext";
 import { useDailyQuests } from "../context/DailyQuestsContext";
 import { COMPANIONS } from "../_lib/companionsCatalog";
+import {
+  ISLAND_DECORATION_CATALOG_BY_ID,
+} from "../_lib/islandDecorationCatalog";
 import {
   getCommonCompanionFriendshipProfile,
   getFriendshipProgress,
@@ -59,6 +63,44 @@ const ISLAND_ALIVE_SEEN_PREFIX =
 
 const DAILY_QUEST_CELEBRATION_PREFIX =
   "@nova/dailyQuestCelebration.v1:";
+
+function formatIslandCollectionDate(
+  timestamp: number | null
+): string {
+  if (
+    !timestamp ||
+    !Number.isFinite(timestamp)
+  ) {
+    return "date unavailable";
+  }
+
+  const date = new Date(timestamp);
+
+  if (
+    Number.isNaN(
+      date.getTime()
+    )
+  ) {
+    return "date unavailable";
+  }
+
+  const months = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+
+  return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+}
 
 const XP_SOURCES = [
   {
@@ -789,6 +831,8 @@ export default function IslandScreen() {
   } = useIsland();
 
   const islandBuilder = useIslandBuilder();
+  const islandDecorations =
+    useIslandDecorations();
 
   const dailyQuestTotalCount =
     Math.max(
@@ -1152,6 +1196,23 @@ export default function IslandScreen() {
     setSelectedBuilderPlacementId,
   ] = useState<string | null>(null);
 
+  const [
+    selectedDecorationPlacementId,
+    setSelectedDecorationPlacementId,
+  ] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (
+      islandBuilder.isEditing
+    ) {
+      setSelectedDecorationPlacementId(
+        null
+      );
+    }
+  }, [
+    islandBuilder.isEditing,
+  ]);
+
   const selectedBuilderPlacement =
     useMemo(
       () =>
@@ -1465,6 +1526,33 @@ export default function IslandScreen() {
         selectedDiscoveryKey
     ) ?? null;
 
+  const selectedDecorationPlacement =
+    islandDecorations.committedPlacements.find(
+      (placement) =>
+        placement.placementId ===
+        selectedDecorationPlacementId
+    ) ?? null;
+
+  const selectedDecoration =
+    selectedDecorationPlacement
+      ? ISLAND_DECORATION_CATALOG_BY_ID[
+          selectedDecorationPlacement.itemId
+        ] ?? null
+      : null;
+
+  const selectedDecorationOwnership =
+    selectedDecoration
+      ? islandDecorations.getOwnershipInfo(
+          selectedDecoration.id
+        )
+      : null;
+
+  const selectedDecorationSince =
+    formatIslandCollectionDate(
+      selectedDecorationOwnership?.firstAcquiredAt ??
+        null
+    );
+
   const sourceValues = {
     quiz: todayFromQuiz,
     brainteasers: todayFromBrainteasers,
@@ -1478,6 +1566,9 @@ export default function IslandScreen() {
     } catch {}
 
     setSelectedDiscoveryKey(null);
+    setSelectedDecorationPlacementId(
+      null
+    );
     setSelectedId(milestone.id);
   };
 
@@ -1490,6 +1581,9 @@ export default function IslandScreen() {
       }
     } catch {}
 
+    setSelectedDecorationPlacementId(
+      null
+    );
     setSelectedDiscoveryKey(
       discovery.key
     );
@@ -1797,6 +1891,11 @@ export default function IslandScreen() {
                 ? null
                 : selectedDiscoveryKey
             }
+            selectedDecorationPlacementId={
+              islandBuilder.isEditing
+                ? null
+                : selectedDecorationPlacementId
+            }
             discoveries={
               sceneDiscoveries
             }
@@ -1877,6 +1976,38 @@ export default function IslandScreen() {
                   discovery
                 );
               }
+            }}
+            onSelectDecoration={(
+              placementId
+            ) => {
+              if (
+                islandBuilder.isEditing
+              ) {
+                return;
+              }
+
+              if (!placementId) {
+                setSelectedDecorationPlacementId(
+                  null
+                );
+                return;
+              }
+
+              try {
+                if (
+                  Platform.OS !==
+                  "web"
+                ) {
+                  void Haptics.selectionAsync();
+                }
+              } catch {}
+
+              setSelectedDiscoveryKey(
+                null
+              );
+              setSelectedDecorationPlacementId(
+                placementId
+              );
             }}
           />
 
@@ -1980,7 +2111,144 @@ export default function IslandScreen() {
           }
         />
 
-        {selectedDiscovery ? (
+        {selectedDecoration &&
+          selectedDecorationOwnership ? (
+          <View
+            style={[
+              styles.detail,
+              {
+                borderColor:
+                  selectedDecoration.accent,
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.detailIcon,
+                {
+                  backgroundColor:
+                    `${selectedDecoration.accent}22`,
+                },
+              ]}
+            >
+              <Text
+                style={
+                  styles.decorationEmoji
+                }
+              >
+                {
+                  selectedDecoration.previewEmoji
+                }
+              </Text>
+            </View>
+
+            <View style={{ flex: 1 }}>
+              <View
+                style={
+                  styles.detailTitleRow
+                }
+              >
+                <Text
+                  style={
+                    styles.detailTitle
+                  }
+                >
+                  {
+                    selectedDecoration.title
+                  }
+                </Text>
+
+                <View
+                  style={
+                    styles.statusPill
+                  }
+                >
+                  <Text
+                    style={[
+                      styles.statusText,
+                      {
+                        color:
+                          selectedDecoration.accent,
+                      },
+                    ]}
+                  >
+                    {
+                      selectedDecoration.rarity.toUpperCase()
+                    }
+                  </Text>
+                </View>
+              </View>
+
+              <Text
+                style={
+                  styles.detailBody
+                }
+              >
+                {
+                  selectedDecoration.description
+                }
+              </Text>
+
+              <View
+                style={
+                  styles.decorationMetaRow
+                }
+              >
+                <Text
+                  style={[
+                    styles.decorationMetaText,
+                    {
+                      color:
+                        selectedDecoration.accent,
+                    },
+                  ]}
+                >
+                  {
+                    selectedDecoration.sourceLabel ??
+                    "Decoration Shop"
+                  }
+                </Text>
+                <Text
+                  style={
+                    styles.decorationMetaSeparator
+                  }
+                >
+                  ·
+                </Text>
+                <Text
+                  style={
+                    styles.decorationMetaText
+                  }
+                >
+                  {
+                    selectedDecoration.collectionLabel ??
+                    "Core Collection"
+                  }
+                </Text>
+              </View>
+
+              <Text
+                style={
+                  styles.decorationOwnershipText
+                }
+              >
+                Owned:{" "}
+                {
+                  selectedDecorationOwnership.ownedCount
+                }{" "}
+                · In your collection since{" "}
+                {
+                  selectedDecorationSince
+                }
+                {
+                  selectedDecorationOwnership.estimated
+                    ? " (estimated)"
+                    : ""
+                }
+              </Text>
+            </View>
+          </View>
+        ) : selectedDiscovery ? (
           <View
             style={[
               styles.detail,
@@ -2879,6 +3147,34 @@ const styles = StyleSheet.create({
     color: "#cbd5e1",
     fontSize: 12,
     lineHeight: 17,
+    marginTop: 5,
+  },
+  decorationEmoji: {
+    fontSize: 25,
+  },
+  decorationMetaRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 5,
+    marginTop: 7,
+  },
+  decorationMetaText: {
+    color: "#cbd5e1",
+    fontSize: 10,
+    lineHeight: 14,
+    fontWeight: "800",
+  },
+  decorationMetaSeparator: {
+    color: "#64748b",
+    fontSize: 10,
+    fontWeight: "900",
+  },
+  decorationOwnershipText: {
+    color: "#94a3b8",
+    fontSize: 10,
+    lineHeight: 15,
+    fontWeight: "700",
     marginTop: 5,
   },
   sectionHeader: {

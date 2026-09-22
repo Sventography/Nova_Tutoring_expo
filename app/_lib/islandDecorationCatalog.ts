@@ -58,6 +58,8 @@ export type IslandDecorationCatalogItem = {
   model: IslandDecorationModel;
   category: IslandDecorationCategory;
   rarity: IslandDecorationRarity;
+  sourceLabel?: string;
+  collectionLabel?: string;
   defaultScale: number;
   minScale: number;
   maxScale: number;

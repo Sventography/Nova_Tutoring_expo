@@ -39,8 +39,16 @@ export type IslandDecorationPlacement = {
 type DecorationState = {
   version: 1;
   ownedCounts: Record<string, number>;
+  firstAcquiredAt: Record<string, number>;
+  firstAcquiredAtEstimated: Record<string, boolean>;
   placements: IslandDecorationPlacement[];
   updatedAt: number;
+};
+
+export type IslandDecorationOwnershipInfo = {
+  ownedCount: number;
+  firstAcquiredAt: number | null;
+  estimated: boolean;
 };
 
 type PurchaseResult = {
@@ -68,6 +76,9 @@ type ContextValue = {
   returnToInventory: (placementId: string) => boolean;
   moveAllToInventory: () => number;
   getInventoryCount: (itemId: string) => number;
+  getOwnershipInfo: (
+    itemId: string
+  ) => IslandDecorationOwnershipInfo;
   armDecorationDrag: (placementId: string) => void;
   getArmedDecorationDrag: () => IslandDecorationPlacement | null;
   clearDecorationDrag: () => void;
@@ -82,6 +93,8 @@ const keyFor = (userId: string | null) =>
 const emptyState = (): DecorationState => ({
   version: 1,
   ownedCounts: {},
+  firstAcquiredAt: {},
+  firstAcquiredAtEstimated: {},
   placements: [],
   updatedAt: Date.now(),
 });
@@ -89,6 +102,10 @@ const emptyState = (): DecorationState => ({
 const cloneState = (state: DecorationState): DecorationState => ({
   version: 1,
   ownedCounts: { ...state.ownedCounts },
+  firstAcquiredAt: { ...state.firstAcquiredAt },
+  firstAcquiredAtEstimated: {
+    ...state.firstAcquiredAtEstimated,
+  },
   placements: state.placements.map((placement) => ({
     ...placement,
     transform: { ...placement.transform },
@@ -169,9 +186,82 @@ function normalizeState(raw: unknown): DecorationState {
     });
   }
 
+  const firstAcquiredAt: Record<string, number> = {};
+  const firstAcquiredAtEstimated: Record<string, boolean> = {};
+
+  if (
+    value.firstAcquiredAt &&
+    typeof value.firstAcquiredAt === "object"
+  ) {
+    for (const [itemId, timestamp] of Object.entries(
+      value.firstAcquiredAt
+    )) {
+      if (!ISLAND_DECORATION_CATALOG_BY_ID[itemId]) continue;
+      if ((ownedCounts[itemId] || 0) <= 0) continue;
+
+      const safeTimestamp = Number(timestamp);
+      if (
+        !Number.isFinite(safeTimestamp) ||
+        safeTimestamp <= 0
+      ) {
+        continue;
+      }
+
+      firstAcquiredAt[itemId] = safeTimestamp;
+      firstAcquiredAtEstimated[itemId] =
+        Boolean(
+          value.firstAcquiredAtEstimated?.[itemId]
+        );
+    }
+  }
+
+  for (const [itemId, ownedCount] of Object.entries(
+    ownedCounts
+  )) {
+    if (
+      ownedCount <= 0 ||
+      firstAcquiredAt[itemId]
+    ) {
+      continue;
+    }
+
+    const placementTimes =
+      placements
+        .filter(
+          (placement) =>
+            placement.itemId === itemId
+        )
+        .map(
+          (placement) =>
+            Number(placement.placedAt)
+        )
+        .filter(
+          (timestamp) =>
+            Number.isFinite(timestamp) &&
+            timestamp > 0
+        );
+
+    /*
+     * Older decoration snapshots did not store purchase timestamps.
+     * Preserve the best historical date we actually have rather than
+     * resetting tenure to today. The UI labels this migrated date as
+     * estimated.
+     */
+    firstAcquiredAt[itemId] =
+      placementTimes.length > 0
+        ? Math.min(...placementTimes)
+        : Number(value.updatedAt) ||
+          Date.now();
+
+    firstAcquiredAtEstimated[itemId] =
+      true;
+  }
+
   return {
     version: 1,
     ownedCounts,
+    firstAcquiredAt,
+    firstAcquiredAtEstimated,
     placements,
     updatedAt: Number(value.updatedAt) || Date.now(),
   };
@@ -318,6 +408,45 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
     return Math.max(0, owned - placed);
   }, []);
 
+  const getOwnershipInfo = useCallback(
+    (
+      itemId: string
+    ): IslandDecorationOwnershipInfo => {
+      const ownedCount =
+        Math.max(
+          0,
+          Math.floor(
+            active.ownedCounts[itemId] || 0
+          )
+        );
+
+      const timestamp =
+        Number(
+          active.firstAcquiredAt[itemId]
+        );
+
+      return {
+        ownedCount,
+        firstAcquiredAt:
+          Number.isFinite(timestamp) &&
+          timestamp > 0
+            ? timestamp
+            : null,
+        estimated:
+          Boolean(
+            active.firstAcquiredAtEstimated[
+              itemId
+            ]
+          ),
+      };
+    },
+    [
+      active.firstAcquiredAt,
+      active.firstAcquiredAtEstimated,
+      active.ownedCounts,
+    ]
+  );
+
   const placeFromInventory = useCallback(
     (itemId: string): string | null => {
       if (!draftRef.current || !ISLAND_DECORATION_CATALOG_BY_ID[itemId]) return null;
@@ -355,6 +484,8 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
       if (coins < item.price) return { ok: false, reason: "insufficient_coins" };
 
       try {
+        const acquiredAt = Date.now();
+
         await addCoins(
           -item.price,
           "island_decoration_purchase",
@@ -364,6 +495,14 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
         const committedNext = cloneState(committedRef.current);
         committedNext.ownedCounts[itemId] =
           (committedNext.ownedCounts[itemId] || 0) + 1;
+
+        if (!committedNext.firstAcquiredAt[itemId]) {
+          committedNext.firstAcquiredAt[itemId] =
+            acquiredAt;
+          committedNext.firstAcquiredAtEstimated[itemId] =
+            false;
+        }
+
         committedNext.updatedAt = Date.now();
 
         await persist(committedNext);
@@ -373,6 +512,14 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
         const draftNext = cloneState(draftRef.current);
         draftNext.ownedCounts[itemId] =
           (draftNext.ownedCounts[itemId] || 0) + 1;
+
+        if (!draftNext.firstAcquiredAt[itemId]) {
+          draftNext.firstAcquiredAt[itemId] =
+            acquiredAt;
+          draftNext.firstAcquiredAtEstimated[itemId] =
+            false;
+        }
+
         draftNext.updatedAt = Date.now();
 
         draftRef.current = draftNext;
@@ -516,6 +663,7 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
     returnToInventory,
     moveAllToInventory,
     getInventoryCount,
+    getOwnershipInfo,
     armDecorationDrag,
     getArmedDecorationDrag,
     clearDecorationDrag,
@@ -527,6 +675,7 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
     clearDecorationDrag,
     committed.placements,
     getArmedDecorationDrag,
+    getOwnershipInfo,
     getInventoryCount,
     isEditing,
     moveAllToInventory,
