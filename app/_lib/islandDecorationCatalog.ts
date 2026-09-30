@@ -45,6 +45,18 @@ export type IslandDecorationRarity =
   | "uncommon"
   | "rare";
 
+export type IslandDecorationSourceType =
+  | "coin_shop"
+  | "event_free"
+  | "event_premium"
+  | "achievement"
+  | "special";
+
+export type IslandDecorationExclusivity =
+  | "standard"
+  | "limited"
+  | "one_time";
+
 export type IslandDecorationCatalogItem = {
   id: string;
   title: string;
@@ -58,8 +70,25 @@ export type IslandDecorationCatalogItem = {
   model: IslandDecorationModel;
   category: IslandDecorationCategory;
   rarity: IslandDecorationRarity;
+
+  /*
+   * Collectible provenance. Existing decorations default to the normal
+   * coin shop + Core Collection, so old catalog entries need no migration.
+   *
+   * Event rewards should set sourceType to event_free/event_premium,
+   * shopVisible to false, and provide eventId/eventName. That keeps them
+   * permanently identifiable without exposing them in the coin shop.
+   */
+  sourceType?: IslandDecorationSourceType;
   sourceLabel?: string;
   collectionLabel?: string;
+  eventId?: string;
+  eventName?: string;
+  exclusivity?: IslandDecorationExclusivity;
+  availableFrom?: string;
+  availableUntil?: string;
+  shopVisible?: boolean;
+
   defaultScale: number;
   minScale: number;
   maxScale: number;
@@ -129,3 +158,59 @@ export const ISLAND_DECORATION_CATALOG_BY_ID =
   Object.fromEntries(
     ISLAND_DECORATION_CATALOG.map((item) => [item.id, item])
   ) as Record<string, IslandDecorationCatalogItem>;
+
+export function isIslandDecorationCoinShopItem(
+  item: IslandDecorationCatalogItem
+): boolean {
+  return (
+    item.shopVisible !== false &&
+    (item.sourceType ?? "coin_shop") === "coin_shop"
+  );
+}
+
+export function getIslandDecorationSourceLabel(
+  item: IslandDecorationCatalogItem
+): string {
+  const explicit = item.sourceLabel?.trim();
+  if (explicit) return explicit;
+
+  switch (item.sourceType ?? "coin_shop") {
+    case "event_free":
+      return "Free Event Track";
+    case "event_premium":
+      return "Premium Event Track";
+    case "achievement":
+      return "Achievement Reward";
+    case "special":
+      return "Special Reward";
+    case "coin_shop":
+    default:
+      return "Decoration Shop";
+  }
+}
+
+export function getIslandDecorationCollectionLabel(
+  item: IslandDecorationCatalogItem
+): string {
+  const explicit = item.collectionLabel?.trim();
+  if (explicit) return explicit;
+
+  const eventName = item.eventName?.trim();
+  if (eventName) return eventName;
+
+  return "Core Collection";
+}
+
+export function getIslandDecorationExclusivityLabel(
+  item: IslandDecorationCatalogItem
+): string | null {
+  switch (item.exclusivity ?? "standard") {
+    case "one_time":
+      return "ONE-TIME ONLY";
+    case "limited":
+      return "LIMITED";
+    case "standard":
+    default:
+      return null;
+  }
+}
