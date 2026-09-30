@@ -44,7 +44,7 @@ function DecorationPointLight(
   }
 
   return (
-    <DecorationPointLight {...props} />
+    <pointLight {...props} />
   );
 }
 
