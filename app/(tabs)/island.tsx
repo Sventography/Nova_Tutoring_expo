@@ -45,6 +45,9 @@ import { useDailyQuests } from "../context/DailyQuestsContext";
 import { COMPANIONS } from "../_lib/companionsCatalog";
 import {
   ISLAND_DECORATION_CATALOG_BY_ID,
+  getIslandDecorationCollectionLabel,
+  getIslandDecorationExclusivityLabel,
+  getIslandDecorationSourceLabel,
 } from "../_lib/islandDecorationCatalog";
 import {
   getCommonCompanionFriendshipProfile,
@@ -1553,6 +1556,27 @@ export default function IslandScreen() {
         null
     );
 
+  const selectedDecorationSourceLabel =
+    selectedDecoration
+      ? getIslandDecorationSourceLabel(
+          selectedDecoration
+        )
+      : null;
+
+  const selectedDecorationCollectionLabel =
+    selectedDecoration
+      ? getIslandDecorationCollectionLabel(
+          selectedDecoration
+        )
+      : null;
+
+  const selectedDecorationExclusivityLabel =
+    selectedDecoration
+      ? getIslandDecorationExclusivityLabel(
+          selectedDecoration
+        )
+      : null;
+
   const sourceValues = {
     quiz: todayFromQuiz,
     brainteasers: todayFromBrainteasers,
@@ -2204,8 +2228,7 @@ export default function IslandScreen() {
                   ]}
                 >
                   {
-                    selectedDecoration.sourceLabel ??
-                    "Decoration Shop"
+                    selectedDecorationSourceLabel
                   }
                 </Text>
                 <Text
@@ -2221,11 +2244,44 @@ export default function IslandScreen() {
                   }
                 >
                   {
-                    selectedDecoration.collectionLabel ??
-                    "Core Collection"
+                    selectedDecorationCollectionLabel
                   }
                 </Text>
+
+                {selectedDecorationExclusivityLabel ? (
+                  <>
+                    <Text
+                      style={
+                        styles.decorationMetaSeparator
+                      }
+                    >
+                      ·
+                    </Text>
+                    <Text
+                      style={[
+                        styles.decorationMetaText,
+                        styles.decorationLimitedText,
+                      ]}
+                    >
+                      {
+                        selectedDecorationExclusivityLabel
+                      }
+                    </Text>
+                  </>
+                ) : null}
               </View>
+
+              {selectedDecoration?.eventName ? (
+                <Text
+                  style={
+                    styles.decorationEventText
+                  }
+                >
+                  Event: {
+                    selectedDecoration.eventName
+                  }
+                </Text>
+              ) : null}
 
               <Text
                 style={
@@ -3175,6 +3231,16 @@ const styles = StyleSheet.create({
     fontSize: 10,
     lineHeight: 15,
     fontWeight: "700",
+    marginTop: 5,
+  },
+  decorationLimitedText: {
+    color: "#fde68a",
+  },
+  decorationEventText: {
+    color: "#c4b5fd",
+    fontSize: 10,
+    lineHeight: 14,
+    fontWeight: "800",
     marginTop: 5,
   },
   sectionHeader: {
