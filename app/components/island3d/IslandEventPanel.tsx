@@ -1,10 +1,14 @@
 // app/components/island3d/IslandEventPanel.tsx
 import React, {
+  useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import {
   ActivityIndicator,
+  Alert,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -13,10 +17,17 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import * as ExpoIAP from "expo-iap";
 
 import {
   useNovaEvents,
 } from "../../context/EventsContext";
+import {
+  usePurchases,
+} from "../../context/PurchasesContext";
+import {
+  useUser,
+} from "../../context/UserContext";
 import {
   ISLAND_DECORATION_CATALOG_BY_ID,
 } from "../../_lib/islandDecorationCatalog";
@@ -152,6 +163,14 @@ function RewardCard({
           {rewardText}
         </Text>
 
+        <Text
+          style={
+            styles.rewardDescription
+          }
+        >
+          {reward.description}
+        </Text>
+
         {decoration ? (
           <Text
             style={
@@ -208,6 +227,14 @@ function RewardCard({
 
 export default function IslandEventPanel() {
   const {
+    supabaseUserId,
+  } = useUser();
+
+  const {
+    grant,
+  } = usePurchases();
+
+  const {
     ready,
     activeEvent,
     upcomingEvent,
@@ -242,6 +269,460 @@ export default function IslandEventPanel() {
   ] = useState<
     string | null
   >(null);
+
+  const [
+    premiumStorePrice,
+    setPremiumStorePrice,
+  ] = useState<
+    string | null
+  >(null);
+
+  const [
+    premiumStoreAvailable,
+    setPremiumStoreAvailable,
+  ] = useState(false);
+
+  const [
+    premiumPurchaseBusy,
+    setPremiumPurchaseBusy,
+  ] = useState(false);
+
+  const premiumPurchaseBusyRef =
+    useRef(false);
+
+  const premiumProductId =
+    activeEvent?.premiumProductId ??
+    null;
+
+  useEffect(() => {
+    let mounted = true;
+    let purchaseUpdatedSub:
+      | { remove?: () => void }
+      | null = null;
+    let purchaseErrorSub:
+      | { remove?: () => void }
+      | null = null;
+
+    const finishPremiumPurchase =
+      async (
+        purchase: any
+      ) => {
+        const productId =
+          String(
+            purchase?.productId ||
+              purchase?.id ||
+              ""
+          ).trim();
+
+        if (
+          !premiumProductId ||
+          productId !==
+            premiumProductId
+        ) {
+          return;
+        }
+
+        try {
+          await grant(
+            premiumProductId
+          );
+
+          await ExpoIAP.finishTransaction({
+            purchase,
+            isConsumable: false,
+          });
+
+          if (mounted) {
+            setMessage(
+              "Premium Track unlocked! Any premium tiers you have already reached can now be claimed."
+            );
+          }
+
+          try {
+            await Haptics.notificationAsync(
+              Haptics.NotificationFeedbackType.Success
+            );
+          } catch {}
+        } catch (error) {
+          console.warn(
+            "[IslandEventPanel] premium fulfillment failed",
+            error
+          );
+
+          if (mounted) {
+            Alert.alert(
+              "Premium pass",
+              "Apple completed the purchase, but Nova could not save the Premium Track entitlement yet. Use Restore Pass to try again."
+            );
+          }
+        } finally {
+          premiumPurchaseBusyRef.current =
+            false;
+
+          if (mounted) {
+            setPremiumPurchaseBusy(
+              false
+            );
+          }
+        }
+      };
+
+    const connectAndLoad =
+      async () => {
+        if (
+          Platform.OS !== "ios" ||
+          !premiumProductId
+        ) {
+          return;
+        }
+
+        try {
+          await ExpoIAP.initConnection();
+
+          purchaseUpdatedSub =
+            ExpoIAP.purchaseUpdatedListener(
+              (purchase: any) => {
+                void finishPremiumPurchase(
+                  purchase
+                );
+              }
+            );
+
+          purchaseErrorSub =
+            ExpoIAP.purchaseErrorListener(
+              (error: any) => {
+                const message =
+                  String(
+                    error?.message ||
+                      error ||
+                      ""
+                  );
+
+                const code =
+                  String(
+                    error?.code || ""
+                  ).toLowerCase();
+
+                const cancelled =
+                  code.includes(
+                    "cancel"
+                  ) ||
+                  message
+                    .toLowerCase()
+                    .includes(
+                      "cancel"
+                    );
+
+                premiumPurchaseBusyRef.current =
+                  false;
+
+                if (mounted) {
+                  setPremiumPurchaseBusy(
+                    false
+                  );
+                }
+
+                if (
+                  !cancelled &&
+                  mounted
+                ) {
+                  Alert.alert(
+                    "Purchase error",
+                    message ||
+                      "The Premium Track purchase could not be completed."
+                  );
+                }
+              }
+            );
+
+          const products =
+            await ExpoIAP.fetchProducts({
+              skus: [
+                premiumProductId,
+              ],
+              type: "in-app",
+            });
+
+          const product =
+            (
+              Array.isArray(
+                products
+              )
+                ? products
+                : []
+            ).find(
+              (
+                candidate: any
+              ) =>
+                String(
+                  candidate?.id ||
+                    candidate?.productId ||
+                    ""
+                ).trim() ===
+                premiumProductId
+            );
+
+          if (!mounted) {
+            return;
+          }
+
+          setPremiumStoreAvailable(
+            Boolean(product)
+          );
+
+          const displayPrice =
+            String(
+              product?.displayPrice ||
+                product?.localizedPrice ||
+                product?.priceString ||
+                ""
+            ).trim();
+
+          setPremiumStorePrice(
+            displayPrice ||
+              null
+          );
+        } catch (error) {
+          console.warn(
+            "[IslandEventPanel] premium product load failed",
+            error
+          );
+
+          if (mounted) {
+            setPremiumStoreAvailable(
+              false
+            );
+            setPremiumStorePrice(
+              null
+            );
+          }
+        }
+      };
+
+    void connectAndLoad();
+
+    return () => {
+      mounted = false;
+      purchaseUpdatedSub?.remove?.();
+      purchaseErrorSub?.remove?.();
+    };
+  }, [
+    grant,
+    premiumProductId,
+  ]);
+
+  const buyPremiumPass =
+    async () => {
+      if (
+        premiumPassOwned ||
+        !premiumProductId ||
+        premiumPurchaseBusyRef.current
+      ) {
+        return;
+      }
+
+      if (!supabaseUserId) {
+        Alert.alert(
+          "Sign in required",
+          "Please sign in before buying the Premium Track so the pass stays attached to your Nova Tutoring account."
+        );
+        return;
+      }
+
+      if (
+        Platform.OS !== "ios"
+      ) {
+        Alert.alert(
+          "Apple purchase",
+          "The Nova Halloween Premium Track is currently configured for iOS purchases."
+        );
+        return;
+      }
+
+      try {
+        premiumPurchaseBusyRef.current =
+          true;
+        setPremiumPurchaseBusy(
+          true
+        );
+
+        await ExpoIAP.initConnection();
+
+        const products =
+          await ExpoIAP.fetchProducts({
+            skus: [
+              premiumProductId,
+            ],
+            type: "in-app",
+          });
+
+        const available =
+          (
+            Array.isArray(
+              products
+            )
+              ? products
+              : []
+          ).some(
+            (
+              product: any
+            ) =>
+              String(
+                product?.id ||
+                  product?.productId ||
+                  ""
+              ).trim() ===
+              premiumProductId
+          );
+
+        if (!available) {
+          premiumPurchaseBusyRef.current =
+            false;
+          setPremiumPurchaseBusy(
+            false
+          );
+
+          Alert.alert(
+            "Premium pass not available yet",
+            "Apple has not returned the Nova Halloween Premium Track product yet. Make sure the non-consumable product exists in App Store Connect, then try again."
+          );
+          return;
+        }
+
+        await ExpoIAP.requestPurchase({
+          request: {
+            apple: {
+              sku:
+                premiumProductId,
+            },
+            google: {
+              skus: [
+                premiumProductId,
+              ],
+            },
+          },
+          type: "in-app",
+        });
+      } catch (error: any) {
+        premiumPurchaseBusyRef.current =
+          false;
+        setPremiumPurchaseBusy(
+          false
+        );
+
+        const raw =
+          String(
+            error?.message ||
+              error ||
+              ""
+          );
+
+        const cancelled =
+          String(
+            error?.code || ""
+          )
+            .toLowerCase()
+            .includes("cancel") ||
+          raw
+            .toLowerCase()
+            .includes("cancel");
+
+        if (!cancelled) {
+          Alert.alert(
+            "Purchase error",
+            raw ||
+              "Could not start the Premium Track purchase."
+          );
+        }
+      }
+    };
+
+  const restorePremiumPass =
+    async () => {
+      if (
+        !premiumProductId ||
+        premiumPurchaseBusyRef.current
+      ) {
+        return;
+      }
+
+      if (!supabaseUserId) {
+        Alert.alert(
+          "Sign in required",
+          "Please sign in to the Nova account that owns the Premium Track, then restore again."
+        );
+        return;
+      }
+
+      try {
+        premiumPurchaseBusyRef.current =
+          true;
+        setPremiumPurchaseBusy(
+          true
+        );
+
+        await ExpoIAP.initConnection();
+
+        const purchases =
+          await ExpoIAP.getAvailablePurchases();
+
+        const matching =
+          (
+            Array.isArray(
+              purchases
+            )
+              ? purchases
+              : []
+          ).find(
+            (
+              purchase: any
+            ) =>
+              String(
+                purchase?.productId ||
+                  purchase?.id ||
+                  ""
+              ).trim() ===
+              premiumProductId
+          );
+
+        if (!matching) {
+          Alert.alert(
+            "No Premium Track found",
+            "Apple did not return a Nova Halloween Premium Track purchase for this Apple account."
+          );
+          return;
+        }
+
+        await grant(
+          premiumProductId
+        );
+
+        try {
+          await ExpoIAP.finishTransaction({
+            purchase: matching,
+            isConsumable: false,
+          });
+        } catch {}
+
+        setMessage(
+          "Premium Track restored to this Nova account."
+        );
+      } catch (error: any) {
+        Alert.alert(
+          "Restore failed",
+          String(
+            error?.message ||
+              "The Premium Track could not be restored right now."
+          )
+        );
+      } finally {
+        premiumPurchaseBusyRef.current =
+          false;
+        setPremiumPurchaseBusy(
+          false
+        );
+      }
+    };
 
   const freeClaimed =
     useMemo(
@@ -935,21 +1416,103 @@ export default function IslandEventPanel() {
                 {!premiumPassOwned ? (
                   <View
                     style={
-                      styles.premiumNotice
+                      styles.premiumPurchaseCard
                     }
                   >
-                    <Ionicons
-                      name="information-circle-outline"
-                      size={15}
-                      color="#c4b5fd"
-                    />
-                    <Text
+                    <View
                       style={
-                        styles.premiumNoticeText
+                        styles.premiumPurchaseCopy
                       }
                     >
-                      Premium rewards are visible now. Purchasing the Halloween pass will be connected to the app's IAP flow separately.
-                    </Text>
+                      <Text
+                        style={
+                          styles.premiumPurchaseTitle
+                        }
+                      >
+                        Unlock the Premium Track
+                      </Text>
+                      <Text
+                        style={
+                          styles.premiumPurchaseText
+                        }
+                      >
+                        One Apple purchase unlocks every premium reward tier you earn during Nova Halloween 2026. Free Track rewards remain free.
+                      </Text>
+
+                      {!premiumStoreAvailable ? (
+                        <Text
+                          style={
+                            styles.premiumStoreStatus
+                          }
+                        >
+                          Apple product not detected yet. The button will retry the App Store when tapped.
+                        </Text>
+                      ) : null}
+                    </View>
+
+                    <Pressable
+                      onPress={() =>
+                        void buyPremiumPass()
+                      }
+                      disabled={
+                        premiumPurchaseBusy
+                      }
+                      style={({ pressed }) => [
+                        styles.unlockPremiumButton,
+                        premiumPurchaseBusy &&
+                          styles.lockedButton,
+                        pressed &&
+                          !premiumPurchaseBusy &&
+                          styles.pressed,
+                      ]}
+                    >
+                      {premiumPurchaseBusy ? (
+                        <ActivityIndicator
+                          size="small"
+                          color="#020617"
+                        />
+                      ) : (
+                        <>
+                          <Ionicons
+                            name="lock-open-outline"
+                            size={15}
+                            color="#020617"
+                          />
+                          <Text
+                            style={
+                              styles.unlockPremiumText
+                            }
+                          >
+                            {premiumStorePrice
+                              ? `UNLOCK • ${premiumStorePrice}`
+                              : "UNLOCK PREMIUM"}
+                          </Text>
+                        </>
+                      )}
+                    </Pressable>
+
+                    <Pressable
+                      onPress={() =>
+                        void restorePremiumPass()
+                      }
+                      disabled={
+                        premiumPurchaseBusy
+                      }
+                      style={({ pressed }) => [
+                        styles.restoreButton,
+                        pressed &&
+                          !premiumPurchaseBusy &&
+                          styles.pressed,
+                      ]}
+                    >
+                      <Text
+                        style={
+                          styles.restoreButtonText
+                        }
+                      >
+                        Restore Pass
+                      </Text>
+                    </Pressable>
                   </View>
                 ) : null}
 
@@ -1343,26 +1906,64 @@ const styles =
       fontSize: 9,
       fontWeight: "900",
     },
-    premiumNotice: {
-      flexDirection: "row",
-      alignItems:
-        "flex-start",
-      gap: 7,
-      borderRadius: 13,
+    premiumPurchaseCard: {
+      borderRadius: 15,
       borderWidth: 1,
       borderColor:
-        "rgba(167,139,250,0.20)",
+        "rgba(167,139,250,0.30)",
       backgroundColor:
-        "rgba(76,29,149,0.11)",
-      padding: 10,
-      marginBottom: 9,
+        "rgba(76,29,149,0.13)",
+      padding: 11,
+      marginBottom: 10,
+      gap: 9,
     },
-    premiumNoticeText: {
-      flex: 1,
+    premiumPurchaseCopy: {
+      gap: 3,
+    },
+    premiumPurchaseTitle: {
+      color: "#f5f3ff",
+      fontSize: 12,
+      fontWeight: "900",
+    },
+    premiumPurchaseText: {
       color: "#c4b5fd",
       fontSize: 9.5,
       lineHeight: 14,
       fontWeight: "700",
+    },
+    premiumStoreStatus: {
+      color: "#fbbf24",
+      fontSize: 8.5,
+      lineHeight: 12,
+      fontWeight: "800",
+      marginTop: 3,
+    },
+    unlockPremiumButton: {
+      minHeight: 42,
+      borderRadius: 12,
+      backgroundColor: "#c084fc",
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 7,
+      paddingHorizontal: 12,
+    },
+    unlockPremiumText: {
+      color: "#020617",
+      fontSize: 10,
+      fontWeight: "900",
+      letterSpacing: 0.25,
+    },
+    restoreButton: {
+      alignSelf: "center",
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+    },
+    restoreButtonText: {
+      color: "#c4b5fd",
+      fontSize: 9,
+      fontWeight: "800",
+      textDecorationLine: "underline",
     },
     rewardList: {
       gap: 8,
@@ -1411,6 +2012,13 @@ const styles =
       lineHeight: 13,
       fontWeight: "800",
       marginTop: 2,
+    },
+    rewardDescription: {
+      color: "#94a3b8",
+      fontSize: 8.5,
+      lineHeight: 12,
+      fontWeight: "700",
+      marginTop: 4,
     },
     collectibleTag: {
       color: "#c4b5fd",
