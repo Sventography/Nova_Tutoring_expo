@@ -6,6 +6,7 @@ import React, {
 } from "react";
 import {
   AppState,
+  Pressable,
   StyleSheet,
   Text,
   View,
@@ -22,6 +23,9 @@ import {
 import {
   useUser,
 } from "../context/UserContext";
+import {
+  useEvents,
+} from "../context/EventsContext";
 
 const PREFIX =
   "@nova/dailyGreeting.v1:";
@@ -61,6 +65,26 @@ export default function DailyWelcomeModal() {
     ready,
     deal,
   } = useDailyDeal();
+
+  const {
+    activeEvent,
+    points: eventPoints,
+    maxPoints: eventMaxPoints,
+    unclaimedRewardCount,
+  } = useEvents();
+
+  const eventCollectibleCount =
+    activeEvent
+      ? [
+          ...activeEvent.freeTrack,
+          ...activeEvent.premiumTrack,
+        ].filter(
+          (reward) =>
+            Boolean(
+              reward.decorationId
+            )
+        ).length
+      : 0;
 
   const [
     visible,
@@ -211,6 +235,18 @@ export default function DailyWelcomeModal() {
     );
   };
 
+  const openEvent = () => {
+    dismiss();
+
+    setTimeout(
+      () =>
+        router.push(
+          "/island" as any
+        ),
+      120
+    );
+  };
+
   return (
     <NovaGuideOverlay
       visible={visible}
@@ -218,7 +254,11 @@ export default function DailyWelcomeModal() {
       pose="welcome"
       eyebrow="NOVA DAILY"
       title={`${hello()}, ${name}!`}
-      message="I’ve got today’s quests and spotlight ready for you. What do you want to check first?"
+      message={
+        activeEvent
+          ? "I’ve got today’s quests, deal, and event progress ready for you."
+          : "I’ve got today’s quests and spotlight ready for you. What do you want to check first?"
+      }
       primaryAction={{
         label:
           "View Daily Quests",
@@ -310,6 +350,119 @@ export default function DailyWelcomeModal() {
           </Text>
         </View>
       )}
+
+      {activeEvent ? (
+        <View
+          style={[
+            styles.eventSpotlight,
+            {
+              borderColor:
+                activeEvent.accent,
+              backgroundColor:
+                activeEvent.accentSoft,
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.eventEyebrow,
+              {
+                color:
+                  activeEvent.accent,
+              },
+            ]}
+          >
+            LIVE EVENT
+          </Text>
+
+          <Text
+            style={
+              styles.eventTitle
+            }
+          >
+            {activeEvent.shortTitle}
+          </Text>
+
+          <Text
+            style={
+              styles.eventTagline
+            }
+          >
+            {activeEvent.tagline}
+          </Text>
+
+          <View
+            style={
+              styles.eventStats
+            }
+          >
+            <Text
+              style={
+                styles.eventStat
+              }
+            >
+              {eventPoints.toLocaleString()}
+              /{eventMaxPoints.toLocaleString()} XP
+            </Text>
+
+            <Text
+              style={
+                styles.eventStat
+              }
+            >
+              {unclaimedRewardCount} reward
+              {unclaimedRewardCount === 1
+                ? ""
+                : "s"}{" "}
+              ready
+            </Text>
+
+            {eventCollectibleCount > 0 ? (
+              <Text
+                style={
+                  styles.eventStat
+                }
+              >
+                {eventCollectibleCount} collectible
+                {eventCollectibleCount === 1
+                  ? ""
+                  : "s"}
+              </Text>
+            ) : null}
+          </View>
+
+          <Pressable
+            onPress={openEvent}
+            accessibilityRole="button"
+            accessibilityLabel={
+              "View live event rewards"
+            }
+            style={({
+              pressed,
+            }) => [
+              styles.eventButton,
+              {
+                borderColor:
+                  activeEvent.accent,
+              },
+              pressed &&
+                styles.eventButtonPressed,
+            ]}
+          >
+            <Text
+              style={[
+                styles.eventButtonText,
+                {
+                  color:
+                    activeEvent.accent,
+                },
+              ]}
+            >
+              View Event Rewards
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
     </NovaGuideOverlay>
   );
 }
@@ -375,5 +528,69 @@ const styles =
       lineHeight: 18,
       textAlign: "center",
       marginTop: 5,
+    },
+    eventSpotlight: {
+      marginTop: 10,
+      borderRadius: 16,
+      borderWidth: 1,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+    },
+    eventEyebrow: {
+      fontSize: 9,
+      fontWeight: "900",
+      letterSpacing: 1.1,
+      textAlign: "center",
+    },
+    eventTitle: {
+      color: "#FFFFFF",
+      fontSize: 16,
+      fontWeight: "900",
+      textAlign: "center",
+      marginTop: 5,
+    },
+    eventTagline: {
+      color: "#CBD5E1",
+      fontSize: 11,
+      lineHeight: 16,
+      fontWeight: "700",
+      textAlign: "center",
+      marginTop: 3,
+    },
+    eventStats: {
+      marginTop: 9,
+      flexDirection: "row",
+      justifyContent: "center",
+      flexWrap: "wrap",
+      gap: 6,
+    },
+    eventStat: {
+      color: "#E2E8F0",
+      fontSize: 10,
+      lineHeight: 14,
+      fontWeight: "800",
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 999,
+      backgroundColor:
+        "rgba(15,23,42,0.68)",
+    },
+    eventButton: {
+      alignSelf: "center",
+      marginTop: 10,
+      borderWidth: 1,
+      borderRadius: 999,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      backgroundColor:
+        "rgba(2,6,23,0.58)",
+    },
+    eventButtonPressed: {
+      opacity: 0.72,
+    },
+    eventButtonText: {
+      fontSize: 11,
+      fontWeight: "900",
+      letterSpacing: 0.3,
     },
   });
