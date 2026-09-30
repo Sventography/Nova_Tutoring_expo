@@ -10,6 +10,8 @@ export type NovaEventReward = {
   requiredPoints: number;
   label: string;
   baseCoins: number;
+  decorationId?: string;
+  decorationQuantity?: number;
 };
 
 export type NovaEventDefinition = {
@@ -31,6 +33,90 @@ export type NovaEventDefinition = {
 
 export const NOVA_EVENTS:
   NovaEventDefinition[] = [
+    {
+      id: "nova-halloween-2026",
+      kind: "seasonal",
+      title: "Nova Halloween 2026",
+      shortTitle: "Nova Halloween",
+      tagline: "Learn. Explore. Haunt the island.",
+      description:
+        "Earn Event XP through quizzes and unlock limited Halloween rewards for Nova Island. Free rewards stay available to every learner; the premium track remains separate.",
+      startDate: "2026-09-30",
+      endDate: "2026-11-02",
+      accent: "#F97316",
+      accentSoft: "rgba(124,58,237,0.22)",
+      freeTrack: [
+        {
+          id: "halloween-free-25",
+          requiredPoints: 25,
+          label: "Trick-or-Treat Coins",
+          baseCoins: 25,
+        },
+        {
+          id: "halloween-free-75",
+          requiredPoints: 75,
+          label: "Ghostlight Lantern",
+          baseCoins: 0,
+          decorationId: "halloween_ghostlight_lantern",
+        },
+        {
+          id: "halloween-free-150",
+          requiredPoints: 150,
+          label: "Midnight Study Crystal",
+          baseCoins: 0,
+          decorationId: "halloween_midnight_crystal",
+        },
+        {
+          id: "halloween-free-250",
+          requiredPoints: 250,
+          label: "Haunted Coin Cache",
+          baseCoins: 125,
+        },
+        {
+          id: "halloween-free-400",
+          requiredPoints: 400,
+          label: "Harvest Moon Portal",
+          baseCoins: 0,
+          decorationId: "halloween_harvest_portal",
+        },
+      ],
+      premiumTrackEnabled: true,
+      premiumProductId: "event_nova_halloween_2026_premium",
+      premiumTrack: [
+        {
+          id: "halloween-premium-25",
+          requiredPoints: 25,
+          label: "Premium Moon Cache",
+          baseCoins: 75,
+        },
+        {
+          id: "halloween-premium-75",
+          requiredPoints: 75,
+          label: "Witchlight Arch",
+          baseCoins: 0,
+          decorationId: "halloween_witchlight_arch",
+        },
+        {
+          id: "halloween-premium-150",
+          requiredPoints: 150,
+          label: "Phantom Fountain",
+          baseCoins: 0,
+          decorationId: "halloween_phantom_fountain",
+        },
+        {
+          id: "halloween-premium-250",
+          requiredPoints: 250,
+          label: "Premium Haunted Cache",
+          baseCoins: 250,
+        },
+        {
+          id: "halloween-premium-400",
+          requiredPoints: 400,
+          label: "Halloween Finale Cache",
+          baseCoins: 400,
+        },
+      ],
+    },
     {
       id:
         "starlight-study-festival-2026",
