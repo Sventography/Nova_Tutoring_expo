@@ -38,6 +38,7 @@ import { useIslandBuilder } from "../context/IslandBuilderContext";
 import { useIslandDecorations } from "../context/IslandDecorationContext";
 import IslandBuilderPanel from "../components/island3d/IslandBuilderPanel";
 import IslandBuilderSceneControls from "../components/island3d/IslandBuilderSceneControls";
+import IslandEventPanel from "../components/island3d/IslandEventPanel";
 import NovaGuideOverlay from "../components/NovaGuideOverlay";
 import { useCompanion } from "../context/CompanionContext";
 import { useUser } from "../context/UserContext";
@@ -2124,6 +2125,10 @@ export default function IslandScreen() {
               </Text>
             </View>
           </View>
+        ) : null}
+
+        {!islandBuilder.isEditing ? (
+          <IslandEventPanel />
         ) : null}
 
         <IslandBuilderPanel
