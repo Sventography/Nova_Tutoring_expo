@@ -14,6 +14,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   ISLAND_DECORATION_CATALOG,
   ISLAND_DECORATION_CATALOG_BY_ID,
+  isIslandDecorationCoinShopItem,
   type IslandDecorationCatalogItem,
 } from "../_lib/islandDecorationCatalog";
 import { clampIslandBuildPosition } from "../_lib/islandBuilderBounds";
@@ -54,7 +55,20 @@ export type IslandDecorationOwnershipInfo = {
 type PurchaseResult = {
   ok: boolean;
   placementId?: string;
-  reason?: "not_ready" | "not_editing" | "unknown_item" | "locked" | "insufficient_coins" | "save_failed";
+  reason?:
+    | "not_ready"
+    | "not_editing"
+    | "unknown_item"
+    | "locked"
+    | "not_for_sale"
+    | "insufficient_coins"
+    | "save_failed";
+};
+
+type GrantDecorationResult = {
+  ok: boolean;
+  ownedCount?: number;
+  reason?: "not_ready" | "unknown_item" | "save_failed";
 };
 
 type ContextValue = {
@@ -69,6 +83,11 @@ type ContextValue = {
   cancelEditing: () => void;
   saveEditing: () => Promise<boolean>;
   buyDecoration: (itemId: string) => Promise<PurchaseResult>;
+  grantDecoration: (
+    itemId: string,
+    quantity?: number,
+    acquiredAt?: number
+  ) => Promise<GrantDecorationResult>;
   placeFromInventory: (itemId: string) => string | null;
   movePlacement: (placementId: string, transform: Partial<IslandDecorationTransform>) => boolean;
   rotatePlacement: (placementId: string, rotationY: number) => boolean;
@@ -478,6 +497,9 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
 
       const item = ISLAND_DECORATION_CATALOG_BY_ID[itemId];
       if (!item) return { ok: false, reason: "unknown_item" };
+      if (!isIslandDecorationCoinShopItem(item)) {
+        return { ok: false, reason: "not_for_sale" };
+      }
       if (islandLevel < item.unlockLevel) {
         return { ok: false, reason: "locked" };
       }
@@ -539,6 +561,102 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
       }
     },
     [addCoins, coins, coinsReady, islandLevel, persist, ready]
+  );
+
+  const grantDecoration = useCallback(
+    async (
+      itemId: string,
+      quantity = 1,
+      acquiredAt = Date.now()
+    ): Promise<GrantDecorationResult> => {
+      if (!ready) {
+        return { ok: false, reason: "not_ready" };
+      }
+
+      const item =
+        ISLAND_DECORATION_CATALOG_BY_ID[itemId];
+
+      if (!item) {
+        return { ok: false, reason: "unknown_item" };
+      }
+
+      const safeQuantity = Math.max(
+        1,
+        Math.floor(Number(quantity) || 1)
+      );
+
+      const safeAcquiredAt =
+        Number.isFinite(Number(acquiredAt)) &&
+        Number(acquiredAt) > 0
+          ? Number(acquiredAt)
+          : Date.now();
+
+      try {
+        const committedNext =
+          cloneState(committedRef.current);
+
+        committedNext.ownedCounts[itemId] =
+          (committedNext.ownedCounts[itemId] || 0) +
+          safeQuantity;
+
+        if (
+          !committedNext.firstAcquiredAt[itemId]
+        ) {
+          committedNext.firstAcquiredAt[itemId] =
+            safeAcquiredAt;
+          committedNext.firstAcquiredAtEstimated[
+            itemId
+          ] = false;
+        }
+
+        committedNext.updatedAt = Date.now();
+
+        await persist(committedNext);
+
+        committedRef.current =
+          committedNext;
+        setCommitted(committedNext);
+
+        if (draftRef.current) {
+          const draftNext =
+            cloneState(draftRef.current);
+
+          draftNext.ownedCounts[itemId] =
+            (draftNext.ownedCounts[itemId] || 0) +
+            safeQuantity;
+
+          if (
+            !draftNext.firstAcquiredAt[itemId]
+          ) {
+            draftNext.firstAcquiredAt[itemId] =
+              safeAcquiredAt;
+            draftNext.firstAcquiredAtEstimated[
+              itemId
+            ] = false;
+          }
+
+          draftNext.updatedAt = Date.now();
+          draftRef.current = draftNext;
+          setDraft(draftNext);
+        }
+
+        return {
+          ok: true,
+          ownedCount:
+            committedNext.ownedCounts[itemId],
+        };
+      } catch (error) {
+        console.warn(
+          "[IslandDecorationContext] grant error",
+          error
+        );
+        return {
+          ok: false,
+          reason: "save_failed",
+        };
+      }
+    },
+    [persist, ready]
   );
 
   const movePlacement = useCallback(
@@ -656,6 +774,7 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
     cancelEditing,
     saveEditing,
     buyDecoration,
+    grantDecoration,
     placeFromInventory,
     movePlacement,
     rotatePlacement,
@@ -677,6 +796,7 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
     getArmedDecorationDrag,
     getOwnershipInfo,
     getInventoryCount,
+    grantDecoration,
     isEditing,
     moveAllToInventory,
     movePlacement,

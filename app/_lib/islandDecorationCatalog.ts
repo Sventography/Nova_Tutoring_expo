@@ -45,6 +45,18 @@ export type IslandDecorationRarity =
   | "uncommon"
   | "rare";
 
+export type IslandDecorationSourceType =
+  | "coin_shop"
+  | "event_free"
+  | "event_premium"
+  | "achievement"
+  | "special";
+
+export type IslandDecorationExclusivity =
+  | "standard"
+  | "limited"
+  | "one_time";
+
 export type IslandDecorationCatalogItem = {
   id: string;
   title: string;
@@ -58,8 +70,25 @@ export type IslandDecorationCatalogItem = {
   model: IslandDecorationModel;
   category: IslandDecorationCategory;
   rarity: IslandDecorationRarity;
+
+  /*
+   * Collectible provenance. Existing decorations default to the normal
+   * coin shop + Core Collection, so old catalog entries need no migration.
+   *
+   * Event rewards should set sourceType to event_free/event_premium,
+   * shopVisible to false, and provide eventId/eventName. That keeps them
+   * permanently identifiable without exposing them in the coin shop.
+   */
+  sourceType?: IslandDecorationSourceType;
   sourceLabel?: string;
   collectionLabel?: string;
+  eventId?: string;
+  eventName?: string;
+  exclusivity?: IslandDecorationExclusivity;
+  availableFrom?: string;
+  availableUntil?: string;
+  shopVisible?: boolean;
+
   defaultScale: number;
   minScale: number;
   maxScale: number;
@@ -123,9 +152,72 @@ export const ISLAND_DECORATION_CATALOG: IslandDecorationCatalogItem[] = [
   { id: "nova_star_lantern", unlockLevel: 5, title: "Nova Star Lantern", shortTitle: "Star Lantern", description: "A tall lantern crowned with a brilliant floating star.", price: 12, previewEmoji: "⭐", accent: "#fde047", secondaryAccent: "#67e8f9", model: "star_lantern", category: "furniture", rarity: "uncommon", defaultScale: 1, minScale: 0.6, maxScale: 4 },
   { id: "nova_portal", unlockLevel: 10, title: "Nova Portal", shortTitle: "Nova Portal", description: "A rare standing portal ring shimmering with cyan and violet energy.", price: 48, previewEmoji: "🌀", accent: "#22d3ee", secondaryAccent: "#a78bfa", model: "portal", category: "cosmic", rarity: "rare", defaultScale: 1, minScale: 0.6, maxScale: 4 },
 
+  // Nova Halloween 2026 — event-only collectibles. Never sold in the coin shop.
+  { id: "halloween_ghostlight_lantern", unlockLevel: 1, title: "Ghostlight Lantern", shortTitle: "Ghostlight", description: "A spectral star lantern glowing with eerie violet and pumpkin-orange light.", price: 0, previewEmoji: "👻", accent: "#c084fc", secondaryAccent: "#fb923c", model: "star_lantern", category: "fantasy", rarity: "rare", sourceType: "event_free", sourceLabel: "Free Event Track", collectionLabel: "Haunted Learning Collection", eventId: "nova-halloween-2026", eventName: "Nova Halloween 2026", exclusivity: "one_time", availableFrom: "2026-09-30", availableUntil: "2026-11-02", shopVisible: false, defaultScale: 1, minScale: 0.6, maxScale: 4 },
+  { id: "halloween_midnight_crystal", unlockLevel: 1, title: "Midnight Study Crystal", shortTitle: "Midnight Crystal", description: "A dark violet crystal formed from concentrated Halloween learning energy.", price: 0, previewEmoji: "🔮", accent: "#8b5cf6", secondaryAccent: "#f97316", model: "crystal", category: "fantasy", rarity: "rare", sourceType: "event_free", sourceLabel: "Free Event Track", collectionLabel: "Haunted Learning Collection", eventId: "nova-halloween-2026", eventName: "Nova Halloween 2026", exclusivity: "one_time", availableFrom: "2026-09-30", availableUntil: "2026-11-02", shopVisible: false, defaultScale: 1, minScale: 0.55, maxScale: 3.5 },
+  { id: "halloween_harvest_portal", unlockLevel: 1, title: "Harvest Moon Portal", shortTitle: "Harvest Portal", description: "A one-time Halloween portal burning with moonlit violet and harvest-orange energy.", price: 0, previewEmoji: "🎃", accent: "#f97316", secondaryAccent: "#a855f7", model: "portal", category: "fantasy", rarity: "rare", sourceType: "event_free", sourceLabel: "Free Event Finale", collectionLabel: "Haunted Learning Collection", eventId: "nova-halloween-2026", eventName: "Nova Halloween 2026", exclusivity: "one_time", availableFrom: "2026-09-30", availableUntil: "2026-11-02", shopVisible: false, defaultScale: 1, minScale: 0.6, maxScale: 4 },
+  { id: "halloween_witchlight_arch", unlockLevel: 1, title: "Witchlight Arch", shortTitle: "Witchlight Arch", description: "A premium ceremonial arch lit by strange green, violet, and moon-blue magic.", price: 0, previewEmoji: "🧙", accent: "#a3e635", secondaryAccent: "#a855f7", model: "cosmic_arch", category: "fantasy", rarity: "rare", sourceType: "event_premium", sourceLabel: "Premium Event Track", collectionLabel: "Haunted Learning Collection", eventId: "nova-halloween-2026", eventName: "Nova Halloween 2026", exclusivity: "one_time", availableFrom: "2026-09-30", availableUntil: "2026-11-02", shopVisible: false, defaultScale: 1, minScale: 0.6, maxScale: 4 },
+  { id: "halloween_phantom_fountain", unlockLevel: 1, title: "Phantom Fountain", shortTitle: "Phantom Fountain", description: "A premium Halloween fountain filled with luminous ghost-blue water.", price: 0, previewEmoji: "💀", accent: "#67e8f9", secondaryAccent: "#c084fc", model: "fountain", category: "water", rarity: "rare", sourceType: "event_premium", sourceLabel: "Premium Event Track", collectionLabel: "Haunted Learning Collection", eventId: "nova-halloween-2026", eventName: "Nova Halloween 2026", exclusivity: "one_time", availableFrom: "2026-09-30", availableUntil: "2026-11-02", shopVisible: false, defaultScale: 1, minScale: 0.7, maxScale: 3.5 },
+
 ];
 
 export const ISLAND_DECORATION_CATALOG_BY_ID =
   Object.fromEntries(
     ISLAND_DECORATION_CATALOG.map((item) => [item.id, item])
   ) as Record<string, IslandDecorationCatalogItem>;
+
+export function isIslandDecorationCoinShopItem(
+  item: IslandDecorationCatalogItem
+): boolean {
+  return (
+    item.shopVisible !== false &&
+    (item.sourceType ?? "coin_shop") === "coin_shop"
+  );
+}
+
+export function getIslandDecorationSourceLabel(
+  item: IslandDecorationCatalogItem
+): string {
+  const explicit = item.sourceLabel?.trim();
+  if (explicit) return explicit;
+
+  switch (item.sourceType ?? "coin_shop") {
+    case "event_free":
+      return "Free Event Track";
+    case "event_premium":
+      return "Premium Event Track";
+    case "achievement":
+      return "Achievement Reward";
+    case "special":
+      return "Special Reward";
+    case "coin_shop":
+    default:
+      return "Decoration Shop";
+  }
+}
+
+export function getIslandDecorationCollectionLabel(
+  item: IslandDecorationCatalogItem
+): string {
+  const explicit = item.collectionLabel?.trim();
+  if (explicit) return explicit;
+
+  const eventName = item.eventName?.trim();
+  if (eventName) return eventName;
+
+  return "Core Collection";
+}
+
+export function getIslandDecorationExclusivityLabel(
+  item: IslandDecorationCatalogItem
+): string | null {
+  switch (item.exclusivity ?? "standard") {
+    case "one_time":
+      return "ONE-TIME ONLY";
+    case "limited":
+      return "LIMITED";
+    case "standard":
+    default:
+      return null;
+  }
+}

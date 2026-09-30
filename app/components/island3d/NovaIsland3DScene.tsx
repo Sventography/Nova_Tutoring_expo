@@ -10,6 +10,7 @@ import React, {
 import {
   Image,
   PanResponder,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -153,6 +154,56 @@ const DEFAULT_TARGET: Vec3 = [
   0.45,
   0,
 ];
+
+/*
+ * Expo GL on phones can become GPU-bound long before the React side looks
+ * busy. Keep the Island continuously animated, but cap native rendering to
+ * 30 FPS. The web build can continue rendering at 60 FPS.
+ */
+function IslandFrameDriver() {
+  const { invalidate } = useThree();
+
+  useEffect(() => {
+    let frame = 0;
+    let lastPaint = 0;
+    const targetFps =
+      Platform.OS === "web"
+        ? 60
+        : 30;
+    const interval =
+      1000 / targetFps;
+
+    const tick = (
+      now: number
+    ) => {
+      if (
+        now - lastPaint >=
+        interval
+      ) {
+        lastPaint = now;
+        invalidate();
+      }
+
+      frame =
+        requestAnimationFrame(
+          tick
+        );
+    };
+
+    frame =
+      requestAnimationFrame(
+        tick
+      );
+
+    return () => {
+      cancelAnimationFrame(
+        frame
+      );
+    };
+  }, [invalidate]);
+
+  return null;
+}
 
 /*
  * Polished temporary Nova Island resident.
@@ -15599,6 +15650,7 @@ const selectLegendary =
       />
 
       <Canvas
+        frameloop="demand"
         onPointerMissed={() => {
           if (builderEditing) {
             selectMilestone(
@@ -15610,12 +15662,15 @@ const selectLegendary =
         style={
           StyleSheet.absoluteFill
         }
-        dpr={[
-          1,
-          1.5,
-        ]}
+        dpr={
+          Platform.OS === "web"
+            ? [1, 1.25]
+            : 1
+        }
         gl={{
-          antialias: true,
+          antialias:
+            Platform.OS ===
+            "web",
           alpha: true,
         }}
         camera={{
@@ -15629,6 +15684,7 @@ const selectLegendary =
           ],
         }}
       >
+        <IslandFrameDriver />
         <IslandWorld
           level={level}
           palette={palette}

@@ -25,6 +25,7 @@ import {
   type DailyQuestProgressEvent,
 } from "../_lib/dailyQuestEvents";
 import { useCoins } from "./CoinsContext";
+import { useIslandDecorations } from "./IslandDecorationContext";
 import { useUser } from "./UserContext";
 import { usePurchases } from "./PurchasesContext";
 import {
@@ -240,6 +241,9 @@ export function EventsProvider({
   const {
     addCoins,
   } = useCoins();
+  const {
+    grantDecoration,
+  } = useIslandDecorations();
   const {
     isOwned,
   } = usePurchases();
@@ -647,20 +651,51 @@ export function EventsProvider({
             next
           );
 
-          await addCoins(
-            rewardCoins,
-            "event_reward",
-            {
-              eventId:
-                activeEvent.id,
-              rewardId:
-                reward.id,
-              baseCoins:
-                reward.baseCoins,
-              totalCoins:
-                rewardCoins,
+          if (rewardCoins > 0) {
+            await addCoins(
+              rewardCoins,
+              "event_reward",
+              {
+                eventId:
+                  activeEvent.id,
+                rewardId:
+                  reward.id,
+                baseCoins:
+                  reward.baseCoins,
+                totalCoins:
+                  rewardCoins,
+              }
+            );
+          }
+
+          if (reward.decorationId) {
+            const granted =
+              await grantDecoration(
+                reward.decorationId,
+                reward.decorationQuantity ?? 1
+              );
+
+            if (!granted.ok) {
+              if (rewardCoins > 0) {
+                try {
+                  await addCoins(
+                    -rewardCoins,
+                    "event_reward_rollback",
+                    {
+                      eventId:
+                        activeEvent.id,
+                      rewardId:
+                        reward.id,
+                    }
+                  );
+                } catch {}
+              }
+
+              throw new Error(
+                `Could not grant event decoration: ${granted.reason || "unknown"}`
+              );
             }
-          );
+          }
 
           return rewardCoins;
         } catch (error) {
@@ -683,6 +718,7 @@ export function EventsProvider({
       [
         activeEvent,
         addCoins,
+        grantDecoration,
         persistNow,
         rewardCoinsFor,
       ]
@@ -762,22 +798,53 @@ export function EventsProvider({
             next
           );
 
-          await addCoins(
-            rewardCoins,
-            "event_premium_reward",
-            {
-              eventId:
-                activeEvent.id,
-              rewardId:
-                reward.id,
-              baseCoins:
-                reward.baseCoins,
-              totalCoins:
-                rewardCoins,
-              premiumProductId:
-                activeEvent.premiumProductId,
+          if (rewardCoins > 0) {
+            await addCoins(
+              rewardCoins,
+              "event_premium_reward",
+              {
+                eventId:
+                  activeEvent.id,
+                rewardId:
+                  reward.id,
+                baseCoins:
+                  reward.baseCoins,
+                totalCoins:
+                  rewardCoins,
+                premiumProductId:
+                  activeEvent.premiumProductId,
+              }
+            );
+          }
+
+          if (reward.decorationId) {
+            const granted =
+              await grantDecoration(
+                reward.decorationId,
+                reward.decorationQuantity ?? 1
+              );
+
+            if (!granted.ok) {
+              if (rewardCoins > 0) {
+                try {
+                  await addCoins(
+                    -rewardCoins,
+                    "event_premium_reward_rollback",
+                    {
+                      eventId:
+                        activeEvent.id,
+                      rewardId:
+                        reward.id,
+                    }
+                  );
+                } catch {}
+              }
+
+              throw new Error(
+                `Could not grant premium event decoration: ${granted.reason || "unknown"}`
+              );
             }
-          );
+          }
 
           return rewardCoins;
         } catch (error) {
@@ -800,6 +867,7 @@ export function EventsProvider({
       [
         activeEvent,
         addCoins,
+        grantDecoration,
         persistNow,
         premiumPassOwned,
         rewardCoinsFor,
