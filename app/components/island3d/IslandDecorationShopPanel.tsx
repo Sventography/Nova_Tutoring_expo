@@ -6,6 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useCoins } from "../../context/CoinsContext";
 import { useIsland } from "../../context/IslandContext";
 import { useIslandDecorations } from "../../context/IslandDecorationContext";
+import { isIslandDecorationCoinShopItem } from "../../_lib/islandDecorationCatalog";
 
 type ShopFilter =
   | "all"
@@ -67,10 +68,15 @@ export default function IslandDecorationShopPanel() {
   const [filter, setFilter] = useState<ShopFilter>("all");
 
   const visibleCatalog = useMemo(() => {
+    const shopCatalog =
+      catalog.filter(
+        isIslandDecorationCoinShopItem
+      );
+
     const filtered =
       filter === "all"
-        ? catalog
-        : catalog.filter(
+        ? shopCatalog
+        : shopCatalog.filter(
             (item) => item.category === filter
           );
 
@@ -120,6 +126,10 @@ export default function IslandDecorationShopPanel() {
         setInventoryOpen(true);
       } else if (result.reason === "locked") {
         setMessage(`Reach Island Level ${selectedItem.unlockLevel} to buy this decoration.`);
+      } else if (result.reason === "not_for_sale") {
+        setMessage(
+          "This collectible is earned from an event or special reward and cannot be bought in the Decoration Shop."
+        );
       } else if (result.reason === "insufficient_coins") {
         setMessage("You do not have enough coins for this decoration.");
       } else {
