@@ -52,7 +52,7 @@ export const NOVA_EVENTS:
           requiredPoints: 25,
           label: "Trick-or-Treat Coins",
           description:
-            "Adds 25 coins to your main Nova coin balance. This reward does not create an inventory item.",
+            "Adds 25 base coins to your main Nova coin balance. Companion bonuses may increase the final amount. This reward does not create an inventory item.",
           baseCoins: 25,
         },
         {
@@ -78,7 +78,7 @@ export const NOVA_EVENTS:
           requiredPoints: 250,
           label: "Haunted Coin Cache",
           description:
-            "Adds 125 coins to your main Nova coin balance. This reward does not create an inventory item.",
+            "Adds 125 base coins to your main Nova coin balance. Companion bonuses may increase the final amount. This reward does not create an inventory item.",
           baseCoins: 125,
         },
         {
@@ -99,7 +99,7 @@ export const NOVA_EVENTS:
           requiredPoints: 25,
           label: "Premium Moon Cache",
           description:
-            "Premium reward. Adds 75 coins to your main Nova coin balance.",
+            "Premium reward. Adds 75 base coins to your main Nova coin balance. Companion bonuses may increase the final amount.",
           baseCoins: 75,
         },
         {
@@ -125,7 +125,7 @@ export const NOVA_EVENTS:
           requiredPoints: 250,
           label: "Premium Haunted Cache",
           description:
-            "Premium reward. Adds 250 coins to your main Nova coin balance.",
+            "Premium reward. Adds 250 base coins to your main Nova coin balance. Companion bonuses may increase the final amount.",
           baseCoins: 250,
         },
         {
@@ -133,7 +133,7 @@ export const NOVA_EVENTS:
           requiredPoints: 400,
           label: "Halloween Finale Cache",
           description:
-            "Premium finale reward. Adds 400 coins to your main Nova coin balance.",
+            "Premium finale reward. Adds 400 base coins to your main Nova coin balance. Companion bonuses may increase the final amount.",
           baseCoins: 400,
         },
       ],
@@ -223,7 +223,7 @@ export const NOVA_EVENTS:
           id: "starlight-premium-250",
           requiredPoints: 250,
           label: "Celestial Vault",
-          description: "Premium reward. Adds 250 coins to your main Nova coin balance.",
+          description: "Premium reward. Adds 250 base coins to your main Nova coin balance. Companion bonuses may increase the final amount.",
           baseCoins: 250,
         },
         {
