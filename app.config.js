@@ -29,7 +29,7 @@ export default ({ config }) => {
       ...(config.ios || {}),
       supportsTablet: true,
       bundleIdentifier: "com.sventography.novatutoring.ios",
-      buildNumber: "102",
+      buildNumber: "103",
     },
 
     android: {
