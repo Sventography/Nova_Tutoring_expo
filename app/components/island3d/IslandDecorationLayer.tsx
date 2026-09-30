@@ -1,5 +1,6 @@
 // app/components/island3d/IslandDecorationLayer.tsx
 import React, { useMemo, useRef } from "react";
+import { Platform } from "react-native";
 import { useFrame, useThree } from "@react-three/fiber/native";
 import * as THREE from "three";
 
@@ -26,6 +27,26 @@ const MUSHROOM_SPOTS: Array<[number, number, number]> = [
   [0.22, 0.58, -0.08],
   [-0.2, 0.58, -0.12],
 ];
+
+/*
+ * Each Three.js point light is evaluated by every affected standard material.
+ * A decorated island can contain many of them at once, which is particularly
+ * expensive in Expo GL. Mobile keeps the emissive materials but skips these
+ * tiny decorative lights; web retains the full lighting treatment.
+ */
+function DecorationPointLight(
+  props: any
+) {
+  if (
+    Platform.OS !== "web"
+  ) {
+    return null;
+  }
+
+  return (
+    <DecorationPointLight {...props} />
+  );
+}
 
 
 function StarFlowerModel() {
@@ -107,7 +128,7 @@ function StarFlowerModel() {
         />
       </mesh>
 
-      <pointLight position={[0, 0.62, 0]} color="#fef3c7" intensity={0.24} distance={1.45} />
+      <DecorationPointLight position={[0, 0.62, 0]} color="#fef3c7" intensity={0.24} distance={1.45} />
     </group>
   );
 }
@@ -275,7 +296,7 @@ function AlienTreeModel({ item }: { item: IslandDecorationCatalogItem }) {
         <torusGeometry args={[0.72, 0.025, 6, 28]} />
         <meshStandardMaterial color={secondary} emissive={secondary} emissiveIntensity={0.72} />
       </mesh>
-      <pointLight position={[0, 1.55, 0]} color={item.accent} intensity={0.42} distance={3.2} />
+      <DecorationPointLight position={[0, 1.55, 0]} color={item.accent} intensity={0.42} distance={3.2} />
     </group>
   );
 }
@@ -333,7 +354,7 @@ function CrystalModel({ item }: { item: IslandDecorationCatalogItem }) {
           />
         </mesh>
       ))}
-      <pointLight position={[0, 0.48, 0]} color={item.accent} intensity={0.32} distance={2.2} />
+      <DecorationPointLight position={[0, 0.48, 0]} color={item.accent} intensity={0.32} distance={2.2} />
     </group>
   );
 }
@@ -425,7 +446,7 @@ function UfoModel({ item }: { item: IslandDecorationCatalogItem }) {
         <meshBasicMaterial color={item.accent} transparent opacity={0.12} side={2} />
       </mesh>
 
-      <pointLight position={[0, 0.18, 0]} color={item.accent} intensity={0.55} distance={3.4} />
+      <DecorationPointLight position={[0, 0.18, 0]} color={item.accent} intensity={0.55} distance={3.4} />
     </group>
   );
 }
@@ -539,7 +560,7 @@ function AlienMushroomModel({ item }: { item: IslandDecorationCatalogItem }) {
           </mesh>
         </group>
       ))}
-      <pointLight position={[0, 0.55, 0]} color={item.accent} intensity={0.28} distance={2.4} />
+      <DecorationPointLight position={[0, 0.55, 0]} color={item.accent} intensity={0.28} distance={2.4} />
     </group>
   );
 }
@@ -571,7 +592,7 @@ function TinyPlanetModel({ item }: { item: IslandDecorationCatalogItem }) {
         <torusGeometry args={[0.68, 0.07, 10, 34]} />
         <meshStandardMaterial color={secondary} emissive={secondary} emissiveIntensity={0.36} metalness={0.2} roughness={0.4} />
       </mesh>
-      <pointLight color={secondary} intensity={0.26} distance={2.8} />
+      <DecorationPointLight color={secondary} intensity={0.26} distance={2.8} />
     </group>
   );
 }
@@ -648,7 +669,7 @@ function PondModel({ item }: { item: IslandDecorationCatalogItem }) {
         <ringGeometry args={[0.9, 1.08, 40]} />
         <meshStandardMaterial color={secondary} roughness={0.9} />
       </mesh>
-      <pointLight position={[0, 0.24, 0]} color={item.accent} intensity={0.16} distance={2.2} />
+      <DecorationPointLight position={[0, 0.24, 0]} color={item.accent} intensity={0.16} distance={2.2} />
     </group>
   );
 }
@@ -665,7 +686,7 @@ function FloatingRockModel({ item }: { item: IslandDecorationCatalogItem }) {
         <sphereGeometry args={[0.42, 16, 10]} />
         <meshBasicMaterial color={item.accent} transparent opacity={0.16} depthWrite={false} />
       </mesh>
-      <pointLight position={[0, 0.42, 0]} color={item.accent} intensity={0.35} distance={2.6} />
+      <DecorationPointLight position={[0, 0.42, 0]} color={item.accent} intensity={0.35} distance={2.6} />
     </group>
   );
 }
@@ -713,7 +734,7 @@ function StarLanternModel({ item }: { item: IslandDecorationCatalogItem }) {
         <octahedronGeometry args={[0.28, 0]} />
         <meshStandardMaterial color={item.accent} emissive={secondary} emissiveIntensity={0.85} roughness={0.24} />
       </mesh>
-      <pointLight position={[0, 1.34, 0]} color={item.accent} intensity={0.55} distance={3.2} />
+      <DecorationPointLight position={[0, 1.34, 0]} color={item.accent} intensity={0.55} distance={3.2} />
     </group>
   );
 }
@@ -730,7 +751,7 @@ function PortalModel({ item }: { item: IslandDecorationCatalogItem }) {
         <circleGeometry args={[0.72, 40]} />
         <meshBasicMaterial color={item.accent} transparent opacity={0.18} depthWrite={false} />
       </mesh>
-      <pointLight color={item.accent} intensity={0.52} distance={3.4} />
+      <DecorationPointLight color={item.accent} intensity={0.52} distance={3.4} />
     </group>
   );
 }
@@ -930,7 +951,7 @@ function Model({ item }: { item: IslandDecorationCatalogItem }) {
           <coneGeometry args={[0.34, 0.2, 4]} />
           <meshStandardMaterial color="#1e293b" metalness={0.42} roughness={0.6} />
         </mesh>
-        <pointLight position={[0, 1.14, 0]} color="#fbbf24" intensity={0.65} distance={3} />
+        <DecorationPointLight position={[0, 1.14, 0]} color="#fbbf24" intensity={0.65} distance={3} />
       </group>
     );
   }
@@ -1001,7 +1022,7 @@ function Model({ item }: { item: IslandDecorationCatalogItem }) {
         <sphereGeometry args={[0.1, 12, 9]} />
         <meshStandardMaterial color="#e0f2fe" emissive="#38bdf8" emissiveIntensity={0.52} />
       </mesh>
-      <pointLight position={[0, 0.78, 0]} color="#7dd3fc" intensity={0.34} distance={2.4} />
+      <DecorationPointLight position={[0, 0.78, 0]} color="#7dd3fc" intensity={0.34} distance={2.4} />
     </group>
   );
 }
