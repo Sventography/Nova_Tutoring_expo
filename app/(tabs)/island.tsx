@@ -1578,6 +1578,48 @@ export default function IslandScreen() {
         )
       : null;
 
+  const telescopeSeesSeventeenthStar =
+    useMemo(() => {
+      if (
+        !selectedDecorationPlacement ||
+        selectedDecorationPlacement.itemId !==
+          "star_telescope"
+      ) {
+        return false;
+      }
+
+      const telescope =
+        selectedDecorationPlacement.transform;
+
+      return islandDecorations.committedPlacements.some(
+        (placement) => {
+          if (
+            placement.itemId !==
+            "nova_star_lantern"
+          ) {
+            return false;
+          }
+
+          const dx =
+            placement.transform.x -
+            telescope.x;
+          const dz =
+            placement.transform.z -
+            telescope.z;
+
+          return Math.hypot(dx, dz) <= 2.6;
+        }
+      );
+    }, [
+      islandDecorations.committedPlacements,
+      selectedDecorationPlacement,
+    ]);
+
+  const selectedDecorationDescription =
+    telescopeSeesSeventeenthStar
+      ? `${selectedDecoration?.description ?? ""}\n\n17 stars detected.\nExpected: 16.`
+      : selectedDecoration?.description ?? "";
+
   const sourceValues = {
     quiz: todayFromQuiz,
     brainteasers: todayFromBrainteasers,
@@ -2214,7 +2256,7 @@ export default function IslandScreen() {
                 }
               >
                 {
-                  selectedDecoration.description
+                  selectedDecorationDescription
                 }
               </Text>
 
