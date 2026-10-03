@@ -17,6 +17,7 @@ import {
   useWindowDimensions,
   View,
   Image,
+  Modal,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -1205,6 +1206,11 @@ export default function IslandScreen() {
     setSelectedDecorationPlacementId,
   ] = useState<string | null>(null);
 
+  const [
+    showSeventeenthStarModal,
+    setShowSeventeenthStarModal,
+  ] = useState(false);
+
   useEffect(() => {
     if (
       islandBuilder.isEditing
@@ -1578,47 +1584,62 @@ export default function IslandScreen() {
         )
       : null;
 
-  const telescopeSeesSeventeenthStar =
+  const seventeenthStarTelescopeIds =
     useMemo(() => {
-      if (
-        !selectedDecorationPlacement ||
-        selectedDecorationPlacement.itemId !==
+      const placements =
+        islandDecorations.committedPlacements;
+      const lanterns =
+        placements.filter((placement) => {
+          const model =
+            ISLAND_DECORATION_CATALOG_BY_ID[
+              placement.itemId
+            ]?.model;
+
+          return (
+            model === "lantern" ||
+            model === "star_lantern"
+          );
+        });
+
+      const telescopeIds =
+        new Set<string>();
+
+      for (const telescope of placements) {
+        if (
+          telescope.itemId !==
           "star_telescope"
-      ) {
-        return false;
+        ) {
+          continue;
+        }
+
+        const nearbyLantern =
+          lanterns.some((lantern) => {
+            const dx =
+              lantern.transform.x -
+              telescope.transform.x;
+            const dz =
+              lantern.transform.z -
+              telescope.transform.z;
+
+            return (
+              Math.hypot(dx, dz) <= 4.5
+            );
+          });
+
+        if (nearbyLantern) {
+          telescopeIds.add(
+            telescope.placementId
+          );
+        }
       }
 
-      const telescope =
-        selectedDecorationPlacement.transform;
-
-      return islandDecorations.committedPlacements.some(
-        (placement) => {
-          if (
-            placement.itemId !==
-            "nova_star_lantern"
-          ) {
-            return false;
-          }
-
-          const dx =
-            placement.transform.x -
-            telescope.x;
-          const dz =
-            placement.transform.z -
-            telescope.z;
-
-          return Math.hypot(dx, dz) <= 2.6;
-        }
-      );
+      return telescopeIds;
     }, [
       islandDecorations.committedPlacements,
-      selectedDecorationPlacement,
     ]);
 
   const selectedDecorationDescription =
-    telescopeSeesSeventeenthStar
-      ? `${selectedDecoration?.description ?? ""}\n\n17 stars detected.\nExpected: 16.`
-      : selectedDecoration?.description ?? "";
+    selectedDecoration?.description ?? "";
 
   const sourceValues = {
     quiz: todayFromQuiz,
@@ -2075,6 +2096,16 @@ export default function IslandScreen() {
               setSelectedDecorationPlacementId(
                 placementId
               );
+
+              if (
+                seventeenthStarTelescopeIds.has(
+                  placementId
+                )
+              ) {
+                setShowSeventeenthStarModal(
+                  true
+                );
+              }
             }}
           />
 
@@ -2815,6 +2846,52 @@ export default function IslandScreen() {
         </Text>
       </ScrollView>
 
+      <Modal
+        visible={
+          showSeventeenthStarModal
+        }
+        transparent
+        animationType="fade"
+        onRequestClose={() =>
+          setShowSeventeenthStarModal(
+            false
+          )
+        }
+      >
+        <Pressable
+          style={
+            styles.seventeenthStarBackdrop
+          }
+          onPress={() =>
+            setShowSeventeenthStarModal(
+              false
+            )
+          }
+        >
+          <View
+            pointerEvents="none"
+            style={
+              styles.seventeenthStarCard
+            }
+          >
+            <Text
+              style={
+                styles.seventeenthStarText
+              }
+            >
+              17 stars detected.
+            </Text>
+            <Text
+              style={
+                styles.seventeenthStarExpected
+              }
+            >
+              Expected: 16.
+            </Text>
+          </View>
+        </Pressable>
+      </Modal>
+
       <NovaGuideOverlay
         visible={
           showIslandGuide
@@ -3206,6 +3283,49 @@ const styles = StyleSheet.create({
     color: "#fef9c3",
     fontSize: 11,
     fontWeight: "900",
+  },
+  seventeenthStarBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(2,6,23,0.72)",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 28,
+  },
+  seventeenthStarCard: {
+    width: "100%",
+    maxWidth: 360,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: "#22d3ee",
+    backgroundColor: "rgba(2,12,27,0.97)",
+    paddingHorizontal: 24,
+    paddingVertical: 26,
+    alignItems: "center",
+    shadowColor: "#22d3ee",
+    shadowOpacity: 0.9,
+    shadowRadius: 20,
+    shadowOffset: {
+      width: 0,
+      height: 0,
+    },
+    elevation: 16,
+  },
+  seventeenthStarText: {
+    color: "#a5f3fc",
+    fontSize: 21,
+    lineHeight: 28,
+    fontWeight: "900",
+    letterSpacing: 0.8,
+    textAlign: "center",
+  },
+  seventeenthStarExpected: {
+    color: "#67e8f9",
+    fontSize: 15,
+    lineHeight: 22,
+    fontWeight: "800",
+    letterSpacing: 0.55,
+    textAlign: "center",
+    marginTop: 8,
   },
   detail: {
     flexDirection: "row",
