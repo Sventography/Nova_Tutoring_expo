@@ -3104,7 +3104,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#34d399",
   },
   onlineText: {
-    color: "#a5f3fc",
+    color: "#fecaca",
     fontSize: 10,
     fontWeight: "900",
     letterSpacing: 0.75,
@@ -3296,12 +3296,12 @@ const styles = StyleSheet.create({
     maxWidth: 360,
     borderRadius: 20,
     borderWidth: 2,
-    borderColor: "#22d3ee",
-    backgroundColor: "rgba(2,12,27,0.97)",
+    borderColor: "#ef4444",
+    backgroundColor: "rgba(24,4,10,0.97)",
     paddingHorizontal: 24,
     paddingVertical: 26,
     alignItems: "center",
-    shadowColor: "#22d3ee",
+    shadowColor: "#ef4444",
     shadowOpacity: 0.9,
     shadowRadius: 20,
     shadowOffset: {
@@ -3319,7 +3319,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   seventeenthStarExpected: {
-    color: "#67e8f9",
+    color: "#f87171",
     fontSize: 15,
     lineHeight: 22,
     fontWeight: "800",
