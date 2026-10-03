@@ -690,27 +690,29 @@ export function StreakProvider({ children }: { children: ReactNode }) {
 
       let coinsAwarded = 0;
 
-      try {
-        await addCoins(
-          reward.totalCoins,
-          "daily_streak_reward",
-          {
-            streakDays: nextCount,
-            baseCoins: reward.baseCoins,
-            specialistBonus: reward.specialistBonus,
-            aetherwyrmBonus: reward.aetherwyrmBonus,
-            awardedCoins: reward.totalCoins,
-            appliedCompanions: reward.appliedCompanions,
-            shieldUsed: usedShield,
-          }
-        );
+      if (reward.totalCoins > 0) {
+        try {
+          await addCoins(
+            reward.totalCoins,
+            "daily_streak_reward",
+            {
+              streakDays: nextCount,
+              baseCoins: reward.baseCoins,
+              specialistBonus: reward.specialistBonus,
+              aetherwyrmBonus: reward.aetherwyrmBonus,
+              awardedCoins: reward.totalCoins,
+              appliedCompanions: reward.appliedCompanions,
+              shieldUsed: usedShield,
+            }
+          );
 
-        coinsAwarded = reward.totalCoins;
-      } catch (error) {
-        console.warn(
-          "[StreakContext] daily streak coin reward failed:",
-          error
-        );
+          coinsAwarded = reward.totalCoins;
+        } catch (error) {
+          console.warn(
+            "[StreakContext] daily streak coin reward failed:",
+            error
+          );
+        }
       }
 
       // Fire one-time streak achievement bonuses after the normal daily reward.
