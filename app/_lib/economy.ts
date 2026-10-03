@@ -47,7 +47,7 @@ export const DAILY_STREAK_MAX_BASE_COINS = 50;
 
 /**
  * Daily streak payout:
- * Day 1 = 5
+ * Day 1 = 0 (starts the streak; no bonus yet)
  * Day 2 = 7
  * Day 3 = 9
  * ...
@@ -58,6 +58,10 @@ export function dailyStreakBaseCoins(streakDays: number): number {
     1,
     Math.floor(Number(streakDays) || 1)
   );
+
+  if (days <= 1) {
+    return 0;
+  }
 
   return Math.min(
     DAILY_STREAK_MAX_BASE_COINS,
