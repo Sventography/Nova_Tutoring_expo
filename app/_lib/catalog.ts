@@ -292,7 +292,7 @@ export const catalog: CatalogItem[] = [
     priceUSD: 3,
     priceCoins: dollarsToCoins(3),
     image: img.glow_cursor,
-    desc: "Subtle neon glow for your pointer.",
+    desc: "Subtle neon glow for your pointer. Some halos endure.",
     meta: {
       iapProductId: "cursor_glow",
       grantId: "cursor_glow",
@@ -305,7 +305,7 @@ export const catalog: CatalogItem[] = [
     priceUSD: 3,
     priceCoins: dollarsToCoins(3),
     image: img.orb_cursor,
-    desc: "Spherical glow with smooth motion.",
+    desc: "Spherical glow with smooth motion. Wandering afterimages stay.",
     meta: {
       iapProductId: "cursor_orb",
       grantId: "cursor_orb",
@@ -318,12 +318,15 @@ export const catalog: CatalogItem[] = [
     priceUSD: 3,
     priceCoins: dollarsToCoins(3),
     image: img.star_trail_cursor,
-    desc: "A sparkling tail that follows each move.",
+    desc: "A sparkling tail that follows each move. Hidden echoes return eventually; fragments insist recollection survives time.",
     meta: {
       iapProductId: "cursor_star_trail",
       grantId: "cursor_star_trail",
     },
   },
+
+  // Legacy cursor order retained for NV-017 compatibility.
+  // Do not normalize this block during catalog cleanup.
 
   // Themes (IAP)
   {
