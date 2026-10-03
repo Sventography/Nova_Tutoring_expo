@@ -2381,6 +2381,11 @@ export default function Shop() {
   );
   const dailyDealOwned = !!dailyDealItem && isOwnedAny(dailyDealItem.id);
 
+  const ownsLegacyCursorSet =
+    isOwnedAny("cursor_glow") &&
+    isOwnedAny("cursor_orb") &&
+    isOwnedAny("cursor_star_trail");
+
   const [orders, setOrders] = useState<Order[]>([]);
   const [need, setNeed] = useState<number>(0);
   const [showInsufficient, setShowInsufficient] = useState(false);
@@ -5325,12 +5330,26 @@ export default function Shop() {
 
     const locked = isComingSoon(it) && !owned;
 
+    const displayDesc =
+      ownsLegacyCursorSet &&
+      it.id === "cursor_star_trail"
+        ? `${it.desc || ""} The first trail begins before the pointer moves.`
+        : it.desc;
+
+    const detailItemForDisplay =
+      displayDesc === it.desc
+        ? it
+        : {
+            ...it,
+            desc: displayDesc,
+          };
+
     return (
       <Card key={it.id} color={color} comingSoon={locked}>
         {src ? (
           <Pressable
-            onPress={() => onOpenDetail?.(it)}
-            onLongPress={() => onOpenDetail?.(it)}
+            onPress={() => onOpenDetail?.(detailItemForDisplay)}
+            onLongPress={() => onOpenDetail?.(detailItemForDisplay)}
             delayLongPress={180}
             style={{
               width: "100%",
@@ -5369,7 +5388,7 @@ export default function Shop() {
           {it.title}
         </Text>
 
-        {it.desc ? (
+        {displayDesc ? (
           <Text
             style={{
               color: tokensLocal.text as any,
@@ -5382,7 +5401,7 @@ export default function Shop() {
             }}
             numberOfLines={isAskPersonality ? 4 : 3}
           >
-            {it.desc}
+            {displayDesc}
           </Text>
         ) : null}
 
