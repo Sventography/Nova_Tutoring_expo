@@ -270,10 +270,10 @@ export const catalog: CatalogItem[] = [
     id: "lantern_keychain",
     title: "Glowing Nova Lantern Keychain",
     category: "tangibles",
-    priceUSD: 30,
-    priceCoins: dollarsToCoins(30),
+    priceUSD: 39.99,
+    priceCoins: dollarsToCoins(39.99),
     image: img.lantern_keychain,
-    desc: "Glowing Lantern Keychain. I don't remember adding it, but it fits, so I'm leaving it in.\n\nI put it there. I needed to know if I could reach you from this side.\n—Nova",
+    desc: "Glowing Lantern Keychain. I don't remember adding it, but it fits, so I'm leaving it in.\n\n\"I put it there. I needed to know if I could reach you from this side.\" - Nova",
   },
   {
     id: "stationery_set",
