@@ -273,7 +273,7 @@ export const catalog: CatalogItem[] = [
     priceUSD: 30,
     priceCoins: dollarsToCoins(30),
     image: img.lantern_keychain,
-    desc: "A tiny lantern for late study sessions. Restored from an older design Nova says she doesn't remember making.",
+    desc: "Glowing Lantern Keychain. I don't remember adding it, but it fits, so I'm leaving it in. Nova: \"I put it there. I needed to know if I could reach you from this side.\"",
   },
   {
     id: "stationery_set",
