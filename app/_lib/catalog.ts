@@ -78,6 +78,7 @@ const img = {
   hat: require("../assets/shop/hat.png"),
 
   keychain: require("../assets/shop/keychain.png"),
+  lantern_keychain: require("../assets/shop/lantern_keychain.png"),
   stationery: require("../assets/shop/stationery.png"),
   case: require("../assets/shop/case.png"),
 
@@ -264,6 +265,15 @@ export const catalog: CatalogItem[] = [
     priceCoins: dollarsToCoins(30),
     image: img.keychain,
     desc: "Metal keychain—carry Nova wherever you go.",
+  },
+  {
+    id: "lantern_keychain",
+    title: "Glowing Nova Lantern Keychain",
+    category: "tangibles",
+    priceUSD: 30,
+    priceCoins: dollarsToCoins(30),
+    image: img.lantern_keychain,
+    desc: "A tiny lantern for late study sessions. Restored from an older design Nova says she doesn't remember making.",
   },
   {
     id: "stationery_set",
