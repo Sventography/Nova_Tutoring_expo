@@ -385,51 +385,21 @@ export default function DailyWelcomeModal() {
 
           <Text
             style={
-              styles.eventTagline
+              styles.eventSummary
             }
           >
-            {activeEvent.tagline}
+            {eventPoints.toLocaleString()}
+            /{eventMaxPoints.toLocaleString()} XP
+            {"  •  "}
+            {unclaimedRewardCount} reward
+            {unclaimedRewardCount === 1
+              ? ""
+              : "s"}{" "}
+            ready
+            {eventCollectibleCount > 0
+              ? `  •  ${eventCollectibleCount} collectible${eventCollectibleCount === 1 ? "" : "s"}`
+              : ""}
           </Text>
-
-          <View
-            style={
-              styles.eventStats
-            }
-          >
-            <Text
-              style={
-                styles.eventStat
-              }
-            >
-              {eventPoints.toLocaleString()}
-              /{eventMaxPoints.toLocaleString()} XP
-            </Text>
-
-            <Text
-              style={
-                styles.eventStat
-              }
-            >
-              {unclaimedRewardCount} reward
-              {unclaimedRewardCount === 1
-                ? ""
-                : "s"}{" "}
-              ready
-            </Text>
-
-            {eventCollectibleCount > 0 ? (
-              <Text
-                style={
-                  styles.eventStat
-                }
-              >
-                {eventCollectibleCount} collectible
-                {eventCollectibleCount === 1
-                  ? ""
-                  : "s"}
-              </Text>
-            ) : null}
-          </View>
 
           <Pressable
             onPress={openEvent}
@@ -549,39 +519,21 @@ const styles =
       textAlign: "center",
       marginTop: 5,
     },
-    eventTagline: {
+    eventSummary: {
       color: "#CBD5E1",
-      fontSize: 11,
-      lineHeight: 16,
-      fontWeight: "700",
-      textAlign: "center",
-      marginTop: 3,
-    },
-    eventStats: {
-      marginTop: 9,
-      flexDirection: "row",
-      justifyContent: "center",
-      flexWrap: "wrap",
-      gap: 6,
-    },
-    eventStat: {
-      color: "#E2E8F0",
       fontSize: 10,
-      lineHeight: 14,
+      lineHeight: 15,
       fontWeight: "800",
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: 999,
-      backgroundColor:
-        "rgba(15,23,42,0.68)",
+      textAlign: "center",
+      marginTop: 4,
     },
     eventButton: {
       alignSelf: "center",
-      marginTop: 10,
+      marginTop: 7,
       borderWidth: 1,
       borderRadius: 999,
       paddingHorizontal: 14,
-      paddingVertical: 8,
+      paddingVertical: 7,
       backgroundColor:
         "rgba(2,6,23,0.58)",
     },
