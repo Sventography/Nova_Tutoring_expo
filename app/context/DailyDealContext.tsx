@@ -5,11 +5,17 @@ import React, {
   useEffect,
   useState,
 } from "react";
+import {
+  AppState,
+} from "react-native";
 
 import {
   catalog,
   type CatalogItem,
 } from "../_lib/catalog";
+import {
+  usePurchases,
+} from "./PurchasesContext";
 
 const DAILY_DEAL_DISCOUNT_PERCENT = 25;
 
@@ -77,14 +83,26 @@ function isEligibleDailyDealItem(
   );
 }
 
-function buildGlobalDailyDeal(
-  dateKey: string
+function buildDailyDeal(
+  dateKey: string,
+  isOwned: (id: string) => boolean
 ): DailyDeal | null {
-  const candidates = catalog
+  const eligible = catalog
     .filter(isEligibleDailyDealItem)
     .sort((a, b) =>
       a.id.localeCompare(b.id)
     );
+
+  const unowned =
+    eligible.filter(
+      (item) =>
+        !isOwned(item.id)
+    );
+
+  const candidates =
+    unowned.length
+      ? unowned
+      : eligible;
 
   if (!candidates.length) {
     return null;
@@ -148,6 +166,10 @@ export function DailyDealProvider({
 }: {
   children: React.ReactNode;
 }) {
+  const {
+    isOwned,
+  } = usePurchases();
+
   const [dateKey, setDateKey] =
     useState(() => localDateKey());
 
@@ -156,26 +178,47 @@ export function DailyDealProvider({
       | ReturnType<typeof setTimeout>
       | null = null;
 
+    const refreshDate = () => {
+      setDateKey(
+        localDateKey()
+      );
+    };
+
     const scheduleNextDay = () => {
       timer = setTimeout(() => {
-        setDateKey(
-          localDateKey()
-        );
+        refreshDate();
         scheduleNextDay();
       }, millisecondsUntilNextDay());
     };
 
     scheduleNextDay();
 
+    const appStateSub =
+      AppState.addEventListener(
+        "change",
+        (nextState) => {
+          if (
+            nextState ===
+            "active"
+          ) {
+            refreshDate();
+          }
+        }
+      );
+
     return () => {
       if (timer) {
         clearTimeout(timer);
       }
+      appStateSub.remove();
     };
   }, []);
 
   const deal =
-    buildGlobalDailyDeal(dateKey);
+    buildDailyDeal(
+      dateKey,
+      isOwned
+    );
 
   return (
     <DailyDealContext.Provider
