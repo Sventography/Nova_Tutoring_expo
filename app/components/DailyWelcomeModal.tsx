@@ -24,7 +24,7 @@ import {
   useUser,
 } from "../context/UserContext";
 import {
-  useEvents,
+  useNovaEvents,
 } from "../context/EventsContext";
 
 const PREFIX =
@@ -71,7 +71,7 @@ export default function DailyWelcomeModal() {
     points: eventPoints,
     maxPoints: eventMaxPoints,
     unclaimedRewardCount,
-  } = useEvents();
+  } = useNovaEvents();
 
   const eventCollectibleCount =
     activeEvent
