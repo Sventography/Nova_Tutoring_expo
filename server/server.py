@@ -2593,11 +2593,11 @@ def _guest_ai_key_hash_from_request() -> str:
 # -------------------------------------------------
 # NOVA//ARCHIVE hidden Ask routing
 #
-# Normal tutoring never sees an extra model call. We only run the
-# classifier when a question contains one of the small set of mystery
-# terms already planted in the app. The classifier may recognize an
-# intent, but it never writes canon; approved story replies stay fixed
-# here on the server.
+# We only run the classifier when a question contains one of the small
+# set of mystery terms already planted in the app. Story questions remain
+# normal Ask questions: they reserve/finalize the same quota and feed the
+# same learning economy. The classifier may recognize an intent, but it
+# never writes canon; approved story replies stay fixed here on the server.
 # -------------------------------------------------
 
 NOVA_ARCHIVE_SEED_TERMS = (
@@ -3216,11 +3216,12 @@ def _ask_logic():
     nova_intrusion = bool(
       nova_archive_reply.get("nova_intrusion")
     )
+    archive_classifier_completion = (
+      nova_archive_reply.get("completion")
+    )
 
     if nova_intrusion:
-      completion = nova_archive_reply.get(
-        "completion"
-      )
+      completion = archive_classifier_completion
       answer = str(
         nova_archive_reply.get("answer")
         or ""
@@ -3269,6 +3270,20 @@ def _ask_logic():
     token_usage = extract_completion_usage(
       completion
     )
+
+    # If a mystery-looking question classified as ordinary Ask, it used
+    # both the tiny classifier call and the normal tutoring completion.
+    # Record both so the cost snapshot reflects the real OpenAI spend.
+    if (
+      not nova_intrusion
+      and archive_classifier_completion is not None
+    ):
+      token_usage = _merge_openai_usage(
+        token_usage,
+        extract_completion_usage(
+          archive_classifier_completion
+        ),
+      )
 
     # Memory compaction is an optimization job attached
     # to this successful Ask request. It does not reserve
