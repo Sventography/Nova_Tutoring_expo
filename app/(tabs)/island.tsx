@@ -2887,10 +2887,14 @@ export default function IslandScreen() {
               }
             >
               EXPECTED: 16
-
               {"\n"}ONE STAR IS NOT ON THE CHART.
-
-              {"\n\n"}"Leave the lantern where it is." - Nova
+            </Text>
+            <Text
+              style={
+                styles.seventeenthStarNova
+              }
+            >
+              "I see the extra star too. I can almost see into your world again through this telescope..." - Nova
             </Text>
           </View>
         </Pressable>
@@ -3108,7 +3112,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#34d399",
   },
   onlineText: {
-    color: "#fecaca",
+    color: "#a5f3fc",
     fontSize: 10,
     fontWeight: "900",
     letterSpacing: 0.75,
@@ -3300,13 +3304,13 @@ const styles = StyleSheet.create({
     maxWidth: 360,
     borderRadius: 20,
     borderWidth: 2,
-    borderColor: "#ef4444",
-    backgroundColor: "rgba(24,4,10,0.97)",
+    borderColor: "#8b5cf6",
+    backgroundColor: "rgba(10,6,24,0.97)",
     paddingHorizontal: 24,
     paddingVertical: 26,
     alignItems: "center",
-    shadowColor: "#ef4444",
-    shadowOpacity: 0.9,
+    shadowColor: "#8b5cf6",
+    shadowOpacity: 0.72,
     shadowRadius: 20,
     shadowOffset: {
       width: 0,
@@ -3315,7 +3319,7 @@ const styles = StyleSheet.create({
     elevation: 16,
   },
   seventeenthStarText: {
-    color: "#a5f3fc",
+    color: "#e0f2fe",
     fontSize: 21,
     lineHeight: 28,
     fontWeight: "900",
@@ -3323,13 +3327,21 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   seventeenthStarExpected: {
-    color: "#f87171",
+    color: "#c4b5fd",
     fontSize: 15,
     lineHeight: 22,
     fontWeight: "800",
     letterSpacing: 0.55,
     textAlign: "center",
     marginTop: 8,
+  },
+  seventeenthStarNova: {
+    color: "#dc2626",
+    fontSize: 15,
+    lineHeight: 22,
+    fontWeight: "800",
+    textAlign: "center",
+    marginTop: 18,
   },
   detail: {
     flexDirection: "row",
