@@ -2628,7 +2628,7 @@ def _looks_like_nova_archive_question(question: str) -> bool:
 def _classify_nova_archive_intent(
   question: str,
   history,
-) -> str | None:
+):
   if not _looks_like_nova_archive_question(question):
     return None
 
@@ -2690,8 +2690,14 @@ def _classify_nova_archive_intent(
       or ""
     ).strip().upper()
 
-    if label == "STAR_17":
-      return label
+    return {
+      "intent": (
+        "STAR_17"
+        if label == "STAR_17"
+        else None
+      ),
+      "completion": completion,
+    }
 
   except Exception as error:
     # Never make the real tutoring experience depend on the hidden ARG.
@@ -2707,12 +2713,15 @@ def _nova_archive_response(
   question: str,
   history,
 ):
-  intent = _classify_nova_archive_intent(
+  classified = _classify_nova_archive_intent(
     question,
     history,
   )
 
-  if intent == "STAR_17":
+  if (
+    classified
+    and classified.get("intent") == "STAR_17"
+  ):
     return {
       "answer": (
         "I see it too. I don't think the seventeenth one "
@@ -2721,9 +2730,18 @@ def _nova_archive_response(
         "helped me reach it."
       ),
       "nova_intrusion": True,
+      "completion": classified.get("completion"),
     }
 
-  return None
+  return {
+    "answer": None,
+    "nova_intrusion": False,
+    "completion": (
+      classified.get("completion")
+      if classified
+      else None
+    ),
+  }
 
 
 # -------------------------------------------------
@@ -2813,21 +2831,6 @@ def _ask_logic():
       "[ask] ignored unverified body user_id:",
       body_user_id,
     )
-
-  # Hidden story interactions are deliberately outside the normal
-  # tutoring economy: no question quota, achievement progress, Island XP,
-  # or ARG progress state. If nothing matches, Ask continues unchanged.
-  nova_archive_reply = _nova_archive_response(
-    question,
-    history,
-  )
-
-  if nova_archive_reply:
-    return jsonify(
-      ok=True,
-      answer=nova_archive_reply["answer"],
-      nova_intrusion=True,
-    ), 200
 
   guest_key_hash = None
 
@@ -3205,16 +3208,34 @@ def _ask_logic():
       ), 429
 
   try:
-    completion = openai_client.chat.completions.create(
-      model=OPENAI_MODEL,
-      messages=messages,
-      temperature=personality_temperature,
+    nova_archive_reply = _nova_archive_response(
+      question,
+      history,
     )
 
-    answer = (
-      completion.choices[0].message.content
-      or ""
-    ).strip()
+    nova_intrusion = bool(
+      nova_archive_reply.get("nova_intrusion")
+    )
+
+    if nova_intrusion:
+      completion = nova_archive_reply.get(
+        "completion"
+      )
+      answer = str(
+        nova_archive_reply.get("answer")
+        or ""
+      ).strip()
+    else:
+      completion = openai_client.chat.completions.create(
+        model=OPENAI_MODEL,
+        messages=messages,
+        temperature=personality_temperature,
+      )
+
+      answer = (
+        completion.choices[0].message.content
+        or ""
+      ).strip()
 
     if not answer:
       if quota_request_id:
@@ -3384,6 +3405,7 @@ def _ask_logic():
         "Encouraging",
       ),
       personality_experience_version=2,
+      nova_intrusion=nova_intrusion,
       memory_limit=memory_limit,
       ask_memory_tier=memory_tier,
       ask_memory_limit=memory_limit,
