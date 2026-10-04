@@ -137,6 +137,7 @@ type Msg = {
   role: "user" | "assistant" | "system";
   text: string;
   personality?: PersonalityKey;
+  novaIntrusion?: boolean;
 };
 
 type AskHistoryItem = {
@@ -158,6 +159,7 @@ type AskApiResponse = {
   ai_questions_reserved?: number | null;
   ai_questions_remaining?: number | null;
   ai_period_end?: string | null;
+  nova_intrusion?: boolean;
 };
 
 const BACKEND_BASE =
@@ -552,6 +554,8 @@ async function callAskApi(
           typeof json.ai_period_end === "string"
             ? json.ai_period_end
             : null,
+        nova_intrusion:
+          json.nova_intrusion === true,
       },
     };
   } catch (e: any) {
@@ -1487,144 +1491,148 @@ export default function Ask() {
               role: "assistant",
               text: answer,
               personality: responsePersonality,
+              novaIntrusion:
+                apiRes.data.nova_intrusion === true,
             },
           ]);
 
-          if (apiRes.data.ask_memory_tier != null) {
-            setMemoryTier(apiRes.data.ask_memory_tier);
-          }
-
-          if (apiRes.data.ask_memory_limit != null) {
-            setMemoryLimit(apiRes.data.ask_memory_limit);
-          }
-
-          if (isAiGuest) {
-            /*
-             * Guests keep the existing local achievement path.
-             * There is no authenticated server identity to own their
-             * permanent Ask achievement progress.
-             */
-            onAskQuestion?.();
-
-            setGuestQuestionsUsed(
-              Math.max(
-                0,
-                Number(apiRes.data.ai_questions_used) || 0
-              )
-            );
-            setGuestQuestionsReserved(
-              Math.max(
-                0,
-                Number(apiRes.data.ai_questions_reserved) || 0
-              )
-            );
-            await refreshGuestAiUsage();
-          } else {
-            /*
-             * Signed-in Ask achievement progress is now server-owned.
-             * The trusted backend finalizes ai_usage_events before it
-             * returns a successful answer. We only fetch eligibility here;
-             * the client never increments the signed-in Ask counter.
-             */
-            if (!askAchievementsServerBacked) {
-              console.warn(
-                "[AskAchievements] signed-in Ask returned without a server-backed user identity"
+          if (apiRes.data.nova_intrusion !== true) {
+            if (apiRes.data.ask_memory_tier != null) {
+              setMemoryTier(apiRes.data.ask_memory_tier);
+            }
+  
+            if (apiRes.data.ask_memory_limit != null) {
+              setMemoryLimit(apiRes.data.ask_memory_limit);
+            }
+  
+            if (isAiGuest) {
+              /*
+               * Guests keep the existing local achievement path.
+               * There is no authenticated server identity to own their
+               * permanent Ask achievement progress.
+               */
+              onAskQuestion?.();
+  
+              setGuestQuestionsUsed(
+                Math.max(
+                  0,
+                  Number(apiRes.data.ai_questions_used) || 0
+                )
               );
+              setGuestQuestionsReserved(
+                Math.max(
+                  0,
+                  Number(apiRes.data.ai_questions_reserved) || 0
+                )
+              );
+              await refreshGuestAiUsage();
             } else {
-              try {
-                const askStatus =
-                  await refreshServerAskAchievements();
-
-                if (
-                  askStatus.achievementIds.length
-                ) {
-                  onServerQuizAchievementsEligible?.(
-                    askStatus.achievementIds
-                  );
-                }
-
-                if (__DEV__) {
-                  console.log(
-                    "[AskAchievements] server progress",
-                    {
-                      successfulQuestions:
-                        askStatus.successfulQuestions,
-                      achievements:
-                        askStatus.achievementIds,
-                    }
-                  );
-                }
-              } catch (achievementError) {
-                /*
-                 * Keep a valid AI answer even if the immediate achievement
-                 * refresh fails. The server already recorded progress, and
-                 * Phase 3D pending-eligibility recovery can surface it after
-                 * reconnect/restart.
-                 */
+              /*
+               * Signed-in Ask achievement progress is now server-owned.
+               * The trusted backend finalizes ai_usage_events before it
+               * returns a successful answer. We only fetch eligibility here;
+               * the client never increments the signed-in Ask counter.
+               */
+              if (!askAchievementsServerBacked) {
                 console.warn(
-                  "[AskAchievements] eligibility refresh failed",
-                  achievementError
+                  "[AskAchievements] signed-in Ask returned without a server-backed user identity"
                 );
+              } else {
+                try {
+                  const askStatus =
+                    await refreshServerAskAchievements();
+  
+                  if (
+                    askStatus.achievementIds.length
+                  ) {
+                    onServerQuizAchievementsEligible?.(
+                      askStatus.achievementIds
+                    );
+                  }
+  
+                  if (__DEV__) {
+                    console.log(
+                      "[AskAchievements] server progress",
+                      {
+                        successfulQuestions:
+                          askStatus.successfulQuestions,
+                        achievements:
+                          askStatus.achievementIds,
+                      }
+                    );
+                  }
+                } catch (achievementError) {
+                  /*
+                   * Keep a valid AI answer even if the immediate achievement
+                   * refresh fails. The server already recorded progress, and
+                   * Phase 3D pending-eligibility recovery can surface it after
+                   * reconnect/restart.
+                   */
+                  console.warn(
+                    "[AskAchievements] eligibility refresh failed",
+                    achievementError
+                  );
+                }
+              }
+  
+              // Supabase remains authoritative for signed-in Nova AI usage.
+              await refreshAiPlan();
+  
+              /*
+               * /api/ask returns the post-finalization usage counters from the
+               * trusted backend. Apply them after the broader refresh so the UI
+               * cannot remain one successful request behind.
+               */
+              const responseQuestionsUsed =
+                Number(
+                  apiRes.data
+                    .ai_questions_used
+                );
+  
+              const responseQuestionsReserved =
+                Number(
+                  apiRes.data
+                    .ai_questions_reserved
+                );
+  
+              if (
+                Number.isFinite(
+                  responseQuestionsUsed
+                ) &&
+                Number.isFinite(
+                  responseQuestionsReserved
+                )
+              ) {
+                applyAiUsageSnapshot({
+                  questionsUsed:
+                    Math.max(
+                      0,
+                      Math.trunc(
+                        responseQuestionsUsed
+                      )
+                    ),
+                  questionsReserved:
+                    Math.max(
+                      0,
+                      Math.trunc(
+                        responseQuestionsReserved
+                      )
+                    ),
+                  periodEnd:
+                    apiRes.data
+                      .ai_period_end ??
+                    aiPeriodEnd ??
+                    null,
+                });
               }
             }
-
-            // Supabase remains authoritative for signed-in Nova AI usage.
-            await refreshAiPlan();
-
-            /*
-             * /api/ask returns the post-finalization usage counters from the
-             * trusted backend. Apply them after the broader refresh so the UI
-             * cannot remain one successful request behind.
-             */
-            const responseQuestionsUsed =
-              Number(
-                apiRes.data
-                  .ai_questions_used
-              );
-
-            const responseQuestionsReserved =
-              Number(
-                apiRes.data
-                  .ai_questions_reserved
-              );
-
-            if (
-              Number.isFinite(
-                responseQuestionsUsed
-              ) &&
-              Number.isFinite(
-                responseQuestionsReserved
-              )
-            ) {
-              applyAiUsageSnapshot({
-                questionsUsed:
-                  Math.max(
-                    0,
-                    Math.trunc(
-                      responseQuestionsUsed
-                    )
-                  ),
-                questionsReserved:
-                  Math.max(
-                    0,
-                    Math.trunc(
-                      responseQuestionsReserved
-                    )
-                  ),
-                periodEnd:
-                  apiRes.data
-                    .ai_period_end ??
-                  aiPeriodEnd ??
-                  null,
-              });
+  
+            // XP drip is okay to keep (Island bar will be greyed in v1 anyway)
+            try {
+              await addIslandXp(2, "ask_answer", { source: "ask", length: answer.length });
+            } catch (e) {
+              console.warn("[Island] addIslandXp from Ask failed", e);
             }
-          }
-
-          // XP drip is okay to keep (Island bar will be greyed in v1 anyway)
-          try {
-            await addIslandXp(2, "ask_answer", { source: "ask", length: answer.length });
-          } catch (e) {
-            console.warn("[Island] addIslandXp from Ask failed", e);
           }
         }
       } catch (e: any) {
@@ -1750,7 +1758,14 @@ export default function Ask() {
             selectable
             style={[
               S.messageText,
-              { color: tokens.text },
+              {
+                color: item.novaIntrusion
+                  ? "#dc2626"
+                  : tokens.text,
+                fontWeight: item.novaIntrusion
+                  ? "800"
+                  : undefined,
+              },
             ]}
           >
             {item.text}
