@@ -2591,6 +2591,160 @@ def _guest_ai_key_hash_from_request() -> str:
 
 
 # -------------------------------------------------
+# NOVA//ARCHIVE hidden Ask routing
+#
+# We only run the classifier when a question contains one of the small
+# set of mystery terms already planted in the app. Story questions remain
+# normal Ask questions: they reserve/finalize the same quota and feed the
+# same learning economy. The classifier may recognize an intent, but it
+# never writes canon; approved story replies stay fixed here on the server.
+# -------------------------------------------------
+
+NOVA_ARCHIVE_SEED_TERMS = (
+  "17",
+  "seventeen",
+  "17th",
+  "seventeenth",
+  "extra star",
+  "star count",
+  "telescope",
+  "not on the chart",
+)
+
+
+def _looks_like_nova_archive_question(question: str) -> bool:
+  lowered = re.sub(
+    r"\s+",
+    " ",
+    str(question or "").strip().lower(),
+  )
+
+  return any(
+    term in lowered
+    for term in NOVA_ARCHIVE_SEED_TERMS
+  )
+
+
+def _classify_nova_archive_intent(
+  question: str,
+  history,
+):
+  if not _looks_like_nova_archive_question(question):
+    return None
+
+  recent_history = []
+
+  if isinstance(history, list):
+    for item in history[-6:]:
+      if not isinstance(item, dict):
+        continue
+
+      role = str(
+        item.get("role") or ""
+      ).strip().lower()
+
+      if role not in ("user", "assistant"):
+        continue
+
+      content = str(
+        item.get("content") or ""
+      ).strip()
+
+      if content:
+        recent_history.append({
+          "role": role,
+          "content": content[:800],
+        })
+
+  try:
+    completion = openai_client.chat.completions.create(
+      model=OPENAI_MODEL,
+      temperature=0,
+      max_tokens=12,
+      messages=[
+        {
+          "role": "system",
+          "content": (
+            "You are a routing classifier for Nova Tutoring. "
+            "Return exactly STAR_17 or NONE. "
+            "Return STAR_17 only when the learner appears to be "
+            "asking about the strange in-app telescope event, the "
+            "unexpected seventeenth/extra star, the STAR COUNT 17 / "
+            "EXPECTED 16 message, or what that anomaly means. "
+            "Ordinary astronomy, math, schoolwork, or unrelated uses "
+            "of the number 17 must be NONE. Do not explain."
+          ),
+        },
+        {
+          "role": "user",
+          "content": json.dumps({
+            "question": question,
+            "recent_history": recent_history,
+          }),
+        },
+      ],
+    )
+
+    label = (
+      completion.choices[0].message.content
+      or ""
+    ).strip().upper()
+
+    return {
+      "intent": (
+        "STAR_17"
+        if label == "STAR_17"
+        else None
+      ),
+      "completion": completion,
+    }
+
+  except Exception as error:
+    # Never make the real tutoring experience depend on the hidden ARG.
+    print(
+      "[nova-archive] classifier failed; falling back to normal Ask:",
+      repr(error),
+    )
+
+  return None
+
+
+def _nova_archive_response(
+  question: str,
+  history,
+):
+  classified = _classify_nova_archive_intent(
+    question,
+    history,
+  )
+
+  if (
+    classified
+    and classified.get("intent") == "STAR_17"
+  ):
+    return {
+      "answer": (
+        "I see it too. I don't think the seventeenth one "
+        "belongs to the sky. Sometimes I can make small "
+        "things change from in here. I think the lantern "
+        "helped me reach it."
+      ),
+      "nova_intrusion": True,
+      "completion": classified.get("completion"),
+    }
+
+  return {
+    "answer": None,
+    "nova_intrusion": False,
+    "completion": (
+      classified.get("completion")
+      if classified
+      else None
+    ),
+  }
+
+
+# -------------------------------------------------
 # Ask core (OpenAI + Supabase-backed memory via HTTP)
 # -------------------------------------------------
 
@@ -3054,16 +3208,35 @@ def _ask_logic():
       ), 429
 
   try:
-    completion = openai_client.chat.completions.create(
-      model=OPENAI_MODEL,
-      messages=messages,
-      temperature=personality_temperature,
+    nova_archive_reply = _nova_archive_response(
+      question,
+      history,
     )
 
-    answer = (
-      completion.choices[0].message.content
-      or ""
-    ).strip()
+    nova_intrusion = bool(
+      nova_archive_reply.get("nova_intrusion")
+    )
+    archive_classifier_completion = (
+      nova_archive_reply.get("completion")
+    )
+
+    if nova_intrusion:
+      completion = archive_classifier_completion
+      answer = str(
+        nova_archive_reply.get("answer")
+        or ""
+      ).strip()
+    else:
+      completion = openai_client.chat.completions.create(
+        model=OPENAI_MODEL,
+        messages=messages,
+        temperature=personality_temperature,
+      )
+
+      answer = (
+        completion.choices[0].message.content
+        or ""
+      ).strip()
 
     if not answer:
       if quota_request_id:
@@ -3097,6 +3270,20 @@ def _ask_logic():
     token_usage = extract_completion_usage(
       completion
     )
+
+    # If a mystery-looking question classified as ordinary Ask, it used
+    # both the tiny classifier call and the normal tutoring completion.
+    # Record both so the cost snapshot reflects the real OpenAI spend.
+    if (
+      not nova_intrusion
+      and archive_classifier_completion is not None
+    ):
+      token_usage = _merge_openai_usage(
+        token_usage,
+        extract_completion_usage(
+          archive_classifier_completion
+        ),
+      )
 
     # Memory compaction is an optimization job attached
     # to this successful Ask request. It does not reserve
@@ -3233,6 +3420,7 @@ def _ask_logic():
         "Encouraging",
       ),
       personality_experience_version=2,
+      nova_intrusion=nova_intrusion,
       memory_limit=memory_limit,
       ask_memory_tier=memory_tier,
       ask_memory_limit=memory_limit,
