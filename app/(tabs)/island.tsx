@@ -2879,14 +2879,18 @@ export default function IslandScreen() {
                 styles.seventeenthStarText
               }
             >
-              17 stars detected.
+              STAR COUNT: 17
             </Text>
             <Text
               style={
                 styles.seventeenthStarExpected
               }
             >
-              Expected: 16.
+              EXPECTED: 16
+
+              {"\n"}ONE STAR IS NOT ON THE CHART.
+
+              {"\n\n"}"Leave the lantern where it is." - Nova
             </Text>
           </View>
         </Pressable>
