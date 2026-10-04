@@ -1518,18 +1518,51 @@ function ItemDetailModal({
               </Text>
 
               {item.desc ? (
-                <Text
-                  style={{
-                    color: tokens.text as any,
-                    fontSize: 14,
-                    lineHeight: 20,
-                    marginBottom: 10,
-                    textAlign: "left",
-                    opacity: locked ? 0.85 : 1,
-                  }}
-                >
-                  {item.desc}
-                </Text>
+                item.id === "lantern_keychain" ? (
+                  <View
+                    style={{
+                      marginBottom: 10,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: tokens.text as any,
+                        fontSize: 14,
+                        lineHeight: 20,
+                        textAlign: "left",
+                        opacity: locked ? 0.85 : 1,
+                      }}
+                    >
+                      {String(item.desc).split("\n\n")[0]}
+                    </Text>
+                    <Text
+                      style={{
+                        color: "#dc2626",
+                        fontSize: 14,
+                        lineHeight: 20,
+                        fontWeight: "800",
+                        textAlign: "left",
+                        marginTop: 12,
+                        opacity: locked ? 0.85 : 1,
+                      }}
+                    >
+                      {String(item.desc).split("\n\n").slice(1).join("\n\n")}
+                    </Text>
+                  </View>
+                ) : (
+                  <Text
+                    style={{
+                      color: tokens.text as any,
+                      fontSize: 14,
+                      lineHeight: 20,
+                      marginBottom: 10,
+                      textAlign: "left",
+                      opacity: locked ? 0.85 : 1,
+                    }}
+                  >
+                    {item.desc}
+                  </Text>
+                )
               ) : null}
 
               {personalityExperience ? (
@@ -5389,20 +5422,55 @@ export default function Shop() {
         </Text>
 
         {displayDesc ? (
-          <Text
-            style={{
-              color: tokensLocal.text as any,
-              fontSize: 12,
-              lineHeight: 16,
-              textAlign: "center",
-              marginTop: 16,
-              paddingHorizontal: 8,
-              opacity: locked ? 0.8 : 1,
-            }}
-            numberOfLines={isAskPersonality ? 4 : 3}
-          >
-            {displayDesc}
-          </Text>
+          it.id === "lantern_keychain" ? (
+            <View
+              style={{
+                marginTop: 16,
+                paddingHorizontal: 8,
+              }}
+            >
+              <Text
+                style={{
+                  color: tokensLocal.text as any,
+                  fontSize: 12,
+                  lineHeight: 16,
+                  textAlign: "center",
+                  opacity: locked ? 0.8 : 1,
+                }}
+              >
+                {String(displayDesc).split("\n\n")[0]}
+              </Text>
+              <Text
+                style={{
+                  color: "#dc2626",
+                  fontSize: 12,
+                  lineHeight: 16,
+                  fontWeight: "800",
+                  textAlign: "center",
+                  marginTop: 8,
+                  opacity: locked ? 0.8 : 1,
+                }}
+                numberOfLines={4}
+              >
+                {String(displayDesc).split("\n\n").slice(1).join("\n\n")}
+              </Text>
+            </View>
+          ) : (
+            <Text
+              style={{
+                color: tokensLocal.text as any,
+                fontSize: 12,
+                lineHeight: 16,
+                textAlign: "center",
+                marginTop: 16,
+                paddingHorizontal: 8,
+                opacity: locked ? 0.8 : 1,
+              }}
+              numberOfLines={isAskPersonality ? 4 : 3}
+            >
+              {displayDesc}
+            </Text>
+          )
         ) : null}
 
         {sizes.length > 0 ? (
