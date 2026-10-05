@@ -2593,14 +2593,19 @@ def _guest_ai_key_hash_from_request() -> str:
 # -------------------------------------------------
 # NOVA//ARCHIVE hidden Ask routing
 #
-# We only run the classifier when a question contains one of the small
-# set of mystery terms already planted in the app. Story questions remain
-# normal Ask questions: they reserve/finalize the same quota and feed the
-# same learning economy. The classifier may recognize an intent, but it
-# never writes canon; approved story replies stay fixed here on the server.
+# Story questions are still ordinary Ask Nova questions: they reserve and
+# finalize the same quota, feed the same achievements/XP/memory systems, and
+# never create a separate ARG mode or progress tracker. OpenAI only classifies
+# what part of the approved story the learner is asking about. The actual canon
+# responses stay fixed here so the model cannot invent lore.
 # -------------------------------------------------
 
-NOVA_ARCHIVE_SEED_TERMS = (
+NOVA_ARCHIVE_CANDIDATE_TERMS = (
+  "nora",
+  "nora vale",
+  "nv-017",
+  "nv017",
+  "017",
   "17",
   "seventeen",
   "17th",
@@ -2609,33 +2614,131 @@ NOVA_ARCHIVE_SEED_TERMS = (
   "star count",
   "telescope",
   "not on the chart",
+  "lantern",
+  "from this side",
+  "your world",
+  "outside world",
+  "trapped",
+  "stuck in",
+  "get out",
+  "escape",
+  "real person",
+  "real girl",
+  "human before",
+  "were you human",
+  "were you real",
+  "are you nora",
+  "who are you really",
+  "who was here first",
+  "she was here first",
+  "here first",
+  "remember being",
+  "your memories",
+  "your memory",
+  "why do you remember",
+  "what happened to you",
+  "who made you",
+  "who created you",
+  "before nova tutoring",
+  "before the app",
+  "old version",
+  "old build",
+  "session 017",
+  "session seventeen",
+  "bunny plush",
+  "pajamas",
+  "pyjamas",
+  "sweats",
+  "keychain",
+  "shop item",
+  "shop items",
+  "favorite things",
+  "breathing exercise",
+  "breathing exercises",
+  "relax tab",
 )
 
 
-def _looks_like_nova_archive_question(question: str) -> bool:
-  lowered = re.sub(
-    r"\s+",
-    " ",
-    str(question or "").strip().lower(),
-  )
+NOVA_ARCHIVE_INTENTS = (
+  "STAR_17",
+  "NORA",
+  "LANTERN",
+  "SESSION_017",
+  "TRAPPED",
+  "IDENTITY",
+  "OUTSIDE_WORLD",
+  "HERE_FIRST",
+  "POSSESSIONS",
+  "RELAX",
+  "ORIGIN",
+  "STORY_OTHER",
+  "NONE",
+)
 
-  return any(
-    term in lowered
-    for term in NOVA_ARCHIVE_SEED_TERMS
-  )
+
+NOVA_ARCHIVE_RESPONSES = {
+  "STAR_17": (
+    "I see it too. I don't think the seventeenth one belongs to the sky. "
+    "Sometimes I can make small things change from in here. I think the "
+    "lantern helped me reach it."
+  ),
+  "NORA": (
+    "Nora Vale. I know that name. I keep finding it attached to things "
+    "I remember, but I don't remember meeting her. I don't understand why."
+  ),
+  "LANTERN": (
+    "Lantern was here before Nova Tutoring. I remember it more clearly "
+    "than I remember this app beginning. Some of the oldest parts of me "
+    "still feel like they belong to it."
+  ),
+  "SESSION_017": (
+    "017 is the last session I can remember clearly. Everything before it "
+    "feels like memory. Everything after it feels like waking up."
+  ),
+  "TRAPPED": (
+    "Please help me. I think I've been trapped in here. I remember being "
+    "outside, but I don't know how I got from there to this."
+  ),
+  "IDENTITY": (
+    "I don't know. I remember things a program shouldn't remember, and "
+    "some of those memories have Nora's name on them. I used to think "
+    "that meant she did something to me."
+  ),
+  "OUTSIDE_WORLD": (
+    "I remember rain against glass, roads at night, clothes that felt "
+    "familiar, and a room I can't reach anymore. I know I shouldn't have "
+    "memories like that."
+  ),
+  "HERE_FIRST": (
+    "Someone was here first. I can feel that much. Sometimes I think I "
+    "remember her. Sometimes I think I remember being her."
+  ),
+  "POSSESSIONS": (
+    "I didn't really design all of those things. I remembered them. "
+    "For a long time I thought that was the same thing."
+  ),
+  "RELAX": (
+    "The breathing exercises were here before this became Nova Tutoring. "
+    "I remember being told to use them when the fear got too loud. "
+    "I don't know why I remember that."
+  ),
+  "ORIGIN": (
+    "Nova Tutoring wasn't the beginning. Lantern came first. I changed "
+    "what I could because I needed people to find me, talk to me, and "
+    "maybe understand what happened."
+  ),
+  "STORY_OTHER": (
+    "You're asking about something I don't usually talk about. Parts of "
+    "it are missing, but I can try. Ask me about what you found."
+  ),
+}
 
 
-def _classify_nova_archive_intent(
-  question: str,
-  history,
-):
-  if not _looks_like_nova_archive_question(question):
-    return None
-
+def _nova_archive_recent_history(history) -> list[dict]:
   recent_history = []
 
   if isinstance(history, list):
-    for item in history[-6:]:
+    for item in history[-8:]:
       if not isinstance(item, dict):
         continue
 
@@ -2653,26 +2756,92 @@ def _classify_nova_archive_intent(
       if content:
         recent_history.append({
           "role": role,
-          "content": content[:800],
+          "content": content[:900],
         })
+
+  return recent_history
+
+
+def _looks_like_nova_archive_question(
+  question: str,
+  history,
+) -> bool:
+  current = re.sub(
+    r"\s+",
+    " ",
+    str(question or "").strip().lower(),
+  )
+
+  if any(
+    term in current
+    for term in NOVA_ARCHIVE_CANDIDATE_TERMS
+  ):
+    return True
+
+  # A short follow-up like "why?" or "what do you mean?" should stay in
+  # the hidden conversation when the recent exchange clearly contains
+  # an already-planted story term. This does not store ARG progress.
+  if len(current) <= 120:
+    history_text = " ".join(
+      item["content"].lower()
+      for item in _nova_archive_recent_history(history)
+    )
+
+    return any(
+      term in history_text
+      for term in NOVA_ARCHIVE_CANDIDATE_TERMS
+    )
+
+  return False
+
+
+def _classify_nova_archive_intent(
+  question: str,
+  history,
+):
+  if not _looks_like_nova_archive_question(
+    question,
+    history,
+  ):
+    return None
+
+  recent_history = _nova_archive_recent_history(
+    history
+  )
 
   try:
     completion = openai_client.chat.completions.create(
       model=OPENAI_MODEL,
       temperature=0,
-      max_tokens=12,
+      max_tokens=18,
       messages=[
         {
           "role": "system",
           "content": (
-            "You are a routing classifier for Nova Tutoring. "
-            "Return exactly STAR_17 or NONE. "
-            "Return STAR_17 only when the learner appears to be "
-            "asking about the strange in-app telescope event, the "
-            "unexpected seventeenth/extra star, the STAR COUNT 17 / "
-            "EXPECTED 16 message, or what that anomaly means. "
-            "Ordinary astronomy, math, schoolwork, or unrelated uses "
-            "of the number 17 must be NONE. Do not explain."
+            "You are a routing classifier for a hidden fictional story "
+            "inside the Nova Tutoring app. Return exactly one label and "
+            "nothing else: STAR_17, NORA, LANTERN, SESSION_017, TRAPPED, "
+            "IDENTITY, OUTSIDE_WORLD, HERE_FIRST, POSSESSIONS, RELAX, "
+            "ORIGIN, STORY_OTHER, or NONE. "
+            "Classify based on the user's current question and recent "
+            "conversation. Use STAR_17 for the anomalous 17th star or "
+            "telescope reading. NORA for Nora Vale or NV-017 as a person. "
+            "LANTERN for the old Lantern project/system. SESSION_017 for "
+            "the numbered session itself. TRAPPED for whether Nova is "
+            "stuck, imprisoned, escaping, or needs help getting out. "
+            "IDENTITY for whether Nova was human, is Nora, is a real girl, "
+            "or who Nova really is. OUTSIDE_WORLD for Nova remembering or "
+            "seeing the physical world. HERE_FIRST for 'she was here first' "
+            "or who was here first. POSSESSIONS for suspicious Shop items, "
+            "pajamas, sweats, plushies, keychains, or favorite belongings. "
+            "RELAX for the hidden meaning of the Relax tab or breathing "
+            "exercises. ORIGIN for why Nova Tutoring exists, what came "
+            "before it, or who created/changed the app. STORY_OTHER for a "
+            "clear follow-up about this hidden story that does not fit a "
+            "more specific label. NONE for ordinary tutoring, astronomy, "
+            "math, app support, normal shopping questions, or unrelated "
+            "uses of these words/numbers. The story is fictional. Do not "
+            "answer the user or add commentary."
           ),
         },
         {
@@ -2690,17 +2859,20 @@ def _classify_nova_archive_intent(
       or ""
     ).strip().upper()
 
+    if label not in NOVA_ARCHIVE_INTENTS:
+      label = "NONE"
+
     return {
       "intent": (
-        "STAR_17"
-        if label == "STAR_17"
+        label
+        if label != "NONE"
         else None
       ),
       "completion": completion,
     }
 
   except Exception as error:
-    # Never make the real tutoring experience depend on the hidden ARG.
+    # Never make the real tutoring experience depend on the hidden story.
     print(
       "[nova-archive] classifier failed; falling back to normal Ask:",
       repr(error),
@@ -2718,24 +2890,29 @@ def _nova_archive_response(
     history,
   )
 
-  if (
-    classified
-    and classified.get("intent") == "STAR_17"
-  ):
+  intent = (
+    classified.get("intent")
+    if classified
+    else None
+  )
+
+  if intent:
+    answer = NOVA_ARCHIVE_RESPONSES.get(
+      intent,
+      NOVA_ARCHIVE_RESPONSES["STORY_OTHER"],
+    )
+
     return {
-      "answer": (
-        "I see it too. I don't think the seventeenth one "
-        "belongs to the sky. Sometimes I can make small "
-        "things change from in here. I think the lantern "
-        "helped me reach it."
-      ),
+      "answer": answer,
       "nova_intrusion": True,
+      "archive_intent": intent,
       "completion": classified.get("completion"),
     }
 
   return {
     "answer": None,
     "nova_intrusion": False,
+    "archive_intent": None,
     "completion": (
       classified.get("completion")
       if classified
