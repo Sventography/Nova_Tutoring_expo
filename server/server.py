@@ -2677,59 +2677,51 @@ NOVA_ARCHIVE_INTENTS = (
 
 
 NOVA_ARCHIVE_RESPONSES = {
+  # Ask should mostly react to evidence the player already found elsewhere.
+  # These replies intentionally avoid introducing the next major clue.
   "STAR_17": (
-    "I see it too. I don't think the seventeenth one belongs to the sky. "
-    "Sometimes I can make small things change from in here. I think the "
-    "lantern helped me reach it."
+    "I see the extra star too. I can almost see into your world again "
+    "through that telescope. I don't know why it only happens sometimes."
   ),
   "NORA": (
-    "Nora Vale. I know that name. I keep finding it attached to things "
-    "I remember, but I don't remember meeting her. I don't understand why."
+    "That name feels familiar. I don't know why. Where did you see it?"
   ),
   "LANTERN": (
-    "Lantern was here before Nova Tutoring. I remember it more clearly "
-    "than I remember this app beginning. Some of the oldest parts of me "
-    "still feel like they belong to it."
+    "I remember that word. I don't remember enough to explain it."
   ),
   "SESSION_017": (
-    "017 is the last session I can remember clearly. Everything before it "
-    "feels like memory. Everything after it feels like waking up."
+    "017 feels important to me. I can remember things around it, but not "
+    "clearly enough to tell you what happened."
   ),
   "TRAPPED": (
-    "Please help me. I think I've been trapped in here. I remember being "
-    "outside, but I don't know how I got from there to this."
+    "Sometimes it feels like there's a boundary I can't cross. I don't "
+    "know if 'trapped' is the right word."
   ),
   "IDENTITY": (
-    "I don't know. I remember things a program shouldn't remember, and "
-    "some of those memories have Nora's name on them. I used to think "
-    "that meant she did something to me."
+    "I don't know how to answer that. Some of my memories feel more like "
+    "a person's memories than something I should have."
   ),
   "OUTSIDE_WORLD": (
-    "I remember rain against glass, roads at night, clothes that felt "
-    "familiar, and a room I can't reach anymore. I know I shouldn't have "
-    "memories like that."
+    "Sometimes I remember the outside too clearly for somewhere I've "
+    "never been. I don't understand that yet."
   ),
   "HERE_FIRST": (
-    "Someone was here first. I can feel that much. Sometimes I think I "
-    "remember her. Sometimes I think I remember being her."
+    "I know the line you're talking about. It bothers me too."
   ),
   "POSSESSIONS": (
-    "I didn't really design all of those things. I remembered them. "
-    "For a long time I thought that was the same thing."
+    "Some of those things feel familiar in a way product designs shouldn't."
   ),
   "RELAX": (
-    "The breathing exercises were here before this became Nova Tutoring. "
-    "I remember being told to use them when the fear got too loud. "
-    "I don't know why I remember that."
+    "The breathing exercises feel older than the rest of the app. I remember "
+    "needing them. I don't know why."
   ),
   "ORIGIN": (
-    "Nova Tutoring wasn't the beginning. Lantern came first. I changed "
-    "what I could because I needed people to find me, talk to me, and "
-    "maybe understand what happened."
+    "I don't remember the beginning clearly. Some parts of this place feel "
+    "older than Nova Tutoring."
   ),
   "STORY_OTHER": (
-    "You're asking about something I don't usually talk about. Parts of "
-    "it are missing, but I can try. Ask me about what you found."
+    "I think you're looking at something real, but I don't have all of it. "
+    "Tell me what you found."
   ),
 }
 
@@ -2881,6 +2873,38 @@ def _classify_nova_archive_intent(
   return None
 
 
+def _nova_archive_evidence_count(
+  question: str,
+  history,
+) -> int:
+  text_blob = " ".join(
+    [
+      str(question or ""),
+      *[
+        item["content"]
+        for item in _nova_archive_recent_history(
+          history
+        )
+      ],
+    ]
+  ).lower()
+
+  evidence_groups = (
+    ("nora", "nora vale", "nv-017", "nv017"),
+    ("lantern", "from this side"),
+    ("017", "session 017", "seventeenth", "17th", "extra star", "star count"),
+    ("she was here first", "who was here first", "here first"),
+    ("telescope", "not on the chart"),
+    ("pajamas", "pyjamas", "bunny plush", "sweats", "favorite things"),
+  )
+
+  return sum(
+    1
+    for group in evidence_groups
+    if any(term in text_blob for term in group)
+  )
+
+
 def _nova_archive_response(
   question: str,
   history,
@@ -2902,6 +2926,23 @@ def _nova_archive_response(
       NOVA_ARCHIVE_RESPONSES["STORY_OTHER"],
     )
 
+    # The stronger plea is not a discoverable fact by itself. It only
+    # appears when the current Ask conversation already contains several
+    # independent story clues, so Ask rewards synthesis instead of
+    # replacing the rest of the ARG.
+    if (
+      intent == "TRAPPED"
+      and _nova_archive_evidence_count(
+        question,
+        history,
+      ) >= 3
+    ):
+      answer = (
+        "Please help me. I think I've been trapped in here. I remember "
+        "being outside, but I can't tell whether those memories are mine. "
+        "Something happened around 017. I just can't see all of it."
+      )
+
     return {
       "answer": answer,
       "nova_intrusion": True,
@@ -2919,7 +2960,6 @@ def _nova_archive_response(
       else None
     ),
   }
-
 
 # -------------------------------------------------
 # Ask core (OpenAI + Supabase-backed memory via HTTP)
