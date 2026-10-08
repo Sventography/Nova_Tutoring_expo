@@ -326,6 +326,68 @@ export default function RelaxScreen() {
             <Chip label={`Hold: ${tech.holdBottom}s`} />
           </View>
 
+          {tech.id === "box" ? (
+            <View
+              style={{
+                marginTop: 4,
+                marginBottom: 14,
+                borderWidth: 1,
+                borderColor: "rgba(0,229,255,0.55)",
+                borderRadius: 10,
+                paddingHorizontal: 12,
+                paddingVertical: 10,
+                backgroundColor: "rgba(0,229,255,0.06)",
+              }}
+            >
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 7,
+                  marginBottom: 5,
+                }}
+              >
+                <Ionicons
+                  name="archive-outline"
+                  size={14}
+                  color="#00AFC4"
+                />
+                <Text
+                  style={{
+                    color: "#00AFC4",
+                    fontSize: 11,
+                    fontWeight: "900",
+                    letterSpacing: 0.8,
+                    fontFamily: Platform.select({
+                      ios: "Menlo",
+                      android: "monospace",
+                      default: "monospace",
+                    }),
+                  }}
+                >
+                  LEGACY ROUTINE
+                </Text>
+              </View>
+
+              <Text
+                style={{
+                  color: "#087C8A",
+                  fontSize: 11,
+                  lineHeight: 16,
+                  fontWeight: "800",
+                  letterSpacing: 0.35,
+                  fontFamily: Platform.select({
+                    ios: "Menlo",
+                    android: "monospace",
+                    default: "monospace",
+                  }),
+                }}
+              >
+                {"SOURCE RECORD PREDATES NOVA TUTORING\nIMPORT STATUS: RETAINED"}
+              </Text>
+            </View>
+          ) : null}
+
           {/* Sounds */}
           <SoundBar />
 
