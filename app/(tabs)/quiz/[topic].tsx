@@ -1071,45 +1071,6 @@ if (studyXpEligibleRef.current) {
           Score: {correct} / {total} ({pct}%).
         </Text>
 
-        <View
-          style={{
-            marginTop: 10,
-            marginBottom: 4,
-            borderWidth: 1,
-            borderColor: "rgba(0,229,255,0.48)",
-            borderRadius: 10,
-            paddingHorizontal: 12,
-            paddingVertical: 10,
-            backgroundColor: "rgba(0,229,255,0.06)",
-          }}
-        >
-          <Text
-            style={{
-              color: CYAN,
-              fontSize: 10,
-              lineHeight: 15,
-              fontWeight: "900",
-              letterSpacing: 0.8,
-              fontFamily: "monospace",
-            }}
-          >
-            LEGACY MODULE: RECALL CHECK
-          </Text>
-          <Text
-            style={{
-              color: "rgba(191,251,255,0.88)",
-              fontSize: 10,
-              lineHeight: 15,
-              fontWeight: "800",
-              letterSpacing: 0.45,
-              marginTop: 3,
-              fontFamily: "monospace",
-            }}
-          >
-            ORIGINAL FUNCTION: RETENTION VERIFICATION
-          </Text>
-        </View>
-
         {typeof lastXp === "number" && lastXp > 0 && (
           <Text style={S.xpText}>Island XP gained: +{lastXp}</Text>
         )}
