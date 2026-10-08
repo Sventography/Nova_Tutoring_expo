@@ -150,6 +150,8 @@ export default function RelaxScreen() {
     scale.setValue(0.7);
   }
 
+  const [showLegacySource, setShowLegacySource] = useState(false);
+
   const [g5, setG5] = useState("");
   const [g4, setG4] = useState("");
   const [g3, setG3] = useState("");
@@ -327,8 +329,11 @@ export default function RelaxScreen() {
           </View>
 
           {tech.id === "box" ? (
-            <View
-              style={{
+            <Pressable
+              onPress={() => setShowLegacySource(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Legacy routine source details"
+              style={({ pressed }) => ({
                 marginTop: 4,
                 marginBottom: 14,
                 borderWidth: 1,
@@ -336,8 +341,10 @@ export default function RelaxScreen() {
                 borderRadius: 10,
                 paddingHorizontal: 12,
                 paddingVertical: 10,
-                backgroundColor: "rgba(0,229,255,0.06)",
-              }}
+                backgroundColor: pressed
+                  ? "rgba(0,229,255,0.11)"
+                  : "rgba(0,229,255,0.06)",
+              })}
             >
               <View
                 style={{
@@ -354,6 +361,7 @@ export default function RelaxScreen() {
                 />
                 <Text
                   style={{
+                    flex: 1,
                     color: "#00AFC4",
                     fontSize: 11,
                     fontWeight: "900",
@@ -367,6 +375,11 @@ export default function RelaxScreen() {
                 >
                   LEGACY ROUTINE
                 </Text>
+                <Ionicons
+                  name={showLegacySource ? "chevron-down" : "chevron-forward"}
+                  size={13}
+                  color="#00AFC4"
+                />
               </View>
 
               <Text
@@ -385,7 +398,46 @@ export default function RelaxScreen() {
               >
                 {"SOURCE RECORD PREDATES NOVA TUTORING\nIMPORT STATUS: RETAINED"}
               </Text>
-            </View>
+
+              {!showLegacySource ? (
+                <Text
+                  style={{
+                    color: "#00AFC4",
+                    fontSize: 9,
+                    lineHeight: 13,
+                    fontWeight: "900",
+                    letterSpacing: 0.65,
+                    marginTop: 7,
+                    opacity: 0.75,
+                    fontFamily: Platform.select({
+                      ios: "Menlo",
+                      android: "monospace",
+                      default: "monospace",
+                    }),
+                  }}
+                >
+                  SOURCE DETAILS AVAILABLE
+                </Text>
+              ) : (
+                <Text
+                  style={{
+                    color: "#00E5FF",
+                    fontSize: 11,
+                    lineHeight: 16,
+                    fontWeight: "900",
+                    letterSpacing: 0.7,
+                    marginTop: 9,
+                    fontFamily: Platform.select({
+                      ios: "Menlo",
+                      android: "monospace",
+                      default: "monospace",
+                    }),
+                  }}
+                >
+                  SOURCE SYSTEM: LANTERN
+                </Text>
+              )}
+            </Pressable>
           ) : null}
 
           {/* Sounds */}
