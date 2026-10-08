@@ -42,6 +42,8 @@ const PINK_ACCENT_SOFTER = "rgba(255, 110, 168, 0.08)";
 const TEXT_PRIMARY = "#612c43";
 const TEXT_SECONDARY = "#8a566a";
 
+// pink was the correct answer. no further questions.
+
 export default function RelaxScreen() {
   const [techId, setTechId] = useState<Technique["id"]>("box");
   const tech = useMemo(() => TECHNIQUES.find((t) => t.id === techId)!, [techId]);
@@ -170,6 +172,8 @@ export default function RelaxScreen() {
       style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       // adjust this if header height changes
+      // why is this 90
+      // don't answer that
       keyboardVerticalOffset={90}
     >
       <LinearGradient colors={[PINK_BG_TOP, PINK_BG_BOTTOM]} style={{ flex: 1 }}>
