@@ -1307,9 +1307,11 @@ function ItemDetailModal({
 }) {
   const { tokens } = useTheme();
   const [showAlt, setShowAlt] = useState(false);
+  const [showMemoryObjectArchive, setShowMemoryObjectArchive] = useState(false);
 
   useEffect(() => {
     setShowAlt(false);
+    setShowMemoryObjectArchive(false);
   }, [item?.id]);
 
   if (!item) return null;
@@ -1585,24 +1587,87 @@ function ItemDetailModal({
                     ) : null}
 
                     {item.id === "plushie_bunny_white" ? (
-                      <Text
-                        style={{
-                          color: "#00E5FF",
-                          fontSize: 11,
-                          lineHeight: 17,
-                          fontWeight: "800",
-                          letterSpacing: 0.7,
+                      <Pressable
+                        onPress={() => setShowMemoryObjectArchive(true)}
+                        accessibilityRole="button"
+                        accessibilityLabel="Memory object archive details"
+                        style={({ pressed }) => ({
                           marginTop: 12,
-                          opacity: locked ? 0.75 : 0.92,
-                          fontFamily: Platform.select({
-                            ios: "Menlo",
-                            android: "monospace",
-                            default: "monospace",
-                          }),
-                        }}
+                          borderWidth: 1,
+                          borderColor: "rgba(0,229,255,0.35)",
+                          borderRadius: 9,
+                          paddingHorizontal: 10,
+                          paddingVertical: 9,
+                          backgroundColor: pressed
+                            ? "rgba(0,229,255,0.10)"
+                            : "rgba(0,229,255,0.05)",
+                        })}
                       >
-                        {"MEMORY OBJECT 06\nSUBJECT: WHITE RABBIT PLUSH\nMATCH CONFIDENCE: 98.7%"}
-                      </Text>
+                        <Text
+                          style={{
+                            color: "#00E5FF",
+                            fontSize: 11,
+                            lineHeight: 17,
+                            fontWeight: "800",
+                            letterSpacing: 0.7,
+                            opacity: locked ? 0.75 : 0.92,
+                            fontFamily: Platform.select({
+                              ios: "Menlo",
+                              android: "monospace",
+                              default: "monospace",
+                            }),
+                          }}
+                        >
+                          {"MEMORY OBJECT 06\nSUBJECT: WHITE RABBIT PLUSH\nMATCH CONFIDENCE: 98.7%"}
+                        </Text>
+
+                        {!showMemoryObjectArchive ? (
+                          <Text
+                            style={{
+                              color: "#00AFC4",
+                              fontSize: 9,
+                              lineHeight: 13,
+                              fontWeight: "900",
+                              letterSpacing: 0.65,
+                              marginTop: 7,
+                              opacity: 0.75,
+                              fontFamily: Platform.select({
+                                ios: "Menlo",
+                                android: "monospace",
+                                default: "monospace",
+                              }),
+                            }}
+                          >
+                            ARCHIVE LINK AVAILABLE
+                          </Text>
+                        ) : (
+                          <View
+                            style={{
+                              marginTop: 9,
+                              paddingTop: 8,
+                              borderTopWidth: 1,
+                              borderTopColor: "rgba(0,229,255,0.24)",
+                            }}
+                          >
+                            <Text
+                              style={{
+                                color: "#00E5FF",
+                                fontSize: 10,
+                                lineHeight: 15,
+                                fontWeight: "900",
+                                letterSpacing: 0.7,
+                                fontFamily: Platform.select({
+                                  ios: "Menlo",
+                                  android: "monospace",
+                                  default: "monospace",
+                                }),
+                              }}
+                            >
+                              {"ARCHIVE CLASS: PERSONAL POSSESSION\nPROFILE LINK: CONFIRMED"}
+                            </Text>
+                          </View>
+                        )}
+                      </Pressable>
                     ) : null}
                   </View>
                 )
