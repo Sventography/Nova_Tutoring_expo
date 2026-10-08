@@ -1550,18 +1550,40 @@ function ItemDetailModal({
                     </Text>
                   </View>
                 ) : (
-                  <Text
-                    style={{
-                      color: tokens.text as any,
-                      fontSize: 14,
-                      lineHeight: 20,
-                      marginBottom: 10,
-                      textAlign: "left",
-                      opacity: locked ? 0.85 : 1,
-                    }}
-                  >
-                    {item.desc}
-                  </Text>
+                  <View style={{ marginBottom: 10 }}>
+                    <Text
+                      style={{
+                        color: tokens.text as any,
+                        fontSize: 14,
+                        lineHeight: 20,
+                        textAlign: "left",
+                        opacity: locked ? 0.85 : 1,
+                      }}
+                    >
+                      {item.desc}
+                    </Text>
+
+                    {item.id === "cursor_star_trail" ? (
+                      <Text
+                        style={{
+                          color: "#00E5FF",
+                          fontSize: 11,
+                          lineHeight: 16,
+                          fontWeight: "800",
+                          letterSpacing: 0.7,
+                          marginTop: 12,
+                          opacity: locked ? 0.75 : 0.92,
+                          fontFamily: Platform.select({
+                            ios: "Menlo",
+                            android: "monospace",
+                            default: "monospace",
+                          }),
+                        }}
+                      >
+                        LEGACY COMPATIBILITY PROFILE: NV-017
+                      </Text>
+                    ) : null}
+                  </View>
                 )
               ) : null}
 
@@ -5366,7 +5388,7 @@ export default function Shop() {
     const displayDesc =
       ownsLegacyCursorSet &&
       it.id === "cursor_star_trail"
-        ? `${it.desc || ""} The first trail begins before the pointer moves. Compatibility profile: NV-017.`
+        ? `${it.desc || ""} The first trail begins before the pointer moves.`
         : it.desc;
 
     const detailItemForDisplay =
