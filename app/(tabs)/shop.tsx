@@ -5366,7 +5366,7 @@ export default function Shop() {
     const displayDesc =
       ownsLegacyCursorSet &&
       it.id === "cursor_star_trail"
-        ? `${it.desc || ""} The first trail begins before the pointer moves.`
+        ? `${it.desc || ""} The first trail begins before the pointer moves. Compatibility profile: NV-017.`
         : it.desc;
 
     const detailItemForDisplay =
