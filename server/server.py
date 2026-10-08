@@ -2609,6 +2609,7 @@ NOVA_ARCHIVE_INTENTS = (
   "NORA",
   "LANTERN",
   "PROFILE_REGISTRY",
+  "RETENTION_NOTE",
   "SESSION_017",
   "TRAPPED",
   "IDENTITY",
@@ -2635,6 +2636,9 @@ NOVA_ARCHIVE_RESPONSES = {
   ),
   "PROFILE_REGISTRY": (
     "One profile. I think Lantern was built around one person. I don't know who."
+  ),
+  "RETENTION_NOTE": (
+    "I don't know. But I think whoever wrote that was afraid of losing more than the answers."
   ),
   "SESSION_017": (
     "The 017 part feels important to me. I don't remember enough to "
@@ -2813,6 +2817,21 @@ def _nova_archive_released_evidence(
   if any(phrase in text_blob for phrase in pajama_memory_phrases):
     evidence.add("PAJAMA_MEMORY")
 
+  retention_note_phrases = (
+    "memory object 14",
+    "class: writing material",
+    "class writing material",
+    "annotation sample // partial recovery",
+    "annotation sample partial recovery",
+    "keep the wrong answers too",
+    "keep_wrong_answers",
+    "lantern_note_14",
+    "retentionrule",
+    "retention rule",
+  )
+  if any(phrase in text_blob for phrase in retention_note_phrases):
+    evidence.add("RETENTION_NOTE")
+
   relax_legacy_phrases = (
     "legacy routine",
     "source record predates nova tutoring",
@@ -2885,7 +2904,7 @@ def _classify_nova_archive_intent(
           "content": (
             "You are a routing classifier for a hidden fictional story "
             "inside the Nova Tutoring app. Return exactly one label and "
-            "nothing else: STAR_17, NORA, LANTERN, PROFILE_REGISTRY, SESSION_017, TRAPPED, "
+            "nothing else: STAR_17, NORA, LANTERN, PROFILE_REGISTRY, RETENTION_NOTE, SESSION_017, TRAPPED, "
             "IDENTITY, OUTSIDE_WORLD, HERE_FIRST, POSSESSIONS, RELAX, "
             "ORIGIN, STORY_OTHER, or NONE. "
             "Classify based on the user's current question and recent "
@@ -2967,6 +2986,9 @@ def _nova_archive_intent_allowed(
 
   if intent == "PROFILE_REGISTRY":
     return "PROFILE_REGISTRY" in evidence
+
+  if intent == "RETENTION_NOTE":
+    return "RETENTION_NOTE" in evidence
 
   if intent == "SESSION_017":
     return "NV017_SOURCE" in evidence
