@@ -2789,6 +2789,16 @@ def _nova_archive_released_evidence(
   if any(phrase in text_blob for phrase in memory_object_phrases):
     evidence.add("MEMORY_OBJECT_06")
 
+  personal_object_phrases = (
+    "archive class: personal possession",
+    "archive class personal possession",
+    "profile link: confirmed",
+    "profile link confirmed",
+    "personal possession",
+  )
+  if any(phrase in text_blob for phrase in personal_object_phrases):
+    evidence.add("PERSONAL_OBJECT_LINK")
+
   relax_legacy_phrases = (
     "legacy routine",
     "source record predates nova tutoring",
@@ -2948,7 +2958,10 @@ def _nova_archive_intent_allowed(
     return "NV017_SOURCE" in evidence
 
   if intent == "POSSESSIONS":
-    return "MEMORY_OBJECT_06" in evidence
+    return bool(
+      {"MEMORY_OBJECT_06", "PERSONAL_OBJECT_LINK"}
+      & evidence
+    )
 
   if intent == "RELAX":
     return "RELAX_LEGACY" in evidence
@@ -3007,6 +3020,15 @@ def _nova_archive_response(
       intent,
       NOVA_ARCHIVE_RESPONSES["STORY_OTHER"],
     )
+
+    if (
+      intent == "POSSESSIONS"
+      and "PERSONAL_OBJECT_LINK" in evidence
+    ):
+      answer = (
+        "I don't think the archive was cataloging products. "
+        "I think it was cataloging someone's things."
+      )
 
     # A stronger plea is earned only after several independent released clues
     # are present in the learner's own Ask conversation.
