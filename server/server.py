@@ -2772,6 +2772,19 @@ def _nova_archive_released_evidence(
   if any(phrase in text_blob for phrase in nv017_phrases):
     evidence.add("NV017_SOURCE")
 
+  # White bunny detail currently exposes this sterile memory-object metadata.
+  # Require the unusual metadata itself, not a generic question about a bunny.
+  memory_object_phrases = (
+    "memory object 06",
+    "subject: white rabbit plush",
+    "subject white rabbit plush",
+    "match confidence: 98.7",
+    "match confidence 98.7",
+    "98.7%",
+  )
+  if any(phrase in text_blob for phrase in memory_object_phrases):
+    evidence.add("MEMORY_OBJECT_06")
+
   return evidence
 
 
@@ -2894,6 +2907,9 @@ def _nova_archive_intent_allowed(
   if intent == "SESSION_017":
     return "NV017_SOURCE" in evidence
 
+  if intent == "POSSESSIONS":
+    return "MEMORY_OBJECT_06" in evidence
+
   if intent == "OUTSIDE_WORLD":
     return bool(
       {"STAR_ANOMALY", "LANTERN_SIGNAL"}
@@ -2906,9 +2922,9 @@ def _nova_archive_intent_allowed(
   if intent == "STORY_OTHER":
     return bool(evidence)
 
-  # Nora's name, the possessions reveal, and the Relax origin have not yet
-  # been released as evidence. Guesses about them must not validate them.
-  if intent in ("NORA", "POSSESSIONS", "RELAX"):
+  # Nora's name and the Relax origin have not yet been released as evidence.
+  # Guesses about them must not validate them.
+  if intent in ("NORA", "RELAX"):
     return False
 
   return False
