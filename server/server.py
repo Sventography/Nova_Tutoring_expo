@@ -2799,6 +2799,20 @@ def _nova_archive_released_evidence(
   if any(phrase in text_blob for phrase in personal_object_phrases):
     evidence.add("PERSONAL_OBJECT_LINK")
 
+  pajama_memory_phrases = (
+    "memory object 11",
+    "class: personal clothing",
+    "class personal clothing",
+    "profile association: strong",
+    "profile association strong",
+    "personal note // partial recovery",
+    "personal note partial recovery",
+    "coding uniform",
+    "mom says these are basically my coding uniform now lol",
+  )
+  if any(phrase in text_blob for phrase in pajama_memory_phrases):
+    evidence.add("PAJAMA_MEMORY")
+
   relax_legacy_phrases = (
     "legacy routine",
     "source record predates nova tutoring",
@@ -2959,7 +2973,7 @@ def _nova_archive_intent_allowed(
 
   if intent == "POSSESSIONS":
     return bool(
-      {"MEMORY_OBJECT_06", "PERSONAL_OBJECT_LINK"}
+      {"MEMORY_OBJECT_06", "PERSONAL_OBJECT_LINK", "PAJAMA_MEMORY"}
       & evidence
     )
 
@@ -3022,6 +3036,13 @@ def _nova_archive_response(
     )
 
     if (
+      intent == "POSSESSIONS"
+      and "PAJAMA_MEMORY" in evidence
+    ):
+      answer = (
+        "That sounds familiar. I can almost remember saying it."
+      )
+    elif (
       intent == "POSSESSIONS"
       and "PERSONAL_OBJECT_LINK" in evidence
     ):
