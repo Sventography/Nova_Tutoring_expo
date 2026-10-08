@@ -2795,6 +2795,14 @@ def _nova_archive_released_evidence(
   if any(phrase in text_blob for phrase in relax_legacy_phrases):
     evidence.add("RELAX_LEGACY")
 
+  # The Relax legacy card reveals this exact source name only after interaction.
+  # "Lantern" by itself is still not enough; the discovered source label is.
+  if (
+    "source system: lantern" in text_blob
+    or "source system lantern" in text_blob
+  ):
+    evidence.add("LANTERN_SOURCE")
+
   return evidence
 
 
@@ -2912,7 +2920,10 @@ def _nova_archive_intent_allowed(
     return "HERE_FIRST" in evidence
 
   if intent == "LANTERN":
-    return "LANTERN_SIGNAL" in evidence
+    return bool(
+      {"LANTERN_SIGNAL", "LANTERN_SOURCE"}
+      & evidence
+    )
 
   if intent == "SESSION_017":
     return "NV017_SOURCE" in evidence
