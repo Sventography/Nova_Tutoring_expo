@@ -1583,6 +1583,27 @@ function ItemDetailModal({
                         LEGACY COMPATIBILITY PROFILE: NV-017
                       </Text>
                     ) : null}
+
+                    {item.id === "plushie_bunny_white" ? (
+                      <Text
+                        style={{
+                          color: "#00E5FF",
+                          fontSize: 11,
+                          lineHeight: 17,
+                          fontWeight: "800",
+                          letterSpacing: 0.7,
+                          marginTop: 12,
+                          opacity: locked ? 0.75 : 0.92,
+                          fontFamily: Platform.select({
+                            ios: "Menlo",
+                            android: "monospace",
+                            default: "monospace",
+                          }),
+                        }}
+                      >
+                        {"MEMORY OBJECT 06\nSUBJECT: WHITE RABBIT PLUSH\nMATCH CONFIDENCE: 98.7%"}
+                      </Text>
+                    ) : null}
                   </View>
                 )
               ) : null}
