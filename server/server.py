@@ -2785,6 +2785,16 @@ def _nova_archive_released_evidence(
   if any(phrase in text_blob for phrase in memory_object_phrases):
     evidence.add("MEMORY_OBJECT_06")
 
+  relax_legacy_phrases = (
+    "legacy routine",
+    "source record predates nova tutoring",
+    "import status: retained",
+    "import status retained",
+    "predates nova tutoring",
+  )
+  if any(phrase in text_blob for phrase in relax_legacy_phrases):
+    evidence.add("RELAX_LEGACY")
+
   return evidence
 
 
@@ -2910,21 +2920,27 @@ def _nova_archive_intent_allowed(
   if intent == "POSSESSIONS":
     return "MEMORY_OBJECT_06" in evidence
 
+  if intent == "RELAX":
+    return "RELAX_LEGACY" in evidence
+
+  if intent == "ORIGIN":
+    return "RELAX_LEGACY" in evidence or len(evidence) >= 2
+
   if intent == "OUTSIDE_WORLD":
     return bool(
       {"STAR_ANOMALY", "LANTERN_SIGNAL"}
       & evidence
     )
 
-  if intent in ("TRAPPED", "IDENTITY", "ORIGIN"):
+  if intent in ("TRAPPED", "IDENTITY"):
     return len(evidence) >= 2
 
   if intent == "STORY_OTHER":
     return bool(evidence)
 
-  # Nora's name and the Relax origin have not yet been released as evidence.
-  # Guesses about them must not validate them.
-  if intent in ("NORA", "RELAX"):
+  # Nora's name has not yet been released as evidence.
+  # A guess about it must not validate the story.
+  if intent == "NORA":
     return False
 
   return False
