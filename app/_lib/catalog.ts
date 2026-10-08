@@ -283,6 +283,11 @@ export const catalog: CatalogItem[] = [
     priceCoins: dollarsToCoins(48),
     image: img.stationery,
     desc: "Stickers, note cards, and more—desk-ready essentials.",
+    // Lantern import note: discarded-answer annotations were retained intentionally.
+    meta: {
+      legacyArchiveRef: "LANTERN_NOTE_14",
+      retentionRule: "KEEP_WRONG_ANSWERS",
+    },
   },
   {
     id: "phone_case",
