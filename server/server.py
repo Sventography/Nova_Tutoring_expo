@@ -2608,6 +2608,7 @@ NOVA_ARCHIVE_INTENTS = (
   "STAR_17",
   "NORA",
   "LANTERN",
+  "RECALL_CHECK",
   "SESSION_017",
   "TRAPPED",
   "IDENTITY",
@@ -2631,6 +2632,9 @@ NOVA_ARCHIVE_RESPONSES = {
   ),
   "LANTERN": (
     "I remember that word. I don't remember enough to explain it."
+  ),
+  "RECALL_CHECK": (
+    "I don't think those questions were originally meant to test a student."
   ),
   "SESSION_017": (
     "The 017 part feels important to me. I don't remember enough to "
@@ -2803,6 +2807,17 @@ def _nova_archive_released_evidence(
   ):
     evidence.add("LANTERN_SOURCE")
 
+  # Quiz results expose this exact legacy module metadata.
+  recall_check_phrases = (
+    "legacy module: recall check",
+    "legacy module recall check",
+    "original function: retention verification",
+    "original function retention verification",
+    "retention verification",
+  )
+  if any(phrase in text_blob for phrase in recall_check_phrases):
+    evidence.add("RECALL_CHECK")
+
   return evidence
 
 
@@ -2845,7 +2860,7 @@ def _classify_nova_archive_intent(
           "content": (
             "You are a routing classifier for a hidden fictional story "
             "inside the Nova Tutoring app. Return exactly one label and "
-            "nothing else: STAR_17, NORA, LANTERN, SESSION_017, TRAPPED, "
+            "nothing else: STAR_17, NORA, LANTERN, RECALL_CHECK, SESSION_017, TRAPPED, "
             "IDENTITY, OUTSIDE_WORLD, HERE_FIRST, POSSESSIONS, RELAX, "
             "ORIGIN, STORY_OTHER, or NONE. "
             "Classify based on the user's current question and recent "
@@ -2924,6 +2939,9 @@ def _nova_archive_intent_allowed(
       {"LANTERN_SIGNAL", "LANTERN_SOURCE"}
       & evidence
     )
+
+  if intent == "RECALL_CHECK":
+    return "RECALL_CHECK" in evidence
 
   if intent == "SESSION_017":
     return "NV017_SOURCE" in evidence
