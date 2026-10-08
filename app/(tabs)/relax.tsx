@@ -328,6 +328,8 @@ export default function RelaxScreen() {
             <Chip label={`Hold: ${tech.holdBottom}s`} />
           </View>
 
+          {/* Legacy import rule: preserve Lantern's original single-profile source record.
+              This metadata is archival only and never maps to the signed-in learner. */}
           {tech.id === "box" ? (
             <Pressable
               onPress={() => setLegacyArchiveDepth((depth) => (depth < 2 ? ((depth + 1) as 0 | 1 | 2) : depth))}
