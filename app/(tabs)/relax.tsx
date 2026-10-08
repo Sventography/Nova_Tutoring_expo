@@ -150,7 +150,7 @@ export default function RelaxScreen() {
     scale.setValue(0.7);
   }
 
-  const [showLegacySource, setShowLegacySource] = useState(false);
+  const [legacyArchiveDepth, setLegacyArchiveDepth] = useState<0 | 1 | 2>(0);
 
   const [g5, setG5] = useState("");
   const [g4, setG4] = useState("");
@@ -330,7 +330,7 @@ export default function RelaxScreen() {
 
           {tech.id === "box" ? (
             <Pressable
-              onPress={() => setShowLegacySource(true)}
+              onPress={() => setLegacyArchiveDepth((depth) => (depth < 2 ? ((depth + 1) as 0 | 1 | 2) : depth))}
               accessibilityRole="button"
               accessibilityLabel="Legacy routine source details"
               style={({ pressed }) => ({
@@ -376,7 +376,7 @@ export default function RelaxScreen() {
                   LEGACY ROUTINE
                 </Text>
                 <Ionicons
-                  name={showLegacySource ? "chevron-down" : "chevron-forward"}
+                  name={legacyArchiveDepth > 0 ? "chevron-down" : "chevron-forward"}
                   size={13}
                   color="#00AFC4"
                 />
@@ -399,7 +399,7 @@ export default function RelaxScreen() {
                 {"SOURCE RECORD PREDATES NOVA TUTORING\nIMPORT STATUS: RETAINED"}
               </Text>
 
-              {!showLegacySource ? (
+              {legacyArchiveDepth === 0 ? (
                 <Text
                   style={{
                     color: "#00AFC4",
@@ -419,23 +419,71 @@ export default function RelaxScreen() {
                   SOURCE DETAILS AVAILABLE
                 </Text>
               ) : (
-                <Text
-                  style={{
-                    color: "#00E5FF",
-                    fontSize: 11,
-                    lineHeight: 16,
-                    fontWeight: "900",
-                    letterSpacing: 0.7,
-                    marginTop: 9,
-                    fontFamily: Platform.select({
-                      ios: "Menlo",
-                      android: "monospace",
-                      default: "monospace",
-                    }),
-                  }}
-                >
-                  SOURCE SYSTEM: LANTERN
-                </Text>
+                <View style={{ marginTop: 9 }}>
+                  <Text
+                    style={{
+                      color: "#00E5FF",
+                      fontSize: 11,
+                      lineHeight: 16,
+                      fontWeight: "900",
+                      letterSpacing: 0.7,
+                      fontFamily: Platform.select({
+                        ios: "Menlo",
+                        android: "monospace",
+                        default: "monospace",
+                      }),
+                    }}
+                  >
+                    SOURCE SYSTEM: LANTERN
+                  </Text>
+
+                  {legacyArchiveDepth === 1 ? (
+                    <Text
+                      style={{
+                        color: "#00AFC4",
+                        fontSize: 9,
+                        lineHeight: 13,
+                        fontWeight: "900",
+                        letterSpacing: 0.65,
+                        marginTop: 7,
+                        opacity: 0.75,
+                        fontFamily: Platform.select({
+                          ios: "Menlo",
+                          android: "monospace",
+                          default: "monospace",
+                        }),
+                      }}
+                    >
+                      PROFILE REGISTRY AVAILABLE
+                    </Text>
+                  ) : (
+                    <View
+                      style={{
+                        marginTop: 9,
+                        paddingTop: 8,
+                        borderTopWidth: 1,
+                        borderTopColor: "rgba(0,229,255,0.28)",
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: "#00E5FF",
+                          fontSize: 10,
+                          lineHeight: 15,
+                          fontWeight: "900",
+                          letterSpacing: 0.7,
+                          fontFamily: Platform.select({
+                            ios: "Menlo",
+                            android: "monospace",
+                            default: "monospace",
+                          }),
+                        }}
+                      >
+                        {"LANTERN // PROFILE REGISTRY\nACTIVE PROFILES: 1\nPRIMARY PROFILE: [UNAVAILABLE]"}
+                      </Text>
+                    </View>
+                  )}
+                </View>
               )}
             </Pressable>
           ) : null}
