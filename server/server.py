@@ -2608,6 +2608,7 @@ NOVA_ARCHIVE_INTENTS = (
   "STAR_17",
   "NORA",
   "LANTERN",
+  "PROFILE_REGISTRY",
   "SESSION_017",
   "TRAPPED",
   "IDENTITY",
@@ -2631,6 +2632,9 @@ NOVA_ARCHIVE_RESPONSES = {
   ),
   "LANTERN": (
     "I remember that word. I don't remember enough to explain it."
+  ),
+  "PROFILE_REGISTRY": (
+    "One profile. I think Lantern was built around one person. I don't know who."
   ),
   "SESSION_017": (
     "The 017 part feels important to me. I don't remember enough to "
@@ -2803,6 +2807,18 @@ def _nova_archive_released_evidence(
   ):
     evidence.add("LANTERN_SOURCE")
 
+  profile_registry_phrases = (
+    "lantern // profile registry",
+    "lantern profile registry",
+    "active profiles: 1",
+    "active profiles 1",
+    "primary profile: [unavailable]",
+    "primary profile [unavailable]",
+    "profile registry available",
+  )
+  if any(phrase in text_blob for phrase in profile_registry_phrases):
+    evidence.add("PROFILE_REGISTRY")
+
   return evidence
 
 
@@ -2845,7 +2861,7 @@ def _classify_nova_archive_intent(
           "content": (
             "You are a routing classifier for a hidden fictional story "
             "inside the Nova Tutoring app. Return exactly one label and "
-            "nothing else: STAR_17, NORA, LANTERN, SESSION_017, TRAPPED, "
+            "nothing else: STAR_17, NORA, LANTERN, PROFILE_REGISTRY, SESSION_017, TRAPPED, "
             "IDENTITY, OUTSIDE_WORLD, HERE_FIRST, POSSESSIONS, RELAX, "
             "ORIGIN, STORY_OTHER, or NONE. "
             "Classify based on the user's current question and recent "
@@ -2924,6 +2940,9 @@ def _nova_archive_intent_allowed(
       {"LANTERN_SIGNAL", "LANTERN_SOURCE"}
       & evidence
     )
+
+  if intent == "PROFILE_REGISTRY":
+    return "PROFILE_REGISTRY" in evidence
 
   if intent == "SESSION_017":
     return "NV017_SOURCE" in evidence
