@@ -1308,10 +1308,12 @@ function ItemDetailModal({
   const { tokens } = useTheme();
   const [showAlt, setShowAlt] = useState(false);
   const [showMemoryObjectArchive, setShowMemoryObjectArchive] = useState(false);
+  const [pajamaArchiveDepth, setPajamaArchiveDepth] = useState<0 | 1 | 2>(0);
 
   useEffect(() => {
     setShowAlt(false);
     setShowMemoryObjectArchive(false);
+    setPajamaArchiveDepth(0);
   }, [item?.id]);
 
   if (!item) return null;
@@ -1665,6 +1667,127 @@ function ItemDetailModal({
                             >
                               {"ARCHIVE CLASS: PERSONAL POSSESSION\nPROFILE LINK: CONFIRMED"}
                             </Text>
+                          </View>
+                        )}
+                      </Pressable>
+                    ) : null}
+
+                    {item.id === "pajamas" ? (
+                      <Pressable
+                        onPress={() =>
+                          setPajamaArchiveDepth((depth) =>
+                            depth < 2 ? ((depth + 1) as 0 | 1 | 2) : depth
+                          )
+                        }
+                        accessibilityRole="button"
+                        accessibilityLabel="Archived pajama record"
+                        style={({ pressed }) => ({
+                          marginTop: 12,
+                          borderWidth: 1,
+                          borderColor: "rgba(0,229,255,0.28)",
+                          borderRadius: 9,
+                          paddingHorizontal: 10,
+                          paddingVertical: 9,
+                          backgroundColor: pressed
+                            ? "rgba(0,229,255,0.09)"
+                            : "rgba(0,229,255,0.04)",
+                        })}
+                      >
+                        {pajamaArchiveDepth === 0 ? (
+                          <Text
+                            style={{
+                              color: "#00AFC4",
+                              fontSize: 9,
+                              lineHeight: 13,
+                              fontWeight: "900",
+                              letterSpacing: 0.7,
+                              opacity: 0.82,
+                              fontFamily: Platform.select({
+                                ios: "Menlo",
+                                android: "monospace",
+                                default: "monospace",
+                              }),
+                            }}
+                          >
+                            ARCHIVE MATCH FOUND
+                          </Text>
+                        ) : (
+                          <View>
+                            <Text
+                              style={{
+                                color: "#00E5FF",
+                                fontSize: 10,
+                                lineHeight: 15,
+                                fontWeight: "900",
+                                letterSpacing: 0.7,
+                                fontFamily: Platform.select({
+                                  ios: "Menlo",
+                                  android: "monospace",
+                                  default: "monospace",
+                                }),
+                              }}
+                            >
+                              {"MEMORY OBJECT 11\nCLASS: PERSONAL CLOTHING\nPROFILE ASSOCIATION: STRONG"}
+                            </Text>
+
+                            {pajamaArchiveDepth === 1 ? (
+                              <Text
+                                style={{
+                                  color: "#00AFC4",
+                                  fontSize: 9,
+                                  lineHeight: 13,
+                                  fontWeight: "900",
+                                  letterSpacing: 0.65,
+                                  marginTop: 7,
+                                  opacity: 0.75,
+                                  fontFamily: Platform.select({
+                                    ios: "Menlo",
+                                    android: "monospace",
+                                    default: "monospace",
+                                  }),
+                                }}
+                              >
+                                PERSONAL NOTE AVAILABLE
+                              </Text>
+                            ) : (
+                              <View
+                                style={{
+                                  marginTop: 9,
+                                  paddingTop: 8,
+                                  borderTopWidth: 1,
+                                  borderTopColor: "rgba(0,229,255,0.24)",
+                                }}
+                              >
+                                <Text
+                                  style={{
+                                    color: "#00E5FF",
+                                    fontSize: 9,
+                                    lineHeight: 14,
+                                    fontWeight: "900",
+                                    letterSpacing: 0.65,
+                                    fontFamily: Platform.select({
+                                      ios: "Menlo",
+                                      android: "monospace",
+                                      default: "monospace",
+                                    }),
+                                  }}
+                                >
+                                  PERSONAL NOTE // PARTIAL RECOVERY
+                                </Text>
+                                <Text
+                                  style={{
+                                    color: "#BFFBFF",
+                                    fontSize: 12,
+                                    lineHeight: 18,
+                                    fontWeight: "700",
+                                    marginTop: 5,
+                                    fontStyle: "italic",
+                                  }}
+                                >
+                                  mom says these are basically my coding uniform now lol
+                                </Text>
+                              </View>
+                            )}
                           </View>
                         )}
                       </Pressable>
