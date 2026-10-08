@@ -40,6 +40,9 @@ function NovaThinking({
   const letters = experience.thinkingText.split("");
   const bounces = useRef(letters.map(() => new Animated.Value(0))).current;
 
+  // technically unnecessary.
+  // emotionally necessary.
+
   useEffect(() => {
     const shimmerLoop = Animated.loop(
       Animated.timing(shimmer, {
@@ -78,6 +81,8 @@ function NovaThinking({
     };
   }, [bounces, experience.key, shimmer]);
 
+  // i have been staring at this shimmer for twenty minutes.
+  // it works. we are not asking questions.
   const translateX = shimmer.interpolate({
     inputRange: [0, 1],
     outputRange: [-260, 260],
