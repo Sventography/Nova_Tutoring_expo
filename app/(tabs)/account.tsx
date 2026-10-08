@@ -23,7 +23,7 @@ import { useUser } from "../context/UserContext";
 import { useTheme } from "../context/ThemeContext";
 import { useStreak } from "../context/StreakContext";
 import { showToast } from "../utils/toast";
-import { DISCORD_INVITE_URL } from "../constants/community";
+import { DISCORD_INVITE_URL, REDDIT_PROFILE_URL } from "../constants/community";
 
 export default function AccountScreen() {
   const {
@@ -354,6 +354,31 @@ ${loginEmail}`
     }
   }
 
+  async function onVisitReddit() {
+    if (!REDDIT_PROFILE_URL) {
+      Alert.alert(
+        "Reddit unavailable",
+        "Nova's Reddit profile has not been configured."
+      );
+      return;
+    }
+
+    try {
+      const supported = await Linking.canOpenURL(REDDIT_PROFILE_URL);
+
+      if (!supported) {
+        throw new Error("Nova's Reddit profile could not be opened.");
+      }
+
+      await Linking.openURL(REDDIT_PROFILE_URL);
+    } catch {
+      Alert.alert(
+        "Unable to open Reddit",
+        `Open ${REDDIT_PROFILE_URL} in your browser or Reddit.`
+      );
+    }
+  }
+
   function IdentityRow({
     label,
     value,
@@ -608,6 +633,24 @@ ${loginEmail}`
           >
             <Text style={[S.discordText, { color: tokens.text }]}>
               🗯️ Join our Discord
+            </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={onVisitReddit}
+            style={[
+              S.discordButton,
+              {
+                marginTop: 10,
+                borderColor: tokens.accent,
+                backgroundColor: tokens.isDark
+                  ? "rgba(0,255,200,0.18)"
+                  : "rgba(0,160,220,0.12)",
+              },
+            ]}
+          >
+            <Text style={[S.discordText, { color: tokens.text }]}>
+              👽 Follow Nova on Reddit
             </Text>
           </Pressable>
 
