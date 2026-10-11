@@ -171,9 +171,7 @@ export default function RelaxScreen() {
     <KeyboardAvoidingView
       style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      // adjust this if header height changes
-      // why is this 90
-      // don't answer that
+      // keep the keyboard clear of the fixed header
       keyboardVerticalOffset={90}
     >
       <LinearGradient colors={[PINK_BG_TOP, PINK_BG_BOTTOM]} style={{ flex: 1 }}>
