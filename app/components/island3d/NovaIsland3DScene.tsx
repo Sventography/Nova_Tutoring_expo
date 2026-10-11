@@ -14174,19 +14174,72 @@ function DailyQuestStation({
 }
 
 function ForgottenIslandNote({
+  libraryPlacement,
   onOpen,
 }: {
+  libraryPlacement: IslandPlacement | null;
   onOpen?: () => void;
 }) {
+  const fallback =
+    LANDMARK_POSITIONS.nova_library;
+
+  const transform =
+    libraryPlacement?.transform;
+
+  const libraryX =
+    transform?.x ??
+    fallback[0];
+  const libraryY =
+    transform?.y ??
+    fallback[1];
+  const libraryZ =
+    transform?.z ??
+    fallback[2];
+  const libraryRotation =
+    transform?.rotationY ?? 0;
+  const libraryScale =
+    transform?.scale ?? 1;
+
+  /*
+   * Follow the player's Library rather than a fixed island coordinate.
+   * The offset grows with the Library footprint, but the paper itself
+   * stays physically small so scaling the landmark never turns it into
+   * an obvious ARG billboard.
+   */
+  const localX =
+    1.12 * libraryScale +
+    0.08;
+  const localZ =
+    -0.48 * libraryScale;
+  const cos =
+    Math.cos(
+      libraryRotation
+    );
+  const sin =
+    Math.sin(
+      libraryRotation
+    );
+
+  const notePosition: Vec3 = [
+    libraryX +
+      localX * cos +
+      localZ * sin,
+    libraryY + 0.035,
+    libraryZ -
+      localX * sin +
+      localZ * cos,
+  ];
+
   return (
     <group
-      /*
-       * Tucked just behind the Library from the Island's default view.
-       * Only a small corner should read as "maybe paper" unless the
-       * player orbits or zooms in to investigate.
-       */
-      position={[0.58, 1.015, -2.02]}
-      rotation={[0, 0.5, -0.04]}
+      position={
+        notePosition
+      }
+      rotation={[
+        0,
+        libraryRotation + 0.34,
+        -0.04,
+      ]}
       onClick={(event) => {
         event.stopPropagation();
         onOpen?.();
@@ -14622,8 +14675,19 @@ function IslandWorld({
           />
         </React.Suspense>
 
-        {!builderEditing ? (
+        {!builderEditing &&
+        (
+          !builderEnabled ||
+          builderPlacementByItemId.has(
+            "nova_library"
+          )
+        ) ? (
           <ForgottenIslandNote
+            libraryPlacement={
+              builderPlacementByItemId.get(
+                "nova_library"
+              ) ?? null
+            }
             onOpen={
               onOpenArgEntryNote
             }
