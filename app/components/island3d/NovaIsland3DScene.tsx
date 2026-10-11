@@ -85,6 +85,7 @@ type Props = {
   dailyQuestAllClaimed?: boolean;
   dailyQuestCelebrationToken?: number;
   onOpenDailyQuests?: () => void;
+  onOpenArgEntryNote?: () => void;
   selectedMilestoneId: string;
   selectedDiscoveryKey: string | null;
   selectedDecorationPlacementId?: string | null;
@@ -14172,6 +14173,77 @@ function DailyQuestStation({
   );
 }
 
+function ForgottenIslandNote({
+  onOpen,
+}: {
+  onOpen?: () => void;
+}) {
+  return (
+    <group
+      position={[0.92, 1.04, -0.72]}
+      rotation={[0, -0.42, 0]}
+      onClick={(event) => {
+        event.stopPropagation();
+        onOpen?.();
+      }}
+    >
+      <ScreenSpaceTapTarget
+        pixels={58}
+        y={0.08}
+        minWorld={0.9}
+        maxWorld={2.8}
+      />
+
+      <mesh
+        rotation={[
+          -Math.PI / 2,
+          0,
+          -0.08,
+        ]}
+      >
+        <boxGeometry
+          args={[
+            0.74,
+            0.48,
+            0.025,
+          ]}
+        />
+        <meshStandardMaterial
+          color="#e7d8b7"
+          roughness={0.92}
+          metalness={0}
+        />
+      </mesh>
+
+      <mesh
+        position={[
+          0.22,
+          0.035,
+          0.13,
+        ]}
+        rotation={[
+          -Math.PI / 2,
+          0,
+          -0.08,
+        ]}
+      >
+        <boxGeometry
+          args={[
+            0.24,
+            0.018,
+            0.16,
+          ]}
+        />
+        <meshStandardMaterial
+          color="#c7b38b"
+          roughness={0.95}
+          metalness={0}
+        />
+      </mesh>
+    </group>
+  );
+}
+
 function IslandWorld({
   level,
   palette,
@@ -14185,6 +14257,7 @@ function IslandWorld({
   dailyQuestAllClaimed,
   dailyQuestCelebrationToken,
   onOpenDailyQuests,
+  onOpenArgEntryNote,
   builderEditing,
   selectedMilestoneId,
   selectedDiscoveryKey,
@@ -14214,6 +14287,7 @@ function IslandWorld({
   dailyQuestAllClaimed: boolean;
   dailyQuestCelebrationToken: number;
   onOpenDailyQuests?: () => void;
+  onOpenArgEntryNote?: () => void;
   builderEditing: boolean;
   selectedMilestoneId: string;
   selectedDiscoveryKey: string | null;
@@ -14543,6 +14617,14 @@ function IslandWorld({
           />
         </React.Suspense>
 
+        {!builderEditing ? (
+          <ForgottenIslandNote
+            onOpen={
+              onOpenArgEntryNote
+            }
+          />
+        ) : null}
+
         {ISLAND_MILESTONES.map(
           (milestone) => (
             <LandmarkObject
@@ -14626,6 +14708,7 @@ export default function NovaIsland3DScene({
   dailyQuestAllClaimed = false,
   dailyQuestCelebrationToken = 0,
   onOpenDailyQuests,
+  onOpenArgEntryNote,
   selectedMilestoneId,
   selectedDiscoveryKey,
   selectedDecorationPlacementId = null,
@@ -15717,6 +15800,9 @@ const selectLegendary =
           }
           onOpenDailyQuests={
             onOpenDailyQuests
+          }
+          onOpenArgEntryNote={
+            onOpenArgEntryNote
           }
           builderEditing={
             builderEditing
