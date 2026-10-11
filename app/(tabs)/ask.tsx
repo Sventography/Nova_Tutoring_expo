@@ -81,8 +81,7 @@ function NovaThinking({
     };
   }, [bounces, experience.key, shimmer]);
 
-  // i have been staring at this shimmer for twenty minutes.
-  // it works. we are not asking questions.
+  // tiny shimmer, disproportionate amount of joy.
   const translateX = shimmer.interpolate({
     inputRange: [0, 1],
     outputRange: [-260, 260],
