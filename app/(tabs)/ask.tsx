@@ -197,6 +197,69 @@ function getCanonicalArgReply(
     .map((message) => normalizeArgPrompt(message.text))
     .join(" ");
 
+  const mentionsStar =
+    q.includes("star") ||
+    q.includes("stars");
+  const mentionsSeventeen =
+    /(^|\s)17($|\s)/.test(q) ||
+    q.includes("seventeen");
+  const mentionsSixteen =
+    /(^|\s)16($|\s)/.test(q) ||
+    q.includes("sixteen");
+  const mentionsExtraStar =
+    mentionsStar &&
+    (
+      q.includes("extra") ||
+      q.includes("missing") ||
+      q.includes("not on the chart") ||
+      (mentionsSeventeen && mentionsSixteen)
+    );
+
+  if (
+    discovery.seventeenthStarDiscovered &&
+    mentionsStar &&
+    (
+      mentionsSeventeen ||
+      mentionsExtraStar ||
+      q.includes("telescope")
+    )
+  ) {
+    return [
+      "I counted seventeen too.",
+      "The chart isn't wrong.",
+      "I remember seeing a version with one more star drawn in by hand.",
+    ].join("\n\n");
+  }
+
+  if (
+    discovery.seventeenthStarDiscovered &&
+    recentArgText.includes("drawn in by hand") &&
+    (
+      q.includes("who") ||
+      q.includes("drew") ||
+      q.includes("drawn") ||
+      q.includes("hand")
+    )
+  ) {
+    return [
+      "I don't remember the name.",
+      "There were two initials in the corner.",
+    ].join("\n\n");
+  }
+
+  if (
+    discovery.seventeenthStarDiscovered &&
+    recentArgText.includes("two initials in the corner") &&
+    (
+      q.includes("initial") ||
+      q.includes("letters") ||
+      q.includes("which two") ||
+      q.includes("what were")
+    )
+  ) {
+    return "N.V.";
+  }
+
   if (entryKind) {
     return [
       "You found that exactly as written?",
@@ -1609,6 +1672,54 @@ export default function Ask() {
 
           if (
             entryKind &&
+            !argDiscovery.nvDiscovered
+          ) {
+            await markNvDiscovered();
+            argDiscovery = {
+              ...argDiscovery,
+              nvDiscovered: true,
+            };
+          }
+
+          const normalizedArgPrompt =
+            normalizeArgPrompt(trimmed);
+          const recentArgConversation =
+            messages
+              .slice(-4)
+              .filter(
+                (message) =>
+                  message.novaIntrusion
+              )
+              .map((message) =>
+                normalizeArgPrompt(
+                  message.text
+                )
+              )
+              .join(" ");
+
+          const unlockNvFromStarBridge =
+            argDiscovery
+              .seventeenthStarDiscovered &&
+            recentArgConversation.includes(
+              "two initials in the corner"
+            ) &&
+            (
+              normalizedArgPrompt.includes(
+                "initial"
+              ) ||
+              normalizedArgPrompt.includes(
+                "letters"
+              ) ||
+              normalizedArgPrompt.includes(
+                "which two"
+              ) ||
+              normalizedArgPrompt.includes(
+                "what were"
+              )
+            );
+
+          if (
+            unlockNvFromStarBridge &&
             !argDiscovery.nvDiscovered
           ) {
             await markNvDiscovered();
