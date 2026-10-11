@@ -63,6 +63,7 @@ import { startCheckout } from "../utils/checkout";
 import { startCoinCheckout } from "../utils/coinCheckout";
 import { notifyCoinOrder } from "../utils/coin-order";
 import { showToast } from "../utils/toast";
+import { markWhiteRabbitDiscovered } from "../utils/argState";
 
 import AddressSheet, { AddressPayload } from "../components/AddressSheet";
 import { supabase } from "../lib/supabase";
@@ -1507,6 +1508,7 @@ function ItemDetailModal({
                 onLongPress={() => {
                   if (item.id === "plushie_bunny_white") {
                     setShowWhiteRabbitTrace(true);
+                    void markWhiteRabbitDiscovered();
                   }
                 }}
               >
