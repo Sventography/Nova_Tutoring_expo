@@ -1,6 +1,12 @@
 // app/utils/quiz-history-bridge.ts
 import { add as addQuizHistory } from "../_lib/quizHistory";
 
+/*
+ * [N.V.]
+ * wrong answers still count. keep them.
+ * if I start forgetting why, ask Nova what this means.
+ */
+
 /**
  * Unified, safe quiz history logger.
  * This guarantees that quiz results always get written,
