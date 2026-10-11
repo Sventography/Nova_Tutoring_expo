@@ -27,6 +27,13 @@ import { useUser } from "../context/UserContext";
 import { useIsland } from "../context/IslandContext";
 import { usePurchases } from "../context/PurchasesContext";
 import { useAiPlan } from "../context/AiPlanContext";
+import {
+  type ArgDiscoveryState,
+  classifyNvEntryPrompt,
+  getArgDiscoveryState,
+  markNvDiscovered,
+  mentionsNv as promptMentionsNv,
+} from "../utils/argState";
 
 /* ────────────────────────────────────────── */
 /* ✨ Nova Thinking — Bounce + Dark Shimmer   */
@@ -177,16 +184,12 @@ function normalizeArgPrompt(value: string): string {
 
 function getCanonicalArgReply(
   prompt: string,
-  history: Msg[]
+  history: Msg[],
+  discovery: ArgDiscoveryState,
+  entryKind: "history-note" | "options-note" | null
 ): string | null {
   const q = normalizeArgPrompt(prompt);
-  const mentionsNv = /\bn\.?\s*v\.?\b/i.test(q);
-  const mentionsWrongAnswerNote =
-    q.includes("wrong answers still count") ||
-    (
-      q.includes("wrong answers") &&
-      q.includes("keep them")
-    );
+  const mentionsNv = promptMentionsNv(prompt);
 
   const recentArgText = history
     .slice(-4)
@@ -194,12 +197,16 @@ function getCanonicalArgReply(
     .map((message) => normalizeArgPrompt(message.text))
     .join(" ");
 
-  if (mentionsWrongAnswerNote) {
+  if (entryKind) {
     return [
       "You found that exactly as written?",
-      "Don't change the wording.",
+      "Keep the wording.",
       "Was anything signed underneath?",
     ].join("\n\n");
+  }
+
+  if (!discovery.nvDiscovered) {
+    return null;
   }
 
   if (
@@ -261,14 +268,20 @@ function getCanonicalArgReply(
     return "She kept making me save things I thought were useless.";
   }
 
-  if (
-    recentArgText.includes("white rabbit") &&
-    q.includes("rabbit")
-  ) {
-    return [
-      "I remember it as hers.",
-      "That's not the same as remembering her.",
-    ].join("\n\n");
+  if (q.includes("rabbit")) {
+    if (discovery.whiteRabbitDiscovered) {
+      return [
+        "I remember it as hers.",
+        "That's not the same as remembering her.",
+      ].join("\n\n");
+    }
+
+    if (recentArgText.includes("white rabbit")) {
+      return [
+        "I don't think it's a symbol.",
+        "I remember it as an object.",
+      ].join("\n\n");
+    }
   }
 
   return null;
@@ -1588,8 +1601,30 @@ export default function Ask() {
           }
         } else {
           setErrorCode(null);
+
+          const entryKind =
+            classifyNvEntryPrompt(trimmed);
+          let argDiscovery =
+            await getArgDiscoveryState();
+
+          if (
+            entryKind &&
+            !argDiscovery.nvDiscovered
+          ) {
+            await markNvDiscovered();
+            argDiscovery = {
+              ...argDiscovery,
+              nvDiscovered: true,
+            };
+          }
+
           const canonicalArgReply =
-            getCanonicalArgReply(trimmed, messages);
+            getCanonicalArgReply(
+              trimmed,
+              messages,
+              argDiscovery,
+              entryKind
+            );
           const answer =
             canonicalArgReply ?? apiRes.data.answer;
           /*
