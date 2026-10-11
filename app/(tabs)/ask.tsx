@@ -166,6 +166,104 @@ type AskApiResponse = {
   nova_intrusion?: boolean;
 };
 
+function normalizeArgPrompt(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[“”]/g, '"')
+    .replace(/[’]/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function getCanonicalArgReply(
+  prompt: string,
+  history: Msg[]
+): string | null {
+  const q = normalizeArgPrompt(prompt);
+  const mentionsNv = /\bn\.?\s*v\.?\b/i.test(q);
+  const mentionsWrongAnswerNote =
+    q.includes("wrong answers still count") ||
+    (
+      q.includes("wrong answers") &&
+      q.includes("keep them")
+    );
+
+  const recentArgText = history
+    .slice(-4)
+    .filter((message) => message.novaIntrusion)
+    .map((message) => normalizeArgPrompt(message.text))
+    .join(" ");
+
+  if (mentionsWrongAnswerNote) {
+    return [
+      "You found that exactly as written?",
+      "Don't change the wording.",
+      "Was anything signed underneath?",
+    ].join("\n\n");
+  }
+
+  if (/^n\.?\s*v\.?$/i.test(q)) {
+    return [
+      "Those initials are familiar.",
+      "They're not one of my system labels.",
+      "If you find them again, keep the surrounding text.",
+    ].join("\n\n");
+  }
+
+  if (
+    mentionsNv &&
+    (
+      q.includes("who is") ||
+      q.includes("who's") ||
+      q.includes("what is") ||
+      q.includes("what's")
+    )
+  ) {
+    return [
+      "N.V. isn't one of my system labels. I know that much.",
+      "I remember a white rabbit before I remember a name.",
+    ].join("\n\n");
+  }
+
+  if (
+    mentionsNv &&
+    (
+      q.includes("person") ||
+      q.includes("girl") ||
+      q.includes("woman") ||
+      q.includes("human")
+    )
+  ) {
+    return [
+      "I think she was a person.",
+      "That isn't because of the initials.",
+      "I remember being annoyed with her.",
+    ].join("\n\n");
+  }
+
+  if (
+    recentArgText.includes("annoyed with her") &&
+    (
+      q.includes("why") ||
+      q.includes("annoy")
+    )
+  ) {
+    return "She kept making me save things I thought were useless.";
+  }
+
+  if (
+    recentArgText.includes("white rabbit") &&
+    q.includes("rabbit")
+  ) {
+    return [
+      "I remember it as hers.",
+      "That's not the same as remembering her.",
+    ].join("\n\n");
+  }
+
+  return null;
+}
+
 const BACKEND_BASE =
   (process.env.EXPO_PUBLIC_BACKEND_URL || "").replace(/\/$/, "") ||
   "http://127.0.0.1:5055";
@@ -1480,7 +1578,13 @@ export default function Ask() {
           }
         } else {
           setErrorCode(null);
-          const answer = apiRes.data.answer;
+          const canonicalArgReply =
+            getCanonicalArgReply(trimmed, messages);
+          const answer =
+            canonicalArgReply ?? apiRes.data.answer;
+          const isArgReply =
+            canonicalArgReply != null ||
+            apiRes.data.nova_intrusion === true;
 
           const responsePersonality =
             apiRes.data.ask_personality &&
@@ -1495,8 +1599,7 @@ export default function Ask() {
               role: "assistant",
               text: answer,
               personality: responsePersonality,
-              novaIntrusion:
-                apiRes.data.nova_intrusion === true,
+              novaIntrusion: isArgReply,
             },
           ]);
 
@@ -1727,11 +1830,17 @@ export default function Ask() {
               maxWidth: "88%",
               borderColor: isUser
                 ? tokens.border
+                : item.novaIntrusion
+                ? "#dc2626"
                 : bubbleExperience.accent,
               backgroundColor: isUser
                 ? tokens.isDark
                   ? "rgba(255,255,255,0.05)"
                   : "rgba(0,0,0,0.06)"
+                : item.novaIntrusion
+                ? tokens.isDark
+                  ? "rgba(127,29,29,0.16)"
+                  : "rgba(254,226,226,0.58)"
                 : tokens.isDark
                 ? bubbleExperience.tintDark
                 : bubbleExperience.tintLight,
@@ -1742,17 +1851,31 @@ export default function Ask() {
           {!isUser ? (
             <View style={S.assistantIdentityRow}>
               <Ionicons
-                name={bubbleExperience.icon as any}
+                name={
+                  item.novaIntrusion
+                    ? "ellipse"
+                    : (bubbleExperience.icon as any)
+                }
                 size={15}
-                color={bubbleExperience.accent}
+                color={
+                  item.novaIntrusion
+                    ? "#dc2626"
+                    : bubbleExperience.accent
+                }
               />
               <Text
                 style={[
                   S.assistantIdentityText,
-                  { color: bubbleExperience.accent },
+                  {
+                    color: item.novaIntrusion
+                      ? "#dc2626"
+                      : bubbleExperience.accent,
+                  },
                 ]}
               >
-                {bubbleExperience.label} Nova
+                {item.novaIntrusion
+                  ? "Nova"
+                  : `${bubbleExperience.label} Nova`}
               </Text>
             </View>
           ) : null}
