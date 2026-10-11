@@ -2894,7 +2894,7 @@ export default function IslandScreen() {
                 styles.seventeenthStarNova
               }
             >
-              I see the extra star too. I can almost see into your world again through this telescope... - Nova
+              I see it too. I don't remember it being there. - Nova
             </Text>
           </View>
         </Pressable>
