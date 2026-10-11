@@ -14180,63 +14180,68 @@ function ForgottenIslandNote({
 }) {
   return (
     <group
-      position={[0.92, 1.04, -0.72]}
-      rotation={[0, -0.42, 0]}
+      /*
+       * Tucked just behind the Library from the Island's default view.
+       * Only a small corner should read as "maybe paper" unless the
+       * player orbits or zooms in to investigate.
+       */
+      position={[0.58, 1.015, -2.02]}
+      rotation={[0, 0.5, -0.04]}
       onClick={(event) => {
         event.stopPropagation();
         onOpen?.();
       }}
     >
       <ScreenSpaceTapTarget
-        pixels={58}
-        y={0.08}
-        minWorld={0.9}
-        maxWorld={2.8}
+        pixels={52}
+        y={0.06}
+        minWorld={0.82}
+        maxWorld={2.6}
       />
 
       <mesh
         rotation={[
           -Math.PI / 2,
           0,
-          -0.08,
+          0.08,
         ]}
       >
         <boxGeometry
           args={[
-            0.74,
-            0.48,
-            0.025,
+            0.46,
+            0.28,
+            0.018,
           ]}
         />
         <meshStandardMaterial
-          color="#e7d8b7"
-          roughness={0.92}
+          color="#d8c9a8"
+          roughness={0.96}
           metalness={0}
         />
       </mesh>
 
       <mesh
         position={[
-          0.22,
-          0.035,
-          0.13,
+          0.14,
+          0.027,
+          0.075,
         ]}
         rotation={[
           -Math.PI / 2,
           0,
-          -0.08,
+          0.08,
         ]}
       >
         <boxGeometry
           args={[
-            0.24,
-            0.018,
-            0.16,
+            0.15,
+            0.012,
+            0.09,
           ]}
         />
         <meshStandardMaterial
-          color="#c7b38b"
-          roughness={0.95}
+          color="#b9a47f"
+          roughness={0.98}
           metalness={0}
         />
       </mesh>
