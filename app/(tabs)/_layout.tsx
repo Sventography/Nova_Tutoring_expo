@@ -94,8 +94,6 @@ type CompanionEffectType =
 function buildCompanionEffectMap(): Record<string, CompanionEffectType> {
   const map: Record<string, CompanionEffectType> = {};
 
-  // TODO: simplify this later.
-  // update: later me said no <3
   // every little guy gets a special effect. this became important somehow.
   const EFFECT_SEQUENCE: CompanionEffectType[] = [
     "hearts",
@@ -3455,8 +3453,6 @@ function InnerTabsLayout() {
    * blank strip beneath the cyan divider. Start with a close estimate, then
    * replace it with the HeaderBar's real measured height.
    */
-  // future me: if you "simplify" this and the cyan line moves, put it back.
-  // love, past me
   const estimatedHeaderHeight = useMemo(
     () =>
       (Platform.OS === "web"
