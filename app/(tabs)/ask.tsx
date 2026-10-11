@@ -197,6 +197,33 @@ function getCanonicalArgReply(
     .map((message) => normalizeArgPrompt(message.text))
     .join(" ");
 
+  const asksWhatWasCounted =
+    (
+      q.includes("count") ||
+      q.includes("counting") ||
+      q.includes("counted")
+    ) &&
+    (
+      q.includes("what") ||
+      q.includes("note") ||
+      q.includes("found") ||
+      q.includes("was i") ||
+      q.includes("were they") ||
+      q.includes("was she") ||
+      q.includes("was he")
+    );
+
+  if (
+    discovery.entryNoteDiscovered &&
+    asksWhatWasCounted
+  ) {
+    return [
+      "The note isn't about the marks on the chart.",
+      "It's about something farther away.",
+      "You only checked when there was enough light.",
+    ].join("\n\n");
+  }
+
   const mentionsStar =
     q.includes("star") ||
     q.includes("stars");
