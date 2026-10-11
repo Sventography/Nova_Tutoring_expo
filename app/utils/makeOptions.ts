@@ -4,6 +4,11 @@
  */
 import { useMemo } from "react";
 
+/*
+ * [N.V.]
+ * the wrong ones should look believable.
+ * otherwise you don't learn which mistake you were about to make.
+ */
 function shuffle<T>(arr: T[]): T[] {
   // In-place Fisher–Yates would be ideal; this is fine for small arrays.
   return arr.sort(() => Math.random() - 0.5);
