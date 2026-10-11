@@ -1307,15 +1307,11 @@ function ItemDetailModal({
 }) {
   const { tokens } = useTheme();
   const [showAlt, setShowAlt] = useState(false);
-  const [showMemoryObjectArchive, setShowMemoryObjectArchive] = useState(false);
-  const [pajamaArchiveDepth, setPajamaArchiveDepth] = useState<0 | 1 | 2>(0);
-  const [stationeryArchiveDepth, setStationeryArchiveDepth] = useState<0 | 1 | 2>(0);
+  const [showWhiteRabbitTrace, setShowWhiteRabbitTrace] = useState(false);
 
   useEffect(() => {
     setShowAlt(false);
-    setShowMemoryObjectArchive(false);
-    setPajamaArchiveDepth(0);
-    setStationeryArchiveDepth(0);
+    setShowWhiteRabbitTrace(false);
   }, [item?.id]);
 
   if (!item) return null;
@@ -1504,420 +1500,97 @@ function ItemDetailModal({
                 </Pressable>
               )}
 
-              <Text
-                style={{
-                  color: isLegendaryDetail
-                    ? legendaryPalette.accent
-                    : (tokens.titleText as any),
-                  fontSize: isLegendaryDetail ? 22 : 18,
-                  fontWeight: "900",
-                  marginBottom: 8,
-                  textAlign: "center",
-                  letterSpacing: isLegendaryDetail ? 0.8 : 0,
-                  textShadowColor: isLegendaryDetail
-                    ? legendaryPalette.primary
-                    : "transparent",
-                  textShadowRadius: isLegendaryDetail ? 12 : 0,
+              {/* [N.V.] some things only answer if you hold on to them. */}
+              <Pressable
+                disabled={item.id !== "plushie_bunny_white"}
+                delayLongPress={1100}
+                onLongPress={() => {
+                  if (item.id === "plushie_bunny_white") {
+                    setShowWhiteRabbitTrace(true);
+                  }
                 }}
               >
-                {item.title}
-              </Text>
+                <Text
+                  style={{
+                    color: isLegendaryDetail
+                      ? legendaryPalette.accent
+                      : (tokens.titleText as any),
+                    fontSize: isLegendaryDetail ? 22 : 18,
+                    fontWeight: "900",
+                    marginBottom: 8,
+                    textAlign: "center",
+                    letterSpacing: isLegendaryDetail ? 0.8 : 0,
+                    textShadowColor: isLegendaryDetail
+                      ? legendaryPalette.primary
+                      : "transparent",
+                    textShadowRadius: isLegendaryDetail ? 12 : 0,
+                  }}
+                >
+                  {item.title}
+                </Text>
+              </Pressable>
 
-              {item.desc ? (
-                item.id === "lantern_keychain" ? (
-                  <View
+              {showWhiteRabbitTrace &&
+              item.id === "plushie_bunny_white" ? (
+                <View
+                  style={{
+                    marginBottom: 12,
+                    borderWidth: 1,
+                    borderColor: "rgba(245,158,11,0.48)",
+                    borderRadius: 10,
+                    paddingHorizontal: 11,
+                    paddingVertical: 10,
+                    backgroundColor: tokens.isDark
+                      ? "rgba(120,53,15,0.16)"
+                      : "rgba(254,243,199,0.64)",
+                  }}
+                >
+                  <Text
                     style={{
-                      marginBottom: 10,
+                      color: "#B45309",
+                      fontSize: 10,
+                      lineHeight: 15,
+                      fontWeight: "900",
+                      letterSpacing: 0.8,
+                      fontFamily: Platform.select({
+                        ios: "Menlo",
+                        android: "monospace",
+                        default: "monospace",
+                      }),
                     }}
                   >
-                    <Text
-                      style={{
-                        color: tokens.text as any,
-                        fontSize: 14,
-                        lineHeight: 20,
-                        textAlign: "left",
-                        opacity: locked ? 0.85 : 1,
-                      }}
-                    >
-                      {String(item.desc).split("\n\n")[0]}
-                    </Text>
-                    <Text
-                      style={{
-                        color: "#dc2626",
-                        fontSize: 14,
-                        lineHeight: 20,
-                        fontWeight: "800",
-                        textAlign: "left",
-                        marginTop: 12,
-                        opacity: locked ? 0.85 : 1,
-                      }}
-                    >
-                      {String(item.desc).split("\n\n").slice(1).join("\n\n")}
-                    </Text>
-                  </View>
-                ) : (
-                  <View style={{ marginBottom: 10 }}>
-                    <Text
-                      style={{
-                        color: tokens.text as any,
-                        fontSize: 14,
-                        lineHeight: 20,
-                        textAlign: "left",
-                        opacity: locked ? 0.85 : 1,
-                      }}
-                    >
-                      {item.desc}
-                    </Text>
+                    [N.V.]
+                  </Text>
+                  <Text
+                    style={{
+                      color: tokens.text as any,
+                      fontSize: 12,
+                      lineHeight: 18,
+                      fontWeight: "700",
+                      marginTop: 4,
+                    }}
+                  >
+                    {"not for studying.\nkeep this one anyway."}
+                  </Text>
+                </View>
+              ) : null}
 
-                    {item.id === "cursor_star_trail" ? (
-                      <Text
-                        style={{
-                          color: "#00E5FF",
-                          fontSize: 11,
-                          lineHeight: 16,
-                          fontWeight: "800",
-                          letterSpacing: 0.7,
-                          marginTop: 12,
-                          opacity: locked ? 0.75 : 0.92,
-                          fontFamily: Platform.select({
-                            ios: "Menlo",
-                            android: "monospace",
-                            default: "monospace",
-                          }),
-                        }}
-                      >
-                        LEGACY COMPATIBILITY PROFILE: NV-017
-                      </Text>
-                    ) : null}
-
-                    {item.id === "plushie_bunny_white" ? (
-                      <Pressable
-                        onPress={() => setShowMemoryObjectArchive(true)}
-                        accessibilityRole="button"
-                        accessibilityLabel="Memory object archive details"
-                        style={({ pressed }) => ({
-                          marginTop: 12,
-                          borderWidth: 1,
-                          borderColor: "rgba(0,229,255,0.35)",
-                          borderRadius: 9,
-                          paddingHorizontal: 10,
-                          paddingVertical: 9,
-                          backgroundColor: pressed
-                            ? "rgba(0,229,255,0.10)"
-                            : "rgba(0,229,255,0.05)",
-                        })}
-                      >
-                        <Text
-                          style={{
-                            color: "#00E5FF",
-                            fontSize: 11,
-                            lineHeight: 17,
-                            fontWeight: "800",
-                            letterSpacing: 0.7,
-                            opacity: locked ? 0.75 : 0.92,
-                            fontFamily: Platform.select({
-                              ios: "Menlo",
-                              android: "monospace",
-                              default: "monospace",
-                            }),
-                          }}
-                        >
-                          {"MEMORY OBJECT 06\nSUBJECT: WHITE RABBIT PLUSH\nMATCH CONFIDENCE: 98.7%"}
-                        </Text>
-
-                        {!showMemoryObjectArchive ? (
-                          <Text
-                            style={{
-                              color: "#00AFC4",
-                              fontSize: 9,
-                              lineHeight: 13,
-                              fontWeight: "900",
-                              letterSpacing: 0.65,
-                              marginTop: 7,
-                              opacity: 0.75,
-                              fontFamily: Platform.select({
-                                ios: "Menlo",
-                                android: "monospace",
-                                default: "monospace",
-                              }),
-                            }}
-                          >
-                            ARCHIVE LINK AVAILABLE
-                          </Text>
-                        ) : (
-                          <View
-                            style={{
-                              marginTop: 9,
-                              paddingTop: 8,
-                              borderTopWidth: 1,
-                              borderTopColor: "rgba(0,229,255,0.24)",
-                            }}
-                          >
-                            <Text
-                              style={{
-                                color: "#00E5FF",
-                                fontSize: 10,
-                                lineHeight: 15,
-                                fontWeight: "900",
-                                letterSpacing: 0.7,
-                                fontFamily: Platform.select({
-                                  ios: "Menlo",
-                                  android: "monospace",
-                                  default: "monospace",
-                                }),
-                              }}
-                            >
-                              {"ARCHIVE CLASS: PERSONAL POSSESSION\nPROFILE LINK: CONFIRMED"}
-                            </Text>
-                          </View>
-                        )}
-                      </Pressable>
-                    ) : null}
-
-                    {item.id === "pajamas" ? (
-                      <Pressable
-                        onPress={() =>
-                          setPajamaArchiveDepth((depth) =>
-                            depth < 2 ? ((depth + 1) as 0 | 1 | 2) : depth
-                          )
-                        }
-                        accessibilityRole="button"
-                        accessibilityLabel="Archived pajama record"
-                        style={({ pressed }) => ({
-                          marginTop: 12,
-                          borderWidth: 1,
-                          borderColor: "rgba(0,229,255,0.28)",
-                          borderRadius: 9,
-                          paddingHorizontal: 10,
-                          paddingVertical: 9,
-                          backgroundColor: pressed
-                            ? "rgba(0,229,255,0.09)"
-                            : "rgba(0,229,255,0.04)",
-                        })}
-                      >
-                        {pajamaArchiveDepth === 0 ? (
-                          <Text
-                            style={{
-                              color: "#00AFC4",
-                              fontSize: 9,
-                              lineHeight: 13,
-                              fontWeight: "900",
-                              letterSpacing: 0.7,
-                              opacity: 0.82,
-                              fontFamily: Platform.select({
-                                ios: "Menlo",
-                                android: "monospace",
-                                default: "monospace",
-                              }),
-                            }}
-                          >
-                            ARCHIVE MATCH FOUND
-                          </Text>
-                        ) : (
-                          <View>
-                            <Text
-                              style={{
-                                color: "#00E5FF",
-                                fontSize: 10,
-                                lineHeight: 15,
-                                fontWeight: "900",
-                                letterSpacing: 0.7,
-                                fontFamily: Platform.select({
-                                  ios: "Menlo",
-                                  android: "monospace",
-                                  default: "monospace",
-                                }),
-                              }}
-                            >
-                              {"MEMORY OBJECT 11\nCLASS: PERSONAL CLOTHING\nPROFILE ASSOCIATION: STRONG"}
-                            </Text>
-
-                            {pajamaArchiveDepth === 1 ? (
-                              <Text
-                                style={{
-                                  color: "#00AFC4",
-                                  fontSize: 9,
-                                  lineHeight: 13,
-                                  fontWeight: "900",
-                                  letterSpacing: 0.65,
-                                  marginTop: 7,
-                                  opacity: 0.75,
-                                  fontFamily: Platform.select({
-                                    ios: "Menlo",
-                                    android: "monospace",
-                                    default: "monospace",
-                                  }),
-                                }}
-                              >
-                                PERSONAL NOTE AVAILABLE
-                              </Text>
-                            ) : (
-                              <View
-                                style={{
-                                  marginTop: 9,
-                                  paddingTop: 8,
-                                  borderTopWidth: 1,
-                                  borderTopColor: "rgba(0,229,255,0.24)",
-                                }}
-                              >
-                                <Text
-                                  style={{
-                                    color: "#00E5FF",
-                                    fontSize: 9,
-                                    lineHeight: 14,
-                                    fontWeight: "900",
-                                    letterSpacing: 0.65,
-                                    fontFamily: Platform.select({
-                                      ios: "Menlo",
-                                      android: "monospace",
-                                      default: "monospace",
-                                    }),
-                                  }}
-                                >
-                                  PERSONAL NOTE // PARTIAL RECOVERY
-                                </Text>
-                                <Text
-                                  style={{
-                                    color: "#BFFBFF",
-                                    fontSize: 12,
-                                    lineHeight: 18,
-                                    fontWeight: "700",
-                                    marginTop: 5,
-                                    fontStyle: "italic",
-                                  }}
-                                >
-                                  mom says these are basically my coding uniform now lol
-                                </Text>
-                              </View>
-                            )}
-                          </View>
-                        )}
-                      </Pressable>
-                    ) : null}
-
-                    {item.id === "stationery_set" ? (
-                      <Pressable
-                        onPress={() =>
-                          setStationeryArchiveDepth((depth) =>
-                            depth < 2 ? ((depth + 1) as 0 | 1 | 2) : depth
-                          )
-                        }
-                        accessibilityRole="button"
-                        accessibilityLabel="Archived stationery record"
-                        style={({ pressed }) => ({
-                          marginTop: 12,
-                          borderWidth: 1,
-                          borderColor: "rgba(0,229,255,0.28)",
-                          borderRadius: 9,
-                          paddingHorizontal: 10,
-                          paddingVertical: 9,
-                          backgroundColor: pressed
-                            ? "rgba(0,229,255,0.09)"
-                            : "rgba(0,229,255,0.04)",
-                        })}
-                      >
-                        {stationeryArchiveDepth === 0 ? (
-                          <Text
-                            style={{
-                              color: "#00AFC4",
-                              fontSize: 9,
-                              lineHeight: 13,
-                              fontWeight: "900",
-                              letterSpacing: 0.7,
-                              opacity: 0.82,
-                              fontFamily: Platform.select({
-                                ios: "Menlo",
-                                android: "monospace",
-                                default: "monospace",
-                              }),
-                            }}
-                          >
-                            ARCHIVE MATCH FOUND
-                          </Text>
-                        ) : (
-                          <View>
-                            <Text
-                              style={{
-                                color: "#00E5FF",
-                                fontSize: 10,
-                                lineHeight: 15,
-                                fontWeight: "900",
-                                letterSpacing: 0.7,
-                                fontFamily: Platform.select({
-                                  ios: "Menlo",
-                                  android: "monospace",
-                                  default: "monospace",
-                                }),
-                              }}
-                            >
-                              {"MEMORY OBJECT 14\nCLASS: WRITING MATERIAL\nPROFILE ASSOCIATION: STRONG"}
-                            </Text>
-
-                            {stationeryArchiveDepth === 1 ? (
-                              <Text
-                                style={{
-                                  color: "#00AFC4",
-                                  fontSize: 9,
-                                  lineHeight: 13,
-                                  fontWeight: "900",
-                                  letterSpacing: 0.65,
-                                  marginTop: 7,
-                                  opacity: 0.75,
-                                  fontFamily: Platform.select({
-                                    ios: "Menlo",
-                                    android: "monospace",
-                                    default: "monospace",
-                                  }),
-                                }}
-                              >
-                                ANNOTATION SAMPLE AVAILABLE
-                              </Text>
-                            ) : (
-                              <View
-                                style={{
-                                  marginTop: 9,
-                                  paddingTop: 8,
-                                  borderTopWidth: 1,
-                                  borderTopColor: "rgba(0,229,255,0.24)",
-                                }}
-                              >
-                                <Text
-                                  style={{
-                                    color: "#00E5FF",
-                                    fontSize: 9,
-                                    lineHeight: 14,
-                                    fontWeight: "900",
-                                    letterSpacing: 0.65,
-                                    fontFamily: Platform.select({
-                                      ios: "Menlo",
-                                      android: "monospace",
-                                      default: "monospace",
-                                    }),
-                                  }}
-                                >
-                                  ANNOTATION SAMPLE // PARTIAL RECOVERY
-                                </Text>
-                                <Text
-                                  style={{
-                                    color: "#BFFBFF",
-                                    fontSize: 12,
-                                    lineHeight: 18,
-                                    fontWeight: "700",
-                                    marginTop: 5,
-                                    fontStyle: "italic",
-                                  }}
-                                >
-                                  keep the wrong answers too. they matter.
-                                </Text>
-                              </View>
-                            )}
-                          </View>
-                        )}
-                      </Pressable>
-                    ) : null}
-
-                  </View>
-                )
+              {item.desc ? (
+                <View style={{ marginBottom: 10 }}>
+                  <Text
+                    style={{
+                      color: tokens.text as any,
+                      fontSize: 14,
+                      lineHeight: 20,
+                      textAlign: "left",
+                      opacity: locked ? 0.85 : 1,
+                    }}
+                  >
+                    {item.id === "lantern_keychain"
+                      ? "A glowing lantern keychain for your Nova collection."
+                      : item.desc}
+                  </Text>
+                </View>
               ) : null}
 
               {personalityExperience ? (
