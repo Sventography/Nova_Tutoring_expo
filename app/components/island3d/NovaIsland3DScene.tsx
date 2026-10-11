@@ -14173,59 +14173,58 @@ function DailyQuestStation({
   );
 }
 
-function ForgottenIslandNote({
-  libraryPlacement,
+function ForgottenGardenNote({
+  gardenPlacement,
   onOpen,
 }: {
-  libraryPlacement: IslandPlacement | null;
+  gardenPlacement: IslandPlacement | null;
   onOpen?: () => void;
 }) {
   const fallback =
-    LANDMARK_POSITIONS.nova_library;
+    LANDMARK_POSITIONS.starlight_garden;
 
   const transform =
-    libraryPlacement?.transform;
+    gardenPlacement?.transform;
 
-  const libraryX =
+  const gardenX =
     transform?.x ??
     fallback[0];
-  const libraryY =
+  const gardenY =
     transform?.y ??
     fallback[1];
-  const libraryZ =
+  const gardenZ =
     transform?.z ??
     fallback[2];
-  const libraryRotation =
+  const gardenRotation =
     transform?.rotationY ?? 0;
-  const libraryScale =
+  const gardenScale =
     transform?.scale ?? 1;
 
   /*
-   * Follow the player's Library rather than a fixed island coordinate.
-   * The offset grows with the Library footprint, but the paper itself
-   * stays physically small so scaling the landmark never turns it into
-   * an obvious ARG billboard.
+   * Follow the player's first earned landmark instead of a fixed island
+   * coordinate. The paper sits among the outer flowers, so it is visible
+   * to somebody inspecting the Garden without reading like a quest marker.
+   * Its offset follows Garden scale, while the paper itself stays small.
    */
   const localX =
-    1.12 * libraryScale +
-    0.08;
+    0.44 * gardenScale;
   const localZ =
-    -0.48 * libraryScale;
+    0.58 * gardenScale;
   const cos =
     Math.cos(
-      libraryRotation
+      gardenRotation
     );
   const sin =
     Math.sin(
-      libraryRotation
+      gardenRotation
     );
 
   const notePosition: Vec3 = [
-    libraryX +
+    gardenX +
       localX * cos +
       localZ * sin,
-    libraryY + 0.035,
-    libraryZ -
+    gardenY + 0.025,
+    gardenZ -
       localX * sin +
       localZ * cos,
   ];
@@ -14237,7 +14236,7 @@ function ForgottenIslandNote({
       }
       rotation={[
         0,
-        libraryRotation + 0.34,
+        gardenRotation + 0.22,
         -0.04,
       ]}
       onClick={(event) => {
@@ -14676,16 +14675,17 @@ function IslandWorld({
         </React.Suspense>
 
         {!builderEditing &&
+        level >= 2 &&
         (
           !builderEnabled ||
           builderPlacementByItemId.has(
-            "nova_library"
+            "starlight_garden"
           )
         ) ? (
-          <ForgottenIslandNote
-            libraryPlacement={
+          <ForgottenGardenNote
+            gardenPlacement={
               builderPlacementByItemId.get(
-                "nova_library"
+                "starlight_garden"
               ) ?? null
             }
             onOpen={
