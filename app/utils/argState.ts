@@ -18,6 +18,11 @@ function normalize(value: string): string {
     .trim();
 }
 
+function normalizedMentionsNv(text: string): boolean {
+  return /(^|\s)nv($|\s)/.test(text) ||
+    /(^|\s)n\s+v($|\s)/.test(text);
+}
+
 function distance(a: string, b: string): number {
   if (a === b) return 0;
   if (!a.length) return b.length;
@@ -75,7 +80,9 @@ function hasConcept(tokens: string[], concepts: string[]): boolean {
 export function classifyNvEntryPrompt(
   value: string
 ): "history-note" | "options-note" | null {
-  const tokens = normalize(value).split(" ").filter(Boolean);
+  const normalized = normalize(value);
+  const tokens = normalized.split(" ").filter(Boolean);
+  const hasNv = normalizedMentionsNv(normalized);
 
   const wrong = hasConcept(tokens, [
     "wrong",
@@ -99,7 +106,14 @@ export function classifyNvEntryPrompt(
     "matters",
   ]);
 
-  if (wrong && answer && (keep || count)) {
+  if (
+    wrong &&
+    answer &&
+    (
+      (keep && count) ||
+      (hasNv && (keep || count))
+    )
+  ) {
     return "history-note";
   }
 
@@ -126,8 +140,7 @@ export function classifyNvEntryPrompt(
 }
 
 export function mentionsNv(value: string): boolean {
-  const text = normalize(value);
-  return /(^|\s)nv($|\s)/.test(text) || /(^|\s)n\s+v($|\s)/.test(text);
+  return normalizedMentionsNv(normalize(value));
 }
 
 export async function getArgDiscoveryState(): Promise<ArgDiscoveryState> {
