@@ -59,7 +59,10 @@ import {
   type CompanionIslandKeepsake,
   type CompanionIslandResident,
 } from "../_lib/commonCompanionFriendship";
-import { markSeventeenthStarDiscovered } from "../utils/argState";
+import {
+  markEntryNoteDiscovered,
+  markSeventeenthStarDiscovered,
+} from "../utils/argState";
 
 const ISLAND_GUIDE_PREFIX =
   "@nova/islandGuide.v2:";
@@ -1212,6 +1215,11 @@ export default function IslandScreen() {
     setShowSeventeenthStarModal,
   ] = useState(false);
 
+  const [
+    showArgEntryNote,
+    setShowArgEntryNote,
+  ] = useState(false);
+
   useEffect(() => {
     if (
       islandBuilder.isEditing
@@ -1972,6 +1980,10 @@ export default function IslandScreen() {
             onOpenDailyQuests={
               openDailyQuests
             }
+            onOpenArgEntryNote={() => {
+              void markEntryNoteDiscovered();
+              setShowArgEntryNote(true);
+            }}
             selectedMilestoneId={
               sceneSelectedMilestoneId
             }
@@ -2850,6 +2862,54 @@ export default function IslandScreen() {
 
       <Modal
         visible={
+          showArgEntryNote
+        }
+        transparent
+        animationType="fade"
+        onRequestClose={() =>
+          setShowArgEntryNote(
+            false
+          )
+        }
+      >
+        <Pressable
+          style={
+            styles.argNoteBackdrop
+          }
+          onPress={() =>
+            setShowArgEntryNote(
+              false
+            )
+          }
+        >
+          <View
+            pointerEvents="none"
+            style={
+              styles.argNoteCard
+            }
+          >
+            <View
+              style={
+                styles.argNoteRule
+              }
+            />
+            <Text
+              style={
+                styles.argNoteBody
+              }
+            >
+              I checked it again before I left.
+              {"\n\n"}The number on the chart still doesn't match what I can see.
+              {"\n\n"}I'm writing this down because tomorrow I'll probably decide I counted wrong and throw this away.
+              {"\n\n"}Don't.
+              {"\n\n"}If I forget why this matters, ask Nova what I was counting.
+            </Text>
+          </View>
+        </Pressable>
+      </Modal>
+
+      <Modal
+        visible={
           showSeventeenthStarModal
         }
         transparent
@@ -3293,6 +3353,48 @@ const styles = StyleSheet.create({
     color: "#fef9c3",
     fontSize: 11,
     fontWeight: "900",
+  },
+  argNoteBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(2,6,23,0.62)",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 28,
+  },
+  argNoteCard: {
+    width: "100%",
+    maxWidth: 360,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(180,148,96,0.72)",
+    backgroundColor: "#efe3c5",
+    paddingHorizontal: 24,
+    paddingVertical: 24,
+    shadowColor: "#000",
+    shadowOpacity: 0.32,
+    shadowRadius: 16,
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    elevation: 12,
+    transform: [
+      {
+        rotate: "-0.8deg",
+      },
+    ],
+  },
+  argNoteRule: {
+    width: 54,
+    height: 2,
+    backgroundColor: "rgba(92,67,40,0.36)",
+    marginBottom: 18,
+  },
+  argNoteBody: {
+    color: "#3f3123",
+    fontSize: 15,
+    lineHeight: 23,
+    fontWeight: "600",
   },
   seventeenthStarBackdrop: {
     flex: 1,
