@@ -202,7 +202,13 @@ function getCanonicalArgReply(
     ].join("\n\n");
   }
 
-  if (/^n\.?\s*v\.?$/i.test(q)) {
+  if (
+    /^n\.?\s*v\.?$/i.test(q) ||
+    (
+      mentionsNv &&
+      recentArgText.includes("was anything signed underneath")
+    )
+  ) {
     return [
       "Those initials are familiar.",
       "They're not one of my system labels.",
@@ -216,7 +222,11 @@ function getCanonicalArgReply(
       q.includes("who is") ||
       q.includes("who's") ||
       q.includes("what is") ||
-      q.includes("what's")
+      q.includes("what's") ||
+      (
+        q.includes("what does") &&
+        q.includes("mean")
+      )
     )
   ) {
     return [
@@ -1582,9 +1592,13 @@ export default function Ask() {
             getCanonicalArgReply(trimmed, messages);
           const answer =
             canonicalArgReply ?? apiRes.data.answer;
+          /*
+           * Act I lore is client-canonical for now. Older backend intrusion
+           * responses are intentionally ignored until their story rules are
+           * migrated to the new ARG bible.
+           */
           const isArgReply =
-            canonicalArgReply != null ||
-            apiRes.data.nova_intrusion === true;
+            canonicalArgReply != null;
 
           const responsePersonality =
             apiRes.data.ask_personality &&
