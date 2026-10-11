@@ -59,6 +59,7 @@ import {
   type CompanionIslandKeepsake,
   type CompanionIslandResident,
 } from "../_lib/commonCompanionFriendship";
+import { markSeventeenthStarDiscovered } from "../utils/argState";
 
 const ISLAND_GUIDE_PREFIX =
   "@nova/islandGuide.v2:";
@@ -2102,6 +2103,7 @@ export default function IslandScreen() {
                   placementId
                 )
               ) {
+                void markSeventeenthStarDiscovered();
                 setShowSeventeenthStarModal(
                   true
                 );
