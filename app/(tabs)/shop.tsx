@@ -1507,8 +1507,12 @@ function ItemDetailModal({
                 delayLongPress={1100}
                 onLongPress={() => {
                   if (item.id === "plushie_bunny_white") {
-                    setShowWhiteRabbitTrace(true);
-                    void markWhiteRabbitDiscovered();
+                    void markWhiteRabbitDiscovered()
+                      .then((unlocked) => {
+                        if (unlocked) {
+                          setShowWhiteRabbitTrace(true);
+                        }
+                      });
                   }
                 }}
               >
