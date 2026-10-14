@@ -1565,7 +1565,9 @@ function ItemDetailModal({
                   </Text>
                   <Text
                     style={{
-                      color: tokens.text as any,
+                      color: tokens.isDark
+                        ? "#d6a447"
+                        : "#7c5200",
                       fontSize: 12,
                       lineHeight: 18,
                       fontWeight: "700",
