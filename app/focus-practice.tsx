@@ -16,6 +16,10 @@ import {
   getFocusTopicInsights,
   type FocusTopicInsight,
 } from "./_lib/focusPracticeInsights";
+import {
+  getArgDiscoveryState,
+  markFocusPracticeNoteDiscovered,
+} from "./utils/argState";
 
 const CYAN = "#67e8f9";
 const CARD = "rgba(15,23,42,0.84)";
@@ -40,11 +44,26 @@ export default function FocusPracticeScreen() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [topics, setTopics] = useState<FocusTopicInsight[]>([]);
+  const [showArgNote, setShowArgNote] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      setTopics(await getFocusTopicInsights());
+      const [nextTopics, discovery] = await Promise.all([
+        getFocusTopicInsights(),
+        getArgDiscoveryState(),
+      ]);
+
+      setTopics(nextTopics);
+
+      const revealArgNote =
+        discovery.whiteRabbitDiscovered;
+
+      setShowArgNote(revealArgNote);
+
+      if (revealArgNote) {
+        void markFocusPracticeNoteDiscovered();
+      }
     } finally {
       setLoading(false);
     }
@@ -247,6 +266,42 @@ export default function FocusPracticeScreen() {
             ))}
           </View>
         )}
+
+        {showArgNote ? (
+          <View
+            style={{
+              borderRadius: 14,
+              borderWidth: 1,
+              borderColor: "rgba(245,158,11,0.42)",
+              backgroundColor: "rgba(120,53,15,0.12)",
+              paddingHorizontal: 14,
+              paddingVertical: 12,
+            }}
+          >
+            <Text
+              style={{
+                color: "#d6a447",
+                fontSize: 10,
+                lineHeight: 15,
+                fontWeight: "900",
+                letterSpacing: 0.9,
+              }}
+            >
+              [N.V.]
+            </Text>
+            <Text
+              style={{
+                marginTop: 4,
+                color: "#d6a447",
+                fontSize: 12,
+                lineHeight: 18,
+                fontWeight: "700",
+              }}
+            >
+              {"don't delete the wrong ones.\ni need to see what i almost believed."}
+            </Text>
+          </View>
+        ) : null}
 
         <View style={styles.note}>
           <Ionicons
