@@ -397,6 +397,29 @@ function getCanonicalArgReply(
     }
   }
 
+  const asksWhereRabbitIs =
+    q.includes("where") ||
+    q.includes("find") ||
+    q.includes("look") ||
+    q.includes("which object") ||
+    q.includes("what object") ||
+    q.includes("how do i") ||
+    q === "what do you mean" ||
+    q === "what does that mean";
+
+  if (
+    !discovery.whiteRabbitDiscovered &&
+    recentArgText.includes(
+      "i remember it as an object"
+    ) &&
+    asksWhereRabbitIs
+  ) {
+    return [
+      "I've seen the rabbit with the things people can take home.",
+      "If you find it, don't let go right away.",
+    ].join("\n\n");
+  }
+
   return null;
 }
 
