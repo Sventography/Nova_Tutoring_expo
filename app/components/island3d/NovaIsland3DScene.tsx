@@ -86,6 +86,8 @@ type Props = {
   dailyQuestCelebrationToken?: number;
   onOpenDailyQuests?: () => void;
   onOpenArgEntryNote?: () => void;
+  onOpenLibraryNotebook?: () => void;
+  libraryNotebookUnlocked?: boolean;
   selectedMilestoneId: string;
   selectedDiscoveryKey: string | null;
   selectedDecorationPlacementId?: string | null;
@@ -14301,6 +14303,79 @@ function ForgottenGardenNote({
   );
 }
 
+function LibraryNotebook({
+  libraryPlacement,
+  onOpen,
+}: {
+  libraryPlacement: IslandPlacement | null;
+  onOpen?: () => void;
+}) {
+  const fallback = LANDMARK_POSITIONS.nova_library;
+  const transform = libraryPlacement?.transform;
+  const rotation = transform?.rotationY ?? 0;
+  const scale = transform?.scale ?? 1;
+  const x = transform?.x ?? fallback[0];
+  const y = transform?.y ?? fallback[1];
+  const z = transform?.z ?? fallback[2];
+  const localX = 1.43 * scale;
+  const localZ = 0.96 * scale;
+  const cos = Math.cos(rotation);
+  const sin = Math.sin(rotation);
+
+  const position: Vec3 = [
+    x + localX * cos + localZ * sin,
+    y + 0.055,
+    z - localX * sin + localZ * cos,
+  ];
+
+  return (
+    <group
+      position={position}
+      rotation={[0, rotation + 0.12, 0]}
+      onClick={(event) => {
+        event.stopPropagation();
+        onOpen?.();
+      }}
+    >
+      <ScreenSpaceTapTarget
+        pixels={55}
+        y={0.06}
+        minWorld={0.82}
+        maxWorld={2.5}
+      />
+      <mesh rotation={[-Math.PI / 2, 0, 0.12]}>
+        <boxGeometry args={[0.46, 0.32, 0.042]} />
+        <meshStandardMaterial
+          color="#76533b"
+          roughness={0.94}
+          metalness={0}
+        />
+      </mesh>
+      <mesh
+        position={[0.015, 0.029, 0]}
+        rotation={[-Math.PI / 2, 0, 0.12]}
+      >
+        <boxGeometry args={[0.37, 0.26, 0.012]} />
+        <meshStandardMaterial
+          color="#e9d9b4"
+          roughness={0.96}
+          metalness={0}
+        />
+      </mesh>
+      <mesh
+        position={[-0.13, 0.043, 0]}
+        rotation={[-Math.PI / 2, 0, 0.12]}
+      >
+        <boxGeometry args={[0.025, 0.25, 0.008]} />
+        <meshStandardMaterial
+          color="#b7883d"
+          roughness={0.91}
+        />
+      </mesh>
+    </group>
+  );
+}
+
 function IslandWorld({
   level,
   palette,
@@ -14315,6 +14390,8 @@ function IslandWorld({
   dailyQuestCelebrationToken,
   onOpenDailyQuests,
   onOpenArgEntryNote,
+  onOpenLibraryNotebook,
+  libraryNotebookUnlocked,
   builderEditing,
   selectedMilestoneId,
   selectedDiscoveryKey,
@@ -14345,6 +14422,8 @@ function IslandWorld({
   dailyQuestCelebrationToken: number;
   onOpenDailyQuests?: () => void;
   onOpenArgEntryNote?: () => void;
+  onOpenLibraryNotebook?: () => void;
+  libraryNotebookUnlocked?: boolean;
   builderEditing: boolean;
   selectedMilestoneId: string;
   selectedDiscoveryKey: string | null;
@@ -14694,6 +14773,21 @@ function IslandWorld({
           />
         ) : null}
 
+        {!builderEditing &&
+        libraryNotebookUnlocked &&
+        level >= 3 &&
+        (
+          !builderEnabled ||
+          builderPlacementByItemId.has("nova_library")
+        ) ? (
+          <LibraryNotebook
+            libraryPlacement={
+              builderPlacementByItemId.get("nova_library") ?? null
+            }
+            onOpen={onOpenLibraryNotebook}
+          />
+        ) : null}
+
         {ISLAND_MILESTONES.map(
           (milestone) => (
             <LandmarkObject
@@ -14778,6 +14872,8 @@ export default function NovaIsland3DScene({
   dailyQuestCelebrationToken = 0,
   onOpenDailyQuests,
   onOpenArgEntryNote,
+  onOpenLibraryNotebook,
+  libraryNotebookUnlocked,
   selectedMilestoneId,
   selectedDiscoveryKey,
   selectedDecorationPlacementId = null,
@@ -15872,6 +15968,12 @@ const selectLegendary =
           }
           onOpenArgEntryNote={
             onOpenArgEntryNote
+          }
+          onOpenLibraryNotebook={
+            onOpenLibraryNotebook
+          }
+          libraryNotebookUnlocked={
+            libraryNotebookUnlocked
           }
           builderEditing={
             builderEditing
