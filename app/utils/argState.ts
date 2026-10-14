@@ -8,12 +8,15 @@ export const ARG_SEVENTEENTH_STAR_DISCOVERED_KEY =
   "@nova/arg/act1/seventeenth-star-discovered.v1";
 export const ARG_ENTRY_NOTE_DISCOVERED_KEY =
   "@nova/arg/act1/entry-note-discovered.v1";
+export const ARG_FOCUS_NOTE_DISCOVERED_KEY =
+  "@nova/arg/act1/focus-note-discovered.v1";
 
 export type ArgDiscoveryState = {
   nvDiscovered: boolean;
   whiteRabbitDiscovered: boolean;
   seventeenthStarDiscovered: boolean;
   entryNoteDiscovered: boolean;
+  focusPracticeNoteDiscovered: boolean;
 };
 
 function normalize(value: string): string {
@@ -155,6 +158,7 @@ export async function getArgDiscoveryState(): Promise<ArgDiscoveryState> {
     ARG_WHITE_RABBIT_DISCOVERED_KEY,
     ARG_SEVENTEENTH_STAR_DISCOVERED_KEY,
     ARG_ENTRY_NOTE_DISCOVERED_KEY,
+    ARG_FOCUS_NOTE_DISCOVERED_KEY,
   ]);
 
   const values = new Map(pairs);
@@ -167,6 +171,8 @@ export async function getArgDiscoveryState(): Promise<ArgDiscoveryState> {
       values.get(ARG_SEVENTEENTH_STAR_DISCOVERED_KEY) === "1",
     entryNoteDiscovered:
       values.get(ARG_ENTRY_NOTE_DISCOVERED_KEY) === "1",
+    focusPracticeNoteDiscovered:
+      values.get(ARG_FOCUS_NOTE_DISCOVERED_KEY) === "1",
   };
 }
 
@@ -191,6 +197,14 @@ export async function markSeventeenthStarDiscovered(): Promise<void> {
 export async function markEntryNoteDiscovered(): Promise<void> {
   await AsyncStorage.setItem(
     ARG_ENTRY_NOTE_DISCOVERED_KEY,
+    "1"
+  );
+}
+
+
+export async function markFocusPracticeNoteDiscovered(): Promise<void> {
+  await AsyncStorage.setItem(
+    ARG_FOCUS_NOTE_DISCOVERED_KEY,
     "1"
   );
 }
