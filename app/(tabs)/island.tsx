@@ -3366,7 +3366,7 @@ const styles = StyleSheet.create({
     maxWidth: 360,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "rgba(180,148,96,0.72)",
+    borderColor: "rgba(202,138,4,0.72)",
     backgroundColor: "#efe3c5",
     paddingHorizontal: 24,
     paddingVertical: 24,
@@ -3387,11 +3387,11 @@ const styles = StyleSheet.create({
   argNoteRule: {
     width: 54,
     height: 2,
-    backgroundColor: "rgba(92,67,40,0.36)",
+    backgroundColor: "rgba(202,138,4,0.62)",
     marginBottom: 18,
   },
   argNoteBody: {
-    color: "#3f3123",
+    color: "#9a6700",
     fontSize: 15,
     lineHeight: 23,
     fontWeight: "600",
