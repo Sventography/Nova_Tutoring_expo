@@ -10,12 +10,21 @@ export const ARG_ENTRY_NOTE_DISCOVERED_KEY =
   "@nova/arg/act1/entry-note-discovered.v1";
 export const ARG_FOCUS_NOTE_DISCOVERED_KEY =
   "@nova/arg/act1/focus-note-discovered.v1";
+export const ARG_TELESCOPE_CLUE_UNLOCKED_KEY =
+  "@nova/arg/act1/telescope-clue-unlocked.v1";
+export const ARG_WHITE_RABBIT_CLUE_UNLOCKED_KEY =
+  "@nova/arg/act1/white-rabbit-clue-unlocked.v1";
+export const ARG_FOCUS_PRACTICE_UNLOCKED_KEY =
+  "@nova/arg/act1/focus-practice-unlocked.v1";
 
 export type ArgDiscoveryState = {
   nvDiscovered: boolean;
   whiteRabbitDiscovered: boolean;
   seventeenthStarDiscovered: boolean;
   entryNoteDiscovered: boolean;
+  telescopeClueUnlocked: boolean;
+  whiteRabbitClueUnlocked: boolean;
+  focusPracticeUnlocked: boolean;
   focusPracticeNoteDiscovered: boolean;
   focusPracticeNoteSeenAt: number | null;
 };
@@ -160,6 +169,9 @@ export async function getArgDiscoveryState(): Promise<ArgDiscoveryState> {
     ARG_SEVENTEENTH_STAR_DISCOVERED_KEY,
     ARG_ENTRY_NOTE_DISCOVERED_KEY,
     ARG_FOCUS_NOTE_DISCOVERED_KEY,
+    ARG_TELESCOPE_CLUE_UNLOCKED_KEY,
+    ARG_WHITE_RABBIT_CLUE_UNLOCKED_KEY,
+    ARG_FOCUS_PRACTICE_UNLOCKED_KEY,
   ]);
 
   const values = new Map(pairs);
@@ -171,20 +183,50 @@ export async function getArgDiscoveryState(): Promise<ArgDiscoveryState> {
    */
   const entryNoteDiscovered =
     values.get(ARG_ENTRY_NOTE_DISCOVERED_KEY) === "1";
-  const seventeenthStarDiscovered =
-    entryNoteDiscovered &&
+
+  /*
+   * New intermediate gates can infer old legitimate test progress from the
+   * later flag that used to represent the same completed step. That keeps
+   * existing dev installs usable without permitting a fresh out-of-order path.
+   */
+  const rawStarDiscovered =
     values.get(ARG_SEVENTEENTH_STAR_DISCOVERED_KEY) === "1";
+  const telescopeClueUnlocked =
+    entryNoteDiscovered &&
+    (
+      values.get(ARG_TELESCOPE_CLUE_UNLOCKED_KEY) === "1" ||
+      rawStarDiscovered
+    );
+  const seventeenthStarDiscovered =
+    telescopeClueUnlocked &&
+    rawStarDiscovered;
+
   const nvDiscovered =
     seventeenthStarDiscovered &&
     values.get(ARG_NV_DISCOVERED_KEY) === "1";
-  const whiteRabbitDiscovered =
-    nvDiscovered &&
+
+  const rawRabbitDiscovered =
     values.get(ARG_WHITE_RABBIT_DISCOVERED_KEY) === "1";
+  const whiteRabbitClueUnlocked =
+    nvDiscovered &&
+    (
+      values.get(ARG_WHITE_RABBIT_CLUE_UNLOCKED_KEY) === "1" ||
+      rawRabbitDiscovered
+    );
+  const whiteRabbitDiscovered =
+    whiteRabbitClueUnlocked &&
+    rawRabbitDiscovered;
 
   const rawFocusSeenAt =
     values.get(ARG_FOCUS_NOTE_DISCOVERED_KEY);
-  const focusPracticeNoteDiscovered =
+  const focusPracticeUnlocked =
     whiteRabbitDiscovered &&
+    (
+      values.get(ARG_FOCUS_PRACTICE_UNLOCKED_KEY) === "1" ||
+      rawFocusSeenAt != null
+    );
+  const focusPracticeNoteDiscovered =
+    focusPracticeUnlocked &&
     rawFocusSeenAt != null;
   const focusTimestamp =
     Number(rawFocusSeenAt);
@@ -194,6 +236,9 @@ export async function getArgDiscoveryState(): Promise<ArgDiscoveryState> {
     whiteRabbitDiscovered,
     seventeenthStarDiscovered,
     entryNoteDiscovered,
+    telescopeClueUnlocked,
+    whiteRabbitClueUnlocked,
+    focusPracticeUnlocked,
     focusPracticeNoteDiscovered,
     focusPracticeNoteSeenAt:
       focusPracticeNoteDiscovered &&
@@ -223,7 +268,7 @@ export async function markWhiteRabbitDiscovered(): Promise<boolean> {
   const state =
     await getArgDiscoveryState();
 
-  if (!state.nvDiscovered) {
+  if (!state.whiteRabbitClueUnlocked) {
     return false;
   }
 
@@ -238,7 +283,7 @@ export async function markSeventeenthStarDiscovered(): Promise<boolean> {
   const state =
     await getArgDiscoveryState();
 
-  if (!state.entryNoteDiscovered) {
+  if (!state.telescopeClueUnlocked) {
     return false;
   }
 
@@ -256,11 +301,56 @@ export async function markEntryNoteDiscovered(): Promise<void> {
   );
 }
 
-export async function markFocusPracticeNoteDiscovered(): Promise<boolean> {
+export async function markTelescopeClueUnlocked(): Promise<boolean> {
+  const state =
+    await getArgDiscoveryState();
+
+  if (!state.entryNoteDiscovered) {
+    return false;
+  }
+
+  await AsyncStorage.setItem(
+    ARG_TELESCOPE_CLUE_UNLOCKED_KEY,
+    "1"
+  );
+  return true;
+}
+
+export async function markWhiteRabbitClueUnlocked(): Promise<boolean> {
+  const state =
+    await getArgDiscoveryState();
+
+  if (!state.nvDiscovered) {
+    return false;
+  }
+
+  await AsyncStorage.setItem(
+    ARG_WHITE_RABBIT_CLUE_UNLOCKED_KEY,
+    "1"
+  );
+  return true;
+}
+
+export async function markFocusPracticeUnlocked(): Promise<boolean> {
   const state =
     await getArgDiscoveryState();
 
   if (!state.whiteRabbitDiscovered) {
+    return false;
+  }
+
+  await AsyncStorage.setItem(
+    ARG_FOCUS_PRACTICE_UNLOCKED_KEY,
+    "1"
+  );
+  return true;
+}
+
+export async function markFocusPracticeNoteDiscovered(): Promise<boolean> {
+  const state =
+    await getArgDiscoveryState();
+
+  if (!state.focusPracticeUnlocked) {
     return false;
   }
 
