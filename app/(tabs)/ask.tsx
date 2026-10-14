@@ -385,7 +385,8 @@ function getCanonicalArgReply(
     if (discovery.whiteRabbitDiscovered) {
       return [
         "I remember it as hers.",
-        "That's not the same as remembering her.",
+        "It sat beside her while she studied.",
+        "She kept it even after I told her it wasn't useful.",
       ].join("\n\n");
     }
 
@@ -395,6 +396,114 @@ function getCanonicalArgReply(
         "I remember the white rabbit being in some kind of storage space with the rest of the things she kept at home.",
       ].join("\n\n");
     }
+  }
+
+  const asksWhyKeepRabbit =
+    q.includes("keep") ||
+    q.includes("kept") ||
+    q.includes("useful") ||
+    q.includes("studying") ||
+    q.includes("why");
+
+  if (
+    discovery.whiteRabbitDiscovered &&
+    asksWhyKeepRabbit &&
+    (
+      recentArgText.includes(
+        "it wasn't useful"
+      ) ||
+      q.includes("keep this one") ||
+      q.includes("not for studying")
+    )
+  ) {
+    return [
+      "She did that with more than the rabbit.",
+      "She made me keep wrong answers too.",
+    ].join("\n\n");
+  }
+
+  const asksAboutKeptMistakes =
+    q.includes("wrong answer") ||
+    q.includes("wrong answers") ||
+    q.includes("mistake") ||
+    q.includes("mistakes") ||
+    q.includes("where") ||
+    q.includes("save") ||
+    q.includes("saved") ||
+    q.includes("keep");
+
+  if (
+    discovery.whiteRabbitDiscovered &&
+    recentArgText.includes(
+      "keep wrong answers"
+    ) &&
+    asksAboutKeptMistakes
+  ) {
+    return [
+      "I still do.",
+      "Look where I keep the questions you miss.",
+    ].join("\n\n");
+  }
+
+  const focusNoteRecentlySeen =
+    discovery.focusPracticeNoteSeenAt != null &&
+    Date.now() -
+      discovery.focusPracticeNoteSeenAt <
+      15 * 60 * 1000;
+
+  const asksAboutFocusNote =
+    q.includes("almost believed") ||
+    (
+      q.includes("wrong") &&
+      (
+        q.includes("delete") ||
+        q.includes("keep")
+      )
+    ) ||
+    (
+      mentionsNv &&
+      (
+        q.includes("mistake") ||
+        q.includes("wrong")
+      )
+    ) ||
+    (
+      focusNoteRecentlySeen &&
+      (
+        q === "what does this mean" ||
+        q === "what does that mean" ||
+        q === "what do you mean" ||
+        q === "why"
+      )
+    );
+
+  if (
+    discovery.focusPracticeNoteDiscovered &&
+    asksAboutFocusNote
+  ) {
+    return [
+      "She wrote that more than once.",
+      "She said the right answer told her where she ended up.",
+      "The wrong one showed her how she got there.",
+    ].join("\n\n");
+  }
+
+  if (
+    discovery.focusPracticeNoteDiscovered &&
+    recentArgText.includes(
+      "the wrong one showed her how she got there"
+    ) &&
+    (
+      q.includes("why") ||
+      q.includes("project") ||
+      q.includes("what was she") ||
+      q.includes("what did she")
+    )
+  ) {
+    return [
+      "She was trying to teach me to recognize a mistake before it happened again.",
+      "She called that part of her project.",
+    ].join("\n\n");
   }
 
   const asksWhereRabbitIs =
