@@ -218,9 +218,32 @@ function getCanonicalArgReply(
     asksWhatWasCounted
   ) {
     return [
-      "The note isn't about the marks on the chart.",
-      "It's about something farther away.",
-      "You only checked when there was enough light.",
+      "The chart was only a reference.",
+      "You were counting what you could see through glass.",
+      "I remember a lantern sitting beside it.",
+    ].join("\n\n");
+  }
+
+  const asksForArgClarification =
+    q === "what does that mean" ||
+    q === "what do you mean" ||
+    q === "what are you talking about" ||
+    q === "where should i look" ||
+    q === "where do i look" ||
+    q === "what should i do" ||
+    q.includes("how do i find") ||
+    q.includes("where can i find");
+
+  if (
+    discovery.entryNoteDiscovered &&
+    asksForArgClarification &&
+    recentArgText.includes(
+      "counting what you could see through glass"
+    )
+  ) {
+    return [
+      "Look around the island for something meant to look at the sky.",
+      "Bring a lantern close to it before you check again.",
     ].join("\n\n");
   }
 
