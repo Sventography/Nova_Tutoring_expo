@@ -381,8 +381,18 @@ function getCanonicalArgReply(
     return "She kept making me save things I thought were useless.";
   }
 
+  const asksWhyKeepRabbit =
+    q.includes("keep") ||
+    q.includes("kept") ||
+    q.includes("useful") ||
+    q.includes("studying") ||
+    q.includes("why");
+
   if (q.includes("rabbit")) {
-    if (discovery.whiteRabbitDiscovered) {
+    if (
+      discovery.whiteRabbitDiscovered &&
+      !asksWhyKeepRabbit
+    ) {
       return [
         "I remember it as hers.",
         "It sat beside her while she studied.",
@@ -390,20 +400,16 @@ function getCanonicalArgReply(
       ].join("\n\n");
     }
 
-    if (recentArgText.includes("white rabbit")) {
+    if (
+      !discovery.whiteRabbitDiscovered &&
+      recentArgText.includes("white rabbit")
+    ) {
       return [
         "I don't think it's a symbol.",
         "I remember the white rabbit being in some kind of storage space with the rest of the things she kept at home.",
       ].join("\n\n");
     }
   }
-
-  const asksWhyKeepRabbit =
-    q.includes("keep") ||
-    q.includes("kept") ||
-    q.includes("useful") ||
-    q.includes("studying") ||
-    q.includes("why");
 
   if (
     discovery.whiteRabbitDiscovered &&
