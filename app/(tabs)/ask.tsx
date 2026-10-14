@@ -475,6 +475,58 @@ function getCanonicalArgReply(
     ].join("\n\n");
   }
 
+  const notebookRecentlySeen =
+    discovery.libraryNotebookSeenAt != null &&
+    Date.now() - discovery.libraryNotebookSeenAt < 15 * 60 * 1000;
+
+  if (
+    discovery.libraryNotebookDiscovered &&
+    (
+      q.includes("notebook") ||
+      q.includes("both pages") ||
+      q.includes("remembered writing") ||
+      q.includes("crossed out") ||
+      (
+        q.includes("remember") &&
+        q.includes("answer")
+      ) ||
+      (
+        notebookRecentlySeen &&
+        (
+          q === "what does this mean" ||
+          q === "what does that mean" ||
+          q === "what do you mean" ||
+          q === "why" ||
+          q === "why did she write that"
+        )
+      )
+    )
+  ) {
+    return [
+      "She was sure she knew the answer the second time.",
+      "But she couldn't tell whether she'd learned it or only remembered seeing it written down.",
+      "She asked me to keep both versions.",
+    ].join("\n\n");
+  }
+
+  if (
+    discovery.libraryNotebookUnlocked &&
+    recentArgText.includes("she kept a notebook for it") &&
+    (
+      q.includes("where") ||
+      q.includes("which books") ||
+      q.includes("which library") ||
+      q.includes("can't find") ||
+      q.includes("where do i look") ||
+      q === "what do you mean"
+    )
+  ) {
+    return [
+      "The Library on your Island.",
+      "I remember it left by the reading hall.",
+    ].join("\n\n");
+  }
+
   const focusNoteRecentlySeen =
     discovery.focusPracticeNoteSeenAt != null &&
     Date.now() -
@@ -515,25 +567,6 @@ function getCanonicalArgReply(
       "She wrote that more than once.",
       "She said the right answer told her where she ended up.",
       "The wrong one showed her how she got there.",
-    ].join("\n\n");
-  }
-
-  if (
-    discovery.libraryNotebookDiscovered &&
-    (
-      q.includes("notebook") ||
-      q.includes("both pages") ||
-      q.includes("remembered writing") ||
-      (
-        q.includes("remember") &&
-        q.includes("answer")
-      )
-    )
-  ) {
-    return [
-      "She was sure she knew the answer the second time.",
-      "But she couldn't tell whether she'd learned it or only remembered seeing it written down.",
-      "She asked me to keep both versions.",
     ].join("\n\n");
   }
 
