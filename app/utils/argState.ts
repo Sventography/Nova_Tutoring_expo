@@ -164,44 +164,89 @@ export async function getArgDiscoveryState(): Promise<ArgDiscoveryState> {
 
   const values = new Map(pairs);
 
+  /*
+   * Act I is intentionally sequential. A later flag is ignored unless every
+   * prerequisite before it exists. This protects ordinary tutoring users from
+   * stray ARG UI and also neutralizes any stale/out-of-order test state.
+   */
+  const entryNoteDiscovered =
+    values.get(ARG_ENTRY_NOTE_DISCOVERED_KEY) === "1";
+  const seventeenthStarDiscovered =
+    entryNoteDiscovered &&
+    values.get(ARG_SEVENTEENTH_STAR_DISCOVERED_KEY) === "1";
+  const nvDiscovered =
+    seventeenthStarDiscovered &&
+    values.get(ARG_NV_DISCOVERED_KEY) === "1";
+  const whiteRabbitDiscovered =
+    nvDiscovered &&
+    values.get(ARG_WHITE_RABBIT_DISCOVERED_KEY) === "1";
+
+  const rawFocusSeenAt =
+    values.get(ARG_FOCUS_NOTE_DISCOVERED_KEY);
+  const focusPracticeNoteDiscovered =
+    whiteRabbitDiscovered &&
+    rawFocusSeenAt != null;
+  const focusTimestamp =
+    Number(rawFocusSeenAt);
+
   return {
-    nvDiscovered: values.get(ARG_NV_DISCOVERED_KEY) === "1",
-    whiteRabbitDiscovered:
-      values.get(ARG_WHITE_RABBIT_DISCOVERED_KEY) === "1",
-    seventeenthStarDiscovered:
-      values.get(ARG_SEVENTEENTH_STAR_DISCOVERED_KEY) === "1",
-    entryNoteDiscovered:
-      values.get(ARG_ENTRY_NOTE_DISCOVERED_KEY) === "1",
-    focusPracticeNoteDiscovered:
-      values.get(ARG_FOCUS_NOTE_DISCOVERED_KEY) != null,
-    focusPracticeNoteSeenAt: (() => {
-      const raw =
-        values.get(ARG_FOCUS_NOTE_DISCOVERED_KEY);
-      const timestamp = Number(raw);
-      return Number.isFinite(timestamp) &&
-        timestamp > 0
-        ? timestamp
-        : null;
-    })(),
+    nvDiscovered,
+    whiteRabbitDiscovered,
+    seventeenthStarDiscovered,
+    entryNoteDiscovered,
+    focusPracticeNoteDiscovered,
+    focusPracticeNoteSeenAt:
+      focusPracticeNoteDiscovered &&
+      Number.isFinite(focusTimestamp) &&
+      focusTimestamp > 0
+        ? focusTimestamp
+        : null,
   };
 }
 
-export async function markNvDiscovered(): Promise<void> {
-  await AsyncStorage.setItem(ARG_NV_DISCOVERED_KEY, "1");
+export async function markNvDiscovered(): Promise<boolean> {
+  const state =
+    await getArgDiscoveryState();
+
+  if (!state.seventeenthStarDiscovered) {
+    return false;
+  }
+
+  await AsyncStorage.setItem(
+    ARG_NV_DISCOVERED_KEY,
+    "1"
+  );
+  return true;
 }
 
-export async function markWhiteRabbitDiscovered(): Promise<void> {
-  await AsyncStorage.multiSet([
-    [ARG_NV_DISCOVERED_KEY, "1"],
-    [ARG_WHITE_RABBIT_DISCOVERED_KEY, "1"],
-  ]);
+export async function markWhiteRabbitDiscovered(): Promise<boolean> {
+  const state =
+    await getArgDiscoveryState();
+
+  if (!state.nvDiscovered) {
+    return false;
+  }
+
+  await AsyncStorage.setItem(
+    ARG_WHITE_RABBIT_DISCOVERED_KEY,
+    "1"
+  );
+  return true;
 }
 
-export async function markSeventeenthStarDiscovered(): Promise<void> {
+export async function markSeventeenthStarDiscovered(): Promise<boolean> {
+  const state =
+    await getArgDiscoveryState();
+
+  if (!state.entryNoteDiscovered) {
+    return false;
+  }
+
   await AsyncStorage.setItem(
     ARG_SEVENTEENTH_STAR_DISCOVERED_KEY,
     "1"
   );
+  return true;
 }
 
 export async function markEntryNoteDiscovered(): Promise<void> {
@@ -211,10 +256,17 @@ export async function markEntryNoteDiscovered(): Promise<void> {
   );
 }
 
+export async function markFocusPracticeNoteDiscovered(): Promise<boolean> {
+  const state =
+    await getArgDiscoveryState();
 
-export async function markFocusPracticeNoteDiscovered(): Promise<void> {
+  if (!state.whiteRabbitDiscovered) {
+    return false;
+  }
+
   await AsyncStorage.setItem(
     ARG_FOCUS_NOTE_DISCOVERED_KEY,
     String(Date.now())
   );
+  return true;
 }
