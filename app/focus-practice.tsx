@@ -57,7 +57,7 @@ export default function FocusPracticeScreen() {
       setTopics(nextTopics);
 
       const revealArgNote =
-        discovery.whiteRabbitDiscovered;
+        discovery.focusPracticeUnlocked;
 
       setShowArgNote(revealArgNote);
 
