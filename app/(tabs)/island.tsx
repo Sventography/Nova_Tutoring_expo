@@ -20,7 +20,7 @@ import {
   Modal,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -60,7 +60,9 @@ import {
   type CompanionIslandResident,
 } from "../_lib/commonCompanionFriendship";
 import {
+  getArgDiscoveryState,
   markEntryNoteDiscovered,
+  markLibraryNotebookDiscovered,
   markSeventeenthStarDiscovered,
 } from "../utils/argState";
 
@@ -1219,6 +1221,28 @@ export default function IslandScreen() {
     showArgEntryNote,
     setShowArgEntryNote,
   ] = useState(false);
+  const [
+    libraryNotebookUnlocked,
+    setLibraryNotebookUnlocked,
+  ] = useState(false);
+  const [
+    showLibraryNotebook,
+    setShowLibraryNotebook,
+  ] = useState(false);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      let active = true;
+      void getArgDiscoveryState().then((state) => {
+        if (active) {
+          setLibraryNotebookUnlocked(state.libraryNotebookUnlocked);
+        }
+      }).catch(() => {
+        if (active) setLibraryNotebookUnlocked(false);
+      });
+      return () => { active = false; };
+    }, [])
+  );
 
   useEffect(() => {
     if (
@@ -1983,6 +2007,12 @@ export default function IslandScreen() {
             onOpenArgEntryNote={() => {
               void markEntryNoteDiscovered();
               setShowArgEntryNote(true);
+            }}
+            libraryNotebookUnlocked={libraryNotebookUnlocked}
+            onOpenLibraryNotebook={() => {
+              void markLibraryNotebookDiscovered().then((unlocked) => {
+                if (unlocked) setShowLibraryNotebook(true);
+              });
             }}
             selectedMilestoneId={
               sceneSelectedMilestoneId
@@ -2907,6 +2937,30 @@ export default function IslandScreen() {
               {"\n\n"}I'm writing this down because tomorrow I'll probably decide I counted wrong and throw this away.
               {"\n\n"}Don't.
               {"\n\n"}If I forget why this matters, ask Nova what I was counting.
+            </Text>
+          </View>
+        </Pressable>
+      </Modal>
+
+      <Modal
+        visible={showLibraryNotebook}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowLibraryNotebook(false)}
+      >
+        <Pressable
+          style={styles.argNoteBackdrop}
+          onPress={() => setShowLibraryNotebook(false)}
+        >
+          <View pointerEvents="none" style={styles.argNoteCard}>
+            <View style={styles.argNoteRule} />
+            <Text style={styles.argNoteBody}>
+              Second attempt: correct.
+              {"\n\n"}I keep looking at the answer I crossed out.
+              {"\n\n"}I don't remember why it felt so familiar yesterday.
+              {"\n\n"}If I get it right tomorrow, how will I know whether I learned it or just remembered what I wrote?
+              {"\n\n"}Don't erase the first one.
+              {"\n\n"}— N.V.
             </Text>
           </View>
         </Pressable>
