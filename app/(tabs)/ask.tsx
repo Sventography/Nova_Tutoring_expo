@@ -31,7 +31,10 @@ import {
   type ArgDiscoveryState,
   classifyNvEntryPrompt,
   getArgDiscoveryState,
+  markFocusPracticeUnlocked,
   markNvDiscovered,
+  markTelescopeClueUnlocked,
+  markWhiteRabbitClueUnlocked,
   mentionsNv as promptMentionsNv,
 } from "../utils/argState";
 
@@ -1948,6 +1951,37 @@ export default function Ask() {
               argDiscovery,
               entryKind
             );
+
+          if (
+            canonicalArgReply?.includes(
+              "counting what you could see through glass"
+            ) ||
+            canonicalArgReply?.includes(
+              "something meant to look at the sky"
+            )
+          ) {
+            await markTelescopeClueUnlocked();
+          }
+
+          if (
+            canonicalArgReply?.includes(
+              "I remember a white rabbit before I remember a name."
+            )
+          ) {
+            await markWhiteRabbitClueUnlocked();
+          }
+
+          if (
+            canonicalArgReply?.includes(
+              "Look where I keep the questions you miss."
+            ) ||
+            canonicalArgReply?.startsWith(
+              "Focus Practice."
+            )
+          ) {
+            await markFocusPracticeUnlocked();
+          }
+
           const answer =
             canonicalArgReply ?? apiRes.data.answer;
           /*
