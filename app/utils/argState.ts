@@ -16,6 +16,10 @@ export const ARG_WHITE_RABBIT_CLUE_UNLOCKED_KEY =
   "@nova/arg/act1/white-rabbit-clue-unlocked.v1";
 export const ARG_FOCUS_PRACTICE_UNLOCKED_KEY =
   "@nova/arg/act1/focus-practice-unlocked.v1";
+export const ARG_LIBRARY_NOTEBOOK_UNLOCKED_KEY =
+  "@nova/arg/act1/library-notebook-unlocked.v1";
+export const ARG_LIBRARY_NOTEBOOK_DISCOVERED_KEY =
+  "@nova/arg/act1/library-notebook-discovered.v1";
 
 export type ArgDiscoveryState = {
   nvDiscovered: boolean;
@@ -27,6 +31,8 @@ export type ArgDiscoveryState = {
   focusPracticeUnlocked: boolean;
   focusPracticeNoteDiscovered: boolean;
   focusPracticeNoteSeenAt: number | null;
+  libraryNotebookUnlocked: boolean;
+  libraryNotebookDiscovered: boolean;
 };
 
 function normalize(value: string): string {
@@ -172,6 +178,8 @@ export async function getArgDiscoveryState(): Promise<ArgDiscoveryState> {
     ARG_TELESCOPE_CLUE_UNLOCKED_KEY,
     ARG_WHITE_RABBIT_CLUE_UNLOCKED_KEY,
     ARG_FOCUS_PRACTICE_UNLOCKED_KEY,
+    ARG_LIBRARY_NOTEBOOK_UNLOCKED_KEY,
+    ARG_LIBRARY_NOTEBOOK_DISCOVERED_KEY,
   ]);
 
   const values = new Map(pairs);
@@ -230,6 +238,12 @@ export async function getArgDiscoveryState(): Promise<ArgDiscoveryState> {
     rawFocusSeenAt != null;
   const focusTimestamp =
     Number(rawFocusSeenAt);
+  const libraryNotebookUnlocked =
+    focusPracticeNoteDiscovered &&
+    values.get(ARG_LIBRARY_NOTEBOOK_UNLOCKED_KEY) === "1";
+  const libraryNotebookDiscovered =
+    libraryNotebookUnlocked &&
+    values.get(ARG_LIBRARY_NOTEBOOK_DISCOVERED_KEY) === "1";
 
   return {
     nvDiscovered,
@@ -240,6 +254,8 @@ export async function getArgDiscoveryState(): Promise<ArgDiscoveryState> {
     whiteRabbitClueUnlocked,
     focusPracticeUnlocked,
     focusPracticeNoteDiscovered,
+    libraryNotebookUnlocked,
+    libraryNotebookDiscovered,
     focusPracticeNoteSeenAt:
       focusPracticeNoteDiscovered &&
       Number.isFinite(focusTimestamp) &&
@@ -358,5 +374,21 @@ export async function markFocusPracticeNoteDiscovered(): Promise<boolean> {
     ARG_FOCUS_NOTE_DISCOVERED_KEY,
     String(Date.now())
   );
+  return true;
+}
+
+export async function markLibraryNotebookUnlocked(): Promise<boolean> {
+  const state = await getArgDiscoveryState();
+  if (!state.focusPracticeNoteDiscovered) return false;
+
+  await AsyncStorage.setItem(ARG_LIBRARY_NOTEBOOK_UNLOCKED_KEY, "1");
+  return true;
+}
+
+export async function markLibraryNotebookDiscovered(): Promise<boolean> {
+  const state = await getArgDiscoveryState();
+  if (!state.libraryNotebookUnlocked) return false;
+
+  await AsyncStorage.setItem(ARG_LIBRARY_NOTEBOOK_DISCOVERED_KEY, "1");
   return true;
 }
