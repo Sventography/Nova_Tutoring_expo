@@ -1874,21 +1874,20 @@ export default function Ask() {
         } else {
           setErrorCode(null);
 
-          const entryKind =
+          const classifiedEntryKind =
             classifyNvEntryPrompt(trimmed);
           let argDiscovery =
             await getArgDiscoveryState();
 
-          if (
-            entryKind &&
-            !argDiscovery.nvDiscovered
-          ) {
-            await markNvDiscovered();
-            argDiscovery = {
-              ...argDiscovery,
-              nvDiscovered: true,
-            };
-          }
+          /*
+           * Source-code breadcrumbs reinforce N.V. only after the in-app
+           * trail has legitimately reached her. They are not alternate
+           * shortcuts into Act I.
+           */
+          const entryKind =
+            argDiscovery.nvDiscovered
+              ? classifiedEntryKind
+              : null;
 
           const normalizedArgPrompt =
             normalizeArgPrompt(trimmed);
@@ -1931,11 +1930,15 @@ export default function Ask() {
             unlockNvFromStarBridge &&
             !argDiscovery.nvDiscovered
           ) {
-            await markNvDiscovered();
-            argDiscovery = {
-              ...argDiscovery,
-              nvDiscovered: true,
-            };
+            const unlocked =
+              await markNvDiscovered();
+
+            if (unlocked) {
+              argDiscovery = {
+                ...argDiscovery,
+                nvDiscovered: true,
+              };
+            }
           }
 
           const canonicalArgReply =
