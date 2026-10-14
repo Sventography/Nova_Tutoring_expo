@@ -32,6 +32,7 @@ import {
   classifyNvEntryPrompt,
   getArgDiscoveryState,
   markFocusPracticeUnlocked,
+  markLibraryNotebookUnlocked,
   markNvDiscovered,
   markTelescopeClueUnlocked,
   markWhiteRabbitClueUnlocked,
@@ -514,6 +515,44 @@ function getCanonicalArgReply(
       "She wrote that more than once.",
       "She said the right answer told her where she ended up.",
       "The wrong one showed her how she got there.",
+    ].join("\n\n");
+  }
+
+  if (
+    discovery.libraryNotebookDiscovered &&
+    (
+      q.includes("notebook") ||
+      q.includes("both pages") ||
+      q.includes("remembered writing") ||
+      (
+        q.includes("remember") &&
+        q.includes("answer")
+      )
+    )
+  ) {
+    return [
+      "She was sure she knew the answer the second time.",
+      "But she couldn't tell whether she'd learned it or only remembered seeing it written down.",
+      "She asked me to keep both versions.",
+    ].join("\n\n");
+  }
+
+  // Only a player who has read the Focus Practice note can reach this
+  // notebook trail. The ordinary Island Library is otherwise unchanged.
+  if (
+    discovery.focusPracticeNoteDiscovered &&
+    recentArgText.includes("she called that part of her project") &&
+    (
+      q.includes("project") ||
+      q.includes("notebook") ||
+      q.includes("where") ||
+      q.includes("what was she working on")
+    )
+  ) {
+    return [
+      "She kept a notebook for it.",
+      "I remember seeing it by the books.",
+      "She never erased an answer. She crossed it out and wrote underneath.",
     ].join("\n\n");
   }
 
@@ -1980,6 +2019,14 @@ export default function Ask() {
             )
           ) {
             await markFocusPracticeUnlocked();
+          }
+
+          if (
+            canonicalArgReply?.includes(
+              "She kept a notebook for it."
+            )
+          ) {
+            await markLibraryNotebookUnlocked();
           }
 
           const answer =
