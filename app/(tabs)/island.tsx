@@ -3391,7 +3391,7 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   argNoteBody: {
-    color: "#9a6700",
+    color: "#7c5200",
     fontSize: 15,
     lineHeight: 23,
     fontWeight: "600",
