@@ -2115,10 +2115,14 @@ export default function IslandScreen() {
                   placementId
                 )
               ) {
-                void markSeventeenthStarDiscovered();
-                setShowSeventeenthStarModal(
-                  true
-                );
+                void markSeventeenthStarDiscovered()
+                  .then((unlocked) => {
+                    if (unlocked) {
+                      setShowSeventeenthStarModal(
+                        true
+                      );
+                    }
+                  });
               }
             }}
           />
