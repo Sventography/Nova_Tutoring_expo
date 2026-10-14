@@ -392,7 +392,7 @@ function getCanonicalArgReply(
     if (recentArgText.includes("white rabbit")) {
       return [
         "I don't think it's a symbol.",
-        "I remember it as an object.",
+        "I remember the white rabbit being in some kind of storage space with the rest of the things she kept at home.",
       ].join("\n\n");
     }
   }
@@ -410,13 +410,14 @@ function getCanonicalArgReply(
   if (
     !discovery.whiteRabbitDiscovered &&
     recentArgText.includes(
-      "i remember it as an object"
+      "some kind of storage space"
     ) &&
     asksWhereRabbitIs
   ) {
     return [
-      "I've seen the rabbit with the things people can take home.",
-      "If you find it, don't let go right away.",
+      "Not on the island.",
+      "Somewhere you can look through things people keep.",
+      "If you find the rabbit, don't let go right away.",
     ].join("\n\n");
   }
 
