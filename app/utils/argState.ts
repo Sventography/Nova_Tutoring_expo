@@ -17,6 +17,7 @@ export type ArgDiscoveryState = {
   seventeenthStarDiscovered: boolean;
   entryNoteDiscovered: boolean;
   focusPracticeNoteDiscovered: boolean;
+  focusPracticeNoteSeenAt: number | null;
 };
 
 function normalize(value: string): string {
@@ -172,7 +173,16 @@ export async function getArgDiscoveryState(): Promise<ArgDiscoveryState> {
     entryNoteDiscovered:
       values.get(ARG_ENTRY_NOTE_DISCOVERED_KEY) === "1",
     focusPracticeNoteDiscovered:
-      values.get(ARG_FOCUS_NOTE_DISCOVERED_KEY) === "1",
+      values.get(ARG_FOCUS_NOTE_DISCOVERED_KEY) != null,
+    focusPracticeNoteSeenAt: (() => {
+      const raw =
+        values.get(ARG_FOCUS_NOTE_DISCOVERED_KEY);
+      const timestamp = Number(raw);
+      return Number.isFinite(timestamp) &&
+        timestamp > 0
+        ? timestamp
+        : null;
+    })(),
   };
 }
 
@@ -205,6 +215,6 @@ export async function markEntryNoteDiscovered(): Promise<void> {
 export async function markFocusPracticeNoteDiscovered(): Promise<void> {
   await AsyncStorage.setItem(
     ARG_FOCUS_NOTE_DISCOVERED_KEY,
-    "1"
+    String(Date.now())
   );
 }
