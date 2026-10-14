@@ -415,6 +415,7 @@ function getCanonicalArgReply(
     discovery.whiteRabbitDiscovered &&
     asksWhyKeepRabbit &&
     (
+      q.includes("rabbit") ||
       recentArgText.includes(
         "it wasn't useful"
       ) ||
@@ -448,6 +449,25 @@ function getCanonicalArgReply(
     return [
       "I still do.",
       "Look where I keep the questions you miss.",
+    ].join("\n\n");
+  }
+
+  if (
+    discovery.whiteRabbitDiscovered &&
+    recentArgText.includes(
+      "look where i keep the questions you miss"
+    ) &&
+    (
+      q.includes("where") ||
+      q.includes("which") ||
+      q.includes("what do you mean") ||
+      q.includes("what does that mean") ||
+      q.includes("how")
+    )
+  ) {
+    return [
+      "Focus Practice.",
+      "I keep missed questions there even after you correct them.",
     ].join("\n\n");
   }
 
