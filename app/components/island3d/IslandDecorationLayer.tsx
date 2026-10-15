@@ -1,8 +1,9 @@
 // app/components/island3d/IslandDecorationLayer.tsx
-import React, { useMemo, useRef } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { Platform } from "react-native";
 import { useFrame, useThree } from "@react-three/fiber/native";
 import * as THREE from "three";
+import NorasLastLantern from "./NorasLastLantern";
 
 import { useIslandBuilder } from "../../context/IslandBuilderContext";
 import { useIslandDecorations } from "../../context/IslandDecorationContext";
@@ -1295,6 +1296,24 @@ function DecorationTapTarget({
   );
 }
 
+// Local development preview only. No catalog listing, ownership, or persisted placement.
+// This must never be enabled in a production build.
+function NorasLanternDeveloperPreview({ isEditing }: { isEditing: boolean }) {
+  const [fireworksTrigger, setFireworksTrigger] = useState(0);
+  if (process.env.EXPO_PUBLIC_NORAS_LANTERN_PREVIEW !== "true" || !__DEV__) return null;
+  return (
+    <group
+      position={[3.5, 0.72, 3.5]}
+      onClick={(event) => {
+        event.stopPropagation();
+        if (!isEditing) setFireworksTrigger((value) => value + 1);
+      }}
+    >
+      <NorasLastLantern fireworksTrigger={fireworksTrigger} />
+    </group>
+  );
+}
+
 export default function IslandDecorationLayer({
   onSelectDecoration,
   onInspectDecoration,
@@ -1317,6 +1336,7 @@ export default function IslandDecorationLayer({
 
   return (
     <group>
+      <NorasLanternDeveloperPreview isEditing={isEditing} />
       {placements.map((placement) => {
         const item = ISLAND_DECORATION_CATALOG_BY_ID[placement.itemId];
         if (!item) return null;
