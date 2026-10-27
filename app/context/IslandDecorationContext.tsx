@@ -18,7 +18,7 @@ import {
   type IslandDecorationCatalogItem,
 } from "../_lib/islandDecorationCatalog";
 import { clampIslandBuildPosition } from "../_lib/islandBuilderBounds";
-import { decorationGroundRadius, findNearestFreeGround, landmarkGroundRadius, overlapsGround } from "../_lib/islandAutoPlacement";
+import { decorationGroundRadius, findNearestFreeGround, landmarkGroundRadius, overlapsGround, developerCastleObstacle } from "../_lib/islandAutoPlacement";
 import { useIslandBuilder } from "./IslandBuilderContext";
 import { useCoins } from "./CoinsContext";
 import { useIsland } from "./IslandContext";
@@ -314,6 +314,8 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
   }));
   // Fixed quest plaza is not part of the editable builder catalog.
   landmarkObstacles.push({ x: 4.9, z: 0.55, radius: 2.4 });
+  const castle = developerCastleObstacle(landmarkObstacles);
+  if (castle) landmarkObstacles.push(castle);
 
   const [ready, setReady] = useState(false);
   const [committed, setCommitted] = useState<DecorationState>(emptyState);
