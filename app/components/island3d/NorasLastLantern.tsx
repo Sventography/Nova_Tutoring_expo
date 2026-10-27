@@ -11,6 +11,7 @@ const CYAN = "#67e8f9";
 const PURPLE = "#c4b5fd";
 const FIREWORK_COLORS = [GOLD, CYAN, PURPLE];
 const BURST_DURATION = 7.5;
+const AWAKENING_SECONDS = 2.2;
 const AMBER = "#ffe4a3";
 const DEEP = "#211a3d";
 
@@ -55,7 +56,7 @@ function Tower({ x, height, radius = 0.44 }: { x: number; height: number; radius
   );
 }
 
-function Fireworks({ trigger = 0 }: { trigger: number }) {
+function Fireworks({ trigger = 0, delay = 0 }: { trigger: number; delay?: number }) {
   const group = useRef<THREE.Group>(null);
   const startedAt = useRef(-1000);
   const previousTrigger = useRef(trigger);
@@ -78,7 +79,7 @@ function Fireworks({ trigger = 0 }: { trigger: number }) {
     const time = clock.getElapsedTime();
     if (previousTrigger.current !== trigger) {
       previousTrigger.current = trigger;
-      startedAt.current = time;
+      startedAt.current = time + delay;
     }
     const elapsed = time - startedAt.current;
     if (!group.current) return;
@@ -157,12 +158,29 @@ function RoyalApproach() {
 export default function NorasLastLantern({ fireworksTrigger = 0 }: Props) {
   const glow = useRef<THREE.Mesh>(null);
   const crown = useRef<THREE.Group>(null);
+  const awakenedAt = useRef(-1000);
+  const previousTrigger = useRef(fireworksTrigger);
+  const towerBeacons = useRef<THREE.Group>(null);
   useFrame(({ clock }) => {
     const time = clock.getElapsedTime();
-    if (crown.current) crown.current.rotation.y = time * 0.16;
+    if (previousTrigger.current !== fireworksTrigger) {
+      previousTrigger.current = fireworksTrigger;
+      awakenedAt.current = time;
+    }
+    const elapsed = time - awakenedAt.current;
+    if (towerBeacons.current) {
+      towerBeacons.current.children.forEach((child, index) => {
+        const pulse = elapsed - (0.35 + index * 0.38);
+        child.visible = pulse >= 0 && pulse < 3.2;
+        if (child.visible) child.scale.setScalar(0.7 + Math.min(1, pulse * 1.8) * 0.8);
+      });
+    }
+    if (crown.current) crown.current.rotation.y += (elapsed >= 0 && elapsed < AWAKENING_SECONDS ? 0.55 : 0.16) / 60;
     if (!glow.current) return;
     const material = glow.current.material as THREE.MeshBasicMaterial;
-    material.opacity = 0.64 + 0.12 * Math.sin(time * 1.4);
+    const awakening = elapsed >= 0 && elapsed < AWAKENING_SECONDS
+      ? Math.sin(Math.PI * elapsed / AWAKENING_SECONDS) * 0.23 : 0;
+    material.opacity = 0.64 + 0.12 * Math.sin(time * 1.4) + awakening;
   });
   return (
     <group>
@@ -177,6 +195,17 @@ export default function NorasLastLantern({ fireworksTrigger = 0 }: Props) {
       </mesh>
       {[-2.05, 2.05].map(x => <Tower key={x} x={x} height={3.55} />)}
       {[-1.15, 1.15].map(x => <Tower key={x} x={x} height={2.1} radius={0.32} />)}
+      <group ref={towerBeacons}>
+        {[
+          [-1.15, 2.83, 0], [1.15, 2.83, 0],
+          [-2.05, 4.28, 0], [2.05, 4.28, 0],
+        ].map(([x, y, z], index) => (
+          <mesh key={index} position={[x, y, z]} visible={false}>
+            <sphereGeometry args={[0.3, 8, 6]} />
+            <meshBasicMaterial color={index < 2 ? CYAN : AMBER} transparent opacity={0.75} depthWrite={false} />
+          </mesh>
+        ))}
+      </group>
       <mesh position={[0, 1.35, 0]}>
         <cylinderGeometry args={[1.15, 1.35, 2.15, 10]} />
         <meshStandardMaterial color={STONE} roughness={0.62} />
@@ -222,7 +251,7 @@ export default function NorasLastLantern({ fireworksTrigger = 0 }: Props) {
           <meshBasicMaterial color="#7dd3fc" transparent opacity={0.8} />
         </mesh>
       ))}
-      <Fireworks trigger={fireworksTrigger} />
+      <Fireworks trigger={fireworksTrigger} delay={AWAKENING_SECONDS} />
     </group>
   );
 }
