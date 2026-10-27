@@ -66,3 +66,16 @@ export function overlapsGround(
     return dx * dx + dz * dz < min * min;
   });
 }
+
+/** Stable development castle footprint. Do not include player decorations here:
+ * doing so would move the castle when someone drags an object nearby. */
+export function developerCastleObstacle(
+  landmarks: readonly GroundObstacle[]
+): GroundObstacle | null {
+  if (!__DEV__ || process.env.EXPO_PUBLIC_NORAS_LANTERN_PREVIEW !== "true") return null;
+  const rawX = Number(process.env.EXPO_PUBLIC_NORAS_LANTERN_X ?? "-4");
+  const rawZ = Number(process.env.EXPO_PUBLIC_NORAS_LANTERN_Z ?? "-4");
+  const preferred = { x: Number.isFinite(rawX) ? rawX : -4, z: Number.isFinite(rawZ) ? rawZ : -4 };
+  const point = findNearestFreeGround(preferred, 2.8, landmarks, { maxDistance: 25 });
+  return point ? { ...point, radius: 2.8 } : null;
+}
