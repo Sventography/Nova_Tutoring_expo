@@ -36,6 +36,7 @@ from apple_subscriptions import (
   apple_subscription_configuration_status,
   register_apple_subscription_routes,
 )
+from collector_redemption import register_collector_routes
 from merch_checkout import (
   merch_checkout_configuration_status,
   register_merch_checkout_routes,
@@ -648,6 +649,12 @@ def _verify_supabase_access_token(access_token: str):
 
   return user if isinstance(user, dict) else None
 
+
+register_collector_routes(
+  app,
+  extract_bearer_token=_extract_bearer_token,
+  verify_access_token=_verify_supabase_access_token,
+)
 
 register_apple_subscription_routes(
   app,
