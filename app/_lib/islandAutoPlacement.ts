@@ -2,7 +2,7 @@
 // Approximate circular footprints are intentionally conservative and cheap on mobile.
 import { isIslandBuildPositionValid } from "./islandBuilderBounds";
 import { ISLAND_DECORATION_CATALOG_BY_ID } from "./islandDecorationCatalog";
-import { ISLAND_BUILDER_CATALOG_BY_ID } from "./islandBuilderCatalog";
+import { ISLAND_BUILDER_CATALOG, ISLAND_BUILDER_CATALOG_BY_ID } from "./islandBuilderCatalog";
 
 export type GroundObstacle = { x: number; z: number; radius: number };
 export type GroundPoint = { x: number; z: number };
@@ -76,6 +76,15 @@ export function developerCastleObstacle(
   const rawX = Number(process.env.EXPO_PUBLIC_NORAS_LANTERN_X ?? "-4");
   const rawZ = Number(process.env.EXPO_PUBLIC_NORAS_LANTERN_Z ?? "-4");
   const preferred = { x: Number.isFinite(rawX) ? rawX : -4, z: Number.isFinite(rawZ) ? rawZ : -4 };
-  const point = findNearestFreeGround(preferred, 2.8, landmarks, { maxDistance: 25 });
+  // Anchor against the canonical map, never against live movable landmarks.
+  // Otherwise moving a tree causes the preview castle to run away.
+  const fixed = [
+    { x: 4.9, z: 0.55, radius: 2.4 },
+    ...ISLAND_BUILDER_CATALOG.map(item => ({
+      x: item.defaultTransform.x, z: item.defaultTransform.z,
+      radius: landmarkGroundRadius(item.id, item.defaultTransform.scale),
+    })),
+  ];
+  const point = findNearestFreeGround(preferred, 2.8, fixed, { maxDistance: 25 });
   return point ? { ...point, radius: 2.8 } : null;
 }
