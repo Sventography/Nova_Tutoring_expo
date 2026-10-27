@@ -4,7 +4,7 @@ import { Platform } from "react-native";
 import { useFrame, useThree } from "@react-three/fiber/native";
 import * as THREE from "three";
 import NorasLastLantern from "./NorasLastLantern";
-import { decorationGroundRadius, findNearestFreeGround, type GroundObstacle } from "../../_lib/islandAutoPlacement";
+import { decorationGroundRadius, findNearestFreeGround, landmarkGroundRadius, type GroundObstacle } from "../../_lib/islandAutoPlacement";
 
 import { useIslandBuilder } from "../../context/IslandBuilderContext";
 import { useIslandDecorations } from "../../context/IslandDecorationContext";
@@ -1336,7 +1336,7 @@ export default function IslandDecorationLayer({
   ) => void;
   inspectedPlacementId?: string | null;
 }) {
-  const { isEditing } = useIslandBuilder();
+  const { isEditing, placements: landmarkPlacements } = useIslandBuilder();
   const keepsakes = useIslandKeepsakes();
   const {
     placements,
@@ -1352,6 +1352,11 @@ export default function IslandDecorationLayer({
         obstacles={[
           // Daily quest plaza is part of the scene, not the decoration inventory.
           { x: 4.9, z: 0.55, radius: 2.4 },
+          ...landmarkPlacements.map(p => ({
+            x: p.transform.x,
+            z: p.transform.z,
+            radius: landmarkGroundRadius(p.itemId, p.transform.scale),
+          })),
           ...placements.map(p => ({
             x: p.transform.x,
             z: p.transform.z,
