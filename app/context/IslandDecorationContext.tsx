@@ -18,7 +18,8 @@ import {
   type IslandDecorationCatalogItem,
 } from "../_lib/islandDecorationCatalog";
 import { clampIslandBuildPosition } from "../_lib/islandBuilderBounds";
-import { decorationGroundRadius, findNearestFreeGround } from "../_lib/islandAutoPlacement";
+import { decorationGroundRadius, findNearestFreeGround, landmarkGroundRadius, overlapsGround } from "../_lib/islandAutoPlacement";
+import { useIslandBuilder } from "./IslandBuilderContext";
 import { useCoins } from "./CoinsContext";
 import { useIsland } from "./IslandContext";
 import { useUser } from "./UserContext";
@@ -306,6 +307,13 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
   const userId = supabaseUserId ? String(supabaseUserId) : null;
   const { coins, ready: coinsReady, addCoins } = useCoins();
   const { islandLevel } = useIsland();
+  const islandBuilder = useIslandBuilder();
+  const landmarkObstacles = islandBuilder.placements.map(p => ({
+    x: p.transform.x, z: p.transform.z,
+    radius: landmarkGroundRadius(p.itemId, p.transform.scale),
+  }));
+  // Fixed quest plaza is not part of the editable builder catalog.
+  landmarkObstacles.push({ x: 4.9, z: 0.55, radius: 2.4 });
 
   const [ready, setReady] = useState(false);
   const [committed, setCommitted] = useState<DecorationState>(emptyState);
@@ -478,11 +486,14 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
         const free = findNearestFreeGround(
           { x: preferred.x, z: preferred.z },
           decorationGroundRadius(itemId, preferred.scale),
-          state.placements.map(p => ({
-            x: p.transform.x,
-            z: p.transform.z,
-            radius: decorationGroundRadius(p.itemId, p.transform.scale),
-          }))
+          [
+            ...landmarkObstacles,
+            ...state.placements.map(p => ({
+              x: p.transform.x,
+              z: p.transform.z,
+              radius: decorationGroundRadius(p.itemId, p.transform.scale),
+            })),
+          ]
         );
         // Keep the item in inventory when no safe location exists.
         if (!free) return false;
@@ -500,7 +511,7 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
       selectPlacement(id);
       return id;
     },
-    [getInventoryCount, mutateDraft, selectPlacement]
+    [getInventoryCount, mutateDraft, selectPlacement, landmarkObstacles]
   );
 
   const buyDecoration = useCallback(
@@ -677,11 +688,35 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
       mutateDraft((state) => {
         const p = state.placements.find((item) => item.placementId === id);
         if (!p) return false;
-        p.transform = normalizeTransform(p.itemId, { ...p.transform, ...transform });
+        const next = normalizeTransform(p.itemId, { ...p.transform, ...transform });
+        const obstacles = [
+          ...landmarkObstacles,
+          ...state.placements.filter(other => other.placementId !== id).map(other => ({
+            x: other.transform.x,
+            z: other.transform.z,
+            radius: decorationGroundRadius(other.itemId, other.transform.scale),
+          })),
+        ];
+        const oldOverlap = overlapsGround(
+          p.transform, decorationGroundRadius(p.itemId, p.transform.scale), obstacles
+        );
+        const newOverlap = overlapsGround(
+          next, decorationGroundRadius(p.itemId, next.scale), obstacles
+        );
+        // Don't trap existing saved layouts that already contain overlaps.
+        // Pure rotation is always allowed; otherwise reject new collisions.
+        if (newOverlap && !oldOverlap) return false;
+        if (newOverlap && oldOverlap && (next.x !== p.transform.x || next.z !== p.transform.z || next.scale !== p.transform.scale)) {
+          const penetration = (point: { x: number; z: number }, radius: number) =>
+            obstacles.reduce((sum, o) => sum + Math.max(0, radius + o.radius + 0.2 - Math.hypot(point.x - o.x, point.z - o.z)), 0);
+          if (penetration(next, decorationGroundRadius(p.itemId, next.scale)) >
+              penetration(p.transform, decorationGroundRadius(p.itemId, p.transform.scale)) + 0.001) return false;
+        }
+        p.transform = next;
         p.updatedAt = Date.now();
         return true;
       }),
-    [mutateDraft]
+    [mutateDraft, landmarkObstacles]
   );
 
   const rotatePlacement = useCallback(
