@@ -18,6 +18,7 @@ import {
   type IslandDecorationCatalogItem,
 } from "../_lib/islandDecorationCatalog";
 import { clampIslandBuildPosition } from "../_lib/islandBuilderBounds";
+import { decorationGroundRadius, findNearestFreeGround } from "../_lib/islandAutoPlacement";
 import { useCoins } from "./CoinsContext";
 import { useIsland } from "./IslandContext";
 import { useUser } from "./UserContext";
@@ -473,10 +474,22 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
 
       const id = newPlacementId(itemId);
       const ok = mutateDraft((state) => {
+        const preferred = spawnTransform(itemId);
+        const free = findNearestFreeGround(
+          { x: preferred.x, z: preferred.z },
+          decorationGroundRadius(itemId, preferred.scale),
+          state.placements.map(p => ({
+            x: p.transform.x,
+            z: p.transform.z,
+            radius: decorationGroundRadius(p.itemId, p.transform.scale),
+          }))
+        );
+        // Keep the item in inventory when no safe location exists.
+        if (!free) return false;
         state.placements.push({
           placementId: id,
           itemId,
-          transform: spawnTransform(itemId),
+          transform: { ...preferred, ...free },
           placedAt: Date.now(),
           updatedAt: Date.now(),
         });
