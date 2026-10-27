@@ -20,6 +20,7 @@ import {
   type IslandTransform,
 } from "../_lib/islandBuilderCatalog";
 import { useIsland } from "./IslandContext";
+import { developerCastleObstacle, landmarkGroundRadius, overlapsGround } from "../_lib/islandAutoPlacement";
 import { useUser } from "./UserContext";
 
 export type IslandPlacement = {
@@ -526,10 +527,26 @@ export function IslandBuilderProvider({
             ISLAND_BUILDER_CATALOG_BY_ID[placement.itemId];
           if (!item) return null;
 
-          placement.transform = normalizedTransform(
+          const next = normalizedTransform(
             { ...placement.transform, ...transform },
             item.defaultTransform
           );
+          const obstacles = state.placements
+            .filter(other => other.placementId !== placementId)
+            .map(other => ({
+              x: other.transform.x, z: other.transform.z,
+              radius: landmarkGroundRadius(other.itemId, other.transform.scale),
+            }));
+          obstacles.push({ x: 4.9, z: 0.55, radius: 2.4 });
+          const castle = developerCastleObstacle([]);
+          if (castle) obstacles.push(castle);
+          const radius = landmarkGroundRadius(placement.itemId, next.scale);
+          const oldRadius = landmarkGroundRadius(placement.itemId, placement.transform.scale);
+          const penetration = (p: { x: number; z: number }, r: number) =>
+            obstacles.reduce((sum, o) => sum + Math.max(0, r + o.radius + 0.2 - Math.hypot(p.x - o.x, p.z - o.z)), 0);
+          // Preserve legacy overlaps, but don't allow dragging further into one.
+          if (penetration(next, radius) > penetration(placement.transform, oldRadius) + 0.001) return null;
+          placement.transform = next;
           placement.updatedAt = Date.now();
           return state;
         })
