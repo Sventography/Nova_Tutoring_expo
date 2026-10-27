@@ -1301,9 +1301,12 @@ function DecorationTapTarget({
 function NorasLanternDeveloperPreview({ isEditing }: { isEditing: boolean }) {
   const [fireworksTrigger, setFireworksTrigger] = useState(0);
   if (process.env.EXPO_PUBLIC_NORAS_LANTERN_PREVIEW !== "true" || !__DEV__) return null;
+  // Preview position can be tuned without changing game code.
+  const previewX = Number(process.env.EXPO_PUBLIC_NORAS_LANTERN_X ?? "-4");
+  const previewZ = Number(process.env.EXPO_PUBLIC_NORAS_LANTERN_Z ?? "-4");
   return (
     <group
-      position={[3.5, 0.72, 3.5]}
+      position={[Number.isFinite(previewX) ? previewX : -4, 0.72, Number.isFinite(previewZ) ? previewZ : -4]}
       onClick={(event) => {
         event.stopPropagation();
         if (!isEditing) setFireworksTrigger((value) => value + 1);
