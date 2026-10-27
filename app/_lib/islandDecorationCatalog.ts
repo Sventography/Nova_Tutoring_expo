@@ -30,7 +30,8 @@ export type IslandDecorationModel =
   | "flower_bed"
   | "star_lantern"
   | "portal"
-  | "fountain";
+  | "fountain"
+  | "noras_last_lantern";
 
 export type IslandDecorationCategory =
   | "path"
@@ -95,6 +96,9 @@ export type IslandDecorationCatalogItem = {
 };
 
 export const ISLAND_DECORATION_CATALOG: IslandDecorationCatalogItem[] = [
+  // Reserved for a future server-verified #017 QR redemption. Not sold or granted here.
+  { id: "noras_last_lantern_017", unlockLevel: 1, title: "Nora's Last Lantern", shortTitle: "Last Lantern", description: "A light kept burning for the one who found the seventeenth star.", price: 0, previewEmoji: "🏰", accent: "#fbbf24", secondaryAccent: "#67e8f9", model: "noras_last_lantern", category: "fantasy", rarity: "rare", sourceType: "special", sourceLabel: "Collector #017 QR Reward", collectionLabel: "Nora's Archive", exclusivity: "one_time", shopVisible: false, defaultScale: 1, minScale: 1, maxScale: 1 },
+
   { id: "path_stone", unlockLevel: 1, title: "Path Stone", shortTitle: "Path Stone", description: "A tiny stepping stone for paths, courtyards, gardens, and trails.", price: 1, previewEmoji: "🪨", accent: "#cbd5e1", model: "stone", category: "path", rarity: "common", defaultScale: 1, minScale: 0.55, maxScale: 3.5 },
   { id: "starflower", unlockLevel: 1, title: "Starflower", shortTitle: "Starflower", description: "A bright little flower for borders, gardens, and colorful filler.", price: 2, previewEmoji: "🌼", accent: "#fde68a", model: "flower", category: "nature", rarity: "common", defaultScale: 1, minScale: 0.55, maxScale: 3.5 },
   { id: "glow_bush", unlockLevel: 1, title: "Glow Bush", shortTitle: "Glow Bush", description: "A lush rounded bush that makes empty areas feel alive.", price: 3, previewEmoji: "🌿", accent: "#86efac", model: "bush", category: "nature", rarity: "common", defaultScale: 1, minScale: 0.55, maxScale: 3.5 },
