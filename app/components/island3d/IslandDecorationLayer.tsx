@@ -4,6 +4,7 @@ import { Platform } from "react-native";
 import { useFrame, useThree } from "@react-three/fiber/native";
 import * as THREE from "three";
 import NorasLastLantern from "./NorasLastLantern";
+import { decorationGroundRadius, findNearestFreeGround, type GroundObstacle } from "../../_lib/islandAutoPlacement";
 
 import { useIslandBuilder } from "../../context/IslandBuilderContext";
 import { useIslandDecorations } from "../../context/IslandDecorationContext";
@@ -1298,15 +1299,22 @@ function DecorationTapTarget({
 
 // Local development preview only. No catalog listing, ownership, or persisted placement.
 // This must never be enabled in a production build.
-function NorasLanternDeveloperPreview({ isEditing }: { isEditing: boolean }) {
+function NorasLanternDeveloperPreview({ isEditing, obstacles }: { isEditing: boolean; obstacles: GroundObstacle[] }) {
   const [fireworksTrigger, setFireworksTrigger] = useState(0);
   if (process.env.EXPO_PUBLIC_NORAS_LANTERN_PREVIEW !== "true" || !__DEV__) return null;
   // Preview position can be tuned without changing game code.
   const previewX = Number(process.env.EXPO_PUBLIC_NORAS_LANTERN_X ?? "-4");
   const previewZ = Number(process.env.EXPO_PUBLIC_NORAS_LANTERN_Z ?? "-4");
+  const safe = findNearestFreeGround(
+    { x: Number.isFinite(previewX) ? previewX : -4, z: Number.isFinite(previewZ) ? previewZ : -4 },
+    2.8,
+    obstacles,
+    { maxDistance: 25 }
+  );
+  if (!safe) return null;
   return (
     <group
-      position={[Number.isFinite(previewX) ? previewX : -4, 0.72, Number.isFinite(previewZ) ? previewZ : -4]}
+      position={[safe.x, 0.72, safe.z]}
       onClick={(event) => {
         event.stopPropagation();
         if (!isEditing) setFireworksTrigger((value) => value + 1);
@@ -1339,7 +1347,18 @@ export default function IslandDecorationLayer({
 
   return (
     <group>
-      <NorasLanternDeveloperPreview isEditing={isEditing} />
+      <NorasLanternDeveloperPreview
+        isEditing={isEditing}
+        obstacles={[
+          // Daily quest plaza is part of the scene, not the decoration inventory.
+          { x: 4.9, z: 0.55, radius: 2.4 },
+          ...placements.map(p => ({
+            x: p.transform.x,
+            z: p.transform.z,
+            radius: decorationGroundRadius(p.itemId, p.transform.scale),
+          })),
+        ]}
+      />
       {placements.map((placement) => {
         const item = ISLAND_DECORATION_CATALOG_BY_ID[placement.itemId];
         if (!item) return null;
