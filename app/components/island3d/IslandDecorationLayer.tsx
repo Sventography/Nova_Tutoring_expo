@@ -759,6 +759,7 @@ function PortalModel({ item }: { item: IslandDecorationCatalogItem }) {
 }
 
 function Model({ item }: { item: IslandDecorationCatalogItem }) {
+  if (item.model === "noras_last_lantern") return <NorasLastLantern />;
   if (item.model === "stone") {
     return (
       <group>
@@ -1339,7 +1340,7 @@ export default function IslandDecorationLayer({
 
   return (
     <group>
-      <NorasLanternDeveloperPreview isEditing={isEditing} />
+      {!placements.some(p => p.itemId === "noras_last_lantern_017") && <NorasLanternDeveloperPreview isEditing={isEditing} />}
       {placements.map((placement) => {
         const item = ISLAND_DECORATION_CATALOG_BY_ID[placement.itemId];
         if (!item) return null;
