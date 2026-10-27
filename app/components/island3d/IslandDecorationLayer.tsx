@@ -4,7 +4,7 @@ import { Platform } from "react-native";
 import { useFrame, useThree } from "@react-three/fiber/native";
 import * as THREE from "three";
 import NorasLastLantern from "./NorasLastLantern";
-import { decorationGroundRadius, findNearestFreeGround, landmarkGroundRadius, type GroundObstacle } from "../../_lib/islandAutoPlacement";
+import { decorationGroundRadius, landmarkGroundRadius, developerCastleObstacle, type GroundObstacle } from "../../_lib/islandAutoPlacement";
 
 import { useIslandBuilder } from "../../context/IslandBuilderContext";
 import { useIslandDecorations } from "../../context/IslandDecorationContext";
