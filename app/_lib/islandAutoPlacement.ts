@@ -70,7 +70,7 @@ export function overlapsGround(
 /** Stable development castle footprint. Do not include player decorations here:
  * doing so would move the castle when someone drags an object nearby. */
 export function developerCastleObstacle(
-  landmarks: readonly GroundObstacle[]
+  _landmarks: readonly GroundObstacle[]
 ): GroundObstacle | null {
   if (!__DEV__ || process.env.EXPO_PUBLIC_NORAS_LANTERN_PREVIEW !== "true") return null;
   const rawX = Number(process.env.EXPO_PUBLIC_NORAS_LANTERN_X ?? "-4");
