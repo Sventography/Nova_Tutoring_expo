@@ -1302,15 +1302,7 @@ function DecorationTapTarget({
 function NorasLanternDeveloperPreview({ isEditing, obstacles }: { isEditing: boolean; obstacles: GroundObstacle[] }) {
   const [fireworksTrigger, setFireworksTrigger] = useState(0);
   if (process.env.EXPO_PUBLIC_NORAS_LANTERN_PREVIEW !== "true" || !__DEV__) return null;
-  // Preview position can be tuned without changing game code.
-  const previewX = Number(process.env.EXPO_PUBLIC_NORAS_LANTERN_X ?? "-4");
-  const previewZ = Number(process.env.EXPO_PUBLIC_NORAS_LANTERN_Z ?? "-4");
-  const safe = findNearestFreeGround(
-    { x: Number.isFinite(previewX) ? previewX : -4, z: Number.isFinite(previewZ) ? previewZ : -4 },
-    2.8,
-    obstacles,
-    { maxDistance: 25 }
-  );
+  const safe = developerCastleObstacle(obstacles);
   if (!safe) return null;
   return (
     <group
@@ -1356,11 +1348,6 @@ export default function IslandDecorationLayer({
             x: p.transform.x,
             z: p.transform.z,
             radius: landmarkGroundRadius(p.itemId, p.transform.scale),
-          })),
-          ...placements.map(p => ({
-            x: p.transform.x,
-            z: p.transform.z,
-            radius: decorationGroundRadius(p.itemId, p.transform.scale),
           })),
         ]}
       />
