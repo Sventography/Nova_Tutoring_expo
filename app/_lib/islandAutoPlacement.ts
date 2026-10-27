@@ -2,6 +2,7 @@
 // Approximate circular footprints are intentionally conservative and cheap on mobile.
 import { isIslandBuildPositionValid } from "./islandBuilderBounds";
 import { ISLAND_DECORATION_CATALOG_BY_ID } from "./islandDecorationCatalog";
+import { ISLAND_BUILDER_CATALOG_BY_ID } from "./islandBuilderCatalog";
 
 export type GroundObstacle = { x: number; z: number; radius: number };
 export type GroundPoint = { x: number; z: number };
@@ -47,4 +48,21 @@ export function findNearestFreeGround(
     }
   }
   return null;
+}
+
+export function landmarkGroundRadius(itemId: string, scale = 1): number {
+  const item = ISLAND_BUILDER_CATALOG_BY_ID[itemId];
+  const base = item?.category === "nature" ? 1.65
+    : item?.category === "water" ? 2.2 : 2.1;
+  return base * Math.max(0.3, scale);
+}
+export function overlapsGround(
+  point: GroundPoint, radius: number,
+  obstacles: readonly GroundObstacle[], gap = 0.2
+): boolean {
+  return obstacles.some(o => {
+    const dx = point.x - o.x, dz = point.z - o.z;
+    const min = radius + o.radius + gap;
+    return dx * dx + dz * dz < min * min;
+  });
 }
