@@ -4,7 +4,7 @@ import { Platform } from "react-native";
 import { useFrame, useThree } from "@react-three/fiber/native";
 import * as THREE from "three";
 import NorasLastLantern from "./NorasLastLantern";
-import { decorationGroundRadius, landmarkGroundRadius, developerCastleObstacle, type GroundObstacle } from "../../_lib/islandAutoPlacement";
+import { decorationGroundRadius, landmarkGroundRadius } from "../../_lib/islandAutoPlacement";
 
 import { useIslandBuilder } from "../../context/IslandBuilderContext";
 import { useIslandDecorations } from "../../context/IslandDecorationContext";
@@ -1299,11 +1299,11 @@ function DecorationTapTarget({
 
 // Local development preview only. No catalog listing, ownership, or persisted placement.
 // This must never be enabled in a production build.
-function NorasLanternDeveloperPreview({ isEditing, obstacles }: { isEditing: boolean; obstacles: GroundObstacle[] }) {
+function NorasLanternDeveloperPreview({ isEditing }: { isEditing: boolean }) {
   const [fireworksTrigger, setFireworksTrigger] = useState(0);
   if (process.env.EXPO_PUBLIC_NORAS_LANTERN_PREVIEW !== "true" || !__DEV__) return null;
-  const safe = developerCastleObstacle(obstacles);
-  if (!safe) return null;
+  // Diagnostic: force a fixed transform to isolate any placement recalculation.
+  const safe = { x: -10, z: 0 };
   return (
     <group
       position={[safe.x, 0.72, safe.z]}
@@ -1339,18 +1339,7 @@ export default function IslandDecorationLayer({
 
   return (
     <group>
-      <NorasLanternDeveloperPreview
-        isEditing={isEditing}
-        obstacles={[
-          // Daily quest plaza is part of the scene, not the decoration inventory.
-          { x: 4.9, z: 0.55, radius: 2.4 },
-          ...landmarkPlacements.map(p => ({
-            x: p.transform.x,
-            z: p.transform.z,
-            radius: landmarkGroundRadius(p.itemId, p.transform.scale),
-          })),
-        ]}
-      />
+      <NorasLanternDeveloperPreview isEditing={isEditing} />
       {placements.map((placement) => {
         const item = ISLAND_DECORATION_CATALOG_BY_ID[placement.itemId];
         if (!item) return null;
