@@ -37,3 +37,5 @@ jobs:
         run: npm ci --ignore-scripts
       - name: Typecheck Expo app
         run: npx tsc --noEmit --pretty false
+      - name: Export static Expo web route
+        run: npx expo export -p web
