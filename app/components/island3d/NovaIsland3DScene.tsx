@@ -15191,6 +15191,18 @@ export default function NovaIsland3DScene({
       []
     );
 
+  // Both touch buttons and pinch gestures update the same animated camera
+  // distance used on the web. No manual camera jumps or extra render loop.
+  const zoomIsland = useCallback((direction: "in" | "out") => {
+    const controls = controlsRef.current;
+    controls.desiredDistance = clamp(
+      controls.desiredDistance * (direction === "in" ? 0.8 : 1.25),
+      6.5,
+      90
+    );
+    velocityRef.current = { azimuth: 0, polar: 0 };
+  }, []);
+
   const resetView =
     useCallback(() => {
       controlsRef.current.desiredTarget =
@@ -15577,7 +15589,21 @@ const selectLegendary =
                     event.nativeEvent.touches[0]?.pageY ?? 0,
                 };
 
-              twoFingerGestureRef.current = null;
+              // When a gesture begins with two fingers, capture its original
+              // spacing immediately instead of discarding the first pinch move.
+              const initialTouches = event.nativeEvent.touches;
+              if (initialTouches.length >= 2) {
+                twoFingerGestureRef.current = {
+                  centerX: (initialTouches[0].pageX + initialTouches[1].pageX) / 2,
+                  centerY: (initialTouches[0].pageY + initialTouches[1].pageY) / 2,
+                  pinchDistance: Math.max(1, distanceBetweenTouches(initialTouches)),
+                  azimuth: controlsRef.current.desiredAzimuth,
+                  polar: controlsRef.current.desiredPolar,
+                  distance: controlsRef.current.desiredDistance,
+                };
+              } else {
+                twoFingerGestureRef.current = null;
+              }
 
               velocityRef.current =
                 {
@@ -15627,7 +15653,7 @@ const selectLegendary =
                 if (pinch > 0 && s.pinchDistance > 0) {
                   const ratio = pinch / s.pinchDistance;
                   controlsRef.current.desiredDistance =
-                    clamp(s.distance / Math.pow(ratio, 0.82), 6.5, 90);
+                    clamp(s.distance / Math.pow(ratio, 1.05), 6.5, 90);
                 }
 
                 velocityRef.current = { azimuth: 0, polar: 0 };
@@ -16303,6 +16329,33 @@ const selectLegendary =
           </Text>
         </Pressable>
 
+        {Platform.OS !== "web" ? (
+          <View style={styles.zoomButtons} pointerEvents="box-none">
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Zoom in on the island"
+              onPress={() => zoomIsland("in")}
+              style={({ pressed }) => [
+                styles.zoomButton,
+                pressed && styles.zoomButtonPressed,
+              ]}
+            >
+              <Ionicons name="add" size={22} color="#e0f2fe" />
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Zoom out from the island"
+              onPress={() => zoomIsland("out")}
+              style={({ pressed }) => [
+                styles.zoomButton,
+                pressed && styles.zoomButtonPressed,
+              ]}
+            >
+              <Ionicons name="remove" size={22} color="#e0f2fe" />
+            </Pressable>
+          </View>
+        ) : null}
+
         <View
           pointerEvents="none"
           style={
@@ -16469,6 +16522,26 @@ const styles =
       color: "#e0f2fe",
       fontSize: 10,
       fontWeight: "800",
+    },
+    zoomButtons: {
+      position: "absolute",
+      top: 100,
+      right: 12,
+      gap: 8,
+      alignItems: "center",
+    },
+    zoomButton: {
+      width: 42,
+      height: 42,
+      justifyContent: "center",
+      alignItems: "center",
+      borderRadius: 13,
+      borderWidth: 1,
+      borderColor: "rgba(186,230,253,0.35)",
+      backgroundColor: "rgba(2,6,23,0.78)",
+    },
+    zoomButtonPressed: {
+      backgroundColor: "rgba(8,145,178,0.36)",
     },
     selectedCard: {
       position: "absolute",
