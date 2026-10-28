@@ -3,7 +3,7 @@
 ## Current safety state (2026-10-28)
 
 - Feature branch: `feature/noras-last-lantern-3d`. Do not merge into the live Render release branch until end-to-end tests pass.
-- Private Supabase objects were installed in the active `nova-tutoring` project. SQL is preserved in `docs/collector-017-redemption-schema.sql` and `docs/collector-017-rate-limit.sql`.
+- Private Supabase objects were installed in the active `nova-tutoring` project. SQL is preserved in `docs/collector-017-redemption-schema.sql` `docs/collector-017-rate-limit.sql`, and `docs/collector-017-permanent-serial-burn.sql`.
 - **Zero production collector codes issued. Zero collector rewards granted.**
 - Server claims and client verification are OFF unless explicitly enabled.
 - The legacy 3D developer preview position was not changed.
@@ -15,7 +15,7 @@ Python Flask entrypoint is `server/server.py`. These settings belong in **Render
 - `COLLECTOR_DATABASE_URL`: Supabase PostgreSQL connection/pooler string using a trusted, server-only database login. The backend uses TLS (`sslmode=require`). Do not use a `EXPO_PUBLIC_` variable or distribute this string in an app build. A direct PostgreSQL connection is required because `collector_private` is intentionally not exposed through the Data API.
 - `COLLECTOR_REDEMPTION_ENABLED=false` until real test claims, schema and production release have been reviewed.
 
-The server uses the existing Supabase credentials to validate the caller's access token and **does not accept a user ID from the client**. The private database function performs the atomic, account-bound claim.
+The server uses the existing Supabase credentials to validate the caller's access token and **does not accept a user ID from the client**. The private database function performs the atomic, account-bound claim. A spent serial remains spent even if its original owner deletes their Nova account; the account reference is anonymized while the claim timestamp is retained.
 
 API endpoints:
 
@@ -39,8 +39,8 @@ All collector API responses are non-cacheable. Codes are SHA-256 hashed in the b
 ## Verification before any production activation
 
 1. Run `PYTHONPATH=server python -m unittest discover -s server/tests -p test_collector_redemption.py -v` (install Flask in the test environment first).
-2. Run `npx tsc --noEmit`, and `npx expo export -p web`. CI workflow `.github/workflows/collector-017-tests.yml` covers the first two.
-3. Confirm both SQL migration objects are present; anonymous/authenticated PostgreSQL roles must not have direct schema usage or function execute permissions.
+2. Run `npx tsc --noEmit`, and `npx expo export -p web`. CI workflow `.github/workflows/collector-017-tests.yml` is configured to run the Python tests, app typecheck, and a web export. Check the actual GitHub Actions run results before deployment; creating the workflow alone does not prove the tests passed.
+3. Confirm all three SQL migration stages are present; anonymous/authenticated PostgreSQL roles must not have direct schema usage or function execute permissions.
 4. In an isolated **staging** environment, provision only disposable test codes and test users; exercise first claim, same-owner retry, another-owner rejection, rate limits, and concurrency. Do not write disposable codes or fake users into production.
 5. Supply `COLLECTOR_DATABASE_URL` through Render secrets; confirm the secure connection and entitlement GET work with a real JWT. Review service logs without exposing tokens or codes.
 6. Verify the collector web route returns a page at `/collector`, works with a fragment URL, and is excluded from search engine indexing.
