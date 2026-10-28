@@ -45,6 +45,13 @@ def register_collector_routes(app, *, extract_bearer_token, verify_access_token)
             with psycopg.connect(database_url, connect_timeout=8) as conn:
                 with conn.cursor() as cur:
                     cur.execute(
+                        "select collector_private.allow_redemption_attempt(%s::uuid)",
+                        (user["id"],),
+                    )
+                    allowed = cur.fetchone()[0]
+                    if not allowed:
+                        return jsonify(ok=False, error="too_many_attempts"), 429
+                    cur.execute(
                         "select collector_private.claim_castle_017(%s::uuid, %s::text)",
                         (user["id"], code_hash),
                     )
