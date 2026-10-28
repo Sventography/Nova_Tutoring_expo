@@ -15004,6 +15004,10 @@ export default function NovaIsland3DScene({
   const interactionActiveRef =
     useRef(false);
 
+  // On the web, mouse/trackpad events arrive through the DOM rather than
+  // React Native's touch-only PanResponder. Native gesture logic is unchanged.
+  const webIslandSurfaceRef = useRef<View | null>(null);
+
   const novaOverlayRef =
     useRef<View | null>(
       null
@@ -15778,6 +15782,143 @@ const selectLegendary =
       [builderEditing, clearDecorationDrag, clearKeepsakeDrag, getArmedDecorationDrag, getArmedKeepsakeDrag, moveDecorationPlacement, moveKeepsake, queueBuilderMove, setInteractionActive]
     );
 
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+
+    const surface = webIslandSurfaceRef.current as unknown as
+      | { addEventListener?: (...args: any[]) => void; removeEventListener?: (...args: any[]) => void }
+      | null;
+    const browser = (globalThis as any).window;
+    if (!surface?.addEventListener || !browser?.addEventListener) return;
+
+    type PointerPosition = { x: number; y: number };
+    const pointers = new Map<number, PointerPosition>();
+    let start:
+      | { x: number; y: number; azimuth: number; polar: number; distance: number; spread: number }
+      | null = null;
+    let gestureActive = false;
+
+    const snapshot = () => {
+      const points = Array.from(pointers.values());
+      if (!points.length) {
+        start = null;
+        return;
+      }
+      const x = points.reduce((total, point) => total + point.x, 0) / points.length;
+      const y = points.reduce((total, point) => total + point.y, 0) / points.length;
+      const spread = points.length > 1
+        ? Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y)
+        : 0;
+      start = {
+        x,
+        y,
+        azimuth: controlsRef.current.desiredAzimuth,
+        polar: controlsRef.current.desiredPolar,
+        distance: controlsRef.current.desiredDistance,
+        spread,
+      };
+      velocityRef.current = { azimuth: 0, polar: 0 };
+    };
+
+    const onPointerDown = (event: any) => {
+      // Only the 3D viewport receives mouse orbit gestures. Clicking
+      // island buttons, panels, or a decoration without dragging still works.
+      if (builderEditing || (event.pointerType === "mouse" && event.button !== 0)) return;
+      if (event.target?.closest?.("button, a, input, select, textarea, [role='button']")) return;
+      if (event.pointerType === "mouse" && pointers.size > 0) return;
+      pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      snapshot();
+    };
+
+    const onPointerMove = (event: any) => {
+      if (!pointers.has(event.pointerId) || !start) return;
+      if (event.pointerType === "mouse" && !(event.buttons & 1)) {
+        pointers.clear();
+        start = null;
+        if (gestureActive) setInteractionActive(false);
+        gestureActive = false;
+        return;
+      }
+      pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      const points = Array.from(pointers.values());
+      const x = points.reduce((sum, point) => sum + point.x, 0) / points.length;
+      const y = points.reduce((sum, point) => sum + point.y, 0) / points.length;
+      const dx = x - start.x;
+      const dy = y - start.y;
+      const spread = points.length > 1
+        ? Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y)
+        : 0;
+      if (!gestureActive && Math.hypot(dx, dy) < 4 &&
+          !(points.length > 1 && Math.abs(spread - start.spread) >= 3)) return;
+
+      if (!gestureActive) {
+        gestureActive = true;
+        setInteractionActive(true);
+      }
+      if (event.cancelable) event.preventDefault();
+      // Drag to orbit; two fingers additionally pinch to zoom.
+      controlsRef.current.desiredAzimuth = start.azimuth - dx * 0.005;
+      controlsRef.current.desiredPolar = clamp(start.polar + dy * 0.0035, 0.38, 1.34);
+      if (points.length > 1 && spread > 0 && start.spread > 0) {
+        controlsRef.current.desiredDistance =
+          clamp(start.distance / Math.pow(spread / start.spread, 0.82), 6.5, 90);
+      }
+      velocityRef.current = { azimuth: 0, polar: 0 };
+    };
+
+    const onPointerEnd = (event: any) => {
+      if (!pointers.has(event.pointerId)) return;
+      pointers.delete(event.pointerId);
+      if (pointers.size === 0) {
+        start = null;
+        if (gestureActive) setInteractionActive(false);
+        gestureActive = false;
+      } else {
+        snapshot();
+      }
+    };
+
+    const onWheel = (event: any) => {
+      if (event.target?.closest?.("button, a, input, select, textarea, [role='button']")) return;
+      if (event.cancelable) event.preventDefault();
+      const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 240 : 1;
+      // Chrome on macOS emits ctrl+wheel for a trackpad pinch. A regular
+      // wheel or two-finger vertical scroll can also zoom the camera.
+      const factor = event.ctrlKey ? 0.012 : 0.0018;
+      controlsRef.current.desiredDistance = clamp(
+        controlsRef.current.desiredDistance *
+          Math.exp(clamp(event.deltaY * unit, -160, 160) * factor),
+        6.5,
+        90
+      );
+      velocityRef.current = { azimuth: 0, polar: 0 };
+    };
+
+    surface.addEventListener("pointerdown", onPointerDown);
+    browser.addEventListener("pointermove", onPointerMove);
+    browser.addEventListener("pointerup", onPointerEnd);
+    browser.addEventListener("pointercancel", onPointerEnd);
+    browser.addEventListener("blur", onWindowBlur);
+    surface.addEventListener("wheel", onWheel, { passive: false });
+
+    function onWindowBlur() {
+      pointers.clear();
+      start = null;
+      if (gestureActive) setInteractionActive(false);
+      gestureActive = false;
+    }
+
+    return () => {
+      surface.removeEventListener?.("pointerdown", onPointerDown);
+      browser.removeEventListener("pointermove", onPointerMove);
+      browser.removeEventListener("pointerup", onPointerEnd);
+      browser.removeEventListener("pointercancel", onPointerEnd);
+      browser.removeEventListener("blur", onWindowBlur);
+      surface.removeEventListener?.("wheel", onWheel);
+      if (gestureActive) setInteractionActive(false);
+    };
+  }, [builderEditing, setInteractionActive]);
+
   const selectedMilestone =
     ISLAND_MILESTONES.find(
       (item) =>
@@ -15883,6 +16024,7 @@ const selectLegendary =
 
   return (
     <View
+      ref={webIslandSurfaceRef}
       style={[
         styles.container,
         {
@@ -15917,7 +16059,7 @@ const selectLegendary =
           false
         );
       }}
-      {...panResponder.panHandlers}
+      {...(Platform.OS === "web" ? {} : panResponder.panHandlers)}
     >
       <LinearGradient
         colors={[
