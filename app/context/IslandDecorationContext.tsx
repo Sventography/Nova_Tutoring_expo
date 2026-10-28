@@ -10,6 +10,7 @@ import React, {
   type ReactNode,
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { COLLECTOR_REWARD_ID, fetchCollectorEntitlements } from "../_lib/collectorClient";
 
 import {
   ISLAND_DECORATION_CATALOG,
@@ -70,7 +71,7 @@ type PurchaseResult = {
 type GrantDecorationResult = {
   ok: boolean;
   ownedCount?: number;
-  reason?: "not_ready" | "unknown_item" | "save_failed";
+  reason?: "not_ready" | "unknown_item" | "save_failed" | "server_only";
 };
 
 type ContextValue = {
@@ -90,6 +91,7 @@ type ContextValue = {
     quantity?: number,
     acquiredAt?: number
   ) => Promise<GrantDecorationResult>;
+  refreshCollectorOwnership: () => Promise<boolean>;
   placeFromInventory: (itemId: string) => string | null;
   movePlacement: (placementId: string, transform: Partial<IslandDecorationTransform>) => boolean;
   rotatePlacement: (placementId: string, rotationY: number) => boolean;
@@ -133,6 +135,30 @@ const cloneState = (state: DecorationState): DecorationState => ({
   })),
   updatedAt: state.updatedAt,
 });
+
+/** Only the backend entitlement response may add the serial #017 castle. */
+function reconcileCollectorReward(state: DecorationState, grantedAt: string | null): DecorationState {
+  const next = cloneState(state);
+  if (grantedAt) {
+    next.ownedCounts[COLLECTOR_REWARD_ID] = 1;
+    next.firstAcquiredAt[COLLECTOR_REWARD_ID] = Date.parse(grantedAt);
+    next.firstAcquiredAtEstimated[COLLECTOR_REWARD_ID] = false;
+    let seen = false;
+    next.placements = next.placements.filter((placement) => {
+      if (placement.itemId !== COLLECTOR_REWARD_ID) return true;
+      if (seen) return false;
+      seen = true;
+      return true;
+    });
+  } else {
+    delete next.ownedCounts[COLLECTOR_REWARD_ID];
+    delete next.firstAcquiredAt[COLLECTOR_REWARD_ID];
+    delete next.firstAcquiredAtEstimated[COLLECTOR_REWARD_ID];
+    next.placements = next.placements.filter((placement) => placement.itemId !== COLLECTOR_REWARD_ID);
+  }
+  next.updatedAt = Date.now();
+  return next;
+}
 
 const newPlacementId = (itemId: string) =>
   `${itemId}:${Date.now().toString(36)}:${Math.random().toString(36).slice(2, 8)}`;
@@ -303,7 +329,8 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
   const {
     supabaseUserId,
     ready: userReady,
-  } = (useUser() || {}) as any;
+    session,
+  } = useUser();
   const userId = supabaseUserId ? String(supabaseUserId) : null;
   const { coins, ready: coinsReady, addCoins } = useCoins();
   const { islandLevel } = useIsland();
@@ -318,6 +345,10 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
   if (castle) landmarkObstacles.push(castle);
 
   const [ready, setReady] = useState(false);
+  const [confirmedCollectorAccount, setConfirmedCollectorAccount] = useState<string | null>(null);
+  const loadedAccountRef = useRef<string | null | undefined>(undefined);
+  const accountRef = useRef(userId);
+  accountRef.current = userId;
   const [committed, setCommitted] = useState<DecorationState>(emptyState);
   const [draft, setDraft] = useState<DecorationState | null>(null);
   const [selectedPlacementId, setSelectedPlacementId] = useState<string | null>(null);
@@ -348,6 +379,8 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
     }
 
     let cancelled = false;
+    loadedAccountRef.current = undefined;
+    setConfirmedCollectorAccount(null);
     setReady(false);
     setDraft(null);
     draftRef.current = null;
@@ -360,12 +393,14 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
         const next = raw ? normalizeState(JSON.parse(raw)) : emptyState();
         if (cancelled) return;
         committedRef.current = next;
+        loadedAccountRef.current = userId;
         setCommitted(next);
       } catch (error) {
         console.warn("[IslandDecorationContext] load error", error);
         if (!cancelled) {
           const fallback = emptyState();
           committedRef.current = fallback;
+          loadedAccountRef.current = userId;
           setCommitted(fallback);
         }
       } finally {
@@ -376,8 +411,58 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
     return () => { cancelled = true; };
   }, [userId, userReady]);
 
+  const refreshCollectorOwnership = useCallback(async (): Promise<boolean> => {
+    if (!ready || !userId || !session?.access_token || loadedAccountRef.current !== userId) {
+      setConfirmedCollectorAccount(null);
+      return false;
+    }
+    try {
+      const entitlements = await fetchCollectorEntitlements(session.access_token);
+      const reward = entitlements.find((item) => item.reward_id === COLLECTOR_REWARD_ID);
+      if (accountRef.current !== userId || loadedAccountRef.current !== userId) return false;
+      const next = reconcileCollectorReward(committedRef.current, reward?.granted_at ?? null);
+      const nextDraft = draftRef.current
+        ? reconcileCollectorReward(draftRef.current, reward?.granted_at ?? null)
+        : null;
+      await persist(next);
+      if (accountRef.current !== userId || loadedAccountRef.current !== userId) return false;
+      committedRef.current = next;
+      setCommitted(next);
+      if (nextDraft) {
+        draftRef.current = nextDraft;
+        setDraft(nextDraft);
+      }
+      setConfirmedCollectorAccount(reward ? userId : null);
+      return !!reward;
+    } catch (error) {
+      // Offline or unconfigured: hide the castle, but preserve the local layout
+      // until the server can authoritatively reconcile it on a later login.
+      if (accountRef.current === userId) setConfirmedCollectorAccount(null);
+      console.warn("[IslandDecorationContext] collector ownership unavailable", error);
+      return false;
+    }
+  }, [persist, ready, session?.access_token, userId]);
+
+  useEffect(() => {
+    if (!ready || !userId || loadedAccountRef.current !== userId) return;
+    void refreshCollectorOwnership();
+  }, [ready, userId, refreshCollectorOwnership]);
+
   const active = draft ?? committed;
   const isEditing = draft !== null;
+  const collectorIsVerified = !!userId && confirmedCollectorAccount === userId;
+  const visiblePlacements = useMemo(
+    () => collectorIsVerified
+      ? active.placements
+      : active.placements.filter((p) => p.itemId !== COLLECTOR_REWARD_ID),
+    [active.placements, collectorIsVerified]
+  );
+  const visibleCommittedPlacements = useMemo(
+    () => collectorIsVerified
+      ? committed.placements
+      : committed.placements.filter((p) => p.itemId !== COLLECTOR_REWARD_ID),
+    [committed.placements, collectorIsVerified]
+  );
 
   const selectPlacement = useCallback((id: string | null) => {
     armedDragRef.current = null;
@@ -432,16 +517,20 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
   );
 
   const getInventoryCount = useCallback((itemId: string) => {
+    if (itemId === COLLECTOR_REWARD_ID && !collectorIsVerified) return 0;
     const source = draftRef.current ?? committedRef.current;
     const owned = source.ownedCounts[itemId] || 0;
     const placed = source.placements.filter((p) => p.itemId === itemId).length;
     return Math.max(0, owned - placed);
-  }, []);
+  }, [collectorIsVerified]);
 
   const getOwnershipInfo = useCallback(
     (
       itemId: string
     ): IslandDecorationOwnershipInfo => {
+      if (itemId === COLLECTOR_REWARD_ID && !collectorIsVerified) {
+        return { ownedCount: 0, firstAcquiredAt: null, estimated: false };
+      }
       const ownedCount =
         Math.max(
           0,
@@ -474,12 +563,14 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
       active.firstAcquiredAt,
       active.firstAcquiredAtEstimated,
       active.ownedCounts,
+      collectorIsVerified,
     ]
   );
 
   const placeFromInventory = useCallback(
     (itemId: string): string | null => {
       if (!draftRef.current || !ISLAND_DECORATION_CATALOG_BY_ID[itemId]) return null;
+      if (itemId === COLLECTOR_REWARD_ID && !collectorIsVerified) return null;
       if (getInventoryCount(itemId) <= 0) return null;
 
       const id = newPlacementId(itemId);
@@ -513,7 +604,7 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
       selectPlacement(id);
       return id;
     },
-    [getInventoryCount, mutateDraft, selectPlacement, landmarkObstacles]
+    [getInventoryCount, mutateDraft, selectPlacement, landmarkObstacles, collectorIsVerified]
   );
 
   const buyDecoration = useCallback(
@@ -604,6 +695,9 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
 
       if (!item) {
         return { ok: false, reason: "unknown_item" };
+      }
+      if (itemId === COLLECTOR_REWARD_ID) {
+        return { ok: false, reason: "server_only" };
       }
 
       const safeQuantity = Math.max(
@@ -816,8 +910,8 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
     ready,
     isEditing,
     catalog: ISLAND_DECORATION_CATALOG,
-    placements: active.placements,
-    committedPlacements: committed.placements,
+    placements: visiblePlacements,
+    committedPlacements: visibleCommittedPlacements,
     selectedPlacementId,
     selectPlacement,
     startEditing,
@@ -825,6 +919,7 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
     saveEditing,
     buyDecoration,
     grantDecoration,
+    refreshCollectorOwnership,
     placeFromInventory,
     movePlacement,
     rotatePlacement,
@@ -837,7 +932,8 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
     getArmedDecorationDrag,
     clearDecorationDrag,
   }), [
-    active.placements,
+    visiblePlacements,
+    visibleCommittedPlacements,
     armDecorationDrag,
     buyDecoration,
     cancelEditing,
@@ -847,6 +943,7 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
     getOwnershipInfo,
     getInventoryCount,
     grantDecoration,
+    refreshCollectorOwnership,
     isEditing,
     moveAllToInventory,
     movePlacement,
