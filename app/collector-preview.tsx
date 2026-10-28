@@ -3,6 +3,15 @@ import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 /** Unlisted preview. Authenticity and claims require server verification. */
 export default function CollectorCertificatePreview() {
+  // This design-only screen must never reveal collector lore on a production
+  // page; the actual QR route only reveals serials after server verification.
+  if (!__DEV__) {
+    return (
+      <View style={{ flex: 1, backgroundColor: "#120d22", alignItems: "center", justifyContent: "center" }}>
+        <Text style={{ color: "#d7cbe4" }}>The collector archive is sealed.</Text>
+      </View>
+    );
+  }
   return (
     <ScrollView style={styles.page} contentContainerStyle={styles.content}>
       <Text style={styles.kicker}>NOVA // ARCHIVE</Text>
