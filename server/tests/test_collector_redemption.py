@@ -21,8 +21,8 @@ REWARD = "noras_last_lantern_017"
 class MemoryDatabase:
     def __init__(self):
         self.codes = {
-            hashlib.sha256(CODE_017.encode()).hexdigest(): [17, None],
-            hashlib.sha256(CODE_OTHER.encode()).hexdigest(): [23, None],
+            hashlib.sha256(CODE_017.encode()).hexdigest(): [17, None, None],
+            hashlib.sha256(CODE_OTHER.encode()).hexdigest(): [23, None, None],
         }
         self.entitlements = {}
         self.attempts = {}
@@ -67,20 +67,19 @@ class Cursor:
             self.result = (self.db.attempts[user] <= 5,)
         elif "select serial_number, claimed_by" in sql:
             item = self.db.codes.get(params[0])
-            self.result = tuple(item) if item else None
+            self.result = tuple(item[:2]) if item else None
         elif "claim_castle_017" in sql:
             user, code_hash = params
             item = self.db.codes.get(code_hash)
             if not item or item[0] != 17:
                 status = "invalid"
-            elif item[1] == user:
-                status = "already_yours"
-            elif item[1] is not None:
-                status = "already_claimed"
+            elif item[2] is not None:
+                status = "already_yours" if item[1] == user else "already_claimed"
             elif user in self.db.entitlements:
                 status = "already_owned"
             else:
                 item[1] = user
+                item[2] = datetime.now(timezone.utc)
                 self.db.entitlements[user] = (REWARD, datetime.now(timezone.utc))
                 status = "claimed"
             self.result = (status,)
@@ -163,6 +162,14 @@ class CollectorRoutesTest(unittest.TestCase):
         self.assertEqual(self.post("redeem").json["status"], "already_yours")
         self.assertEqual(self.post("redeem", token="bob").status_code, 409)
         self.assertEqual(len(self.db.entitlements), 1)
+
+    def test_account_deletion_does_not_reissue_the_serial(self):
+        self.assertEqual(self.post("redeem").status_code, 200)
+        item = self.db.codes[hashlib.sha256(CODE_017.encode()).hexdigest()]
+        item[1] = None  # Auth FK anonymizes owner on account deletion.
+        self.db.entitlements.clear()  # Owner's entitlement cascades away.
+        self.assertIsNotNone(item[2])  # The physical serial stays spent.
+        self.assertEqual(self.post("redeem", token="bob").status_code, 409)
 
     def test_inventory_is_only_for_authenticated_owner(self):
         self.post("redeem")
