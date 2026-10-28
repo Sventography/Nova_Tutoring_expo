@@ -15022,25 +15022,57 @@ export default function NovaIsland3DScene({
           NOVA_SPRITE_BASE_HEIGHT *
           projection.scale;
 
-        novaOverlayRef.current?.setNativeProps(
-          {
-            style: {
-              left:
-                projection.x -
-                width / 2,
-              top:
-                projection.y -
-                height +
-                4,
-              width,
-              height,
-              opacity:
-                projection.visible
-                  ? 1
-                  : 0,
-            },
+        const overlay =
+          novaOverlayRef.current;
+
+        if (!overlay) {
+          return;
+        }
+
+        const left =
+          projection.x - width / 2;
+        const top =
+          projection.y - height + 4;
+        const opacity =
+          projection.visible ? 1 : 0;
+
+        if (Platform.OS === "web") {
+          // React Native Web gives View a DOM element ref, not the
+          // native setNativeProps API. Updating the DOM style directly
+          // also avoids re-rendering the whole 3D island each frame.
+          const webStyle = (
+            overlay as unknown as {
+              style?: {
+                left: string;
+                top: string;
+                width: string;
+                height: string;
+                opacity: string;
+              };
+            }
+          ).style;
+
+          if (webStyle) {
+            webStyle.left = `${left}px`;
+            webStyle.top = `${top}px`;
+            webStyle.width = `${width}px`;
+            webStyle.height = `${height}px`;
+            webStyle.opacity = String(opacity);
           }
-        );
+          return;
+        }
+
+        // Preserve the existing efficient imperative updates on iOS
+        // and Android, where setNativeProps is supported.
+        overlay.setNativeProps({
+          style: {
+            left,
+            top,
+            width,
+            height,
+            opacity,
+          },
+        });
       },
       []
     );
