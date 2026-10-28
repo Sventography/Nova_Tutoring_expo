@@ -758,8 +758,13 @@ function PortalModel({ item }: { item: IslandDecorationCatalogItem }) {
   );
 }
 
-function Model({ item }: { item: IslandDecorationCatalogItem }) {
-  if (item.model === "noras_last_lantern") return <NorasLastLantern />;
+function Model({ item, fireworksTrigger = 0 }: {
+  item: IslandDecorationCatalogItem;
+  fireworksTrigger?: number;
+}) {
+  if (item.model === "noras_last_lantern") {
+    return <NorasLastLantern fireworksTrigger={fireworksTrigger} />;
+  }
   if (item.model === "stone") {
     return (
       <group>
@@ -1331,6 +1336,7 @@ export default function IslandDecorationLayer({
 }) {
   const { isEditing, placements: landmarkPlacements } = useIslandBuilder();
   const keepsakes = useIslandKeepsakes();
+  const [castleFireworks, setCastleFireworks] = useState<Record<string, number>>({});
   const {
     placements,
     selectedPlacementId,
@@ -1369,6 +1375,12 @@ export default function IslandDecorationLayer({
               event.stopPropagation();
 
               if (!isEditing) {
+                if (placement.itemId === "noras_last_lantern_017") {
+                  setCastleFireworks((current) => ({
+                    ...current,
+                    [placement.placementId]: (current[placement.placementId] || 0) + 1,
+                  }));
+                }
                 onInspectDecoration?.(
                   placement.placementId
                 );
@@ -1406,7 +1418,7 @@ export default function IslandDecorationLayer({
             <DecorationTapTarget
               item={item}
             />
-            <Model item={item} />
+            <Model item={item} fireworksTrigger={castleFireworks[placement.placementId] || 0} />
           </group>
         );
       })}
