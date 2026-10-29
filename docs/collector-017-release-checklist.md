@@ -50,13 +50,14 @@ This suite runs Flask's in-process test client with a mocked PostgreSQL connecti
 two pretend Auth accounts. No live JWTs, actual collector QR codes, real database
 passwords, or production schema writes are required.
 
-The 13 mock checks cover authentication, disabled endpoints, certificate response and
+The 13 mock checks (confirmed successful on the Mac, 2026-10-28) cover authentication, disabled endpoints, certificate response and
 no-cache headers, permanent single-use claims, own-account retry, cross-account
 rejection, owner identity privacy, deleted-account permanent serial burn and truthful
 claimed status, inventory isolation, no castle for other serials, malformed codes,
 shared verification/claim attempt quotas, and missing database configuration.
-An earlier version of the backend suite passed GitHub Actions. **The current 13-test
-version has not yet been executed in CI and must not be represented as a pass.**
+The user ran the updated 13-test mock suite on Mac: "Ran 13 tests ... OK".
+The new staging-Auth tests and their modified manual CI workflow are NOT yet
+independently verified; they must be run before staging is activated.
 
 Read-only verification of the active Supabase project confirmed on 2026-10-28 that
 the collector tables contain zero codes, zero grants and zero attempt records;
@@ -97,11 +98,12 @@ What it does:
 - Stops/removes its test container in `finally` even on failure. Docker must
   already be installed and running; the image may need to be downloaded.
 
-**Status:** Runner added to feature branch, but execution against Docker/Postgres
-and a real Supabase-authenticated staging app have *not* yet been verified.
-A green run of this suite checks the database SQL/Flask boundary; it is NOT a
-complete mobile QR deep-link/real-JWT/Render deployment test. Do not enable
-production redemption or print real QR codes based solely on this suite.
+**Status (2026-10-28):** GitHub Actions returned a green check for the
+manual isolated PostgreSQL staging workflow (user-provided screenshot).
+A later QR/API/Postgres smoke test was added to the runner after that run and
+has not yet been executed in CI. A green SQL workflow does NOT prove a real
+Supabase token, native deep link, or island inventory synchronization.
+Do not enable production redemption or print real physical QR codes.
 
 ### Optional one-click GitHub test (no Docker on your Mac)
 
@@ -182,6 +184,28 @@ exercise native `nova://` deep links, real Supabase JWTs/registration,
 the live island entitlement provider, or placing the castle on another device.
 Those require a separately configured staging Auth/backend environment;
 never test them with production codes or production grants.
+
+## Next milestone: separate Supabase Auth + actual Expo island inventory
+
+See **docs/collector-017-real-auth-staging.md** for the detailed setup and
+acceptance plan. Prepared feature-branch components:
+- server/collector_staging_server.py — uses the existing secure collector
+  routes but verifies tokens with a separate project's Supabase Auth.
+- server/collector_staging_seed.py — securely issues two disposable staging
+  QR codes and refuses Nova's actual projects or an existing edition.
+- app/_lib/collectorStaging.ts — refuses production Auth/backend configuration
+  and separates saved staging sessions from real Nova sessions.
+- app/collector-staging.tsx — unlinked staging-only view to compare backend
+  entitlements with real IslandDecorationProvider inventory.
+- scripts/test-collector-staging-config.cjs, server/tests/test_collector_staging_server.py,
+  and server/tests/test_collector_staging_seed.py — regression checks added
+  to the opt-in Collector 017 CI workflow.
+
+**Blocker:** The connected Supabase account currently has only live and
+inactive historical Nova projects. No isolated real-Auth staging project
+or separate HTTPS Render staging service has been provisioned. This
+milestone is PREPARED, not complete, and its new tests must still be run.
+Production collection remains disabled and no live codes are issued.
 
 ## Verification before any production activation
 
