@@ -1,12 +1,18 @@
 /** Server-authenticated collector API. No client-side entitlement grants. */
-import { COLLECTOR_STAGING_MODE } from "./collectorStaging";
+import {
+  COLLECTOR_STAGING_MODE,
+  COLLECTOR_STAGING_SUPABASE_URL,
+  COLLECTOR_STAGING_PUBLISHABLE_KEY,
+} from "./collectorStaging";
 export const COLLECTOR_REWARD_ID = "noras_last_lantern_017" as const;
 export const COLLECTOR_CLAIMS_ENABLED =
   process.env.EXPO_PUBLIC_COLLECTOR_REDEMPTION_ENABLED === "true";
 
 const API_BASE = (
-  process.env.EXPO_PUBLIC_BACKEND_URL ||
-  (COLLECTOR_STAGING_MODE ? "" : "https://nove-tutoring-backend.onrender.com")
+  COLLECTOR_STAGING_MODE
+    ? COLLECTOR_STAGING_SUPABASE_URL
+    : (process.env.EXPO_PUBLIC_BACKEND_URL ||
+       "https://nove-tutoring-backend.onrender.com")
 ).replace(/\/+$/, "");
 
 // Staging keeps the exact same response contract, but runs entirely on the
@@ -15,8 +21,9 @@ const API_BASE = (
 const COLLECTOR_ROUTE = COLLECTOR_STAGING_MODE
   ? "functions/v1/collector-staging"
   : "api/collector";
-const STAGING_PUBLISHABLE_KEY =
-  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || "";
+const STAGING_PUBLISHABLE_KEY = COLLECTOR_STAGING_MODE
+  ? COLLECTOR_STAGING_PUBLISHABLE_KEY
+  : "";
 
 export type CollectorEntitlement = {
   reward_id: typeof COLLECTOR_REWARD_ID;
