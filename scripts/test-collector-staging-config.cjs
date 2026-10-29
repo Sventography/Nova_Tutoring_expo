@@ -69,6 +69,29 @@ assert.equal(staging.COLLECTOR_STAGING_BUILD_ALLOWED, true);
 assert.equal(hostedPreview.COLLECTOR_STAGING_BUILD_ALLOWED, true);
 assert.equal(sealedRelease.COLLECTOR_STAGING_BUILD_ALLOWED, false);
 checks += 5;
+
+// Regression: local Expo .env / an old manifest can still contain live
+// values. Explicit collector staging MUST ignore them, on both JS runtime
+// and Expo's Node/SSR configuration path.
+const staleAuth = "https://owlbqyiqsyfcrpqqfacp.supabase.co";
+const staleBackend = "https://nove-tutoring-backend.onrender.com";
+const stageRuntime = staging.resolvedCollectorAppConfig(
+  staleAuth, "old-production-public-key", staleBackend
+);
+assert.equal(stageRuntime.supabaseUrl, authA);
+assert.equal(stageRuntime.backendUrl, authA);
+assert.equal(
+  stageRuntime.publicKey, staging.COLLECTOR_STAGING_PUBLISHABLE_KEY
+);
+assert.match(stageRuntime.publicKey, /^sb_publishable_/);
+const liveRuntime = production.resolvedCollectorAppConfig(
+  staleAuth, "old-production-public-key", staleBackend
+);
+assert.equal(liveRuntime.supabaseUrl, staleAuth);
+assert.equal(liveRuntime.backendUrl, staleBackend);
+assert.equal(liveRuntime.publicKey, "old-production-public-key");
+checks += 7;
+
 accepts(authA, backend);
 rejects(authB, backend);
 assert.equal(
@@ -125,4 +148,25 @@ assert.match(edge, /client\.auth\.getUser\(bearer\[1\]\)/);
 assert.match(edge, /collector_private\.claim_castle_017/);
 assert.match(edge, /collector_private\.allow_redemption_attempt/);
 checks += 7;
+
+// Guard both the Node-side Expo configuration and direct collector requests.
+// Production config branch must remain the original env-based behavior.
+const expoConfig = fs.readFileSync(
+  path.join(__dirname, "../app.config.js"), "utf8"
+);
+const appClient = fs.readFileSync(
+  path.join(__dirname, "../app/lib/supabase.ts"), "utf8"
+);
+const launcher = fs.readFileSync(
+  path.join(__dirname, "start-collector-staging-web.sh"), "utf8"
+);
+assert.match(expoConfig, /const collectorStaging =/);
+assert.match(expoConfig, /EXPO_PUBLIC_SUPABASE_URL: collectorStaging/);
+assert.match(expoConfig, /EXPO_PUBLIC_SUPABASE_ANON_KEY: collectorStaging/);
+assert.match(appClient, /resolvedCollectorAppConfig\(/);
+assert.match(collectorClient, /COLLECTOR_STAGING_SUPABASE_URL/);
+assert.match(collectorClient, /COLLECTOR_STAGING_PUBLISHABLE_KEY/);
+assert.match(launcher, /export EXPO_NO_DOTENV=1/);
+assert.match(launcher, /export EXPO_PUBLIC_COLLECTOR_STAGING_MODE=true/);
+checks += 8;
 console.log("Collector staging configuration: " + checks + " assertions passed.");
