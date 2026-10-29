@@ -1,0 +1,19 @@
+# Registration for GitHub's manual Run workflow button only.
+# The full security/app checks live on feature/noras-last-lantern-3d.
+# No push trigger, no deployment, and no production secrets.
+name: Collector 017 security and app checks
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  branch-selection:
+    # Manual runs should select the dedicated feature branch. On that branch,
+    # GitHub reads the full workflow file with collector-backend/collector-web.
+    if: github.ref == 'refs/heads/feature/noras-last-lantern-3d'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Feature branch selected; use the branch's collector security workflow."
