@@ -66,4 +66,14 @@ jobs:
           echo "::warning::Repository-wide TypeScript has known unrelated errors; touched-file diagnostics only were checked."
           echo "Total repository TS errors: $(grep -c 'error TS' /tmp/nova-tsc.log || true)"
       - name: Export static Expo web route
+        # This is a throwaway CI build, NOT a deployment. Use public-shaped,
+        # nonexistent test endpoints rather than live Nova credentials.
+        # The staging guard and Auth client both require nonblank config.
+        env:
+          EXPO_PUBLIC_COLLECTOR_STAGING_MODE: "true"
+          EXPO_PUBLIC_COLLECTOR_STAGING_WEB_PREVIEW: "true"
+          EXPO_PUBLIC_COLLECTOR_REDEMPTION_ENABLED: "false"
+          EXPO_PUBLIC_SUPABASE_URL: "https://abcdefghijklmnopqrst.supabase.co"
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: "ci-placeholder-not-a-real-supabase-key"
+          EXPO_PUBLIC_BACKEND_URL: "https://collector-ci.invalid"
         run: npx expo export -p web
