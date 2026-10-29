@@ -65,9 +65,9 @@ class Cursor:
             user = params[0]
             self.db.attempts[user] = self.db.attempts.get(user, 0) + 1
             self.result = (self.db.attempts[user] <= 5,)
-        elif "select serial_number, claimed_by" in sql:
+        elif "select serial_number, claimed_by, claimed_at" in sql:
             item = self.db.codes.get(params[0])
-            self.result = tuple(item[:2]) if item else None
+            self.result = tuple(item) if item else None
         elif "claim_castle_017" in sql:
             user, code_hash = params
             item = self.db.codes.get(code_hash)
@@ -169,7 +169,28 @@ class CollectorRoutesTest(unittest.TestCase):
         item[1] = None  # Auth FK anonymizes owner on account deletion.
         self.db.entitlements.clear()  # Owner's entitlement cascades away.
         self.assertIsNotNone(item[2])  # The physical serial stays spent.
+        verified = self.post("verify", token="bob")
+        self.assertEqual(verified.status_code, 200)
+        self.assertEqual(verified.json["claim_state"], "claimed")
         self.assertEqual(self.post("redeem", token="bob").status_code, 409)
+
+    def test_authenticity_tracks_claimed_state_without_exposing_owner(self):
+        self.assertEqual(self.post("redeem").status_code, 200)
+        owner = self.post("verify", token="alice")
+        stranger = self.post("verify", token="bob")
+        self.assertEqual(owner.status_code, 200)
+        self.assertEqual(owner.json["claim_state"], "yours")
+        self.assertEqual(stranger.json["claim_state"], "claimed")
+        for response in (owner, stranger):
+            self.assertNotIn("claimed_by", response.json)
+            self.assertNotIn("code_hash", response.json)
+            self.assertNotIn("user_id", response.json)
+
+    def test_disabled_endpoints_do_not_consume_attempts(self):
+        with patch.dict(os.environ, {"COLLECTOR_REDEMPTION_ENABLED": "false"}):
+            self.assertEqual(self.post("verify").status_code, 503)
+            self.assertEqual(self.post("redeem").status_code, 503)
+        self.assertEqual(self.db.attempts, {})
 
     def test_inventory_is_only_for_authenticated_owner(self):
         self.post("redeem")
@@ -189,6 +210,16 @@ class CollectorRoutesTest(unittest.TestCase):
         self.assertEqual(self.post("verify", "short").status_code, 400)
         self.assertEqual(self.post("redeem", "short").status_code, 400)
         self.assertEqual(self.post("verify", "C" * 43).status_code, 400)
+        self.assertEqual(self.post("verify", "X" * 129).status_code, 400)
+        self.assertEqual(self.post("verify", "../" + "a" * 40).status_code, 400)
+        self.assertEqual(self.post("verify", " " + "A" * 43).status_code, 400)
+
+    def test_claim_attempts_share_limit_with_verifications(self):
+        for _ in range(4):
+            self.assertEqual(self.post("verify", "C" * 43).status_code, 400)
+        self.assertEqual(self.post("redeem").status_code, 200)
+        self.assertEqual(self.post("redeem").status_code, 429)
+        self.assertEqual(self.db.attempts[USER_A], 6)
 
     def test_atomic_account_attempt_limit(self):
         for _ in range(5):
