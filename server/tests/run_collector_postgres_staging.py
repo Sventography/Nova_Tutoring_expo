@@ -351,6 +351,13 @@ def smoke_test_real_qr_browser_flow(dsn: str) -> None:
             certificate = client.get("/collector", base_url=base)
             assert certificate.status_code == 200
             assert certificate.headers["Referrer-Policy"] == "no-referrer"
+            scanned_markup = certificate.get_data(as_text=True)
+            assert qr17 not in scanned_markup and qr23 not in scanned_markup, (
+                "The scanned page leaked an unpresented QR code"
+            )
+            assert "data:image/svg+xml;base64," not in scanned_markup, (
+                "Only the Mac staging launcher may publish QR artwork"
+            )
 
             owner = client.post(
                 "/demo/login", json={"identity": "alice"}, base_url=base
