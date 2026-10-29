@@ -15849,6 +15849,29 @@ const selectLegendary =
       [builderEditing, clearDecorationDrag, clearKeepsakeDrag, getArmedDecorationDrag, getArmedKeepsakeDrag, moveDecorationPlacement, moveKeepsake, queueBuilderMove, setInteractionActive]
     );
 
+  // Keep pointer listeners stable while a selected item is being dragged.
+  // IslandDecorationContext's move function may change identity after state
+  // updates, so event handler closures use up-to-date refs instead of
+  // tearing down the web gesture mid-drag.
+  const webBuildMoveRef = useRef({
+    queueBuilderMove,
+    moveDecorationPlacement,
+    moveKeepsake,
+    getArmedDecorationDrag,
+    getArmedKeepsakeDrag,
+    clearDecorationDrag,
+    clearKeepsakeDrag,
+  });
+  webBuildMoveRef.current = {
+    queueBuilderMove,
+    moveDecorationPlacement,
+    moveKeepsake,
+    getArmedDecorationDrag,
+    getArmedKeepsakeDrag,
+    clearDecorationDrag,
+    clearKeepsakeDrag,
+  };
+
   useEffect(() => {
     if (Platform.OS !== "web") return;
 
@@ -15899,15 +15922,12 @@ const selectLegendary =
     const onPointerDown = (event: any) => {
       // BUILD mode must NOT disable the camera: this used to bail out
       // immediately in BUILD, making only wheel zoom functional.
-      // We still ignore explicit UI controls and preserve selected-item
-      // dragging: the 3D item handler arms it before this DOM event bubbles.
+      // The capture listener runs BEFORE R3F's item handlers. It records
+      // a possible camera gesture; once R3F arms a selected decoration,
+      // onPointerMove sends movement to the decoration instead of the view.
       if (event.pointerType === "mouse" && event.button !== 0 && event.button !== 2) return;
       if (event.target?.closest?.("button, a, input, select, textarea, [role='button']")) return;
       if (event.pointerType === "mouse" && pointers.size > 0) return;
-      if (builderEditing && event.button === 0 &&
-          (builderDragRef.current || getArmedDecorationDrag() || getArmedKeepsakeDrag())) {
-        return;
-      }
       mousePan = event.pointerType === "mouse" &&
         (event.button === 2 || event.shiftKey);
       mouseButton = event.pointerType === "mouse" ? event.button : 0;
@@ -15943,6 +15963,51 @@ const selectLegendary =
       }
       if (event.cancelable) event.preventDefault();
 
+      if (builderEditing && !start.pan && points.length === 1) {
+        const actions = webBuildMoveRef.current;
+        const landmarkDrag = builderDragRef.current;
+        const decorationDrag = actions.getArmedDecorationDrag();
+        const keepsakeDrag = actions.getArmedKeepsakeDrag();
+        if (landmarkDrag || decorationDrag || keepsakeDrag) {
+          // The object was selected by the 3D pointer handler. Move it in
+          // the ground plane; do not orbit or pan the camera at the same time.
+          const unitsPerPixel = clamp(start.distance / 1250, 0.007, 0.02);
+          const rightX = Math.cos(start.azimuth);
+          const rightZ = -Math.sin(start.azimuth);
+          const downX = Math.sin(start.azimuth);
+          const downZ = Math.cos(start.azimuth);
+          const deltaX = (dx * rightX + dy * downX) * unitsPerPixel;
+          const deltaZ = (dx * rightZ + dy * downZ) * unitsPerPixel;
+          if (landmarkDrag) {
+            const next = clampIslandBuildPosition(
+              landmarkDrag.x + deltaX, landmarkDrag.z + deltaZ,
+              landmarkDrag.scale, landmarkDrag.itemId
+            );
+            actions.queueBuilderMove(landmarkDrag.placementId, next.x, next.z);
+          } else if (decorationDrag) {
+            const next = clampIslandBuildPosition(
+              decorationDrag.transform.x + deltaX,
+              decorationDrag.transform.z + deltaZ,
+              decorationDrag.transform.scale,
+              decorationDrag.itemId
+            );
+            actions.moveDecorationPlacement(
+              decorationDrag.placementId, { x: next.x, z: next.z }
+            );
+          } else if (keepsakeDrag) {
+            const next = clampIslandBuildPosition(
+              keepsakeDrag.transform.x + deltaX,
+              keepsakeDrag.transform.z + deltaZ,
+              keepsakeDrag.transform.scale,
+              keepsakeDrag.key
+            );
+            actions.moveKeepsake(keepsakeDrag.key, { x: next.x, z: next.z });
+          }
+          velocityRef.current = { azimuth: 0, polar: 0 };
+          return;
+        }
+      }
+
       if (points.length > 1 || start.pan) {
         // Right-drag or Shift+left-drag pans the map without moving the
         // selected collectible. Two-finger touch pans and pinches to zoom.
@@ -15967,8 +16032,8 @@ const selectLegendary =
       // pointer might not be in our map. Clear drag arms on every release.
       if (builderEditing) {
         builderDragRef.current = null;
-        clearDecorationDrag();
-        clearKeepsakeDrag();
+        webBuildMoveRef.current.clearDecorationDrag();
+        webBuildMoveRef.current.clearKeepsakeDrag();
       }
       if (!pointers.has(event.pointerId)) return;
       pointers.delete(event.pointerId);
@@ -16003,10 +16068,13 @@ const selectLegendary =
       if (event.cancelable) event.preventDefault();
     };
 
-    surface.addEventListener("pointerdown", onPointerDown);
-    browser.addEventListener("pointermove", onPointerMove);
-    browser.addEventListener("pointerup", onPointerEnd);
-    browser.addEventListener("pointercancel", onPointerEnd);
+    // Capture is critical: R3F's canvas can consume pointer events before
+    // they bubble to this React Native Web View. Wheel was working because
+    // it used a different listener; orbit/pan appeared dead.
+    surface.addEventListener("pointerdown", onPointerDown, true);
+    browser.addEventListener("pointermove", onPointerMove, true);
+    browser.addEventListener("pointerup", onPointerEnd, true);
+    browser.addEventListener("pointercancel", onPointerEnd, true);
     browser.addEventListener("blur", onWindowBlur);
     surface.addEventListener("wheel", onWheel, { passive: false });
     surface.addEventListener("contextmenu", onContextMenu);
@@ -16015,28 +16083,23 @@ const selectLegendary =
       pointers.clear();
       start = null;
       builderDragRef.current = null;
-      clearDecorationDrag();
-      clearKeepsakeDrag();
+      webBuildMoveRef.current.clearDecorationDrag();
+      webBuildMoveRef.current.clearKeepsakeDrag();
       if (gestureActive) setInteractionActive(false);
       gestureActive = false;
     }
 
     return () => {
-      surface.removeEventListener?.("pointerdown", onPointerDown);
-      browser.removeEventListener("pointermove", onPointerMove);
-      browser.removeEventListener("pointerup", onPointerEnd);
-      browser.removeEventListener("pointercancel", onPointerEnd);
+      surface.removeEventListener?.("pointerdown", onPointerDown, true);
+      browser.removeEventListener("pointermove", onPointerMove, true);
+      browser.removeEventListener("pointerup", onPointerEnd, true);
+      browser.removeEventListener("pointercancel", onPointerEnd, true);
       browser.removeEventListener("blur", onWindowBlur);
       surface.removeEventListener?.("wheel", onWheel);
       surface.removeEventListener?.("contextmenu", onContextMenu);
       if (gestureActive) setInteractionActive(false);
     };
-  }, [
-    builderEditing,
-    getArmedDecorationDrag, getArmedKeepsakeDrag,
-    clearDecorationDrag, clearKeepsakeDrag,
-    setInteractionActive,
-  ]);
+  }, [builderEditing, setInteractionActive]);
 
   const selectedMilestone =
     ISLAND_MILESTONES.find(
@@ -16424,7 +16487,7 @@ const selectLegendary =
 
         {builderEditing ? (
           <View style={styles.cameraPad} pointerEvents="box-none">
-            <Text style={styles.cameraPadTitle}>MOVE CAMERA</Text>
+            <Text style={styles.cameraPadTitle}>MOVE CAMERA · BUILD v3</Text>
             <View style={styles.cameraPadRow}>
               <Pressable
                 accessibilityRole="button"
