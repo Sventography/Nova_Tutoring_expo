@@ -84,6 +84,36 @@ The Edge deployment is active, but a successful real JWT claim has not
 yet been observed. Passing existing PostgreSQL and mock tests does not
 replace that acceptance test.
 
+## Test-user status and one-command Mac startup (2026-10-29)
+
+Two NEW staging Auth users are present and email-confirmed. This was
+verified by a count-only SQL query (no addresses or passwords disclosed).
+There are still zero actual account-owned collector entitlements.
+
+Use the provided, project-pinned launcher rather than copying environment
+values manually. The launcher includes only a **public** Supabase publishable
+key, checks for the required feature branch, and runs local Expo on port 8081:
+
+    cd ~/dev/Nova_Tutoring_expo_3
+    git -c core.sshCommand="ssh -p 443 -o Hostname=ssh.github.com" fetch origin
+    git merge --ff-only origin/feature/noras-last-lantern-3d
+    bash scripts/start-collector-staging-web.sh
+
+Then manually open http://localhost:8081/sign-in in a **Safari Private**
+window on the Mac. Use staging account A's email/password (do NOT share
+credentials in chat). Next visit http://localhost:8081/collector-staging
+and click "Recheck server & island inventory" to verify an actual
+authenticated request returns ZERO castle entitlements before redeeming.
+
+If these checks succeed, open the staging-only #017 link from the
+private locally saved file, claim as A, refresh the diagnostic inventory,
+and later test B. Do not use the old **mock QR server** on port 5057 for
+this real-account test. In the staging Edge gateway, only port 8081 or
+19006 on local loopback is whitelisted for CORS.
+
+This check is **not verified yet**; the user still needs to run Expo and
+authenticate. Never deploy these staging-only configs to the public app.
+
 ## How to launch staging Expo on the Mac
 
 1. Pull feature/noras-last-lantern-3d onto the development clone.
