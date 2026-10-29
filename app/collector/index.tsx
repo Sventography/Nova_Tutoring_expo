@@ -8,6 +8,7 @@ import { useUser } from "../context/UserContext";
 import { useIslandDecorations } from "../context/IslandDecorationContext";
 import {
   COLLECTOR_CLAIMS_ENABLED,
+  COLLECTOR_REWARD_ID,
   CollectorApiError,
   redeemCollectorCode,
   validCollectorCode,
@@ -64,7 +65,7 @@ export default function CollectorCertificate() {
     };
   }, []);
   const { session, isLoggedIn } = useUser();
-  const { refreshCollectorOwnership } = useIslandDecorations();
+  const { refreshCollectorOwnership, getInventoryCount } = useIslandDecorations();
   const [verification, setVerification] = useState<CollectorVerification | null>(null);
   const [checking, setChecking] = useState(false);
   const [claiming, setClaiming] = useState(false);
@@ -122,6 +123,7 @@ export default function CollectorCertificate() {
   const verified = verification?.authentic === true;
   const isSeventeen = verified && verification?.serial_number === 17;
   const isOwner = isSeventeen && verification?.claim_state === "yours";
+  const castleWaitingToPlace = getInventoryCount(COLLECTOR_REWARD_ID) > 0;
 
   return (
     <ScrollView style={styles.page} contentContainerStyle={styles.content}>
@@ -202,6 +204,7 @@ export default function CollectorCertificate() {
               <Text style={styles.buttonLabel}>Sync to my island</Text>
             </TouchableOpacity>
           ) : null}
+          {castleWaitingToPlace ? (
           <View style={styles.placementGuide}>
             <Text style={styles.guideTitle}>🏰 Your castle is in Decoration Inventory</Text>
             <Text style={styles.guideBody}>
@@ -218,6 +221,22 @@ export default function CollectorCertificate() {
               <Text style={styles.buttonLabel}>Open my island</Text>
             </TouchableOpacity>
           </View>
+          ) : synced ? (
+            <View style={styles.placementGuide}>
+              <Text style={styles.guideTitle}>🏰 Your castle is already placed!</Text>
+              <Text style={styles.guideBody}>
+                Nora's Last Lantern is on your island. You can move it
+                any time using BUILD mode.
+              </Text>
+              <TouchableOpacity
+                accessibilityRole="button"
+                style={styles.button}
+                onPress={() => router.push("/(tabs)/island" as never)}
+              >
+                <Text style={styles.buttonLabel}>Open my island</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
         </>
       ) : verification.claim_state === "claimed" ? (
         <Text style={styles.notice}>This collector code has already been redeemed.</Text>
