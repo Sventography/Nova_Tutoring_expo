@@ -1,142 +1,144 @@
-# Collector 017 — real Supabase Auth staging (NO production changes)
+# Collector #017: REAL staging Auth and island entitlement test
 
-Status: **implementation prepared on feature branch; NOT provisioned or live**.
-The phone camera + mock claims worked, and the isolated real-Postgres GitHub
-workflow passed on 2026-10-28. Real Supabase Auth + actual app inventory have
-not been tested yet. Neither existing Supabase project is staging:
-one project is live, and an older project is inactive. **Do not reuse either
-project for temporary collector codes or grants.**
+**Status (2026-10-29):** Staging project CREATED and private schema INSTALLED.
+Staging Supabase Edge Function DEPLOYED (active, verify_jwt=true).
+Real-user login, redemption, and cross-device Island confirmation are
+**not yet tested**. Production Nova remains unchanged.
 
-## What this verifies
+## Staging project (no production accounts or QR codes copied)
 
-A separate Supabase Auth project issues real account access tokens.
-The staging Flask API verifies them via that project's Auth endpoint, then
-reads/writes only its own private PostgreSQL collector tables. The staging
-Expo app uses the existing sign-in, collector certificate, and island
-decoration provider. The hidden staging diagnostics view shows whether
-the server-issued castle is genuinely visible in that account's island.
+- Organization: Nova Tutoring (Free)
+- Project: nova-collector-staging
+- Reference: gouhhltupxaycuysdtrw
+- Dashboard: https://supabase.com/dashboard/project/gouhhltupxaycuysdtrw
+- Project URL: https://gouhhltupxaycuysdtrw.supabase.co
+- Region: us-east-1; created after a verified $0/month quote
+- Never target live Nova (owlbqyiqsyfcrpqqfacp) or old inactive
+  Nova (zgrixkqcowitlygbvrlw) during collector testing.
 
-## 1. Obtain a new, separate Supabase staging project
+### Database completed
 
-Create a dedicated project (for example nova-collector-staging) in Supabase.
-This may require another project slot or payment. Review costs before doing
-that; no new project was provisioned by the assistant.
+Supabase migration history:
+- collector_017_private_schema_rate_limit_permanent_serial
+- staging_profiles_owner_only_and_signup_check
+- fix_staging_check_username_coalesce
 
-Save locally (never in GitHub): its HTTPS project URL, public publishable/anon
-key, separate server-only PostgreSQL URI with TLS, and two disposable test
-account credentials. Do NOT import production users, data, real codes or
-customer records. Auth and database MUST belong to the same staging project.
+The first migration applies the exact three checked-in private SQL files
+in order: docs/collector-017-redemption-schema.sql,
+docs/collector-017-rate-limit.sql, and
+docs/collector-017-permanent-serial-burn.sql.
 
-To use the full Expo app, a schema-only staging copy of required PUBLIC app
-tables (including profiles) and their existing RLS rules may be needed.
-Never copy production profile/user rows.
+The other two migrations create a SCHEMA-ONLY public.profiles table
+compatible with the existing Expo sign-in flow, plus owner-only RLS,
+and the check_username RPC. The consolidated corrected reference SQL
+is checked into docs/collector-017-staging-profile-schema.sql.
+No production profile rows or Auth identities were copied.
 
-## 2. Install the collector schema into staging only
+Verified on 2026-10-29:
+- Three collector_private tables: ALL RLS-enabled, ALL initially empty
+- No schema usage/claim function execution for anon or authenticated
+- service_role may execute trusted private collector functions
+- A claimed serial remains permanently spent after account deletion
+- Staging profiles have four owner-only RLS policies
+- Anonymous users cannot SELECT profile rows
+- Anonymous pre-signup RPC check_username("Test017") returns "ok"
+- Zero staging user accounts, QR codes, redemptions, and entitlements
+  at time of installation
 
-In that *new project* SQL editor, execute these three existing files in order:
+Supabase security advisor notes:
+- INFO: Three private tables with no RLS policies. INTENTIONAL.
+- WARN: public.check_username is a SECURITY DEFINER RPC executable
+  by anon/authenticated. This is a deliberately constrained read-only
+  exception to check case-insensitive username availability before
+  sign-up. It returns only a fixed status and runs with an empty search
+  path. Do not add identifying data to the response or broader privileges.
+  Revisit before production sign-up; this is staging-only.
 
-1. docs/collector-017-redemption-schema.sql
-2. docs/collector-017-rate-limit.sql
-3. docs/collector-017-permanent-serial-burn.sql
+## FREE staging backend: Supabase Edge Function
 
-These contain private tables and server-only functions. Do not use live Nova
-SQL Editor for this staging exercise; do not expose the collector_private
-schema to the Supabase Data API.
+**No second Render service is required for this staging run.**
 
-## 3. Host a separate HTTPS staging backend
+Deployed function: collector-staging (version 1), JWT verification ON.
+Its source is committed at:
 
-Use server/collector_staging_server.py, NOT server/server.py. It only has
-collector APIs and /staging/health. A new Render staging service can have
-its root directory set to server, with:
+    supabase/functions/collector-staging/index.ts
 
-Build: pip install -r requirements.txt
+It exposes the same collector API response shapes as the Python backend:
 
-Start: gunicorn 'collector_staging_server:create_app()' --bind 0.0.0.0:$PORT
+    GET  https://gouhhltupxaycuysdtrw.supabase.co/functions/v1/collector-staging/entitlements
+    POST https://gouhhltupxaycuysdtrw.supabase.co/functions/v1/collector-staging/verify
+    POST https://gouhhltupxaycuysdtrw.supabase.co/functions/v1/collector-staging/redeem
 
-Staging-only server environment variables:
+Only a valid staging user JWT is permitted by the Edge gateway.
+The handler also verifies the caller against staging Supabase Auth using
+getUser(token), then queries the STAGING project's built-in SUPABASE_DB_URL,
+with existing private stored procedures handling rate limit and claims.
+Neither this function nor Expo contains any service-role or database secret.
 
-    COLLECTOR_STAGING_SUPABASE_URL=https://STAGING-REF.supabase.co
-    COLLECTOR_STAGING_PUBLISHABLE_KEY=STAGING_PUBLIC_KEY
-    COLLECTOR_STAGING_DATABASE_URL=STAGING_POSTGRES_CONNECTION_URI
-    COLLECTOR_STAGING_WEB_ORIGINS=https://YOUR-STAGING-WEB-HOST
+Browser CORS origins currently permitted: localhost / 127.0.0.1 at
+port 8081 or 19006 (Mac development only). A future HTTPS staging web
+preview will require explicitly whitelisting its own HTTPS origin in
+the Edge source, then redeploying **only** to the staging project.
 
-Do not copy any production Render secrets. The standalone server refuses
-production/old Supabase project IDs and database hosts that do not match
-its Auth project. It also refuses any inherited COLLECTOR_DATABASE_URL.
-The health endpoint should identify mode isolated_collector_staging.
+The Edge deployment is active, but a successful real JWT claim has not
+yet been observed. Passing existing PostgreSQL and mock tests does not
+replace that acceptance test.
 
-For real JWTs, use HTTPS for a remote server. HTTP is allowed on 127.0.0.1
-for Mac-only tests; never send JWTs over HTTP on the home LAN.
+## How to launch staging Expo on the Mac
 
-## 4. Generate disposable staging-only QR codes
-
-Only once the schema and staging credentials are prepared, from the Mac:
-
-    cd ~/dev/Nova_Tutoring_expo_3
-    source server/.venv/bin/activate
-    python server/collector_staging_seed.py --web-origin http://localhost:8081
-
-The seeder checks the isolated project reference, refuses existing codes,
-and creates two random staging-only codes (017 and 023). Only SHA-256 hashes
-are stored in the staging DB; the original one-off links are displayed in
-local Terminal output. Do not paste them in GitHub or share them publicly.
-
-For a separate HTTPS staging web deployment, use its HTTPS origin instead.
-A non-local plain HTTP origin is rejected. The seeder never uses
-COLLECTOR_DATABASE_URL.
-
-## 5. Run Expo with staging-only environment settings
-
-Use the **new staging** project/public key and staging backend, not the live
-Nova values. For a Mac developer session, configure:
+1. Pull feature/noras-last-lantern-3d onto the development clone.
+2. Obtain ONLY the staging project's PUBLIC publishable key via
+   Dashboard > Project Settings > API Keys. Never use service_role or
+   any sb_secret_... key in Expo.
+3. Set the following in an ignored local .env file OR prefix the Expo
+   startup command with environment variables (do not commit secrets):
 
     EXPO_PUBLIC_COLLECTOR_STAGING_MODE=true
     EXPO_PUBLIC_COLLECTOR_REDEMPTION_ENABLED=true
-    EXPO_PUBLIC_SUPABASE_URL=https://STAGING-REF.supabase.co
-    EXPO_PUBLIC_SUPABASE_ANON_KEY=STAGING_PUBLIC_KEY
-    EXPO_PUBLIC_BACKEND_URL=https://YOUR-STAGING-BACKEND
+    EXPO_PUBLIC_SUPABASE_URL=https://gouhhltupxaycuysdtrw.supabase.co
+    EXPO_PUBLIC_SUPABASE_ANON_KEY=YOUR_STAGING_PUBLISHABLE_KEY
+    EXPO_PUBLIC_BACKEND_URL=https://gouhhltupxaycuysdtrw.supabase.co
 
-Then use npx expo start --web on Mac. It may require a staging-only copy of
-Nova's public schema to provide sign-in/profile features.
+4. On Mac, start from the repository root:
 
-For a production-optimized web preview on a **different HTTPS staging
-web domain only**, also set:
+    npx expo start --web -c
 
-    EXPO_PUBLIC_COLLECTOR_STAGING_WEB_PREVIEW=true
+The client collector API switches to
+/functions/v1/collector-staging/* only in explicit staging mode.
+No claim request from staging is ever sent to the live Render backend.
+The staging auth storage key does not reuse a production session.
 
-Do not set the preview switch in the live EAS, Render or Vercel build
-environments. Do not merge the feature branch into the release branch to
-set up staging. Staging now fails to start if Supabase Auth or backend points
-to either live/old Nova project or production Render host. It also stores
-Supabase sessions under a staging-specific storage key.
+No direct deployment to the public production app is needed for this test.
+A separately hosted HTTPS staging web preview, if later created, also
+requires EXPO_PUBLIC_COLLECTOR_STAGING_WEB_PREVIEW=true.
 
-## 6. End-to-end acceptance checks
+## Next steps (still required)
 
-1. Sign in to the staging Expo app with a NEW staging account A.
-2. Open the staging #017 link from the seeder. See the serial only after
-   server verification, then claim it.
-3. Visit /collector-staging and refresh the ledger. It should show one
-   server entitlement and island owned count 1.
-4. Visit the Island tab and place the castle with the island builder.
-5. Reload or sign out/back in as account A. Entitlement persists remotely.
-   Island placement coordinates remain device-local (not cross-device synced).
-6. Switch to staging account B on the SAME device. It must not have a castle;
-   verifying #017 must report it already redeemed.
-7. Scan/verify staging #023: authentic, but never grants the #017 castle.
-8. For iPhone browser testing, use a separate HTTPS staging WEB host and
-   HTTPS staging backend. Do not serve sign-in pages over plain HTTP on LAN.
+1. In the STAGING project's Authentication > Users, create two
+   disposable test user accounts. They must be genuine users in this
+   staging project, NOT live Nova users. You may use your own accessible
+   test email addresses / aliases and manage confirmation there.
+2. Sign in to staging Expo /sign-in with test account A, then account B.
+   Check /collector-staging shows the current user but no castle yet.
+3. After staging login works, generate separate one-time *test-only*
+   QR codes for serials 017 and 023. Do not use any physical product
+   codes. The guarded Python seeder is at
+   server/collector_staging_seed.py if you have a staging-only PostgreSQL
+   URI; keep its output private. It must never be run against live Nova.
+4. Open the TEST #017 URL in staging Expo while A is signed in. Verify
+   authenticity, redeem, and check /collector-staging: server and island
+   counts must show 1. Place the castle in Island Builder.
+5. Sign out/back into A; reward must persist remotely.
+6. Sign in as B: zero inventory; #017 already claimed; #023 cannot
+   grant the castle.
+7. Only then host a separate HTTPS web preview and test the iPhone QR
+   scan and app login together. No real JWT on plain HTTP home LAN.
 
-The staging-only diagnostics link appears at the bottom of the collector
-certificate. It is sealed in normal app builds.
+The 13 mocked Python tests, 7 PostgreSQL tests and QR API smoke test have
+passed previously. The newer 26-test security backend run passed; the
+Expo build was fixed to hydrate Git LFS assets, and the user reported
+its subsequent manual run succeeded. This NEW Supabase Edge runtime
+requires real-user authentication and DB round-trip verification.
 
-## Acceptance boundary
-
-GitHub Actions > Collector 017 security and app checks is manual-only on
-feature/noras-last-lantern-3d and exercises mocked Auth server semantics,
-staging isolation, and the Expo web export. The separate manual PostgreSQL
-workflow tests actual private SQL claim transaction behavior.
-
-No production collector flags were enabled. No production QR codes or
-entitlements were issued. Do NOT declare real-auth staging complete until a
-separate project exists, the service is on HTTPS, and a real staged account
-can claim and inspect its castle in Expo.
+Do not activate production collector redemption or issue physical
+codes based on staging success alone.
