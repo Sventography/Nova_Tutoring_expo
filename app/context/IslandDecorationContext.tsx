@@ -358,12 +358,20 @@ function moveCastleOffProtectedLandmarks(
   if (!castle) return state;
 
   const radius = decorationGroundRadius(COLLECTOR_REWARD_ID, castle.transform.scale);
-  if (!overlapsGround(
+  const blocksProtectedLandmark = overlapsGround(
     castle.transform,
     radius,
     [DAILY_QUEST_GROUND_OBSTACLE, NOVA_PEDESTAL_GROUND_OBSTACLE],
     0.4,
-  )) {
+  );
+  // The previous version always spawned this special reward at (-12,-7).
+  // It was technically non-overlapping on the ground but looked visually
+  // crowded against Nova at the default camera angle. Relocate only that
+  // exact legacy auto-spawn once; preserve custom safe user placements.
+  const atLegacyAutoSpawn =
+    Math.abs(castle.transform.x + 12) < 0.01 &&
+    Math.abs(castle.transform.z + 7) < 0.01;
+  if (!blocksProtectedLandmark && !atLegacyAutoSpawn) {
     return state;
   }
 
