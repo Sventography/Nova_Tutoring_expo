@@ -136,6 +136,17 @@ export default function CollectorStagingDiagnostics() {
         </Text>
       </View>
 
+      {serverOwnsCastle && countInInventory > 0 ? (
+        <View style={styles.inventoryGuide}>
+          <Text style={styles.inventoryGuideTitle}>🏰 Your castle is waiting to be placed!</Text>
+          <Text style={styles.inventoryGuideText}>
+            Open my island → scroll below the 3D scene → tap BUILD →
+            expand Decoration Inventory → choose 🏰 Last Lantern →
+            PLACE → SAVE.
+          </Text>
+        </View>
+      ) : null}
+
       <Text style={styles.status} accessibilityRole="alert">{message}</Text>
 
       {!isLoggedIn ? (
@@ -185,6 +196,9 @@ const styles = StyleSheet.create({
   card: { width: "100%", maxWidth: 500, borderWidth: 1, borderColor: "#8c6b51", borderRadius: 18, backgroundColor: "#241934", padding: 24, marginTop: 28 },
   row: { color: "#e4d8ed", marginVertical: 7, fontSize: 14 },
   status: { color: "#f5dbac", fontSize: 14, lineHeight: 22, textAlign: "center", marginTop: 26, maxWidth: 450 },
+  inventoryGuide: { width: "100%", maxWidth: 500, marginTop: 20, padding: 18, borderRadius: 14, borderColor: "#d7a868", borderWidth: 1, backgroundColor: "#30203b" },
+  inventoryGuideTitle: { color: "#f3d69a", fontWeight: "800", fontSize: 16, textAlign: "center" },
+  inventoryGuideText: { color: "#e6d7f2", fontSize: 14, lineHeight: 22, marginTop: 9, textAlign: "center" },
   button: { backgroundColor: "#f0cb81", paddingVertical: 16, paddingHorizontal: 24, borderRadius: 13, marginTop: 22, minWidth: 250, alignItems: "center" },
   buttonText: { color: "#241630", fontSize: 15, fontWeight: "800" },
   disabled: { opacity: 0.5 },
