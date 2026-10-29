@@ -16,6 +16,8 @@ export const COLLECTOR_STAGING_BUILD_ALLOWED =
 
 // Live Nova Auth and its historical inactive project are both forbidden as
 // staging targets. Project refs are public identifiers, not API keys.
+const ONLY_ALLOWED_STAGING_REF = "gouhhltupxaycuysdtrw";
+
 const FORBIDDEN_SUPABASE_REFS = new Set([
   "owlbqyiqsyfcrpqqfacp",
   "zgrixkqcowitlygbvrlw",
@@ -61,6 +63,9 @@ export function collectorStagingConfigError(
   if (ref && FORBIDDEN_SUPABASE_REFS.has(ref)) {
     return "Collector staging refuses Nova's production or former Supabase project.";
   }
+  if (ref !== ONLY_ALLOWED_STAGING_REF) {
+    return "Collector staging requires the dedicated nova-collector-staging project.";
+  }
   if (auth.protocol !== "https:" || (auth.pathname !== "/" && auth.pathname !== "")) {
     return "Hosted staging Supabase Auth must use a root HTTPS URL.";
   }
@@ -69,6 +74,9 @@ export function collectorStagingConfigError(
   if (!backend) return "Provide a valid EXPO_PUBLIC_BACKEND_URL for isolated staging.";
   if (PRODUCTION_BACKENDS.has(backend.hostname)) {
     return "Collector staging refuses Nova's live Render backend.";
+  }
+  if (backend.origin !== auth.origin) {
+    return "Staging collector API must use the same isolated Supabase Edge project as Auth.";
   }
   if (backend.pathname !== "/" && backend.pathname !== "") {
     return "Staging collector backend URL must not contain a path.";
