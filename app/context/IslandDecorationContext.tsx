@@ -26,6 +26,7 @@ import {
   overlapsGround,
   developerCastleObstacle,
   DAILY_QUEST_GROUND_OBSTACLE,
+  NOVA_PEDESTAL_GROUND_OBSTACLE,
   COLLECTOR_CASTLE_PREFERRED_GROUND,
   type GroundObstacle,
 } from "../_lib/islandAutoPlacement";
@@ -343,12 +344,11 @@ function spawnTransform(itemId: string): IslandDecorationTransform {
   });
 }
 
-/** One-time layout repair, ONLY for a previously placed #017 that covers
- * the non-editable Daily Quest station. Preserve its id, ownership and
- * placement state; never move ordinary decorations or custom castle layouts
- * which already leave the pavilion clear. No client-side reward grant.
+/** One-time layout repair ONLY when a previously placed #017 obstructs
+ * Nova herself or the non-editable Daily Quest pavilion. Keep placement
+ * identity, server ownership and non-castle layouts unchanged.
  */
-function moveCastleOffQuest(
+function moveCastleOffProtectedLandmarks(
   state: DecorationState,
   landmarkObstacles: readonly GroundObstacle[],
 ): DecorationState {
@@ -358,7 +358,12 @@ function moveCastleOffQuest(
   if (!castle) return state;
 
   const radius = decorationGroundRadius(COLLECTOR_REWARD_ID, castle.transform.scale);
-  if (!overlapsGround(castle.transform, radius, [DAILY_QUEST_GROUND_OBSTACLE], 0.4)) {
+  if (!overlapsGround(
+    castle.transform,
+    radius,
+    [DAILY_QUEST_GROUND_OBSTACLE, NOVA_PEDESTAL_GROUND_OBSTACLE],
+    0.4,
+  )) {
     return state;
   }
 
@@ -402,8 +407,10 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
     x: p.transform.x, z: p.transform.z,
     radius: landmarkGroundRadius(p.itemId, p.transform.scale),
   }));
-  // Fixed quest plaza is not part of the editable builder catalog.
+  // The fixed quest pavilion and Nova's pedestal/sprite are non-editable
+  // scene elements, so neither appears in the normal Builder catalog.
   landmarkObstacles.push(DAILY_QUEST_GROUND_OBSTACLE);
+  landmarkObstacles.push(NOVA_PEDESTAL_GROUND_OBSTACLE);
   const castle = developerCastleObstacle(landmarkObstacles);
   if (castle) landmarkObstacles.push(castle);
   // This is a stable reference so auth reconciliation doesn't re-fetch
@@ -487,12 +494,12 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
       const entitlements = await fetchCollectorEntitlements(session.access_token);
       const reward = entitlements.find((item) => item.reward_id === COLLECTOR_REWARD_ID);
       if (accountRef.current !== userId || loadedAccountRef.current !== userId) return false;
-      const next = moveCastleOffQuest(
+      const next = moveCastleOffProtectedLandmarks(
         reconcileCollectorReward(committedRef.current, reward?.granted_at ?? null),
         landmarkObstaclesRef.current
       );
       const nextDraft = draftRef.current
-        ? moveCastleOffQuest(
+        ? moveCastleOffProtectedLandmarks(
             reconcileCollectorReward(draftRef.current, reward?.granted_at ?? null),
             landmarkObstaclesRef.current
           )
