@@ -54,6 +54,8 @@ jobs:
         run: node scripts/test-collector-staging-config.cjs
       - name: Validate separate iPhone staging app identifiers and safe EAS build
         run: node scripts/test-collector-ios-staging-build.cjs
+      - name: Validate Xcode native staging identity and automatic source restoration
+        run: node scripts/test-collector-staging-native-ios.cjs
       - name: Validate #017 castle footprint, safe placement, and inventory guidance
         run: node scripts/test-collector-castle-placement.cjs
       - name: Validate island BUILD camera controls and desktop pan/orbit
