@@ -11,6 +11,7 @@ import {
   COLLECTOR_STAGING_BUILD_ALLOWED,
   collectorStagingConfigError,
   collectorStagingStorageKey,
+  resolvedCollectorAppConfig,
 } from "../_lib/collectorStaging";
 
 const extra =
@@ -25,23 +26,34 @@ const extra =
     | undefined) ??
   {};
 
-const SUPABASE_URL = String(
+const requestedAuthUrl = String(
   process.env.EXPO_PUBLIC_SUPABASE_URL ||
     extra.EXPO_PUBLIC_SUPABASE_URL ||
     ""
 ).trim();
-
-const SUPABASE_ANON_KEY = String(
+const requestedPublicKey = String(
   process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
     extra.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
     ""
 ).trim();
-
-const BACKEND_URL = String(
+const requestedBackendUrl = String(
   process.env.EXPO_PUBLIC_BACKEND_URL ||
     extra.EXPO_PUBLIC_BACKEND_URL ||
     ""
 ).trim();
+
+// Staging *always* selects its dedicated Supabase project. Expo web SSR,
+// Metro inlining, or an older .env/manifest must not silently select Nova's
+// production Auth project when the staging switch is explicitly enabled.
+const {
+  supabaseUrl: SUPABASE_URL,
+  publicKey: SUPABASE_ANON_KEY,
+  backendUrl: BACKEND_URL,
+} = resolvedCollectorAppConfig(
+  requestedAuthUrl,
+  requestedPublicKey,
+  requestedBackendUrl
+);
 
 // Fail closed before creating an Auth client or recovering any stored session.
 // Real-account collector staging must never point at Nova's live Auth/backend.
