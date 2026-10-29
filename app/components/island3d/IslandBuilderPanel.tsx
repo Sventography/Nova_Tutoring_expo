@@ -14,6 +14,7 @@ import { useIslandDecorations } from "../../context/IslandDecorationContext";
 import IslandDecorationShopPanel from "./IslandDecorationShopPanel";
 import { useIslandKeepsakes } from "../../context/IslandKeepsakeContext";
 import IslandKeepsakeInventoryPanel from "./IslandKeepsakeInventoryPanel";
+import { COLLECTOR_REWARD_ID } from "../../_lib/collectorClient";
 
 type Props = {
   selectedPlacementId: string | null;
@@ -165,7 +166,9 @@ export default function IslandBuilderPanel({
     cancelEditing: cancelDecorationEditing,
     saveEditing: saveDecorationEditing,
     selectPlacement: selectDecorationPlacement,
+    getInventoryCount: getDecorationInventoryCount,
   } = useIslandDecorations();
+  const castleWaiting = getDecorationInventoryCount(COLLECTOR_REWARD_ID) > 0;
 
   const {
     startEditing: startKeepsakeEditing,
@@ -311,6 +314,16 @@ export default function IslandBuilderPanel({
             </Text>
           </Pressable>
         </View>
+
+        {castleWaiting ? (
+          <View style={styles.castleNotice}>
+            <Text style={styles.castleNoticeTitle}>🏰 Nora's castle is ready!</Text>
+            <Text style={styles.castleNoticeText}>
+              Tap BUILD, then open Decoration Inventory (not regular
+              Inventory). Tap Last Lantern → PLACE → SAVE.
+            </Text>
+          </View>
+        ) : null}
 
         {showClosedTip ? (
           <DismissibleTip
@@ -682,6 +695,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+  },
+  castleNotice: {
+    padding: 12, borderRadius: 12, borderWidth: 1,
+    borderColor: "rgba(251,191,36,0.72)",
+    backgroundColor: "rgba(120,53,15,0.18)",
+  },
+  castleNoticeTitle: { color: "#fde68a", fontSize: 14, fontWeight: "900" },
+  castleNoticeText: {
+    color: "#f7e9cc", marginTop: 5, fontSize: 11, lineHeight: 16,
   },
   closedCopy: {
     flex: 1,
