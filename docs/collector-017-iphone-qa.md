@@ -79,8 +79,16 @@ to proceed if the tracked native files already have local changes.
 cd ~/dev/Nova_Tutoring_expo_3
 git -c core.sshCommand="ssh -p 443 -o Hostname=ssh.github.com" fetch origin
 git merge --ff-only origin/feature/noras-last-lantern-3d
+bash scripts/build-collector-staging-ios.sh --check-only
+# Only after it prints PRE-FLIGHT PASSED and restores the native files:
 bash scripts/build-collector-staging-ios.sh
 ```
+
+The `--check-only` mode does **not** contact EAS or consume a
+cloud build. It verifies that Xcode, Info.plist and the dynamic Expo
+configuration all identify **Nova Collector Staging**, then restores
+the original native files. Review the output before launching another
+cloud build, especially after an earlier wrong-ID installation.
 
 Before any installation, check the resulting EAS build's **actual
 native iOS bundle identifier**: it MUST be
