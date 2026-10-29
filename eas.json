@@ -17,6 +17,25 @@
     "production": {
       "node": "20.19.4",
       "environment": "production"
+    },
+    "collector-staging-ios": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "environment": "development",
+      "ios": {
+        "simulator": false
+      },
+      "env": {
+        "EXPO_NO_DOTENV": "1",
+        "EXPO_PUBLIC_COLLECTOR_STAGING_MODE": "true",
+        "EXPO_PUBLIC_COLLECTOR_REDEMPTION_ENABLED": "true",
+        "EXPO_PUBLIC_COLLECTOR_STAGING_WEB_PREVIEW": "false",
+        "EXPO_PUBLIC_NORAS_LANTERN_PREVIEW": "false",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://gouhhltupxaycuysdtrw.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_g6o0Crn4Cn_r5vj6RMn3SQ_1K_q0SDY",
+        "EXPO_PUBLIC_BACKEND_URL": "https://gouhhltupxaycuysdtrw.supabase.co",
+        "EXPO_PUBLIC_OPENAI_API_KEY": "dummy-key"
+      }
     }
   }
 }
