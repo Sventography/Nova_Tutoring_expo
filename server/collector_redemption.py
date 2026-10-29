@@ -113,7 +113,7 @@ def register_collector_routes(app, *, extract_bearer_token, verify_access_token)
                     if not _admit_attempt(cur, account_id):
                         return jsonify(ok=False, error="too_many_attempts"), 429
                     cur.execute(
-                        """select serial_number, claimed_by
+                        """select serial_number, claimed_by, claimed_at
                            from collector_private.plushie_codes
                            where code_hash = %s""",
                         (hashlib.sha256(code.encode("utf-8")).hexdigest(),),
@@ -121,10 +121,13 @@ def register_collector_routes(app, *, extract_bearer_token, verify_access_token)
                     item = cur.fetchone()
             if not item:
                 return jsonify(ok=False, error="invalid_code"), 400
-            serial, claimed_by = item
+            serial, claimed_by, claimed_at = item
+            # Physical serials remain burned after account deletion: the Auth
+            # FK anonymizes claimed_by, but claimed_at stays populated.
+            # Do not advertise an irreversibly spent QR as available.
             claim_state = (
-                "available" if claimed_by is None
-                else "yours" if str(claimed_by) == account_id
+                "available" if claimed_at is None
+                else "yours" if claimed_by is not None and str(claimed_by) == account_id
                 else "claimed"
             )
             return jsonify(
