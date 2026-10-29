@@ -7,14 +7,16 @@ import { ISLAND_BUILDER_CATALOG, ISLAND_BUILDER_CATALOG_BY_ID } from "./islandBu
 export type GroundObstacle = { x: number; z: number; radius: number };
 export type GroundPoint = { x: number; z: number };
 
-// Source: DailyQuestStation in NovaIsland3DScene.tsx is at
-// [4.15, 1.03, 0.55], with parent island rotation -0.08 radians and
-// station scale 1.42. Keep the entire interactive pavilion clear, not
-// merely its small central chest. If the station moves, update this.
+// Source: DailyQuestStation in NovaIsland3DScene.tsx is rooted at
+// [4.15, 1.03, 0.55] with station scale 1.42 and yaw -0.42, inside
+// island yaw -0.08. The raised plaza is offset +0.55 X/+0.05 Z
+// in station-local space, putting its world center near (4.74, 1.32).
+// Protect the *entire* clickable pavilion, not just its small chest.
+// Update this if the 3D station is moved.
 export const DAILY_QUEST_GROUND_OBSTACLE: GroundObstacle = {
-  x: 4.18,
-  z: 0.22,
-  radius: 3.5,
+  x: 4.55,
+  z: 1.1,
+  radius: 3.75,
 };
 export const COLLECTOR_CASTLE_PREFERRED_GROUND: GroundPoint = {
   x: -12,
