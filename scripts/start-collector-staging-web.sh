@@ -33,6 +33,11 @@ if command -v lsof >/dev/null 2>&1 &&
   exit 1
 fi
 
+# Load ONLY the explicit staging variables below. Expo otherwise loads
+# old .env / .env.local production values on this Mac and can inline them
+# into the browser despite the staging flag.
+export EXPO_NO_DOTENV=1
+
 # Override any existing/live .env values in this process only, without
 # editing or overwriting the user's normal local configuration.
 export EXPO_PUBLIC_COLLECTOR_STAGING_MODE=true
@@ -48,6 +53,7 @@ echo "============================================================"
 echo "  NOVA//ARCHIVE — REAL ACCOUNT STAGING (NOT PRODUCTION)"
 echo "  Auth:    nova-collector-staging (new separate Supabase)"
 echo "  Backend: staging Supabase Edge Function"
+echo "  Local .env loading: DISABLED for this staging run"
 echo "  Browser: http://localhost:8081/sign-in"
 echo "  Debug:   http://localhost:8081/collector-staging"
 echo "  PLEASE USE STAGING TEST ACCOUNTS, NOT YOUR LIVE NOVA LOGIN."
