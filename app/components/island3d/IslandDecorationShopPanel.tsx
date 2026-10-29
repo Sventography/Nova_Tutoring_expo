@@ -1,5 +1,5 @@
 // app/components/island3d/IslandDecorationShopPanel.tsx
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -7,6 +7,7 @@ import { useCoins } from "../../context/CoinsContext";
 import { useIsland } from "../../context/IslandContext";
 import { useIslandDecorations } from "../../context/IslandDecorationContext";
 import { isIslandDecorationCoinShopItem } from "../../_lib/islandDecorationCatalog";
+import { COLLECTOR_REWARD_ID } from "../../_lib/collectorClient";
 
 type ShopFilter =
   | "all"
@@ -66,6 +67,12 @@ export default function IslandDecorationShopPanel() {
   const [buying, setBuying] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [filter, setFilter] = useState<ShopFilter>("all");
+  const castleWaiting = getInventoryCount(COLLECTOR_REWARD_ID) > 0;
+
+  // Open the reward panel automatically when an authenticated #017 appears.
+  useEffect(() => {
+    if (castleWaiting) setInventoryOpen(true);
+  }, [castleWaiting]);
 
   const visibleCatalog = useMemo(() => {
     const shopCatalog =
@@ -344,13 +351,21 @@ export default function IslandDecorationShopPanel() {
       <View style={styles.card}>
         <Header
           title="Decoration Inventory"
-          subtitle={`${inventoryTotal} decoration${inventoryTotal === 1 ? "" : "s"} waiting`}
+          subtitle={castleWaiting
+            ? "🏰 Nora's #017 castle is ready — tap to PLACE"
+            : `${inventoryTotal} decoration${inventoryTotal === 1 ? "" : "s"} waiting`}
           icon="leaf-outline"
           open={inventoryOpen}
           onToggle={() => setInventoryOpen((value) => !value)}
         />
         {inventoryOpen ? (
           <View style={styles.body}>
+            {castleWaiting ? (
+              <Text style={styles.castleHint}>
+                🏰 Collector #017 unlocked! Tap Last Lantern below to PLACE
+                it, then press SAVE in Island Builder.
+              </Text>
+            ) : null}
             {placements.length > 0 ? (
               <Pressable
                 onPress={confirmMoveAll}
@@ -375,7 +390,11 @@ export default function IslandDecorationShopPanel() {
                   <Pressable
                     key={item.id}
                     onPress={() => place(item.id)}
-                    style={({ pressed }) => [styles.item, pressed && styles.pressed]}
+                    style={({ pressed }) => [
+                      styles.item,
+                      item.id === COLLECTOR_REWARD_ID && styles.castleItem,
+                      pressed && styles.pressed,
+                    ]}
                   >
                     <Text style={styles.emojiSmall}>{item.previewEmoji}</Text>
                     <Text numberOfLines={2} style={styles.itemTitle}>{item.shortTitle}</Text>
@@ -417,6 +436,8 @@ const styles = StyleSheet.create({
   filterTextActive: { color: "#67e8f9" },
   row: { gap: 8, paddingRight: 8 },
   item: { width: 104, minHeight: 104, borderRadius: 14, borderWidth: 1, borderColor: "rgba(148,163,184,0.18)", backgroundColor: "rgba(2,6,23,0.54)", padding: 9 },
+  castleItem: { borderColor: "#f5cf84", backgroundColor: "rgba(180,125,47,0.18)" },
+  castleHint: { color: "#fde68a", fontSize: 12, fontWeight: "800", lineHeight: 18, padding: 10, borderRadius: 10, borderWidth: 1, borderColor: "#c6a272", backgroundColor: "rgba(180,125,47,0.13)" },
   itemLocked: { opacity: 0.62, backgroundColor: "rgba(15,23,42,0.72)" },
   emojiSmall: { fontSize: 27 },
   itemTitle: { marginTop: 6, color: "#f8fafc", fontSize: 11, lineHeight: 14, fontWeight: "900" },
