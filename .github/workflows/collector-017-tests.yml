@@ -28,6 +28,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # PNG/JPG assets live in Git LFS. The default checkout otherwise
+          # leaves 130-byte text pointers which Expo/Jimp cannot read.
+          lfs: true
+      - name: Verify Expo icon was hydrated from Git LFS
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          icon = Path("app/assets/favicon.png")
+          data = icon.read_bytes()
+          if not data.startswith(b"\x89PNG\r\n\x1a\n"):
+              raise SystemExit(
+                  "::error::Expo favicon is not a real PNG. Check the Git LFS checkout."
+              )
+          print(f"Git LFS favicon hydrated: {len(data)} bytes")
+          PY
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
