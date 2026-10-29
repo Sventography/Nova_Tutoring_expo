@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   ScrollView,
@@ -35,6 +35,17 @@ export default function CollectorStagingDiagnostics() {
 
   const enabled = __DEV__ && COLLECTOR_STAGING_MODE;
   const accountId = session?.user?.id ?? null;
+
+  useEffect(() => {
+    // Never display a previous account's server verdict after a logout or
+    // a switch to a different staging Auth user.
+    setLastServerGrants(null);
+    setMessage(
+      accountId
+        ? "Signed in. Recheck the server to confirm this account's reward."
+        : "Sign in with a separate staging Supabase account to begin."
+    );
+  }, [accountId]);
   const ownership = island.getOwnershipInfo(COLLECTOR_REWARD_ID);
   const countInInventory = island.getInventoryCount(COLLECTOR_REWARD_ID);
   const serverOwnsCastle = useMemo(() =>
