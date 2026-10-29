@@ -8,6 +8,34 @@
 export const COLLECTOR_STAGING_MODE =
   process.env.EXPO_PUBLIC_COLLECTOR_STAGING_MODE === "true";
 
+// Public identifiers and a PUBLIC client key for our disposable, separate
+// staging project. Neither the live Supabase project nor its backend can be
+// selected by leftover Expo .env / Constants values in staging mode.
+export const COLLECTOR_STAGING_SUPABASE_URL =
+  "https://gouhhltupxaycuysdtrw.supabase.co";
+export const COLLECTOR_STAGING_PUBLISHABLE_KEY =
+  "sb_publishable_g6o0Crn4Cn_r5vj6RMn3SQ_1K_q0SDY";
+
+export function resolvedCollectorAppConfig(
+  requestedAuthUrl: string,
+  requestedPublicKey: string,
+  requestedBackendUrl: string,
+): { supabaseUrl: string; publicKey: string; backendUrl: string } {
+  if (COLLECTOR_STAGING_MODE) {
+    // Staging must never fall through to a cached live-app configuration.
+    return {
+      supabaseUrl: COLLECTOR_STAGING_SUPABASE_URL,
+      publicKey: COLLECTOR_STAGING_PUBLISHABLE_KEY,
+      backendUrl: COLLECTOR_STAGING_SUPABASE_URL,
+    };
+  }
+  return {
+    supabaseUrl: requestedAuthUrl,
+    publicKey: requestedPublicKey,
+    backendUrl: requestedBackendUrl,
+  };
+}
+
 // A separately deployed HTTPS preview can run with a production-optimized
 // web bundle. This extra explicit switch must NEVER be enabled in a live app
 // build. Both staging URLs are still checked against the production denylist.
