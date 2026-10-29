@@ -1,12 +1,22 @@
 /** Server-authenticated collector API. No client-side entitlement grants. */
+import { COLLECTOR_STAGING_MODE } from "./collectorStaging";
 export const COLLECTOR_REWARD_ID = "noras_last_lantern_017" as const;
 export const COLLECTOR_CLAIMS_ENABLED =
   process.env.EXPO_PUBLIC_COLLECTOR_REDEMPTION_ENABLED === "true";
 
 const API_BASE = (
   process.env.EXPO_PUBLIC_BACKEND_URL ||
-  "https://nove-tutoring-backend.onrender.com"
+  (COLLECTOR_STAGING_MODE ? "" : "https://nove-tutoring-backend.onrender.com")
 ).replace(/\/+$/, "");
+
+// Staging keeps the exact same response contract, but runs entirely on the
+// separate FREE Supabase Edge Function instead of creating a second Render
+// backend. Production continues using its unchanged Flask collector routes.
+const COLLECTOR_ROUTE = COLLECTOR_STAGING_MODE
+  ? "functions/v1/collector-staging"
+  : "api/collector";
+const STAGING_PUBLISHABLE_KEY =
+  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || "";
 
 export type CollectorEntitlement = {
   reward_id: typeof COLLECTOR_REWARD_ID;
@@ -38,10 +48,14 @@ async function requestCollector(
   code?: string
 ): Promise<any> {
   if (!accessToken) throw new CollectorApiError("unauthorized", 401);
-  const response = await fetch(`${API_BASE}/api/collector/${path}`, {
+  if (COLLECTOR_STAGING_MODE && (!API_BASE || !STAGING_PUBLISHABLE_KEY)) {
+    throw new CollectorApiError("staging_not_configured", 503);
+  }
+  const response = await fetch(`${API_BASE}/${COLLECTOR_ROUTE}/${path}`, {
     method: code === undefined ? "GET" : "POST",
     headers: {
       Authorization: `Bearer ${accessToken}`,
+      ...(COLLECTOR_STAGING_MODE ? { apikey: STAGING_PUBLISHABLE_KEY } : {}),
       ...(code === undefined ? {} : { "Content-Type": "application/json" }),
     },
     ...(code === undefined ? {} : { body: JSON.stringify({ code }) }),
