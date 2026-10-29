@@ -5,6 +5,19 @@ export default ({ config }) => {
   // A staging build cannot fall back to a previous, live .env value.
   const collectorStaging =
     process.env.EXPO_PUBLIC_COLLECTOR_STAGING_MODE === "true";
+  const isCollectorIosBuild =
+    process.env.EAS_BUILD_PROFILE === "collector-staging-ios";
+  if (isCollectorIosBuild && !collectorStaging) {
+    throw new Error(
+      "Collector iPhone build refused: EXPO_PUBLIC_COLLECTOR_STAGING_MODE must be true."
+    );
+  }
+  if (collectorStaging && process.env.EAS_BUILD_PROFILE &&
+      !isCollectorIosBuild) {
+    throw new Error(
+      "Collector staging cannot be built with the regular Nova EAS profile."
+    );
+  }
   const stagingUrl = "https://gouhhltupxaycuysdtrw.supabase.co";
   const stagingPublicKey = "sb_publishable_g6o0Crn4Cn_r5vj6RMn3SQ_1K_q0SDY";
   const backendUrl = collectorStaging
@@ -15,9 +28,11 @@ export default ({ config }) => {
   return {
     ...config,
 
-    name: "Nova Tutoring",
+    name: collectorStaging ? "Nova Collector Staging" : "Nova Tutoring",
     slug: "Nova_Tutoring_expo_3",
-    scheme: "nova",
+    // Distinct staging scheme prevents the real Nova application from
+    // intercepting disposable collector-test QR/deep links.
+    scheme: collectorStaging ? "novacollectorstage" : "nova",
 
     version: "1.6.0",
     orientation: "portrait",
@@ -35,13 +50,18 @@ export default ({ config }) => {
     ios: {
       ...(config.ios || {}),
       supportsTablet: true,
-      bundleIdentifier: "com.sventography.novatutoring.ios",
+      // Staging must NEVER replace the real Nova app on a tester's phone.
+      bundleIdentifier: collectorStaging
+        ? "com.sventography.novatutoring.ios.collectorstage"
+        : "com.sventography.novatutoring.ios",
       buildNumber: "103",
     },
 
     android: {
       ...(config.android || {}),
-      package: "com.sventography.novatutoring",
+      package: collectorStaging
+        ? "com.sventography.novatutoring.collectorstage"
+        : "com.sventography.novatutoring",
       adaptiveIcon: {
         foregroundImage: "./app/assets/favicon.png",
         backgroundColor: "#000000",
