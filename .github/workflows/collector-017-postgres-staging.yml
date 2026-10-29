@@ -1,0 +1,27 @@
+# Manual only. No push/PR triggers and no production credentials.
+# Each run creates a throwaway localhost-only PostgreSQL Docker container.
+name: Collector 017 isolated PostgreSQL staging
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  postgres-staging:
+    # Never run against the default or production release branches.
+    if: github.ref == 'refs/heads/feature/noras-last-lantern-3d'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install only the necessary local staging test dependencies
+        run: python -m pip install 'Flask>=3,<4' 'psycopg[binary]==3.2.10'
+      - name: Syntax-check isolated staging runner and collector backend
+        run: python -m py_compile server/tests/run_collector_postgres_staging.py server/collector_redemption.py
+      - name: Execute real collector SQL against disposable PostgreSQL
+        run: python server/tests/run_collector_postgres_staging.py
