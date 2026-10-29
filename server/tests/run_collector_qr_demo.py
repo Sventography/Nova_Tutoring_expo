@@ -105,7 +105,7 @@ def fake_svg_qr(url: str) -> str:
     return "data:image/svg+xml;base64," + base64.b64encode(out.getvalue()).decode("ascii")
 
 
-def make_demo_app(*, database_url: str, public_ip: str, port: int):
+def make_demo_app(*, database_url: str, public_ip: str, port: int, mock_db=None):
     """Create an isolated Flask app using only synthetic accounts and tokens."""
     app = Flask("nova_collector_qr_local_only")
     app.config["MAX_CONTENT_LENGTH"] = 2048
@@ -117,16 +117,24 @@ def make_demo_app(*, database_url: str, public_ip: str, port: int):
     }
     identities = {tokens["alice"]: alice, tokens["bob"]: bob}
     codes = {17: secrets.token_urlsafe(32), 23: secrets.token_urlsafe(32)}
-    with REAL_CONNECT(database_url, sslmode="disable") as conn:
-        with conn.cursor() as cur:
-            cur.execute("INSERT INTO auth.users(id) VALUES (%s::uuid), (%s::uuid)", (alice, bob))
-            for serial, code in codes.items():
-                cur.execute(
-                    """INSERT INTO collector_private.plushie_codes
-                       (edition, serial_number, code_hash)
-                       VALUES ('noras_last_lantern', %s, %s)""",
-                    (serial, hashlib.sha256(code.encode("utf-8")).hexdigest()),
-                )
+    if mock_db is not None:
+        # Optional no-Docker fallback for testing the phone camera and UI.
+        # The actual SQL is verified in the separate PostgreSQL workflow.
+        mock_db.codes = {
+            hashlib.sha256(code.encode("utf-8")).hexdigest(): [serial, None, None]
+            for serial, code in codes.items()
+        }
+    else:
+        with REAL_CONNECT(database_url, sslmode="disable") as conn:
+            with conn.cursor() as cur:
+                cur.execute("INSERT INTO auth.users(id) VALUES (%s::uuid), (%s::uuid)", (alice, bob))
+                for serial, code in codes.items():
+                    cur.execute(
+                        """INSERT INTO collector_private.plushie_codes
+                           (edition, serial_number, code_hash)
+                           VALUES ('noras_last_lantern', %s, %s)""",
+                        (serial, hashlib.sha256(code.encode("utf-8")).hexdigest()),
+                    )
 
     def extract_bearer():
         header = request.headers.get("Authorization", "")
@@ -164,6 +172,11 @@ def make_demo_app(*, database_url: str, public_ip: str, port: int):
         for serial, code in codes.items()
     }
     markup = (HERE / "collector_qr_demo.html").read_text(encoding="utf-8")
+    if mock_db is not None:
+        markup = markup.replace(
+            "Fake accounts and disposable QR codes.",
+            "Fake accounts, disposable QR codes, and MOCK (in-memory) storage."
+        )
     markup = (
         markup
         .replace("__QR_017__", fake_svg_qr(links[17]))
@@ -208,6 +221,10 @@ def main() -> int:
     parser.add_argument(
         "--port", type=int, default=5057, help="Local test HTTP port (default: 5057)."
     )
+    parser.add_argument(
+        "--mock", action="store_true",
+        help="No-Docker fallback: test the QR camera/UI with in-memory fake storage only."
+    )
     args = parser.parse_args()
     if not 1024 <= args.port <= 65535:
         parser.error("--port must be between 1024 and 65535.")
@@ -216,40 +233,63 @@ def main() -> int:
     except (ValueError, RuntimeError) as exc:
         parser.error(str(exc))
 
-    # Refuse commonly leaked / live-looking configuration at launch. The actual
-    # database connection is ALWAYS a freshly created disposable Docker DSN.
+    # Always ignore user environment DB URLs; a local-only connection is
+    # generated inside this runner. No production user or code is consulted.
     if os.environ.get("COLLECTOR_DATABASE_URL"):
-        print("[collector-qr] Ignoring existing COLLECTOR_DATABASE_URL: "
-              "this demo only uses its own disposable Docker database.")
+        print("[collector-qr] Ignoring COLLECTOR_DATABASE_URL; this test uses "
+              "disposable local-only storage.")
     name = None
-    print("[collector-qr] Starting temporary, localhost-only PostgreSQL...")
     try:
-        name, db_url = launch_temporary_database()
-        install_original_sql(db_url)
-        app = make_demo_app(database_url=db_url, public_ip=local_ip, port=args.port)
+        if args.mock:
+            from test_collector_redemption import MemoryDatabase
+            fake_db = MemoryDatabase()
+            db_url = "postgresql://mock-only"
+            app = make_demo_app(
+                database_url=db_url, public_ip=local_ip, port=args.port,
+                mock_db=fake_db,
+            )
 
-        def local_only_connect(conninfo, **kwargs):
-            if conninfo != db_url:
-                raise AssertionError("Collector QR demo refused a non-disposable DB connection.")
-            if kwargs.get("sslmode") != "require" or kwargs.get("connect_timeout") != 8:
-                raise AssertionError("Production collector connection contract changed.")
-            return REAL_CONNECT(conninfo, **{**kwargs, "sslmode": "disable"})
+            def local_only_connect(conninfo, **kwargs):
+                if conninfo != db_url:
+                    raise AssertionError("Mock QR demo refused non-mock DB connection.")
+                return fake_db.connect(conninfo, **kwargs)
 
-        # Test-only bridge: local vanilla Postgres has no TLS, production remains
-        # sslmode=require. This patch lives only while this script is running.
+            storage_description = "MOCK MEMORY — not real PostgreSQL"
+        else:
+            print("[collector-qr] Starting temporary, localhost-only PostgreSQL...")
+            name, db_url = launch_temporary_database()
+            install_original_sql(db_url)
+            app = make_demo_app(
+                database_url=db_url, public_ip=local_ip, port=args.port,
+            )
+
+            def local_only_connect(conninfo, **kwargs):
+                if conninfo != db_url:
+                    raise AssertionError("QR demo refused a non-disposable DB connection.")
+                if kwargs.get("sslmode") != "require" or kwargs.get("connect_timeout") != 8:
+                    raise AssertionError("Production collector connection contract changed.")
+                return REAL_CONNECT(conninfo, **{**kwargs, "sslmode": "disable"})
+
+            storage_description = "REAL DISPOSABLE POSTGRESQL"
+
+        # Real mode: the local Docker Postgres has no TLS certificate; route
+        # production code still requests sslmode=require and we replace it
+        # with disable ONLY for the disposable test container. Mock mode:
+        # connect goes solely to the already-tested in-memory fake backend.
         with patch.dict(os.environ, {
             "COLLECTOR_DATABASE_URL": db_url,
             "COLLECTOR_REDEMPTION_ENABLED": "true",
         }), patch.object(psycopg, "connect", side_effect=local_only_connect):
             print("\n" + "=" * 66)
-            print("  NOVA//ARCHIVE — ISOLATED QR TEST, NOT PRODUCTION")
-            print(f"  Open on Mac:  http://{local_ip}:{args.port}/stage")
-            print("  Scan the QR displayed there with your iPhone camera.")
+            print("  NOVA//ARCHIVE — LOCAL QR TEST, NOT PRODUCTION")
+            print(f"  Storage: {storage_description}")
+            print(f"  Open on Mac: http://{local_ip}:{args.port}/stage")
+            print("  Scan the QR there with the iPhone camera.")
             print("  Use Test Owner A to claim and Test Owner B to check rejection.")
-            print("  Stop with Control+C. The temporary database will be deleted.")
+            print("  Stop with Control+C; temporary storage is discarded.")
             print("=" * 66 + "\n")
-            app.run(host="0.0.0.0", port=args.port, debug=False, use_reloader=False,
-                    threaded=True)
+            app.run(host="0.0.0.0", port=args.port, debug=False,
+                    use_reloader=False, threaded=True)
         return 0
     except KeyboardInterrupt:
         print("\n[collector-qr] Shutting down the local staging demo.")
