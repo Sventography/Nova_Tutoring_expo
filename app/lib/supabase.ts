@@ -6,6 +6,11 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 import Constants from "expo-constants";
 import { createClient } from "@supabase/supabase-js";
+import {
+  COLLECTOR_STAGING_MODE,
+  collectorStagingConfigError,
+  collectorStagingStorageKey,
+} from "../_lib/collectorStaging";
 
 const extra =
   (Constants.expoConfig?.extra as
@@ -31,8 +36,22 @@ const SUPABASE_ANON_KEY = String(
     ""
 ).trim();
 
-const SUPABASE_STORAGE_KEY =
-  "nova.supabase.auth.v3";
+const BACKEND_URL = String(
+  process.env.EXPO_PUBLIC_BACKEND_URL ||
+    extra.EXPO_PUBLIC_BACKEND_URL ||
+    ""
+).trim();
+
+// Fail closed before creating an Auth client or recovering any stored session.
+// Real-account collector staging must never point at Nova's live Auth/backend.
+if (COLLECTOR_STAGING_MODE) {
+  const problem = collectorStagingConfigError(
+    SUPABASE_URL, BACKEND_URL, __DEV__
+  );
+  if (problem) throw new Error("[COLLECTOR STAGING] " + problem);
+}
+
+const SUPABASE_STORAGE_KEY = collectorStagingStorageKey(SUPABASE_URL);
 
 if (__DEV__) {
   console.log("[SUPABASE CONFIG]", {
