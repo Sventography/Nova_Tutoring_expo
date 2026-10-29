@@ -49,18 +49,14 @@ export function collectorStagingConfigError(
   const auth = parsedUrl(supabaseUrl);
   if (!auth) return "Provide a valid isolated EXPO_PUBLIC_SUPABASE_URL for staging.";
   const ref = hostedSupabaseRef(auth.hostname);
-  const localAuth = isLocalhost(auth.hostname);
-  if (!localAuth && !ref) {
-    return "Staging Auth must use a dedicated Supabase project or local Supabase CLI.";
+  if (!ref) {
+    return "Staging Auth must use a dedicated hosted Supabase project.";
   }
   if (ref && FORBIDDEN_SUPABASE_REFS.has(ref)) {
     return "Collector staging refuses Nova's production or former Supabase project.";
   }
-  if (ref && auth.protocol !== "https:") {
-    return "Hosted staging Supabase Auth must use HTTPS.";
-  }
-  if (localAuth && auth.protocol !== "http:") {
-    return "Local Supabase CLI Auth should use a localhost HTTP address.";
+  if (auth.protocol !== "https:" || (auth.pathname !== "/" && auth.pathname !== "")) {
+    return "Hosted staging Supabase Auth must use a root HTTPS URL.";
   }
 
   const backend = parsedUrl(backendUrl);
@@ -68,14 +64,14 @@ export function collectorStagingConfigError(
   if (PRODUCTION_BACKENDS.has(backend.hostname)) {
     return "Collector staging refuses Nova's live Render backend.";
   }
+  if (backend.pathname !== "/" && backend.pathname !== "") {
+    return "Staging collector backend URL must not contain a path.";
+  }
   if (backend.protocol !== "https:" &&
     !(backend.protocol === "http:" && isLocalhost(backend.hostname))) {
     return "Staging collector backend must use HTTPS or local loopback.";
   }
   // Never send real Auth access tokens over unencrypted LAN connections.
-  if (backend.protocol === "http:" && !isLocalhost(backend.hostname)) {
-    return "Plain HTTP staging backends are permitted on localhost only.";
-  }
   return null;
 }
 
