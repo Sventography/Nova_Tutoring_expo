@@ -14,6 +14,7 @@ import type { Session, User as SupabaseUser } from "@supabase/supabase-js";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "../lib/supabase";
+import { COLLECTOR_STAGING_MODE } from "../_lib/collectorStaging";
 
 type LocalUserProfile = {
   id: string;
@@ -149,15 +150,21 @@ type UserContextValue = {
 
 const UserContext = createContext<UserContextValue | null>(null);
 
-const PROFILE_KEY = "user.profile.v1";
+const PROFILE_KEY = COLLECTOR_STAGING_MODE
+  ? "user.profile.v1.collector-stage"
+  : "user.profile.v1";
 const GUEST_RESET_GUARD_KEY =
   "@nova/guest.reset.guard.v2";
 
 const GUEST_RESET_GUARD_MS =
   8000;
 
-const SUPABASE_JWT_KEY = "auth.supabase.jwt";
-const SUPABASE_AUTH_TOKEN_KEY = "@supabase.auth.token";
+const SUPABASE_JWT_KEY = COLLECTOR_STAGING_MODE
+  ? "auth.supabase.jwt.collector-stage"
+  : "auth.supabase.jwt";
+const SUPABASE_AUTH_TOKEN_KEY = COLLECTOR_STAGING_MODE
+  ? "@supabase.auth.token.collector-stage"
+  : "@supabase.auth.token";
 const PENDING_EMAIL_CHANGE_KEY =
   "nova.auth.pending-email-change.v1";
 
@@ -527,6 +534,18 @@ async function clearSupabaseAuthStorage(reason?: string) {
     );
 
     const keys = await AsyncStorage.getAllKeys();
+
+    // Never remove a live project's locally saved tokens when testing
+    // collector staging in the same browser or simulator.
+    if (COLLECTOR_STAGING_MODE) {
+      const onlyStaging = keys.filter((key) =>
+        key.startsWith("nova.supabase.auth.v3.collector-stage.")
+      );
+      await AsyncStorage.multiRemove([
+        SUPABASE_JWT_KEY, SUPABASE_AUTH_TOKEN_KEY, ...onlyStaging,
+      ]);
+      return;
+    }
 
     const supaKeys = keys.filter((k) => {
       const low = String(k).toLowerCase();
@@ -1620,6 +1639,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
      * guest/device-global commerce and customization keys; signed-in user keys
      * and Supabase data remain untouched.
      */
+    if (!COLLECTOR_STAGING_MODE) {
     try {
       await AsyncStorage.setItem(
         GUEST_RESET_GUARD_KEY,
@@ -1672,6 +1692,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         error
       );
     }
+    } // Staging never clears shared guest customization/purchases.
 
     // Update the visible app state after guest storage is clean.
     setSession(null);
