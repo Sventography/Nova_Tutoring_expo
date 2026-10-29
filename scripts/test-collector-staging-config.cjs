@@ -169,4 +169,20 @@ assert.match(collectorClient, /COLLECTOR_STAGING_PUBLISHABLE_KEY/);
 assert.match(launcher, /export EXPO_NO_DOTENV=1/);
 assert.match(launcher, /export EXPO_PUBLIC_COLLECTOR_STAGING_MODE=true/);
 checks += 8;
+// Regression for ChatGPT/share-link tracking landing AFTER a #code=...
+// fragment (as seen in Chrome's address bar). Only the exact code is passed
+// to Supabase; appended tracking text can never become part of the code.
+const collectorPage = fs.readFileSync(
+  path.join(__dirname, "../app/collector/index.tsx"), "utf8"
+);
+assert.match(collectorPage, /fragment\.split\("\?", 1\)\[0\]/);
+const secretCode = "A".repeat(64);
+const linkWithTracking =
+  "http://localhost:8081/collector#code=" +
+  secretCode + "?utm_source=chatgpt.com";
+const fragment = linkWithTracking.split("#", 2)[1];
+const extracted = new URLSearchParams(fragment.split("?", 1)[0]).get("code");
+assert.equal(extracted, secretCode);
+checks += 2;
+
 console.log("Collector staging configuration: " + checks + " assertions passed.");
