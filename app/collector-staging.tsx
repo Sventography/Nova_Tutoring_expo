@@ -15,7 +15,10 @@ import {
   fetchCollectorEntitlements,
   type CollectorEntitlement,
 } from "./_lib/collectorClient";
-import { COLLECTOR_STAGING_MODE } from "./_lib/collectorStaging";
+import {
+  COLLECTOR_STAGING_MODE,
+  COLLECTOR_STAGING_BUILD_ALLOWED,
+} from "./_lib/collectorStaging";
 
 /**
  * Unlinked, DEVELOPMENT-ONLY diagnostics for isolated real-account staging.
@@ -33,7 +36,7 @@ export default function CollectorStagingDiagnostics() {
   const [lastServerGrants, setLastServerGrants] =
     useState<CollectorEntitlement[] | null>(null);
 
-  const enabled = __DEV__ && COLLECTOR_STAGING_MODE;
+  const enabled = COLLECTOR_STAGING_MODE && COLLECTOR_STAGING_BUILD_ALLOWED;
   const accountId = session?.user?.id ?? null;
 
   useEffect(() => {
