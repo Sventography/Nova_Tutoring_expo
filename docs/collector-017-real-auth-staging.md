@@ -114,6 +114,38 @@ this real-account test. In the staging Edge gateway, only port 8081 or
 This check is **not verified yet**; the user still needs to run Expo and
 authenticate. Never deploy these staging-only configs to the public app.
 
+## Known staging startup error — fixed on the feature branch
+
+If Expo showed:
+
+    [COLLECTOR STAGING] Collector staging refuses Nova's production
+    or former Supabase project.
+
+the protective guard rejected a stale production Supabase URL from Expo's
+runtime environment or its cached config. The staging launcher had already
+exported the correct project, but Expo could still pick up an old .env or
+manifest value. To fail **safe** *and* start reliably, explicit staging mode
+now pins ALL three public connection values to the same isolated project:
+Auth URL, publishable key, and collector Edge base URL. Production remains
+environment-driven and unchanged. The Expo app.config.js path is pinned too,
+including server-side rendering. Launcher sets EXPO_NO_DOTENV=1 to prevent
+old local Nova environment values being loaded.
+
+Pull the latest feature branch, stop the previous Expo process (Ctrl+C),
+then rerun:
+
+    cd ~/dev/Nova_Tutoring_expo_3
+    git -c core.sshCommand="ssh -p 443 -o Hostname=ssh.github.com" fetch origin
+    git merge --ff-only origin/feature/noras-last-lantern-3d
+    bash scripts/start-collector-staging-web.sh
+
+Open a fresh Safari Private window at http://localhost:8081/sign-in.
+Never lower/remove the staging guard to make an environment error go away.
+
+The pinned URLs and public client key are not server secrets; no live
+production account/password should be used in staging. This fix must be
+tested in a real Mac Expo run before declaring login end-to-end proven.
+
 ## How to launch staging Expo on the Mac
 
 1. Pull feature/noras-last-lantern-3d onto the development clone.
