@@ -20,11 +20,13 @@ const result = ts.transpileModule(helper, {
 const errors = (result.diagnostics || []).filter(d => d.category === ts.DiagnosticCategory.Error);
 assert.equal(errors.length, 0, "Camera math helper must transpile without TypeScript syntax errors");
 
-const exports = {};
-vm.runInNewContext(result.outputText, { exports, module: { exports } }, {
+const helperExports = {};
+vm.runInNewContext(result.outputText, {
+  exports: helperExports, module: { exports: helperExports },
+}, {
   filename: "islandCameraNavigation.ts",
 });
-const { panIslandCameraTarget, orbitIslandCamera } = exports;
+const { panIslandCameraTarget, orbitIslandCamera } = helperExports;
 assert.equal(typeof panIslandCameraTarget, "function");
 assert.equal(typeof orbitIslandCamera, "function");
 
@@ -104,4 +106,4 @@ assert.match(scene, /nudgeIslandCamera\("tilt-up"\)/);
 assert.match(scene, /nudgeIslandCamera\("tilt-down"\)/);
 assert.match(scene, /"BUILD: Drag empty space to rotate/);
 assert.match(scene, /onPress={resetView}/);
-console.log("Island BUILD camera: 28 geometry, gesture and UI checks passed.");
+console.log("Island BUILD camera geometry, gesture and UI checks passed.");
