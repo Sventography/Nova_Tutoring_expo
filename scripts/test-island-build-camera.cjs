@@ -86,9 +86,23 @@ assert.doesNotMatch(pointerDown,
   "Web pointerdown must never globally disable camera in BUILD mode");
 assert.match(pointerDown, /event\.button !== 0 && event\.button !== 2/,
   "Both normal orbit and right-drag camera pan should be available");
-assert.match(pointerDown, /builderDragRef\.current/);
-assert.match(pointerDown, /getArmedDecorationDrag\(\)/);
-assert.match(pointerDown, /getArmedKeepsakeDrag\(\)/);
+const pointerMove = scene.slice(pointerEnd, scene.indexOf('const onPointerEnd = (event: any) => {', pointerEnd));
+assert.match(pointerMove, /builderDragRef\.current/);
+assert.match(pointerMove, /actions\.getArmedDecorationDrag\(\)/);
+assert.match(pointerMove, /actions\.getArmedKeepsakeDrag\(\)/);
+assert.match(pointerMove, /actions\.queueBuilderMove\(/);
+assert.match(pointerMove, /actions\.moveDecorationPlacement\(/);
+assert.match(pointerMove, /actions\.moveKeepsake\(/);
+assert.match(pointerMove, /if \(builderEditing && !start\.pan && points\.length === 1\)/,
+  "Selected item drag must take precedence over the camera orbit");
+assert.match(scene, /surface\.addEventListener\("pointerdown", onPointerDown, true\)/,
+  "Use capture so Three.js cannot swallow the orbit gesture");
+assert.match(scene, /browser\.addEventListener\("pointermove", onPointerMove, true\)/,
+  "Use capture for mouse motion when dragging over 3D objects");
+assert.match(scene, /surface\.removeEventListener\?\.\("pointerdown", onPointerDown, true\)/);
+assert.match(scene, /browser\.removeEventListener\("pointermove", onPointerMove, true\)/);
+assert.match(scene, /\}, \[builderEditing, setInteractionActive\]\);/,
+  "Do not tear down a drag event listener after the selected item moves");
 assert.match(scene, /controlsRef\.current\.desiredTarget = panIslandCameraTarget\(/,
   "Web camera must pan when Shift/right drag is active");
 assert.match(scene, /const orbit = orbitIslandCamera\(/,
@@ -104,6 +118,7 @@ assert.match(scene, /nudgeIslandCamera\("pan-down"\)/);
 assert.match(scene, /nudgeIslandCamera\("pan-right"\)/);
 assert.match(scene, /nudgeIslandCamera\("tilt-up"\)/);
 assert.match(scene, /nudgeIslandCamera\("tilt-down"\)/);
+assert.match(scene, /MOVE CAMERA · BUILD v3/, "Visible UI version tag is required");
 assert.match(scene, /"BUILD: Drag empty space to rotate/);
 assert.match(scene, /onPress={resetView}/);
 console.log("Island BUILD camera geometry, gesture and UI checks passed.");
