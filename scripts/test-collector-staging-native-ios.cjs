@@ -80,6 +80,8 @@ assert.match(runner, /mktemp -d/);
 assert.match(runner, /cp "\$PROJECT" "\$BACKUP_DIR\/project\.pbxproj"/);
 assert.match(runner, /cp "\$PLIST" "\$BACKUP_DIR\/Info\.plist"/);
 assert.match(runner, /trap restore_native EXIT/);
+assert.match(runner, /--check-only/);
+assert.match(runner, /PRE-FLIGHT PASSED. No EAS build was started/);
 assert.match(runner, /node scripts\/collector-staging-native-ios\.cjs --apply/);
 assert.match(runner, /node scripts\/collector-staging-native-ios\.cjs --verify/);
 assert.match(runner, /export EXPO_PUBLIC_COLLECTOR_STAGING_MODE=true/);
