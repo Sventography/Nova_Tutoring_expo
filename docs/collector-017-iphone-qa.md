@@ -56,12 +56,42 @@ From the Mac's working feature-branch repo, stop the current web Expo
 server (Ctrl+C) and fetch/fast-forward the branch. Then sign in to the
 intended EAS project and Apple's developer provisioning when prompted.
 
-Build the separate iOS dev client only if the owner chooses to do so:
+IMPORTANT native identity correction, following the owner's first
+iPhone attempt: The repository **tracks ios/**. Xcode's
+`ios/NovaTutoring.xcodeproj/project.pbxproj` has the normal Nova
+bundle ID in both Debug and Release configurations, and its
+`ios/NovaTutoring/Info.plist` has the normal Nova display name
+and URL scheme. In this existing native project EAS **does not copy**
+the dynamic `app.config.js` name/bundle ID into Xcode. Therefore,
+even though `npx expo config --json` correctly prints the *staging*
+name, a direct `eas build --profile collector-staging-ios`
+could still create an IPA with the **normal Nova** bundle ID and
+install it over the regular app. This happened on the first test.
+
+**DO NOT run the raw EAS build command again.** Use the staging-safe
+wrapper, which temporarily patches only those native source identity
+values and checks both native and dynamic config before invoking EAS.
+It backs up the existing Xcode project and Info.plist, and restores
+them automatically on success, failure, or interruption. It refuses
+to proceed if the tracked native files already have local changes.
 
 ```bash
 cd ~/dev/Nova_Tutoring_expo_3
-npx eas-cli@latest build --platform ios --profile collector-staging-ios
+git -c core.sshCommand="ssh -p 443 -o Hostname=ssh.github.com" fetch origin
+git merge --ff-only origin/feature/noras-last-lantern-3d
+bash scripts/build-collector-staging-ios.sh
 ```
+
+Before any installation, check the resulting EAS build's **actual
+native iOS bundle identifier**: it MUST be
+`com.sventography.novatutoring.ios.collectorstage`. If EAS still
+shows `com.sventography.novatutoring.ios`, stop: that is a normal
+Nova build, not the collector staging app.
+
+Do not run another cloud build just to check the config: run
+`node scripts/test-collector-staging-native-ios.cjs` first or
+run the manual GitHub test workflow. Those tests use a disposable
+Xcode copy and change nothing in the real iOS files.
 
 For EAS internal-distribution development builds on a real iPhone,
 follow the EAS prompt to register the iPhone for ad-hoc provisioning
