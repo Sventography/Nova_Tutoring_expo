@@ -227,6 +227,45 @@ Manual GitHub run #40817657264 on `feature/noras-last-lantern-3d`:
 workflow on the feature branch and inspect both jobs. Future build errors
 must be investigated separately, not dismissed because the backend passed.
 
+## Dedicated $0 Supabase staging — 2026-10-29
+
+A SEPARATE project, nova-collector-staging, was created at a verified
+$0/month cost, under the Nova Tutoring Free organization, ref
+gouhhltupxaycuysdtrw. Live Nova was not changed.
+
+- Applied existing collector private schema, attempt limit and permanent
+  serial-burn SQL in a single staging migration.
+- Added staging-only public.profiles (schema only), four owner-only RLS
+  policies, and read-only check_username RPC needed by Expo sign-up.
+  Consolidated reference SQL is in
+  docs/collector-017-staging-profile-schema.sql.
+- Verified anon/authenticated cannot execute private claim and
+  cannot access collector schema; RLS on all four tables.
+- Security advisor: three expected INFO notices (private tables deny all)
+  plus two expected WARN notices about the intentionally available
+  read-only SECURITY DEFINER check_username RPC. Review before any
+  future production signup rollout; not a production schema change.
+- Deployed **Supabase Edge Function collector-staging, version 1,
+  ACTIVE, verify_jwt=true** in the new project only. Source is
+  supabase/functions/collector-staging/index.ts.
+- Staging Expo collectorClient uses Supabase /functions/v1/collector-staging
+  and the backend URL must exactly match staging Auth's project origin.
+  The live app still uses the original Render Flask endpoint.
+- Two 256-bit disposable codes for staging serials 017 and 023 were
+  generated. Only SHA-256 hashes are in the staging database. Both
+  codes are unclaimed. Original secrets were NOT committed to GitHub.
+- Confirmed no staging user accounts or entitlements exist yet, and
+  calling claim or attempt with a null user is denied.
+
+**Still unverified:** A real staging Supabase sign-in, an authenticated
+Edge Function request, server-side grant, island entitlement reconciliation,
+and mobile HTTPS QR scan. The Edge Function deployment being ACTIVE is
+not proof that its database queries work with a real JWT. The updated
+feature-branch CI also needs another manual run after the Edge client changes.
+
+See docs/collector-017-real-auth-staging.md for current steps; it supersedes
+the former Render-only staging backend suggestion.
+
 ## Verification before any production activation
 
 1. Run the mock suite above and record the result. The GitHub workflow is manual-only:
