@@ -14,6 +14,13 @@ if [[ "$BRANCH" != "feature/noras-last-lantern-3d" ]]; then
   exit 1
 fi
 
+# Prevent testing an outdated bundle that lacks the BUILD-mode camera.
+if ! grep -Fq 'MOVE CAMERA · BUILD v3' app/components/island3d/NovaIsland3DScene.tsx; then
+  echo "[collector-staging] This branch checkout does NOT include BUILD v3."
+  echo "Fetch and fast-forward origin/feature/noras-last-lantern-3d first."
+  exit 1
+fi
+
 if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
   echo "[collector-staging] Node.js and npm are required."
   exit 1
@@ -51,6 +58,8 @@ export EXPO_PUBLIC_BACKEND_URL="https://gouhhltupxaycuysdtrw.supabase.co"
 echo
 echo "============================================================"
 echo "  NOVA//ARCHIVE — REAL ACCOUNT STAGING (NOT PRODUCTION)"
+echo "  Git commit: $(git rev-parse --short HEAD)"
+echo "  Island camera: MOVE CAMERA · BUILD v3"
 echo "  Auth:    nova-collector-staging (new separate Supabase)"
 echo "  Backend: staging Supabase Edge Function"
 echo "  Local .env loading: DISABLED for this staging run"
