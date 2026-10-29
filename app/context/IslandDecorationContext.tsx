@@ -19,7 +19,16 @@ import {
   type IslandDecorationCatalogItem,
 } from "../_lib/islandDecorationCatalog";
 import { clampIslandBuildPosition } from "../_lib/islandBuilderBounds";
-import { decorationGroundRadius, findNearestFreeGround, landmarkGroundRadius, overlapsGround, developerCastleObstacle } from "../_lib/islandAutoPlacement";
+import {
+  decorationGroundRadius,
+  findNearestFreeGround,
+  landmarkGroundRadius,
+  overlapsGround,
+  developerCastleObstacle,
+  DAILY_QUEST_GROUND_OBSTACLE,
+  COLLECTOR_CASTLE_PREFERRED_GROUND,
+  type GroundObstacle,
+} from "../_lib/islandAutoPlacement";
 import { useIslandBuilder } from "./IslandBuilderContext";
 import { useCoins } from "./CoinsContext";
 import { useIsland } from "./IslandContext";
@@ -315,6 +324,15 @@ function normalizeState(raw: unknown): DecorationState {
 }
 
 function spawnTransform(itemId: string): IslandDecorationTransform {
+  // A rare, 9-unit-wide castle deserves a stable home rather than the
+  // generic random 1.2–5.4-unit ring around the quest tracker.
+  if (itemId === COLLECTOR_REWARD_ID) {
+    return normalizeTransform(itemId, {
+      ...COLLECTOR_CASTLE_PREFERRED_GROUND,
+      rotationY: 0,
+    });
+  }
+
   const angle = Math.random() * Math.PI * 2;
   const radius = 1.2 + Math.random() * 4.2;
 
@@ -323,6 +341,51 @@ function spawnTransform(itemId: string): IslandDecorationTransform {
     z: Math.sin(angle) * radius,
     rotationY: Math.random() * Math.PI * 2,
   });
+}
+
+/** One-time layout repair, ONLY for a previously placed #017 that covers
+ * the non-editable Daily Quest station. Preserve its id, ownership and
+ * placement state; never move ordinary decorations or custom castle layouts
+ * which already leave the pavilion clear. No client-side reward grant.
+ */
+function moveCastleOffQuest(
+  state: DecorationState,
+  landmarkObstacles: readonly GroundObstacle[],
+): DecorationState {
+  const castle = state.placements.find(
+    (placement) => placement.itemId === COLLECTOR_REWARD_ID
+  );
+  if (!castle) return state;
+
+  const radius = decorationGroundRadius(COLLECTOR_REWARD_ID, castle.transform.scale);
+  if (!overlapsGround(castle.transform, radius, [DAILY_QUEST_GROUND_OBSTACLE], 0.4)) {
+    return state;
+  }
+
+  const obstacles: GroundObstacle[] = [
+    ...landmarkObstacles,
+    ...state.placements
+      .filter((placement) => placement.placementId !== castle.placementId)
+      .map((placement) => ({
+        x: placement.transform.x,
+        z: placement.transform.z,
+        radius: decorationGroundRadius(placement.itemId, placement.transform.scale),
+      })),
+  ];
+  const safe = findNearestFreeGround(COLLECTOR_CASTLE_PREFERRED_GROUND, radius, obstacles, {
+    gap: 0.45,
+  });
+  if (!safe) return state; // Keep existing layout if nowhere fits.
+
+  const next = cloneState(state);
+  const target = next.placements.find(
+    (placement) => placement.placementId === castle.placementId
+  );
+  if (!target) return state;
+  target.transform = { ...target.transform, ...safe };
+  target.updatedAt = Date.now();
+  next.updatedAt = Date.now();
+  return next;
 }
 
 export function IslandDecorationProvider({ children }: { children: ReactNode }) {
@@ -340,9 +403,13 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
     radius: landmarkGroundRadius(p.itemId, p.transform.scale),
   }));
   // Fixed quest plaza is not part of the editable builder catalog.
-  landmarkObstacles.push({ x: 4.9, z: 0.55, radius: 2.4 });
+  landmarkObstacles.push(DAILY_QUEST_GROUND_OBSTACLE);
   const castle = developerCastleObstacle(landmarkObstacles);
   if (castle) landmarkObstacles.push(castle);
+  // This is a stable reference so auth reconciliation doesn't re-fetch
+  // endlessly on unrelated island renders.
+  const landmarkObstaclesRef = useRef(landmarkObstacles);
+  landmarkObstaclesRef.current = landmarkObstacles;
 
   const [ready, setReady] = useState(false);
   const [confirmedCollectorAccount, setConfirmedCollectorAccount] = useState<string | null>(null);
@@ -420,9 +487,15 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
       const entitlements = await fetchCollectorEntitlements(session.access_token);
       const reward = entitlements.find((item) => item.reward_id === COLLECTOR_REWARD_ID);
       if (accountRef.current !== userId || loadedAccountRef.current !== userId) return false;
-      const next = reconcileCollectorReward(committedRef.current, reward?.granted_at ?? null);
+      const next = moveCastleOffQuest(
+        reconcileCollectorReward(committedRef.current, reward?.granted_at ?? null),
+        landmarkObstaclesRef.current
+      );
       const nextDraft = draftRef.current
-        ? reconcileCollectorReward(draftRef.current, reward?.granted_at ?? null)
+        ? moveCastleOffQuest(
+            reconcileCollectorReward(draftRef.current, reward?.granted_at ?? null),
+            landmarkObstaclesRef.current
+          )
         : null;
       await persist(next);
       if (accountRef.current !== userId || loadedAccountRef.current !== userId) return false;
