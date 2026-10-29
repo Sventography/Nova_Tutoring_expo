@@ -255,6 +255,67 @@ that CANCEL/SAVE operate as before.
 **Not yet verified by a fresh Expo browser run or CI since this fix.**
 Do not infer mobile usability from the web-only test.
 
+## Additional live feedback and BUILD v3 correction (2026-10-29)
+
+Tester A/B/A confirmed authenticated ownership persistence (A has #017,
+B does not), but the next manual BUILD-mode screenshot at 1:17 PM showed:
+- The camera still only zoomed, even though BUILD v2 had been committed.
+- The entire **MOVE CAMERA** pad was missing from the screenshot. If that
+  build had actually been loaded, the pad must have appeared. This
+  strongly indicates an older bundle still running, or a render issue
+  that must be manually rechecked; do not claim the camera fix passed.
+- The placed castle visually obstructed Nova herself. Our previous
+  collision system protected Daily Quest but not the Nova pedestal.
+
+New fixes in this branch:
+- Shared camera now uses **capture-phase** DOM pointerdown/move/up in
+  React Native Web, even when Three.js has pointer targets.
+- The camera works in BUILD: left-drag on blank island rotates;
+  Shift+left-drag or right-drag pans; scroll/trackpad zooms. Controls
+  can always be operated via the onscreen pad.
+- A selected, armed item on primary drag moves that item (not the
+  camera). DOM handlers hold live function refs, so an island
+  re-render in mid-drag does not detach the event handler.
+- Visible marker **MOVE CAMERA · BUILD v3** is rendered in the camera pad.
+  Staging launcher refuses an older branch checkout without that marker
+  and prints the running Git commit on startup.
+- Protect NOVA_PEDESTAL_WORLD near (-3, 0.8, 1.6) after island yaw
+  rotation, as a dedicated ground obstacle centered near (-3.12, 1.36),
+  radius 2.75. Move previously placed #017 away from either Nova or
+  Daily Quest only when it actually overlaps those protected regions.
+- New castle placement prefers (10, -10), visually opposite Nova and
+  away from the Daily Quest pavilion, with collision-aware fallback.
+- Staging launcher unsets any inherited `EXPO_PUBLIC_NORAS_LANTERN_PREVIEW`
+  flag to avoid a duplicate non-redemption debug castle.
+- Extend island-camera and castle regression scripts to cover the
+  corrections; workflow remains manual-only.
+
+**Manual retest protocol:**
+1. SAVE any island editor changes, then stop the existing Expo process
+   with Ctrl+C. Do not touch production.
+2. In `~/dev/Nova_Tutoring_expo_3` fetch and fast-forward
+   `origin/feature/noras-last-lantern-3d`.
+3. Run `bash scripts/start-collector-staging-web.sh`. Terminal
+   must display `Island camera: MOVE CAMERA · BUILD v3` and Git commit.
+4. Chrome: hard-refresh with **Command + Shift + R**, then open Island
+   and BUILD. The camera-pad title MUST show
+   `MOVE CAMERA · BUILD v3`.
+5. Check pad left/right rotate, pan, tilt; check mouse empty-ground drag,
+   Shift-drag/right-drag and wheel. Click Last Lantern; dragging its
+   selected model should move it without moving camera.
+6. Visit `/collector-staging` and Recheck server & island inventory;
+   reload Island. The existing entitled castle should move off any
+   overlapping Nova/Quest obstacle. The entitlement must remain 1.
+7. SAVE layout. Refresh and check persistence. Then sign into Tester B
+   and ensure this camera update hasn't leaked #017 ownership.
+8. Run workflow's CI checks after testing, or run locally
+   `node scripts/test-island-build-camera.cjs` and
+   `node scripts/test-collector-castle-placement.cjs`.
+
+**Status:** Code and regression tests committed; the user's local
+browser and new CI jobs have not yet verified BUILD v3 at this writing.
+No production code was deployed.
+
 ## Next steps (still required)
 
 1. In the STAGING project's Authentication > Users, create two
