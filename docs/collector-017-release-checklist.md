@@ -207,6 +207,26 @@ or separate HTTPS Render staging service has been provisioned. This
 milestone is PREPARED, not complete, and its new tests must still be run.
 Production collection remains disabled and no live codes are issued.
 
+## Manual security CI — 2026-10-29 build fix awaiting rerun
+
+Manual GitHub run #40817657264 on `feature/noras-last-lantern-3d`:
+- `collector-backend`: **PASS**, 26 mock/isolated staging tests, all OK.
+- `collector-web`: **FAIL** at `npx expo export -p web`.
+- Staging configuration: **PASS**, 26 JavaScript assertions.
+- Collector-touched TypeScript diagnostics: **PASS** for the selected files.
+  Repository-wide TypeScript still reports 1,022 pre-existing errors; this
+  workflow does NOT represent a full TypeScript clean build.
+- Root cause of web export: the configuration's PNG favicon is a Git LFS
+  pointer when `actions/checkout` doesn't hydrate LFS; `jimp-compact`
+  reported `Could not find MIME for Buffer <null>`.
+- Workflow fix committed: checkout with `lfs: true`, verify favicon is
+  actually a PNG, and use explicitly fake CI staging URLs/public key while
+  exporting web. No production credentials or deployment involved.
+
+**The fixed Expo build is NOT YET VERIFIED.** Manually rerun the security
+workflow on the feature branch and inspect both jobs. Future build errors
+must be investigated separately, not dismissed because the backend passed.
+
 ## Verification before any production activation
 
 1. Run the mock suite above and record the result. The GitHub workflow is manual-only:
