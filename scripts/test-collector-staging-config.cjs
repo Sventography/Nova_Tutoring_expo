@@ -49,9 +49,9 @@ const sealedRelease = runConfig(true, false, false);
 const problem = (auth, api, dev = true) =>
   staging.collectorStagingConfigError(auth, api, dev);
 
-const authA = "https://abcdefghijklmnopqrst.supabase.co";
+const authA = "https://gouhhltupxaycuysdtrw.supabase.co";
 const authB = "https://bbbbbbbbbbbbbbbbbbbb.supabase.co";
-const backend = "https://nova-collector-staging.onrender.com";
+const backend = authA;
 let checks = 0;
 
 function accepts(auth, api, dev = true) {
@@ -70,7 +70,7 @@ assert.equal(hostedPreview.COLLECTOR_STAGING_BUILD_ALLOWED, true);
 assert.equal(sealedRelease.COLLECTOR_STAGING_BUILD_ALLOWED, false);
 checks += 5;
 accepts(authA, backend);
-accepts(authB, backend);
+rejects(authB, backend);
 assert.equal(
   hostedPreview.collectorStagingConfigError(authA, backend, hostedPreview.COLLECTOR_STAGING_BUILD_ALLOWED),
   null
@@ -80,7 +80,7 @@ assert.equal(
   "string"
 );
 checks += 2;
-accepts(authA, "http://127.0.0.1:5059");
+rejects(authA, "http://127.0.0.1:5059");
 rejects("http://127.0.0.1:54321", "http://127.0.0.1:5059");
 rejects(authA + "/auth/v1", backend);
 rejects(authA, backend + "/api/collector");
@@ -108,4 +108,21 @@ assert.notEqual(
   staging.collectorStagingStorageKey(authB)
 );
 checks += 2;
+
+// Verify that the mobile client dispatches staging calls to Edge, while
+// production requests retain their existing Flask collector route.
+const collectorClient = fs.readFileSync(
+  path.join(__dirname, "../app/_lib/collectorClient.ts"), "utf8"
+);
+const edge = fs.readFileSync(
+  path.join(__dirname, "../supabase/functions/collector-staging/index.ts"), "utf8"
+);
+assert.match(collectorClient, /functions\/v1\/collector-staging/);
+assert.match(collectorClient, /"api\/collector"/);
+assert.match(collectorClient, /apikey: STAGING_PUBLISHABLE_KEY/);
+assert.match(edge, /const STAGING_REF = "gouhhltupxaycuysdtrw"/);
+assert.match(edge, /client\.auth\.getUser\(bearer\[1\]\)/);
+assert.match(edge, /collector_private\.claim_castle_017/);
+assert.match(edge, /collector_private\.allow_redemption_attempt/);
+checks += 7;
 console.log("Collector staging configuration: " + checks + " assertions passed.");
