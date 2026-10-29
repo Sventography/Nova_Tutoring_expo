@@ -40,6 +40,10 @@ import {
   clampIslandBuildPosition,
 } from "../../_lib/islandBuilderBounds";
 import {
+  orbitIslandCamera,
+  panIslandCameraTarget,
+} from "../../_lib/islandCameraNavigation";
+import {
   ISLAND_DECORATION_CATALOG_BY_ID,
 } from "../../_lib/islandDecorationCatalog";
 
@@ -15203,6 +15207,43 @@ export default function NovaIsland3DScene({
     velocityRef.current = { azimuth: 0, polar: 0 };
   }, []);
 
+  // Dedicated camera navigation works even when an item is selected for
+  // moving, and never mutates that item's position or its stored layout.
+  // These buttons supplement mouse/trackpad gestures on web and finger
+  // gestures on native, so the camera never becomes stuck in BUILD mode.
+  const nudgeIslandCamera = useCallback((
+    direction:
+      | "orbit-left" | "orbit-right"
+      | "tilt-up" | "tilt-down"
+      | "pan-left" | "pan-right" | "pan-up" | "pan-down"
+  ) => {
+    const controls = controlsRef.current;
+    const orbitStep = Math.PI / 12;
+    const tiltStep = 0.12;
+    if (direction === "orbit-left") {
+      controls.desiredAzimuth -= orbitStep;
+    } else if (direction === "orbit-right") {
+      controls.desiredAzimuth += orbitStep;
+    } else if (direction === "tilt-up") {
+      controls.desiredPolar = clamp(controls.desiredPolar - tiltStep, 0.38, 1.34);
+    } else if (direction === "tilt-down") {
+      controls.desiredPolar = clamp(controls.desiredPolar + tiltStep, 0.38, 1.34);
+    } else {
+      const horizontal = direction === "pan-left" ? -95
+        : direction === "pan-right" ? 95 : 0;
+      const vertical = direction === "pan-up" ? -95
+        : direction === "pan-down" ? 95 : 0;
+      controls.desiredTarget = panIslandCameraTarget(
+        controls.desiredTarget,
+        controls.desiredAzimuth,
+        horizontal,
+        vertical,
+        controls.desiredDistance
+      );
+    }
+    velocityRef.current = { azimuth: 0, polar: 0 };
+  }, []);
+
   const resetView =
     useCallback(() => {
       controlsRef.current.desiredTarget =
@@ -15819,8 +15860,14 @@ const selectLegendary =
 
     type PointerPosition = { x: number; y: number };
     const pointers = new Map<number, PointerPosition>();
+    let mousePan = false;
+    let mouseButton = 0;
     let start:
-      | { x: number; y: number; azimuth: number; polar: number; distance: number; spread: number }
+      | {
+          x: number; y: number;
+          azimuth: number; polar: number; distance: number; spread: number;
+          target: Vec3; pan: boolean; button: number;
+        }
       | null = null;
     let gestureActive = false;
 
@@ -15841,24 +15888,37 @@ const selectLegendary =
         azimuth: controlsRef.current.desiredAzimuth,
         polar: controlsRef.current.desiredPolar,
         distance: controlsRef.current.desiredDistance,
+        target: [...controlsRef.current.desiredTarget],
         spread,
+        pan: mousePan,
+        button: mouseButton,
       };
       velocityRef.current = { azimuth: 0, polar: 0 };
     };
 
     const onPointerDown = (event: any) => {
-      // Only the 3D viewport receives mouse orbit gestures. Clicking
-      // island buttons, panels, or a decoration without dragging still works.
-      if (builderEditing || (event.pointerType === "mouse" && event.button !== 0)) return;
+      // BUILD mode must NOT disable the camera: this used to bail out
+      // immediately in BUILD, making only wheel zoom functional.
+      // We still ignore explicit UI controls and preserve selected-item
+      // dragging: the 3D item handler arms it before this DOM event bubbles.
+      if (event.pointerType === "mouse" && event.button !== 0 && event.button !== 2) return;
       if (event.target?.closest?.("button, a, input, select, textarea, [role='button']")) return;
       if (event.pointerType === "mouse" && pointers.size > 0) return;
+      if (builderEditing && event.button === 0 &&
+          (builderDragRef.current || getArmedDecorationDrag() || getArmedKeepsakeDrag())) {
+        return;
+      }
+      mousePan = event.pointerType === "mouse" &&
+        (event.button === 2 || event.shiftKey);
+      mouseButton = event.pointerType === "mouse" ? event.button : 0;
       pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
       snapshot();
     };
 
     const onPointerMove = (event: any) => {
       if (!pointers.has(event.pointerId) || !start) return;
-      if (event.pointerType === "mouse" && !(event.buttons & 1)) {
+      const pressedButton = start.button === 2 ? 2 : 1;
+      if (event.pointerType === "mouse" && !(event.buttons & pressedButton)) {
         pointers.clear();
         start = null;
         if (gestureActive) setInteractionActive(false);
@@ -15882,9 +15942,19 @@ const selectLegendary =
         setInteractionActive(true);
       }
       if (event.cancelable) event.preventDefault();
-      // Drag to orbit; two fingers additionally pinch to zoom.
-      controlsRef.current.desiredAzimuth = start.azimuth - dx * 0.005;
-      controlsRef.current.desiredPolar = clamp(start.polar + dy * 0.0035, 0.38, 1.34);
+
+      if (points.length > 1 || start.pan) {
+        // Right-drag or Shift+left-drag pans the map without moving the
+        // selected collectible. Two-finger touch pans and pinches to zoom.
+        controlsRef.current.desiredTarget = panIslandCameraTarget(
+          start.target, start.azimuth, dx, dy, start.distance
+        );
+      } else {
+        // Left-drag on empty ground rotates the view even during BUILD.
+        const orbit = orbitIslandCamera(start.azimuth, start.polar, dx, dy);
+        controlsRef.current.desiredAzimuth = orbit.azimuth;
+        controlsRef.current.desiredPolar = orbit.polar;
+      }
       if (points.length > 1 && spread > 0 && start.spread > 0) {
         controlsRef.current.desiredDistance =
           clamp(start.distance / Math.pow(spread / start.spread, 0.82), 6.5, 90);
@@ -15893,6 +15963,13 @@ const selectLegendary =
     };
 
     const onPointerEnd = (event: any) => {
+      // A selected object's pointerdown may stop DOM bubbling, so its
+      // pointer might not be in our map. Clear drag arms on every release.
+      if (builderEditing) {
+        builderDragRef.current = null;
+        clearDecorationDrag();
+        clearKeepsakeDrag();
+      }
       if (!pointers.has(event.pointerId)) return;
       pointers.delete(event.pointerId);
       if (pointers.size === 0) {
@@ -15908,8 +15985,8 @@ const selectLegendary =
       if (event.target?.closest?.("button, a, input, select, textarea, [role='button']")) return;
       if (event.cancelable) event.preventDefault();
       const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 240 : 1;
-      // Chrome on macOS emits ctrl+wheel for a trackpad pinch. A regular
-      // wheel or two-finger vertical scroll can also zoom the camera.
+      // Mac trackpad pinch emits ctrl+wheel. Regular wheel zoom also works
+      // in edit mode without changing the selected decoration's transform.
       const factor = event.ctrlKey ? 0.012 : 0.0018;
       controlsRef.current.desiredDistance = clamp(
         controlsRef.current.desiredDistance *
@@ -15920,16 +15997,26 @@ const selectLegendary =
       velocityRef.current = { azimuth: 0, polar: 0 };
     };
 
+    const onContextMenu = (event: any) => {
+      // Right-drag is reserved for camera panning within the viewport,
+      // not the browser context menu. Outside the viewport it still works.
+      if (event.cancelable) event.preventDefault();
+    };
+
     surface.addEventListener("pointerdown", onPointerDown);
     browser.addEventListener("pointermove", onPointerMove);
     browser.addEventListener("pointerup", onPointerEnd);
     browser.addEventListener("pointercancel", onPointerEnd);
     browser.addEventListener("blur", onWindowBlur);
     surface.addEventListener("wheel", onWheel, { passive: false });
+    surface.addEventListener("contextmenu", onContextMenu);
 
     function onWindowBlur() {
       pointers.clear();
       start = null;
+      builderDragRef.current = null;
+      clearDecorationDrag();
+      clearKeepsakeDrag();
       if (gestureActive) setInteractionActive(false);
       gestureActive = false;
     }
@@ -15941,9 +16028,15 @@ const selectLegendary =
       browser.removeEventListener("pointercancel", onPointerEnd);
       browser.removeEventListener("blur", onWindowBlur);
       surface.removeEventListener?.("wheel", onWheel);
+      surface.removeEventListener?.("contextmenu", onContextMenu);
       if (gestureActive) setInteractionActive(false);
     };
-  }, [builderEditing, setInteractionActive]);
+  }, [
+    builderEditing,
+    getArmedDecorationDrag, getArmedKeepsakeDrag,
+    clearDecorationDrag, clearKeepsakeDrag,
+    setInteractionActive,
+  ]);
 
   const selectedMilestone =
     ISLAND_MILESTONES.find(
@@ -16329,6 +16422,86 @@ const selectLegendary =
           </Text>
         </Pressable>
 
+        {builderEditing ? (
+          <View style={styles.cameraPad} pointerEvents="box-none">
+            <Text style={styles.cameraPadTitle}>MOVE CAMERA</Text>
+            <View style={styles.cameraPadRow}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Rotate island view left"
+                onPress={() => nudgeIslandCamera("orbit-left")}
+                style={styles.cameraPadButton}
+              >
+                <Ionicons name="arrow-undo-outline" size={17} color="#dbeafe" />
+                <Text style={styles.cameraPadLabel}>Rotate</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Rotate island view right"
+                onPress={() => nudgeIslandCamera("orbit-right")}
+                style={styles.cameraPadButton}
+              >
+                <Ionicons name="arrow-redo-outline" size={17} color="#dbeafe" />
+                <Text style={styles.cameraPadLabel}>Rotate</Text>
+              </Pressable>
+            </View>
+            <View style={styles.cameraPadRow}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Pan camera left"
+                onPress={() => nudgeIslandCamera("pan-left")}
+                style={styles.cameraPadButton}
+              >
+                <Ionicons name="arrow-back" size={17} color="#dbeafe" />
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Pan camera up"
+                onPress={() => nudgeIslandCamera("pan-up")}
+                style={styles.cameraPadButton}
+              >
+                <Ionicons name="arrow-up" size={17} color="#dbeafe" />
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Pan camera down"
+                onPress={() => nudgeIslandCamera("pan-down")}
+                style={styles.cameraPadButton}
+              >
+                <Ionicons name="arrow-down" size={17} color="#dbeafe" />
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Pan camera right"
+                onPress={() => nudgeIslandCamera("pan-right")}
+                style={styles.cameraPadButton}
+              >
+                <Ionicons name="arrow-forward" size={17} color="#dbeafe" />
+              </Pressable>
+            </View>
+            <View style={styles.cameraPadRow}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Tilt camera higher"
+                onPress={() => nudgeIslandCamera("tilt-up")}
+                style={styles.cameraPadButton}
+              >
+                <Ionicons name="chevron-up" size={17} color="#dbeafe" />
+                <Text style={styles.cameraPadLabel}>Tilt</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Tilt camera lower"
+                onPress={() => nudgeIslandCamera("tilt-down")}
+                style={styles.cameraPadButton}
+              >
+                <Ionicons name="chevron-down" size={17} color="#dbeafe" />
+                <Text style={styles.cameraPadLabel}>Tilt</Text>
+              </Pressable>
+            </View>
+          </View>
+        ) : null}
+
         {Platform.OS !== "web" ? (
           <View style={styles.zoomButtons} pointerEvents="box-none">
             <Pressable
@@ -16425,8 +16598,11 @@ const selectLegendary =
               styles.hintText
             }
           >
-            Drag to rotate · Pinch to
-            zoom · Tap to explore
+            {builderEditing
+              ? Platform.OS === "web"
+                ? "BUILD: Drag empty space to rotate · Shift/right-drag to pan · Scroll to zoom"
+                : "BUILD: Drag empty ground to pan · Two fingers to rotate/zoom"
+              : "Drag to rotate · Pinch to zoom · Tap to explore"}
           </Text>
         </View>
       </View>
@@ -16521,6 +16697,46 @@ const styles =
     resetText: {
       color: "#e0f2fe",
       fontSize: 10,
+      fontWeight: "800",
+    },
+    cameraPad: {
+      position: "absolute",
+      left: 12,
+      top: 55,
+      maxWidth: 238,
+      borderRadius: 13,
+      borderWidth: 1,
+      borderColor: "rgba(103,232,249,0.40)",
+      backgroundColor: "rgba(2,6,23,0.80)",
+      padding: 7,
+      gap: 6,
+    },
+    cameraPadTitle: {
+      color: "#bae6fd",
+      fontSize: 9,
+      fontWeight: "900",
+      letterSpacing: 0.7,
+      textAlign: "center",
+    },
+    cameraPadRow: {
+      flexDirection: "row",
+      justifyContent: "center",
+      gap: 5,
+    },
+    cameraPadButton: {
+      minWidth: 38,
+      minHeight: 35,
+      paddingHorizontal: 5,
+      borderRadius: 9,
+      borderWidth: 1,
+      borderColor: "rgba(186,230,253,0.24)",
+      backgroundColor: "rgba(15,43,68,0.85)",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    cameraPadLabel: {
+      color: "#dbeafe",
+      fontSize: 8,
       fontWeight: "800",
     },
     zoomButtons: {
