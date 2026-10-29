@@ -44,6 +44,7 @@ export default function CollectorStagingDiagnostics() {
   useEffect(() => {
     // Never display a previous account's server verdict after a logout or
     // a switch to a different staging Auth user.
+    setChecking(false);
     setLastServerGrants(null);
     setMessage(
       accountId
