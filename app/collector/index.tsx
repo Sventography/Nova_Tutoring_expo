@@ -14,7 +14,10 @@ import {
   verifyCollectorCode,
   type CollectorVerification,
 } from "../_lib/collectorClient";
-import { COLLECTOR_STAGING_MODE } from "../_lib/collectorStaging";
+import {
+  COLLECTOR_STAGING_MODE,
+  COLLECTOR_STAGING_BUILD_ALLOWED,
+} from "../_lib/collectorStaging";
 
 /**
  * Unlinked static QR destination. The URL's opaque code is never displayed or
@@ -203,7 +206,7 @@ export default function CollectorCertificate() {
       )}
 
       {verified && message ? <Text style={styles.notice}>{message}</Text> : null}
-      {__DEV__ && COLLECTOR_STAGING_MODE ? (
+      {COLLECTOR_STAGING_MODE && COLLECTOR_STAGING_BUILD_ALLOWED ? (
         <TouchableOpacity
           accessibilityRole="button"
           style={styles.stagingButton}
