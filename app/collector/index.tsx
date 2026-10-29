@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View,
 } from "react-native";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Linking from "expo-linking";
 import { useUser } from "../context/UserContext";
 import { useIslandDecorations } from "../context/IslandDecorationContext";
@@ -14,33 +14,45 @@ import {
   verifyCollectorCode,
   type CollectorVerification,
 } from "../_lib/collectorClient";
+import { COLLECTOR_STAGING_MODE } from "../_lib/collectorStaging";
 
 /**
  * Unlinked static QR destination. The URL's opaque code is never displayed or
  * treated as proof of ownership. The server checks authenticity and claims.
  */
 export default function CollectorCertificate() {
+  const router = useRouter();
   const params = useLocalSearchParams<{ code?: string }>();
   const [fragmentCode, setFragmentCode] = useState<string | undefined>();
   const code = validCollectorCode(params.code) ? params.code : fragmentCode;
 
-  // Public QR URLs use /collector#code=<opaque token>. Fragments are not sent
-  // to the web server; native nova://collector?code=... links also work.
+  // A browser fragment never reaches the HTTP server. Expo Linking can
+  // report null on web reload, so read the browser hash directly as well.
+  // Native nova://collector?code=... remains covered by Router parameters.
   useEffect(() => {
     let active = true;
-    void Linking.getInitialURL().then((url) => {
-      if (!active || !url) return;
-      const fragment = url.split("#")[1] || "";
-      const raw = fragment.split("&").find((part) => part.startsWith("code="));
-      if (!raw) return;
+    function applyFragment(url: string | null) {
+      if (!active || !url || !url.includes("#")) return;
+      const fragment = url.slice(url.indexOf("#") + 1);
       try {
-        const token = decodeURIComponent(raw.slice(5));
-        if (validCollectorCode(token)) setFragmentCode(token);
+        const candidate = new URLSearchParams(fragment).get("code");
+        if (validCollectorCode(candidate)) setFragmentCode(candidate);
       } catch {
-        // Ignore malformed, untrusted URL fragments.
+        // Malformed QR links do not authorize any grant.
       }
-    }).catch(() => {});
-    return () => { active = false; };
+    }
+    const onHashChange = () => {
+      if (typeof window !== "undefined") applyFragment(window.location.href);
+    };
+    onHashChange();
+    void Linking.getInitialURL().then(applyFragment).catch(() => {});
+    const subscription = Linking.addEventListener("url", ({ url }) => applyFragment(url));
+    if (typeof window !== "undefined") window.addEventListener("hashchange", onHashChange);
+    return () => {
+      active = false;
+      subscription.remove();
+      if (typeof window !== "undefined") window.removeEventListener("hashchange", onHashChange);
+    };
   }, []);
   const { session, isLoggedIn } = useUser();
   const { refreshCollectorOwnership } = useIslandDecorations();
@@ -55,6 +67,7 @@ export default function CollectorCertificate() {
     setVerification(null);
     setMessage("");
     setSynced(false);
+    setChecking(false);
     if (!COLLECTOR_CLAIMS_ENABLED || !session?.access_token || !validCollectorCode(code)) {
       return () => { cancelled = true; };
     }
@@ -190,6 +203,15 @@ export default function CollectorCertificate() {
       )}
 
       {verified && message ? <Text style={styles.notice}>{message}</Text> : null}
+      {__DEV__ && COLLECTOR_STAGING_MODE ? (
+        <TouchableOpacity
+          accessibilityRole="button"
+          style={styles.stagingButton}
+          onPress={() => router.push("/collector-staging" as never)}
+        >
+          <Text style={styles.stagingLabel}>Inspect staging account & island inventory</Text>
+        </TouchableOpacity>
+      ) : null}
       <Text style={styles.footer}>NORA VALE · SESSION 017</Text>
     </ScrollView>
   );
@@ -229,5 +251,7 @@ const styles = StyleSheet.create({
   button: { backgroundColor: "#f0cb81", borderRadius: 14, paddingVertical: 16, paddingHorizontal: 25, marginTop: 28 },
   disabled: { opacity: 0.6 },
   buttonLabel: { color: "#1b1231", fontSize: 15, fontWeight: "800", textAlign: "center" },
+  stagingButton: { borderColor: "#8d70a2", borderWidth: 1, borderRadius: 12, paddingVertical: 13, paddingHorizontal: 18, marginTop: 25 },
+  stagingLabel: { color: "#dbc8ed", fontWeight: "700", fontSize: 13, textAlign: "center" },
   footer: { color: "#86759c", fontSize: 10, letterSpacing: 2, marginTop: 48 },
 });
