@@ -54,6 +54,8 @@ jobs:
         run: node scripts/test-collector-staging-config.cjs
       - name: Validate #017 castle footprint, safe placement, and inventory guidance
         run: node scripts/test-collector-castle-placement.cjs
+      - name: Validate island BUILD camera controls and desktop pan/orbit
+        run: node scripts/test-island-build-camera.cjs
       - name: Check TypeScript diagnostics in collector-touched files only
         shell: bash
         run: |
@@ -61,7 +63,7 @@ jobs:
           # errors from legacy/quarantined code; do not misreport this as a
           # full-project pass. Capture diagnostics and require clean touched files.
           npx tsc --noEmit --pretty false > /tmp/nova-tsc.log 2>&1 || true
-          if grep -E '^(app/collector/|app/_lib/collectorClient\.ts|app/_lib/collectorStaging\.ts|app/_lib/islandAutoPlacement\.ts|app/collector-staging\.tsx|app/lib/supabase\.ts|app/context/IslandDecorationContext\.tsx|app/components/island3d/IslandDecorationLayer\.tsx|app/components/island3d/IslandBuilderPanel\.tsx|app/components/island3d/IslandDecorationShopPanel\.tsx)\([0-9]+,[0-9]+\): error TS' /tmp/nova-tsc.log; then
+          if grep -E '^(app/collector/|app/_lib/collectorClient\.ts|app/_lib/collectorStaging\.ts|app/_lib/islandAutoPlacement\.ts|app/_lib/islandCameraNavigation\.ts|app/collector-staging\.tsx|app/lib/supabase\.ts|app/context/IslandDecorationContext\.tsx|app/components/island3d/IslandDecorationLayer\.tsx|app/components/island3d/IslandBuilderPanel\.tsx|app/components/island3d/IslandDecorationShopPanel\.tsx)\([0-9]+,[0-9]+\): error TS' /tmp/nova-tsc.log; then
             echo "::error::Collector-touched files have TypeScript errors"
             exit 1
           fi
