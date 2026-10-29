@@ -10,6 +10,8 @@ permissions:
 
 jobs:
   postgres-staging:
+    # Never run against the default or production release branches.
+    if: github.ref == 'refs/heads/feature/noras-last-lantern-3d'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
