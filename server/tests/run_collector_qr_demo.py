@@ -171,31 +171,45 @@ def make_demo_app(*, database_url: str, public_ip: str, port: int, mock_db=None)
         serial: f"http://{public_ip}:{port}/collector#code={quote(code, safe='')}"
         for serial, code in codes.items()
     }
-    markup = (HERE / "collector_qr_demo.html").read_text(encoding="utf-8")
+    template = (HERE / "collector_qr_demo.html").read_text(encoding="utf-8")
     if mock_db is not None:
-        markup = markup.replace(
+        template = template.replace(
             "Fake accounts and disposable QR codes.",
             "Fake accounts, disposable QR codes, and MOCK (in-memory) storage."
         )
-    markup = (
-        markup
-        .replace("__QR_017__", fake_svg_qr(links[17]))
-        .replace("__QR_023__", fake_svg_qr(links[23]))
-        .replace("__LINK_017__", html.escape(links[17], quote=True))
-        .replace("__LINK_023__", html.escape(links[23], quote=True))
-        .replace("<script>\n(function() {",
-                 "<script>window.__NOVA_LOCAL_COLLECTOR_STAGE__ = true;</script>\n"
-                 "<script>\n(function() {")
+
+    def prepare_template(qr17: str, qr23: str, url17: str, url23: str) -> str:
+        return (
+            template
+            .replace("__QR_017__", qr17)
+            .replace("__QR_023__", qr23)
+            .replace("__LINK_017__", url17)
+            .replace("__LINK_023__", url23)
+            .replace("<script>\n(function() {",
+                     "<script>window.__NOVA_LOCAL_COLLECTOR_STAGE__ = true;</script>\n"
+                     "<script>\n(function() {")
+        )
+
+    # ONLY the Mac's local /stage launcher ever contains QR secrets.
+    launcher_html = prepare_template(
+        fake_svg_qr(links[17]), fake_svg_qr(links[23]),
+        html.escape(links[17], quote=True), html.escape(links[23], quote=True),
     )
+    # Scanned /collector responses include no valid QR codes, even hidden
+    # in HTML. They learn the presented token solely from the URL fragment.
+    certificate_html = prepare_template("", "", "#", "#")
 
     @app.get("/")
     def home():
         return redirect("/stage", code=302)
 
     @app.get("/stage")
+    def local_qr_launcher():
+        return Response(launcher_html, mimetype="text/html")
+
     @app.get("/collector")
     def collector_ui():
-        return Response(markup, mimetype="text/html")
+        return Response(certificate_html, mimetype="text/html")
 
     @app.post("/demo/login")
     def synthetic_login():
