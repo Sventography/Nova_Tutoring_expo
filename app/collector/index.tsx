@@ -100,8 +100,8 @@ export default function CollectorCertificate() {
       setSynced(didSync);
       setVerification({ ...verification, claim_state: "yours" });
       setMessage(didSync
-        ? "It's yours. Find Nora's Last Lantern in your island decorations."
-        : "Your claim succeeded! Island inventory will sync when the archive reconnects.");
+        ? "Castle unlocked! Follow the steps below to place it on your island."
+        : "Your claim succeeded! The castle will appear after your island inventory syncs.");
     } catch (error) {
       setMessage(errorMessage(error));
     } finally {
@@ -114,7 +114,7 @@ export default function CollectorCertificate() {
     const didSync = await refreshCollectorOwnership();
     setSynced(didSync);
     setMessage(didSync
-      ? "Nora's Last Lantern is ready in your island decorations."
+      ? "Castle ready! Follow the steps below to place it on your island."
       : "Ownership sync is temporarily unavailable. Your claim stays with your account.");
     setClaiming(false);
   }
@@ -202,6 +202,22 @@ export default function CollectorCertificate() {
               <Text style={styles.buttonLabel}>Sync to my island</Text>
             </TouchableOpacity>
           ) : null}
+          <View style={styles.placementGuide}>
+            <Text style={styles.guideTitle}>🏰 Your castle is in Decoration Inventory</Text>
+            <Text style={styles.guideBody}>
+              1. Open your Island and scroll below the 3D scene.{"\n"}
+              2. Tap BUILD, then open Decoration Inventory
+              (not the regular Inventory).{"\n"}
+              3. Tap 🏰 Last Lantern → PLACE, then SAVE.
+            </Text>
+            <TouchableOpacity
+              accessibilityRole="button"
+              style={styles.button}
+              onPress={() => router.push("/(tabs)/island" as never)}
+            >
+              <Text style={styles.buttonLabel}>Open my island</Text>
+            </TouchableOpacity>
+          </View>
         </>
       ) : verification.claim_state === "claimed" ? (
         <Text style={styles.notice}>This collector code has already been redeemed.</Text>
@@ -256,6 +272,9 @@ const styles = StyleSheet.create({
   certificate: { color: "#cceaf0", fontSize: 13, fontWeight: "600", marginTop: 27, marginBottom: 16, textAlign: "center" },
   notice: { color: "#d7cbe4", fontSize: 14, lineHeight: 22, textAlign: "center", maxWidth: 415, marginTop: 24 },
   success: { color: "#f4ce8b", fontSize: 16, textAlign: "center", marginTop: 24 },
+  placementGuide: { width: "100%", maxWidth: 460, marginTop: 20, paddingHorizontal: 20, paddingVertical: 20, borderRadius: 16, borderWidth: 1, borderColor: "#b39064", backgroundColor: "#281d3b", alignItems: "center" },
+  guideTitle: { color: "#f5d58e", fontSize: 16, fontWeight: "800", textAlign: "center" },
+  guideBody: { color: "#e8dcef", fontSize: 14, lineHeight: 23, marginTop: 12, textAlign: "left" },
   loader: { alignItems: "center", marginTop: 24 },
   button: { backgroundColor: "#f0cb81", borderRadius: 14, paddingVertical: 16, paddingHorizontal: 25, marginTop: 28 },
   disabled: { opacity: 0.6 },
