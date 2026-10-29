@@ -285,6 +285,10 @@ New fixes in this branch:
   Daily Quest only when it actually overlaps those protected regions.
 - New castle placement prefers (10, -10), visually opposite Nova and
   away from the Daily Quest pavilion, with collision-aware fallback.
+  Previously saved castles at the exact prior auto-spawn (-12, -7)
+  also relocate to this new side on verified ownership refresh,
+  even if their ground circles technically did not collide. Safe,
+  deliberately customized locations remain unchanged.
 - Staging launcher unsets any inherited `EXPO_PUBLIC_NORAS_LANTERN_PREVIEW`
   flag to avoid a duplicate non-redemption debug castle.
 - Extend island-camera and castle regression scripts to cover the
