@@ -18,9 +18,21 @@ export const DAILY_QUEST_GROUND_OBSTACLE: GroundObstacle = {
   z: 1.1,
   radius: 3.75,
 };
+// Nova's actual 3D pedestal sits at (-3, 1.6) inside the parent
+// island group, whose yaw is -0.08 radians. Protect a generous buffer
+// for her projected sprite, not merely her pedestal's tiny ground mesh.
+// Source: NOVA_PEDESTAL_WORLD in NovaIsland3DScene.tsx.
+export const NOVA_PEDESTAL_GROUND_OBSTACLE: GroundObstacle = {
+  x: -3.12,
+  z: 1.36,
+  radius: 2.75,
+};
+
+// A visually separate place for the unique castle, opposite Nova and
+// the Daily Quest pavilion at the default camera azimuth.
 export const COLLECTOR_CASTLE_PREFERRED_GROUND: GroundPoint = {
-  x: -12,
-  z: -7,
+  x: 10,
+  z: -10,
 };
 const MODEL_RADII: Record<string, number> = {
   stone: 0.35, flower: 0.32, grass_patch: 0.65, bush: 0.65,
@@ -99,6 +111,7 @@ export function developerCastleObstacle(
   // Otherwise moving a tree causes the preview castle to run away.
   const fixed = [
     DAILY_QUEST_GROUND_OBSTACLE,
+    NOVA_PEDESTAL_GROUND_OBSTACLE,
     ...ISLAND_BUILDER_CATALOG.map(item => ({
       x: item.defaultTransform.x, z: item.defaultTransform.z,
       radius: landmarkGroundRadius(item.id, item.defaultTransform.scale),
