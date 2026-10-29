@@ -197,7 +197,8 @@ def make_demo_app(*, database_url: str, public_ip: str, port: int, mock_db=None)
     )
     # Scanned /collector responses include no valid QR codes, even hidden
     # in HTML. They learn the presented token solely from the URL fragment.
-    certificate_html = prepare_template("", "", "#", "#")
+    blank_image = "data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs="
+    certificate_html = prepare_template(blank_image, blank_image, "#", "#")
 
     @app.get("/")
     def home():
