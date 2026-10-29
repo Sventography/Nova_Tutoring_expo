@@ -218,6 +218,43 @@ staging code; never reissue the spent #017 QR.
 **This UI change is not yet tested on a real running Mac app.** No
 production deployments or real physical collector codes were changed.
 
+## BUILD-mode camera navigation fix (2026-10-29)
+
+After real Tester A → Tester B → Tester A sign-out/in checks passed,
+Tester A also reported that camera navigation was effectively zoom-only
+in BUILD mode on Mac web.
+
+Root cause in NovaIsland3DScene.tsx: the web `pointerdown` handler
+explicitly refused all pointer gestures whenever `builderEditing` was
+true, while the separate mouse-wheel listener still allowed zoom.
+
+Feature-branch fix pending manual browser and CI verification:
+- Remove the unconditional BUILD pointerdown lockout, while avoiding
+  item drag arms so moving the view does not accidentally move items.
+- **Left-drag empty space:** rotate the view (web).
+- **Shift+left-drag or right-drag:** pan the camera target (web).
+- **Mouse wheel/trackpad:** zoom (unchanged).
+- **Two-finger web touch:** pan and pinch.
+- New in-scene `MOVE CAMERA` pad in BUILD on web/native:
+  rotate left/right, pan in four directions, tilt up/down.
+- Camera target is clamped to the island's build vicinity; no changes
+  to collector ownership, private QR codes, or saved decoration transforms.
+- Build-mode help now explains mouse and native interactions.
+- Shared pure helper: app/_lib/islandCameraNavigation.ts.
+- Regression: scripts/test-island-build-camera.cjs, wired into the
+  manual-only Collector 017 GitHub workflow.
+
+To test: stop current Expo process (Ctrl+C), pull the latest
+feature/noras-last-lantern-3d branch with `git fetch` and
+`git merge --ff-only`, then run
+`bash scripts/start-collector-staging-web.sh`.
+Open Island > BUILD, use the camera pad and drag blank ground. Ensure
+the 017 castle does not move unless explicitly selected/moved, and
+that CANCEL/SAVE operate as before.
+
+**Not yet verified by a fresh Expo browser run or CI since this fix.**
+Do not infer mobile usability from the web-only test.
+
 ## Next steps (still required)
 
 1. In the STAGING project's Authentication > Users, create two
