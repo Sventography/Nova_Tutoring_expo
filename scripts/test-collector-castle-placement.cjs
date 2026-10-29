@@ -57,7 +57,20 @@ assert.ok(flowerRadius < 0.5, "Ordinary flower footprints must remain unchanged"
 
 const quest = geo.DAILY_QUEST_GROUND_OBSTACLE;
 const home = geo.COLLECTOR_CASTLE_PREFERRED_GROUND;
-assert.ok(quest.radius >= 3, "Protect the complete quest station");
+assert.ok(quest.radius >= 3.5, "Protect the complete quest station");
+// Verify the exclusion center tracks the real, transformed 3D plaza,
+// including the station-local x/z offset and its two yaw rotations.
+const plazaOffsetX = 0.55 * 1.42, plazaOffsetZ = 0.05 * 1.42;
+const rotateY = (x, z, yaw) => ({
+  x: x * Math.cos(yaw) + z * Math.sin(yaw),
+  z: -x * Math.sin(yaw) + z * Math.cos(yaw),
+});
+const localPlaza = rotateY(plazaOffsetX, plazaOffsetZ, -0.42);
+const worldPlaza = rotateY(4.15 + localPlaza.x, 0.55 + localPlaza.z, -0.08);
+assert.ok(
+  Math.hypot(quest.x - worldPlaza.x, quest.z - worldPlaza.z) < 0.4,
+  "Protected quest location must match the island's transformed 3D plaza"
+);
 assert.ok(!geo.overlapsGround(home, castleRadius, [quest], 0.45));
 
 const oldNearQuest = { x: 4.15, z: 0.55 };
