@@ -69,7 +69,7 @@ live end-to-end test.
 In addition to the 13 mocked Flask tests, the feature branch has a separate,
 **explicitly launched** integration runner:
 
-\`\`\`bash
+```bash
 cd ~/dev/Nova_Tutoring_expo_3
 # On the feature branch; start Docker Desktop / OrbStack before running.
 cd server
@@ -77,24 +77,24 @@ source .venv/bin/activate
 python -m pip install "Flask>=3,<4" "psycopg[binary]==3.2.10"
 cd ..
 python server/tests/run_collector_postgres_staging.py
-\`\`\`
+```
 
 What it does:
-- Creates its own \`postgres:17-alpine\` Docker container with an ephemeral password
+- Creates its own `postgres:17-alpine` Docker container with an ephemeral password
   and randomized name, bound **only to 127.0.0.1** on a random port.
 - Does **not** read any production database URL, Render secret, or Supabase JWT;
   does not import the live Flask app or change live schema.
 - Applies exactly the three checked-in collector SQL files, with minimal local
-  \`auth.users\`, \`anon\`, \`authenticated\`, and \`service_role\` fixtures.
+  `auth.users`, `anon`, `authenticated`, and `service_role` fixtures.
 - Creates random disposable fake codes and two synthetic account IDs.
 - Exercises the real Flask collector routes against **real Postgres**, including
   secret-code verification, #017 ownership, duplicate claims, another-account
   denial, cross-request entitlement persistence, account deletion, rate limits,
   RLS grants and two simultaneous claim attempts.
-- Tests the production TLS requirement via a local-only \`psycopg\` wrapper that
-  substitutes \`sslmode=disable\` for the disposable vanilla Docker image.
-  **This does not relax production's \`sslmode=require\` setting.**
-- Stops/removes its test container in \`finally\` even on failure. Docker must
+- Tests the production TLS requirement via a local-only `psycopg` wrapper that
+  substitutes `sslmode=disable` for the disposable vanilla Docker image.
+  **This does not relax production's `sslmode=require` setting.**
+- Stops/removes its test container in `finally` even on failure. Docker must
   already be installed and running; the image may need to be downloaded.
 
 **Status:** Runner added to feature branch, but execution against Docker/Postgres
