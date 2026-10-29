@@ -20,13 +20,17 @@ const output = ts.transpileModule(source, {
   },
 }).outputText;
 
-function runConfig(staging) {
+function runConfig(staging, dev = true, preview = false) {
   const mod = { exports: {} };
   const sandbox = {
+    __DEV__: dev,
     module: mod,
     exports: mod.exports,
     process: {
-      env: { EXPO_PUBLIC_COLLECTOR_STAGING_MODE: staging ? "true" : "false" },
+      env: {
+        EXPO_PUBLIC_COLLECTOR_STAGING_MODE: staging ? "true" : "false",
+        EXPO_PUBLIC_COLLECTOR_STAGING_WEB_PREVIEW: preview ? "true" : "false",
+      },
     },
     URL,
     Set,
@@ -40,6 +44,8 @@ function runConfig(staging) {
 
 const staging = runConfig(true);
 const production = runConfig(false);
+const hostedPreview = runConfig(true, false, true);
+const sealedRelease = runConfig(true, false, false);
 const problem = (auth, api, dev = true) =>
   staging.collectorStagingConfigError(auth, api, dev);
 
@@ -59,9 +65,21 @@ function rejects(auth, api, dev = true) {
 
 assert.equal(staging.COLLECTOR_STAGING_MODE, true);
 assert.equal(production.COLLECTOR_STAGING_MODE, false);
-checks += 2;
+assert.equal(staging.COLLECTOR_STAGING_BUILD_ALLOWED, true);
+assert.equal(hostedPreview.COLLECTOR_STAGING_BUILD_ALLOWED, true);
+assert.equal(sealedRelease.COLLECTOR_STAGING_BUILD_ALLOWED, false);
+checks += 5;
 accepts(authA, backend);
 accepts(authB, backend);
+assert.equal(
+  hostedPreview.collectorStagingConfigError(authA, backend, hostedPreview.COLLECTOR_STAGING_BUILD_ALLOWED),
+  null
+);
+assert.equal(
+  typeof sealedRelease.collectorStagingConfigError(authA, backend, sealedRelease.COLLECTOR_STAGING_BUILD_ALLOWED),
+  "string"
+);
+checks += 2;
 accepts(authA, "http://127.0.0.1:5059");
 rejects("http://127.0.0.1:54321", "http://127.0.0.1:5059");
 rejects(authA + "/auth/v1", backend);
