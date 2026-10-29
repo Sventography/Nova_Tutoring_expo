@@ -36,9 +36,39 @@ All collector API responses are non-cacheable. Codes are SHA-256 hashed in the b
 - The island provider checks `GET /entitlements` after signed-in inventory loads; it adds exactly one #017 castle for the true owner, and hides locally forged/stale #017 entries while verification is unavailable. Local `grantDecoration` cannot issue #017.
 - The server-side entitlement follows the account across devices. **Island placement coordinates remain device-local** under the existing decoration storage design; syncing island layouts is a separate feature.
 
+## Safe local mock test (no real codes or customer database writes)
+
+Pull the feature branch before testing. From the repo root, with the existing Python
+virtual environment active and Flask installed, run:
+
+```bash
+cd server
+PYTHONPATH=. python -m unittest discover -s tests -p 'test_collector_redemption.py' -v
+```
+
+This suite runs Flask's in-process test client with a mocked PostgreSQL connection and
+two pretend Auth accounts. No live JWTs, actual collector QR codes, real database
+passwords, or production schema writes are required.
+
+The 13 mock checks cover authentication, disabled endpoints, certificate response and
+no-cache headers, permanent single-use claims, own-account retry, cross-account
+rejection, owner identity privacy, deleted-account permanent serial burn and truthful
+claimed status, inventory isolation, no castle for other serials, malformed codes,
+shared verification/claim attempt quotas, and missing database configuration.
+An earlier version of the backend suite passed GitHub Actions. **The current 13-test
+version has not yet been executed in CI and must not be represented as a pass.**
+
+Read-only verification of the active Supabase project confirmed on 2026-10-28 that
+the collector tables contain zero codes, zero grants and zero attempt records;
+that anon/authenticated lack private schema usage and claim-function execution;
+and all three collector tables have RLS enabled. None of these checks constitute a
+live end-to-end test.
+
 ## Verification before any production activation
 
-1. Run `PYTHONPATH=server python -m unittest discover -s server/tests -p test_collector_redemption.py -v` (install Flask in the test environment first).
+1. Run the mock suite above and record the result. The GitHub workflow is manual-only:
+   **Actions > Collector 017 security and app checks > Run workflow**; select
+   `feature/noras-last-lantern-3d`. Do not re-enable push-triggered failure emails.
 2. Run `npx tsc --noEmit`, and `npx expo export -p web`. CI workflow `.github/workflows/collector-017-tests.yml` is configured to run the Python tests, app typecheck, and a web export. Check the actual GitHub Actions run results before deployment; creating the workflow alone does not prove the tests passed.
 3. Confirm all three SQL migration stages are present; anonymous/authenticated PostgreSQL roles must not have direct schema usage or function execute permissions.
 4. In an isolated **staging** environment, provision only disposable test codes and test users; exercise first claim, same-owner retry, another-owner rejection, rate limits, and concurrency. Do not write disposable codes or fake users into production.
