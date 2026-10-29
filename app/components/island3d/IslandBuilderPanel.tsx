@@ -1,6 +1,7 @@
 // app/components/island3d/IslandBuilderPanel.tsx
 import React, { useMemo, useState } from "react";
 import {
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -439,7 +440,9 @@ export default function IslandBuilderPanel({
           {showBuildTip ? (
             <DismissibleTip
               icon="hand-left-outline"
-              text="Use the controls directly over the island while you edit. Drag a landmark for larger moves; drag empty land to move the view."
+              text={Platform.OS === "web"
+                ? "Use MOVE CAMERA over the island to rotate, tilt and pan. Drag empty space to rotate; Shift+drag or right-drag to pan. Select an item to adjust its position."
+                : "Use MOVE CAMERA over the island to rotate, tilt and pan. Drag empty ground to move the view; use two fingers to rotate and zoom. Tap an item to adjust its position."}
               onClose={() =>
                 setShowBuildTip(false)
               }
