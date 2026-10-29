@@ -8,6 +8,12 @@
 export const COLLECTOR_STAGING_MODE =
   process.env.EXPO_PUBLIC_COLLECTOR_STAGING_MODE === "true";
 
+// A separately deployed HTTPS preview can run with a production-optimized
+// web bundle. This extra explicit switch must NEVER be enabled in a live app
+// build. Both staging URLs are still checked against the production denylist.
+export const COLLECTOR_STAGING_BUILD_ALLOWED =
+  __DEV__ || process.env.EXPO_PUBLIC_COLLECTOR_STAGING_WEB_PREVIEW === "true";
+
 // Live Nova Auth and its historical inactive project are both forbidden as
 // staging targets. Project refs are public identifiers, not API keys.
 const FORBIDDEN_SUPABASE_REFS = new Set([
@@ -42,9 +48,9 @@ function hostedSupabaseRef(hostname: string): string | null {
 export function collectorStagingConfigError(
   supabaseUrl: string,
   backendUrl: string,
-  devBuild: boolean,
+  allowedBuild: boolean,
 ): string | null {
-  if (!devBuild) return "Collector staging is restricted to development builds.";
+  if (!allowedBuild) return "Collector staging requires a dev build or explicit staging web preview.";
 
   const auth = parsedUrl(supabaseUrl);
   if (!auth) return "Provide a valid isolated EXPO_PUBLIC_SUPABASE_URL for staging.";
