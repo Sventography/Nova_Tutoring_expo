@@ -38,7 +38,13 @@ export default function CollectorCertificate() {
       if (!active || !url || !url.includes("#")) return;
       const fragment = url.slice(url.indexOf("#") + 1);
       try {
-        const candidate = new URLSearchParams(fragment).get("code");
+        // Link-sharing apps may append ?utm_source=... AFTER the #code
+        // fragment. Since this is not a real URL query, URLSearchParams
+        // would otherwise include it in the code and reject a valid QR.
+        // Strip only the appended fragment query; the code itself must
+        // still pass the exact format check and server-side hash check.
+        const codeParams = fragment.split("?", 1)[0];
+        const candidate = new URLSearchParams(codeParams).get("code");
         if (validCollectorCode(candidate)) setFragmentCode(candidate);
       } catch {
         // Malformed QR links do not authorize any grant.
