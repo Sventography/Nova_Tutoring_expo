@@ -197,7 +197,8 @@ Feature-branch fixes, pending new manual UI/CI verification:
 - The royal castle has a 4.8-unit conservative circular collision radius
   (the model's 3.05-unit foundation and +Z royal approach are physically
   large). Quest station is protected at approximately x=4.18,z=0.22,
-  radius=3.5, matching the 3D station + parent world rotation.
+  radius=3.75, centered near x=4.55,z=1.1 around the transformed
+  3D plaza (actual root+plaza center near x=4.74,z=1.32).
 - New castles prefer a deterministic clear starting point x=-12,z=-7,
   with normal collision-aware fallback around movable landmarks.
 - On server-authorized inventory refresh, *only* a previously placed
