@@ -6,6 +6,20 @@ import { ISLAND_BUILDER_CATALOG, ISLAND_BUILDER_CATALOG_BY_ID } from "./islandBu
 
 export type GroundObstacle = { x: number; z: number; radius: number };
 export type GroundPoint = { x: number; z: number };
+
+// Source: DailyQuestStation in NovaIsland3DScene.tsx is at
+// [4.15, 1.03, 0.55], with parent island rotation -0.08 radians and
+// station scale 1.42. Keep the entire interactive pavilion clear, not
+// merely its small central chest. If the station moves, update this.
+export const DAILY_QUEST_GROUND_OBSTACLE: GroundObstacle = {
+  x: 4.18,
+  z: 0.22,
+  radius: 3.5,
+};
+export const COLLECTOR_CASTLE_PREFERRED_GROUND: GroundPoint = {
+  x: -12,
+  z: -7,
+};
 const MODEL_RADII: Record<string, number> = {
   stone: 0.35, flower: 0.32, grass_patch: 0.65, bush: 0.65,
   colored_bush: 0.7, mushroom: 0.42, bench: 0.95, lantern: 0.48,
@@ -16,6 +30,9 @@ const MODEL_RADII: Record<string, number> = {
   flower_bed: 0.9, ufo: 1.45, meteor: 1.2, moon_rock: 0.85,
   floating_rock: 1, crystal: 0.7, glow_plant: 0.55,
   alien_mushroom: 0.6, tiny_planet: 0.8,
+  // The #017 castle is NOT a small item: foundation radius 3.05 plus
+  // a long royal approach (+Z ~4.1 units). Leave room to walk around it.
+  noras_last_lantern: 4.8,
 };
 export function decorationGroundRadius(itemId: string, scale = 1): number {
   const model = ISLAND_DECORATION_CATALOG_BY_ID[itemId]?.model;
@@ -79,12 +96,12 @@ export function developerCastleObstacle(
   // Anchor against the canonical map, never against live movable landmarks.
   // Otherwise moving a tree causes the preview castle to run away.
   const fixed = [
-    { x: 4.9, z: 0.55, radius: 2.4 },
+    DAILY_QUEST_GROUND_OBSTACLE,
     ...ISLAND_BUILDER_CATALOG.map(item => ({
       x: item.defaultTransform.x, z: item.defaultTransform.z,
       radius: landmarkGroundRadius(item.id, item.defaultTransform.scale),
     })),
   ];
-  const point = findNearestFreeGround(preferred, 2.8, fixed, { maxDistance: 25 });
-  return point ? { ...point, radius: 2.8 } : null;
+  const point = findNearestFreeGround(preferred, 4.8, fixed, { maxDistance: 25 });
+  return point ? { ...point, radius: 4.8 } : null;
 }
