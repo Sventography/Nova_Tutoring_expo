@@ -8,6 +8,7 @@ import Constants from "expo-constants";
 import { createClient } from "@supabase/supabase-js";
 import {
   COLLECTOR_STAGING_MODE,
+  COLLECTOR_STAGING_BUILD_ALLOWED,
   collectorStagingConfigError,
   collectorStagingStorageKey,
 } from "../_lib/collectorStaging";
@@ -46,7 +47,7 @@ const BACKEND_URL = String(
 // Real-account collector staging must never point at Nova's live Auth/backend.
 if (COLLECTOR_STAGING_MODE) {
   const problem = collectorStagingConfigError(
-    SUPABASE_URL, BACKEND_URL, __DEV__
+    SUPABASE_URL, BACKEND_URL, COLLECTOR_STAGING_BUILD_ALLOWED
   );
   if (problem) throw new Error("[COLLECTOR STAGING] " + problem);
 }
