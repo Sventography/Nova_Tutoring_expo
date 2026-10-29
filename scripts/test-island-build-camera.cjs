@@ -34,14 +34,15 @@ const near = (actual, expected) => assert.ok(Math.abs(actual - expected) < 0.000
 
 // Screen-right drag at azimuth 0 pans the camera target left.
 const first = panIslandCameraTarget([0, 1, 0], 0, 100, 0, 40);
-near(first[0], -1.6);
+// 40/1250 exceeds the helper's 0.02-units/pixel cap, so 100px = 2.
+near(first[0], -2);
 near(first[1], 1);
 near(first[2], 0);
 
 // The same gesture with the camera spun 90° pans along the other axis.
 const spun = panIslandCameraTarget([0, 1, 0], Math.PI / 2, 100, 0, 40);
 near(spun[0], 0);
-near(spun[2], 1.6);
+near(spun[2], 2);
 
 // Vertical drag in an arbitrary orbit moves the ground-plane target.
 const up = panIslandCameraTarget([3, 1, -2], Math.PI / 4, 0, -100, 40);
