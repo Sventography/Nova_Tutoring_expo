@@ -103,6 +103,22 @@ A green run of this suite checks the database SQL/Flask boundary; it is NOT a
 complete mobile QR deep-link/real-JWT/Render deployment test. Do not enable
 production redemption or print real QR codes based solely on this suite.
 
+### Optional one-click GitHub test (no Docker on your Mac)
+
+A second manual-only workflow is registered at
+`.github/workflows/collector-017-postgres-staging.yml` on the repository's
+default branch solely to make GitHub's **Run workflow** UI available. It does
+not deploy the app or run on a push. Its job is explicitly gated to
+`feature/noras-last-lantern-3d`; running it on another branch skips the job.
+
+In GitHub: **Actions → Collector 017 isolated PostgreSQL staging →
+Run workflow → select `feature/noras-last-lantern-3d` → Run workflow**.
+Inspect the `postgres-staging` job result and the seven integration checks.
+
+The workflow was registered and the runner source committed, but no actual
+PostgreSQL test run has been observed yet. Do not claim success until the
+workflow/job reports success.
+
 ## Verification before any production activation
 
 1. Run the mock suite above and record the result. The GitHub workflow is manual-only:
