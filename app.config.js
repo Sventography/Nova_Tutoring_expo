@@ -1,9 +1,16 @@
 // app.config.js
 
 export default ({ config }) => {
-  const backendUrl =
-    process.env.EXPO_PUBLIC_BACKEND_URL ||
-    "https://nove-tutoring-backend.onrender.com";
+  // This config also runs inside Expo's Node process (including SSR).
+  // A staging build cannot fall back to a previous, live .env value.
+  const collectorStaging =
+    process.env.EXPO_PUBLIC_COLLECTOR_STAGING_MODE === "true";
+  const stagingUrl = "https://gouhhltupxaycuysdtrw.supabase.co";
+  const stagingPublicKey = "sb_publishable_g6o0Crn4Cn_r5vj6RMn3SQ_1K_q0SDY";
+  const backendUrl = collectorStaging
+    ? stagingUrl
+    : (process.env.EXPO_PUBLIC_BACKEND_URL ||
+       "https://nove-tutoring-backend.onrender.com");
 
   return {
     ...config,
@@ -79,11 +86,13 @@ export default ({ config }) => {
     extra: {
       ...(config.extra || {}),
 
-      EXPO_PUBLIC_SUPABASE_URL:
-        process.env.EXPO_PUBLIC_SUPABASE_URL || "",
+      EXPO_PUBLIC_SUPABASE_URL: collectorStaging
+        ? stagingUrl
+        : (process.env.EXPO_PUBLIC_SUPABASE_URL || ""),
 
-      EXPO_PUBLIC_SUPABASE_ANON_KEY:
-        process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || "",
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: collectorStaging
+        ? stagingPublicKey
+        : (process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || ""),
 
       EXPO_PUBLIC_BACKEND_URL: backendUrl,
 
