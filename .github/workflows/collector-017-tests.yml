@@ -52,6 +52,8 @@ jobs:
         run: npm ci --ignore-scripts
       - name: Validate staging isolation and per-project session keys
         run: node scripts/test-collector-staging-config.cjs
+      - name: Validate separate iPhone staging app identifiers and safe EAS build
+        run: node scripts/test-collector-ios-staging-build.cjs
       - name: Validate #017 castle footprint, safe placement, and inventory guidance
         run: node scripts/test-collector-castle-placement.cjs
       - name: Validate island BUILD camera controls and desktop pan/orbit
