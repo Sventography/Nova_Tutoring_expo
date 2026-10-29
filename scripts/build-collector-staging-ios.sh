@@ -10,6 +10,13 @@
 # ALWAYS restore the exact original native files (even on interruption).
 set -euo pipefail
 
+# Free local preflight: verify all staged native and dynamic values without
+# contacting Apple or submitting an EAS cloud build.
+if [[ $# -gt 1 ]] || { [[ $# -eq 1 ]] && [[ "$1" != "--check-only" ]]; }; then
+  echo "Usage: bash scripts/build-collector-staging-ios.sh [--check-only]"
+  exit 2
+fi
+
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
@@ -84,6 +91,12 @@ process.stdin.on("data",c=>s+=c).on("end",()=>{
   }
   console.log("[collector-ios] Dynamic config and native Xcode agree.");
 });'
+
+if [[ $# -eq 1 && "$1" == "--check-only" ]]; then
+  echo "[collector-ios] PRE-FLIGHT PASSED. No EAS build was started."
+  echo "[collector-ios] Original native files will now be restored."
+  exit 0
+fi
 
 echo
 echo "=========================================================="
