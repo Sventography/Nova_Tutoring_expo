@@ -24,6 +24,15 @@ if [[ ! -d node_modules ]]; then
   npm ci
 fi
 
+# Don't allow Expo to silently change to port 8082 (or another port):
+# the staging Edge CORS allowlist intentionally permits only port 8081.
+if command -v lsof >/dev/null 2>&1 &&
+    lsof -nP -iTCP:8081 -sTCP:LISTEN 2>/dev/null | grep -q LISTEN; then
+  echo "[collector-staging] Port 8081 is already in use."
+  echo "Stop the other Expo dev server (Ctrl+C), then run this script again."
+  exit 1
+fi
+
 # Override any existing/live .env values in this process only, without
 # editing or overwriting the user's normal local configuration.
 export EXPO_PUBLIC_COLLECTOR_STAGING_MODE=true
