@@ -174,6 +174,49 @@ No direct deployment to the public production app is needed for this test.
 A separately hosted HTTPS staging web preview, if later created, also
 requires EXPO_PUBLIC_COLLECTOR_STAGING_WEB_PREVIEW=true.
 
+## UX feedback from the first real #017 redemption (2026-10-29)
+
+Confirmed in a real signed-in staging account: server #017 entitlement is
+confirmed; Island owned count = 1; unplaced castle inventory = 1. The
+redemption and owner-bound inventory sync both succeeded.
+
+Two legitimate UX defects were found during manual staging:
+1. The castle was invisible until the collector scrolled below the 3D
+   world, tapped BUILD, expanded *Decoration Inventory* (not regular
+   Inventory), tapped Last Lantern PLACE, then SAVE.
+2. Random small-decoration auto-placement could put the enormous castle
+   directly on top of the Daily Quest tracker.
+
+Feature-branch fixes, pending new manual UI/CI verification:
+- Certificate now explicitly walks the user through BUILD → Decoration
+  Inventory → PLACE → SAVE and offers an Open my island action.
+- The staging diagnostics screen also shows placement directions.
+- The collapsed Island Builder shows a clear "castle ready" notice when
+  the collectible is unplaced. Decoration Inventory auto-opens when a
+  verified account has an unplaced #017 and highlights that item.
+- The royal castle has a 4.8-unit conservative circular collision radius
+  (the model's 3.05-unit foundation and +Z royal approach are physically
+  large). Quest station is protected at approximately x=4.18,z=0.22,
+  radius=3.5, matching the 3D station + parent world rotation.
+- New castles prefer a deterministic clear starting point x=-12,z=-7,
+  with normal collision-aware fallback around movable landmarks.
+- On server-authorized inventory refresh, *only* a previously placed
+  #017 that overlaps the protected quest pavilion can be relocated to a
+  safe position. It preserves the same ownership, placement ID and
+  unrelated decoration layouts. It never issues another entitlement.
+- Manual-only CI now includes
+  scripts/test-collector-castle-placement.cjs and modified file checks.
+
+To test the fix: pull the feature branch, stop Expo with Ctrl+C,
+restart bash scripts/start-collector-staging-web.sh, open the island,
+then recheck /collector-staging. The already-claimed castle should
+remain owned and no longer block the quest tracker. Test a fresh
+unplaced flow in a separate disposable account only with a NEW
+staging code; never reissue the spent #017 QR.
+
+**This UI change is not yet tested on a real running Mac app.** No
+production deployments or real physical collector codes were changed.
+
 ## Next steps (still required)
 
 1. In the STAGING project's Authentication > Users, create two
