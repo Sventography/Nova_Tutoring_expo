@@ -119,6 +119,70 @@ The workflow was registered and the runner source committed, but no actual
 PostgreSQL test run has been observed yet. Do not claim success until the
 workflow/job reports success.
 
+## iPhone camera QR flow — temporary local staging page
+
+**These QR codes are generated fresh on the Mac, are not physical product
+codes, and can never grant a live Nova reward.** The phone opens the temporary
+Flask certificate page in Safari, not the published Nova app. "Test Owner A/B"
+are synthetic, not actual Supabase logins. The separate staging workflow tests
+the real PostgreSQL SQL boundary; the browser scanner test checks the physical
+iPhone camera and the collector certificate's API interactions.
+
+### Easy mode: no Docker required (UI + scan, mock storage)
+
+Mac and iPhone must be on the same Wi-Fi. From the feature branch:
+
+```bash
+cd ~/dev/Nova_Tutoring_expo_3
+git -c core.sshCommand="ssh -p 443 -o Hostname=ssh.github.com" fetch origin
+git merge --ff-only origin/feature/noras-last-lantern-3d
+cd server
+source .venv/bin/activate
+python -m pip install "Flask>=3,<4" "psycopg[binary]==3.2.10" "qrcode==8.2"
+cd ..
+python server/tests/run_collector_qr_demo.py --mock
+```
+
+Open the printed `http://<private-Mac-IP>:5057/stage` address on Mac.
+Click **Allow** if macOS asks whether Python may accept local connections.
+Scan the first QR from the iPhone's regular Camera app and open its link.
+Tap **Test Owner A**, verify, claim #017, then check the staging inventory.
+Switch to **Test Owner B** and verify again: code must say already claimed,
+and B must have no reward. Scan the **023** QR as B to confirm it is authentic
+but never unlocks the castle. Return to Owner A and check the entitlement.
+The QR uses a `#code=` fragment so a regular HTTP GET omits the token.
+
+The mock mode is **only for camera/UI testing**. It is labeled on screen and in
+Terminal. Stopping the process discards all grants and QR tokens. The earlier
+real-database staging suite remains the source of SQL/transaction verification.
+
+### Stronger local mode: full real PostgreSQL + QR (Docker required)
+
+If Docker Desktop or OrbStack is installed and running, omit `--mock`:
+
+```bash
+python server/tests/run_collector_qr_demo.py
+```
+
+This creates its own Docker container with real Postgres, applies all three
+private SQL migrations, then launches the same certificate page on port 5057.
+Neither command reads a production database URL or a real Supabase account.
+Control+C ends the demo and removes the disposable Docker container.
+
+If network detection chooses an unreachable VPN address, find your Mac's
+Wi-Fi IPv4 in **System Settings → Wi-Fi → Details → TCP/IP**, then use
+`--host-ip 192.168.x.x` with your *actual private* address. Never give this
+demo a public IP, attach a public tunnel, or scan from cellular data.
+
+### Unverified boundaries
+
+The QR staging page checks native camera -> temporary browser -> backend
+verify/claim/entitlements -> mock or disposable PostgreSQL. It **does not yet**
+exercise native `nova://` deep links, real Supabase JWTs/registration,
+the live island entitlement provider, or placing the castle on another device.
+Those require a separately configured staging Auth/backend environment;
+never test them with production codes or production grants.
+
 ## Verification before any production activation
 
 1. Run the mock suite above and record the result. The GitHub workflow is manual-only:
