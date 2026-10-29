@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   ScrollView,
@@ -38,6 +38,8 @@ export default function CollectorStagingDiagnostics() {
 
   const enabled = COLLECTOR_STAGING_MODE && COLLECTOR_STAGING_BUILD_ALLOWED;
   const accountId = session?.user?.id ?? null;
+  const accountRef = useRef(accountId);
+  accountRef.current = accountId;
 
   useEffect(() => {
     // Never display a previous account's server verdict after a logout or
@@ -61,10 +63,13 @@ export default function CollectorStagingDiagnostics() {
     setChecking(true);
     setMessage("Checking the private collector entitlement ledger…");
     setLastServerGrants(null);
+    const expectedAccount = accountId;
     try {
       // This is a signed-in authenticated read, NOT a client-side grant.
       const entitlements = await fetchCollectorEntitlements(session.access_token);
+      if (accountRef.current !== expectedAccount) return;
       const synced = await island.refreshCollectorOwnership();
+      if (accountRef.current !== expectedAccount) return;
       setLastServerGrants(entitlements);
       const owns = entitlements.some((item) => item.reward_id === COLLECTOR_REWARD_ID);
       setMessage(
@@ -75,13 +80,15 @@ export default function CollectorStagingDiagnostics() {
             : "No #017 castle entitlement belongs to this staging account."
       );
     } catch {
-      setMessage(
-        "Unable to verify the staging collector ledger. No local reward was granted."
-      );
+      if (accountRef.current === expectedAccount) {
+        setMessage(
+          "Unable to verify the staging collector ledger. No local reward was granted."
+        );
+      }
     } finally {
-      setChecking(false);
+      if (accountRef.current === expectedAccount) setChecking(false);
     }
-  }, [enabled, session?.access_token, island]);
+  }, [accountId, enabled, session?.access_token, island]);
 
   if (!enabled) {
     return (
@@ -99,7 +106,7 @@ export default function CollectorStagingDiagnostics() {
       <Text style={styles.kicker}>NOVA // ARCHIVE</Text>
       <Text style={styles.title}>SESSION 017 — STAGING</Text>
       <Text style={styles.notice}>
-        Developer-only. This connects to a separate staging Supabase project
+        Isolated staging only. This connects to a separate staging Supabase project
         and never issues real physical collector codes.
       </Text>
 
