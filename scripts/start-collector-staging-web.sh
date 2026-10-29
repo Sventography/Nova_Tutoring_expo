@@ -53,6 +53,13 @@ export EXPO_PUBLIC_SUPABASE_URL="https://gouhhltupxaycuysdtrw.supabase.co"
 export EXPO_PUBLIC_SUPABASE_ANON_KEY="sb_publishable_g6o0Crn4Cn_r5vj6RMn3SQ_1K_q0SDY"
 export EXPO_PUBLIC_BACKEND_URL="https://gouhhltupxaycuysdtrw.supabase.co"
 
+# A leftover Lantern developer-preview flag can render a separate fake
+# castle in staging and confuse real #017 ownership/placement testing.
+# Staging uses ONLY the actual authenticated collector inventory.
+unset EXPO_PUBLIC_NORAS_LANTERN_PREVIEW
+unset EXPO_PUBLIC_NORAS_LANTERN_X
+unset EXPO_PUBLIC_NORAS_LANTERN_Z
+
 # The Expo web app must use the same port whitelisted by the staging Edge
 # function's CORS policy. Use only a localhost browser for this real-login test.
 echo
