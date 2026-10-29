@@ -298,6 +298,105 @@ class RealPostgresCollectorTests(unittest.TestCase):
             self.assertEqual(self.get("entitlements").status_code, 200)
 
 
+
+def smoke_test_real_qr_browser_flow(dsn: str) -> None:
+    """Check QR-scanned fragment URL -> real Flask API -> real PostgreSQL.
+
+    Flask's HTTP test client (rather than a graphical browser) exercises the
+    actual local demo landing page and synthetic login. A human iPhone scan
+    is still needed to verify the camera and mobile Safari experience.
+    """
+    import re
+
+    from run_collector_qr_demo import make_demo_app
+
+    # Clear only the runner's disposable Docker database, never Supabase.
+    with REAL_CONNECT(dsn, sslmode="disable") as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "TRUNCATE collector_private.reward_entitlements, "
+                "collector_private.plushie_codes, "
+                "collector_private.redemption_attempts, auth.users CASCADE"
+            )
+    local_ip = "192.168.10.8"  # Fictional RFC1918 host; test client does no networking.
+    port = 5057
+    base = f"http://{local_ip}:{port}"
+    demo = make_demo_app(database_url=dsn, public_ip=local_ip, port=port)
+
+    def local_connect(conninfo, **kwargs):
+        if conninfo != dsn or kwargs.get("sslmode") != "require":
+            raise AssertionError("QR demo attempted to use a non-isolated database")
+        return REAL_CONNECT(conninfo, **{**kwargs, "sslmode": "disable"})
+
+    with patch.dict(os.environ, {
+        "COLLECTOR_DATABASE_URL": dsn,
+        "COLLECTOR_REDEMPTION_ENABLED": "true",
+    }), patch.object(psycopg, "connect", side_effect=local_connect):
+        with demo.test_client() as client:
+            stage = client.get("/stage", base_url=base)
+            assert stage.status_code == 200, stage.status_code
+            markup = stage.get_data(as_text=True)
+            assert "LOCAL TEST ONLY" in markup
+            assert "__NOVA_LOCAL_COLLECTOR_STAGE__ = true" in markup
+            assert "__QR_017__" not in markup and "__LINK_017__" not in markup
+            assert "data:image/svg+xml;base64," in markup
+            codes = re.findall(
+                re.escape(base) + r"/collector#code=([A-Za-z0-9_-]{32,128})",
+                markup
+            )
+            assert len(codes) == 2 and codes[0] != codes[1], "Missing QR links"
+            qr17, qr23 = codes
+
+            # URL fragments never reach Flask: only the path /collector does.
+            certificate = client.get("/collector", base_url=base)
+            assert certificate.status_code == 200
+            assert certificate.headers["Referrer-Policy"] == "no-referrer"
+
+            owner = client.post(
+                "/demo/login", json={"identity": "alice"}, base_url=base
+            )
+            stranger = client.post(
+                "/demo/login", json={"identity": "bob"}, base_url=base
+            )
+            assert owner.status_code == 200 and stranger.status_code == 200
+            owner_token, stranger_token = (
+                owner.json["token"], stranger.json["token"]
+            )
+            assert owner_token != stranger_token
+
+            def post(path, token, code):
+                return client.post(
+                    "/api/collector/" + path, json={"code": code},
+                    headers={"Authorization": "Bearer " + token},
+                    base_url=base,
+                )
+
+            def entitlement(token):
+                return client.get(
+                    "/api/collector/entitlements",
+                    headers={"Authorization": "Bearer " + token},
+                    base_url=base,
+                )
+
+            first = post("verify", owner_token, qr17)
+            assert first.status_code == 200 and first.json["serial_number"] == 17
+            assert first.json["claim_state"] == "available"
+            claimed = post("redeem", owner_token, qr17)
+            assert claimed.status_code == 200 and claimed.json["status"] == "claimed"
+            assert any(item["reward_id"] == REWARD for item in entitlement(owner_token).json["entitlements"])
+            assert entitlement(stranger_token).json["entitlements"] == []
+            denied = post("redeem", stranger_token, qr17)
+            assert denied.status_code == 409, denied.json
+            after = post("verify", stranger_token, qr17)
+            assert after.json["claim_state"] == "claimed"
+            other = post("verify", stranger_token, qr23)
+            assert other.status_code == 200 and other.json["serial_number"] == 23
+            assert other.json["reward_id"] is None
+            assert post("redeem", stranger_token, qr23).status_code == 400
+            assert entitlement(stranger_token).json["entitlements"] == []
+    print("[collector-stage] QR browser/API/PostgreSQL smoke test PASSED")
+
+
 def main() -> int:
     name = None
     print("[collector-stage] Starting disposable localhost PostgreSQL.")
@@ -310,7 +409,11 @@ def main() -> int:
             RealPostgresCollectorTests
         )
         result = unittest.TextTestRunner(verbosity=2).run(suite)
-        return 0 if result.wasSuccessful() else 1
+        if not result.wasSuccessful():
+            return 1
+        print("[collector-stage] Running QR browser-to-real-Postgres smoke test.")
+        smoke_test_real_qr_browser_flow(dsn)
+        return 0
     except Exception as exc:
         print(f"[collector-stage] Failed: {type(exc).__name__}: {exc}", file=sys.stderr)
         return 1
