@@ -45,6 +45,20 @@ function applyOverlayText(project, plist) {
     plist, "<string>" + PRODUCTION_ID + "</string>",
     "<string>" + STAGING_ID + "</string>", "bundle-ID URL scheme"
   );
+  // Safari on iPhone can access a local HTTP URL without the app's Local
+  // Network privilege. The native Expo dev client cannot. Only the staging
+  // IPA adds these privacy declarations: the source Info.plist for the
+  // production Nova app is restored unchanged after EAS upload.
+  plist = one(
+    plist,
+    "\t<key>NSAppTransportSecurity</key>",
+    "\t<key>NSLocalNetworkUsageDescription</key>\n" +
+      "\t<string>Nova Collector Staging connects to the Expo development server on your local Wi-Fi.</string>\n" +
+      "\t<key>NSBonjourServices</key>\n" +
+      "\t<array>\n\t\t<string>_expo._tcp</string>\n\t</array>\n" +
+      "\t<key>NSAppTransportSecurity</key>",
+    "staging-only local-network privacy declarations"
+  );
   verifyOverlayText(project, plist);
   return { project, plist };
 }
@@ -63,6 +77,14 @@ function verifyOverlayText(project, plist) {
     "Staging app must not claim normal Nova's deep-link scheme.");
   assert.equal(count(plist, "<string>" + PRODUCTION_ID + "</string>"), 0,
     "Staging app must not claim normal Nova's bundle-ID URL scheme.");
+  assert.equal(count(plist, "<key>NSLocalNetworkUsageDescription</key>"), 1,
+    "Staging IPA must declare local-network privacy usage to iOS.");
+  assert.equal(count(plist, "<key>NSBonjourServices</key>"), 1,
+    "Staging IPA must declare Expo's Bonjour service discovery.");
+  assert.equal(count(plist, "<string>_expo._tcp</string>"), 1,
+    "Expo dev-server Bonjour service must be declared exactly once.");
+  assert.equal(count(plist, "<key>NSAllowsLocalNetworking</key>\n\t\t<true/>"), 1,
+    "iOS App Transport Security must continue to allow local HTTP for Metro.");
   return true;
 }
 function run(mode, root) {
@@ -85,6 +107,7 @@ function run(mode, root) {
   console.log("  iPhone app: " + STAGING_DISPLAY_NAME);
   console.log("  Xcode bundle ID: " + STAGING_ID + " (Debug + Release)");
   console.log("  iOS link scheme: " + STAGING_SCHEME);
+  console.log("  Local network privacy: declared (Expo Bonjour + local HTTP)");
 }
 if (require.main === module) {
   try {
