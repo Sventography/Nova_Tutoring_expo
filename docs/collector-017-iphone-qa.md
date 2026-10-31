@@ -176,6 +176,63 @@ scan and a fresh single-use #017 claim require a later production-like
 HTTPS QR bridge and a separately prepared disposable test entitlement.
 Do not use real manufactured serials during testing.
 
+## iPhone Metro loading follow-up (2026-10-31)
+
+The correct separate iPhone development client installed and opened its
+launcher, but showed "No development servers found", then "Error loading
+app" when connecting to the Mac. On the same Wi-Fi, the iPhone (LAN
+192.168.1.67) successfully opened/downloaded
+`http://192.168.1.74:8081/status` using Safari. From the Mac itself,
+the same LAN Metro endpoint returned `packager-status:running`, the
+iOS development manifest returned HTTP 200, and the manifest's iOS JS
+bundle returned HTTP 200 with 26,475,173 bytes.
+
+These results confirm Metro can produce the app bundle and Safari can
+reach it, **but do not prove the native iPhone app has permission to
+connect to the LAN**. Apple explicitly exempts Safari/WKWebView from
+the native Local Network permission gate. The tracked
+`ios/NovaTutoring/Info.plist` previously declared
+`NSAllowsLocalNetworking` (ATS HTTP policy), but did NOT declare
+`NSLocalNetworkUsageDescription` or `NSBonjourServices` (local
+network privilege/Expo discovery). The user also reported
+Nova Collector Staging was absent from iOS Settings > Privacy &
+Security > Local Network.
+
+To address this, the **temporary staging-native overlay only** now
+adds:
+- `NSLocalNetworkUsageDescription`: why the staging app uses LAN Metro
+- `NSBonjourServices`: `_expo._tcp` for dev-server discovery
+
+The app's production plist and native identifiers remain untouched.
+The overlay's existing `--check-only` path verifies these fields
+and restores the production files. The staging-only regression test
+now requires these privacy declarations and verifies they do not
+persist in the production plist.
+
+**Diagnosis status:** This is a concrete missing iOS privacy
+declaration and plausible explanation for failure, **not proven root
+cause** without native device logs or a retest. Existing installed
+iPhone binaries cannot acquire new Info.plist declarations via
+Metro JS refresh; they require another signed native staging build.
+Because EAS builds may be billable, first run:
+
+```bash
+git -c core.sshCommand="ssh -p 443 -o Hostname=ssh.github.com" fetch origin
+git merge --ff-only origin/feature/noras-last-lantern-3d
+node scripts/test-collector-staging-native-ios.cjs
+bash scripts/build-collector-staging-ios.sh --check-only
+```
+
+Review the output and (ideally) rerun the manual GitHub workflow.
+If a new EAS build is authorized, invoke only
+`bash scripts/build-collector-staging-ios.sh` and replace the
+**staging app** using its new EAS install link, never the published
+Nova app. The next load should produce a native Local Network
+permission prompt; tap Allow, then reopen the LAN Metro URL.
+If it still fails, inspect native device Console logs
+(e.g. `NSURLErrorDomain`, `App Transport Security`,
+`Local Network`) before any further build.
+
 ## Acceptance record
 
 - [ ] All automated GitHub Actions jobs green on the exact feature branch commit
