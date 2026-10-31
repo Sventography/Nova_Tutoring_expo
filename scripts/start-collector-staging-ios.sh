@@ -5,6 +5,19 @@
 # Never use a Supabase secret, service_role, or live Nova API key here.
 set -euo pipefail
 
+if [[ $# -gt 1 ]] || { [[ $# -eq 1 ]] && [[ "$1" != "--tunnel" ]]; }; then
+  echo "Usage: bash scripts/start-collector-staging-ios.sh [--tunnel]"
+  exit 2
+fi
+
+CONNECTION_MODE="${1:-}"
+if [[ "$CONNECTION_MODE" == "--tunnel" ]]; then
+  # This is a temporary PUBLIC development URL; no production accounts,
+  # tokens, or collector codes should ever be exercised through it.
+  echo "[collector-staging] Tunnel mode requested: staging development bundle will be accessible via a public URL."
+  echo "[collector-staging] Only staging accounts; do not share tunnel URL; Ctrl+C stops server."
+fi
+
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
@@ -75,10 +88,15 @@ echo "  Local .env loading: DISABLED for this staging run"
 echo "  Device: iPhone with the separate Nova Collector Staging dev build"
 echo "  Device route: collector-staging inside that staging app"
 echo "  Use staging Tester A/B accounts ONLY. Never use live Nova login."
+echo "  Network: ${CONNECTION_MODE:---lan}"
 echo "  Press Ctrl+C to stop; this does NOT erase account-owned rewards."
 echo "============================================================"
 echo
 
-# --dev-client forces a proper native build (expo-iap is not part of Expo Go).
-# Both devices must be on the same trusted Wi-Fi network.
+# --dev-client forces the installed native build (expo-iap is not in Expo Go).
+# LAN: both devices must be on trusted Wi-Fi; tunnel: temporary public URL
+# avoids local IP and Bonjour discovery, while retaining all staging env vars.
+if [[ "$CONNECTION_MODE" == "--tunnel" ]]; then
+  exec npx expo start --dev-client --tunnel -c --port 8081
+fi
 exec npx expo start --dev-client --lan -c --port 8081
