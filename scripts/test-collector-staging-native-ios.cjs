@@ -25,6 +25,10 @@ assert.equal(
 );
 assert.match(originalPlist, /<string>Nova Tutoring<\/string>/);
 assert.match(originalPlist, /<string>nova<\/string>/);
+assert.doesNotMatch(originalPlist, /NSLocalNetworkUsageDescription/,
+  "Production Info.plist must remain untouched by staging network fix");
+assert.doesNotMatch(originalPlist, /NSBonjourServices/,
+  "Production Info.plist must not gain staging-only Bonjour discovery");
 assert.ok(!originalProject.includes(overlay.STAGING_ID),
   "Do not commit staging-only iOS identifiers into production native source");
 
@@ -35,6 +39,14 @@ assert.match(modified.plist, /<string>Nova Collector Staging<\/string>/);
 assert.match(modified.plist, /<string>novacollectorstage<\/string>/);
 assert.match(modified.plist, /<string>com\.sventography\.novatutoring\.ios\.collectorstage<\/string>/);
 assert.ok(!modified.plist.includes("<string>nova</string>"));
+assert.match(modified.plist, /<key>NSLocalNetworkUsageDescription<\/key>/,
+  "Staging app must declare native local-network permission rationale");
+assert.match(modified.plist, /<key>NSBonjourServices<\/key>/,
+  "Staging app must declare Expo development server discovery");
+assert.match(modified.plist, /<string>_expo\._tcp<\/string>/);
+assert.match(modified.plist,
+  /<key>NSAllowsLocalNetworking<\/key>\s*<true\/>/,
+  "Staging app must preserve local HTTP access for Metro");
 
 assert.throws(
   () => overlay.applyOverlayText(modified.project, modified.plist),
@@ -70,6 +82,8 @@ try {
 // Guarantee regression test itself never mutates native source files.
 assert.equal(fs.readFileSync(xcodePath, "utf8"), originalProject);
 assert.equal(fs.readFileSync(plistPath, "utf8"), originalPlist);
+assert.doesNotMatch(fs.readFileSync(plistPath, "utf8"), /NSLocalNetworkUsageDescription/,
+  "Never persist the staging-only network permission in the real app");
 
 const runner = fs.readFileSync(
   path.join(root, "scripts/build-collector-staging-ios.sh"), "utf8"
