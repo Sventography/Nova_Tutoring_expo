@@ -1,3 +1,9 @@
+> Current status (2026-10-31): iPhone staging placement, saved-layout persistence,
+> and owner/non-owner account switching passed by user report. See
+> [the dated iPhone acceptance update](collector-017-iphone-qa.md#acceptance-update--2026-10-31).
+> Earlier pending test lists below are historical, not instructions to repeat
+> completed checks. Latest verified CI is green on October 29's commit only.
+
 # Collector #017: REAL staging Auth and island entitlement test
 
 **Status (2026-10-29):** Staging project CREATED and private schema INSTALLED.

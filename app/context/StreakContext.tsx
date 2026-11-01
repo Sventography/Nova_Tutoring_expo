@@ -16,6 +16,7 @@ import { useLegendaryCompanions } from "../hooks/useLegendaryCompanions";
 import { AchieveEmitter, ACHIEVEMENT_EVENT } from "./AchievementsContext";
 import { useCoins } from "./CoinsContext";
 import { dailyStreakBaseCoins } from "../_lib/economy";
+import { COLLECTOR_STAGING_MODE } from "../_lib/collectorStaging";
 
 // All streak logic is anchored to Eastern Time (America/New_York)
 const EASTERN_TZ = "America/New_York";
@@ -267,7 +268,7 @@ async function migrateLegacyGuestIfNeeded(): Promise<void> {
 async function fetchStreakFromSupabase(
   userId: string | null
 ): Promise<StreakMeta | null> {
-  if (!userId) return null;
+  if (!userId || COLLECTOR_STAGING_MODE) return null;
 
   try {
     const { data, error } = await supabase.rpc(
@@ -467,6 +468,21 @@ export function StreakProvider({ children }: { children: ReactNode }) {
   );
 
   const markToday = useCallback(async (): Promise<StreakMarkResult> => {
+    // Collector staging has Auth/ownership only, not the Nova economy RPCs.
+    // Do not fall back to guest rewards or fabricate a successful streak claim.
+    if (COLLECTOR_STAGING_MODE) {
+      return {
+        awarded: false,
+        streakDays: meta.count,
+        baseCoins: 0,
+        coinsAwarded: 0,
+        nextBaseCoins: 0,
+        nextCoins: 0,
+        shieldUsed: false,
+        appliedCompanions: [],
+      };
+    }
+
     if (markTodayInFlightRef.current) {
       return markTodayInFlightRef.current;
     }

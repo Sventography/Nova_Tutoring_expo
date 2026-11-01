@@ -108,7 +108,9 @@ export default function HeaderBar() {
       !todayChecked &&
       typeof markToday === "function"
     ) {
-      markToday();
+      void markToday().catch((error: unknown) => {
+        console.warn("[HeaderBar] daily streak claim unavailable:", error);
+      });
     }
   }, [loaded, todayChecked, markToday, isLoggedIn]);
 

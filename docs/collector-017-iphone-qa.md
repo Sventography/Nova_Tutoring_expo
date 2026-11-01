@@ -1,6 +1,7 @@
 # NOVA//ARCHIVE — Collector iPhone staging QA (no production rollout)
 
-**Status:** Preparation only, not built or installed. 2026-10-29.
+**Status:** Installed and manually tested on iPhone, user-confirmed 2026-10-31.
+See the dated acceptance update below; earlier setup sections are historical instructions.
 **Project:** Feature branch `feature/noras-last-lantern-3d`.
 **Backend:** ONLY isolated `nova-collector-staging` Supabase project.
 **Accounts:** Tester A / Tester B already confirmed in staging.
@@ -236,10 +237,10 @@ If it still fails, inspect native device Console logs
 ## Acceptance record
 
 - [ ] All automated GitHub Actions jobs green on the exact feature branch commit
-- [ ] Staging iPhone build installed alongside normal Nova
-- [ ] On iPhone A owns #017, castle in Island inventory/render
-- [ ] On iPhone B no #017 entitlement or castle
-- [ ] A still owns #017 after switch, quit/restart
+- [x] Separate Nova Collector Staging app installed (user confirmed app identity)
+- [x] Owning account has #017 castle in inventory and can place it on iPhone
+- [x] Tester B has no castle in inventory/Island (user-reported account-switch check)
+- [x] Owning account retains castle and saved placement after switch and restart (user reported)
 - [ ] BUILD gestures/pad work and castle does not obstruct Nova/quest
 - [ ] Staging deep-link can open read-only owner verification
 - [ ] Separate final HTTPS physical QR scan test completed (later)
@@ -247,3 +248,52 @@ If it still fails, inspect native device Console logs
 **Never claim that mobile QR / fresh redemption passed on this evidence
 alone.** No prod credentials, real QR stock, or App Store Connect
 submission should be modified by this QA preparation.
+
+## Acceptance update — 2026-10-31
+
+User confirmed Nova Collector Staging opened through the tunnel, castle
+inventory/placement works, and the restart/account-switch sequence passed.
+The suspected library overlap was resolved by the user; no placement defect
+was established. These manual checks need not be repeated without a relevant
+change. This report is user evidence, not an independently observed device log.
+
+The screenshot exposed PGRST202 for nova_mark_daily_streak. Collector staging
+provides collector Auth/ownership, not the normal Nova economy. The client now
+skips streak status/claim RPCs in collector staging and returns a non-awarding
+result; the header also catches claim failures. No economy schema or live
+backend is changed. Device confirmation of this JS fix remains pending.
+
+Latest verified GitHub Actions run: 40933281673, SUCCESS on 2026-10-29,
+commit 359a6ac4f917c06cb135cd0a35e18fea82a77d62:
+https://github.com/Sventography/Nova_Tutoring_expo/actions/runs/40933281673
+This is older than the current native identity/network changes and streak fix.
+It must not be represented as green CI for the current working tree.
+
+Release handoff: preserve the completed manual checks; obtain current-commit
+CI before merging/releasing, review production deployment configuration and
+fulfillment/code handling, then deliberately coordinate production activation.
+Prior QR test records are historical evidence. A shipped HTTPS physical QR
+handoff is not established by today's inventory/account checks; this is an
+unresolved evidence boundary, not a request to redo the earlier claim tests.
+
+Local validation of the 2026-10-31 working-tree update:
+- Six JavaScript regression scripts passed: staging config (50 assertions),
+  iOS build config, native overlay/restore, castle placement, BUILD camera,
+  and the new staging streak regression (staging makes zero economy calls;
+  normal Nova still calls server RPCs and propagates errors).
+- All 26 Python collector backend tests passed using the CI dependencies in
+  a temporary virtual environment; no database or user accounts were changed.
+- Full tsc stops on TS2657 in an existing backups/ history.tsx file. A separate
+  check rooted at StreakContext/HeaderBar found no diagnostics in those two
+  changed files, but 33 diagnostics in imported dependencies. This is NOT
+  a clean full-project typecheck. CI's existing touched-file filter does not
+  establish full type safety when backup syntax errors stop compilation.
+- Real authenticated staging redemption and inventory sync were already
+  recorded on 2026-10-29 in collector-017-real-auth-staging.md. Do not redo
+  those just because an older pending-steps section remains in the history.
+- Expo static web export passed (exit 0) using dotenv-disabled CI-style
+  configuration, with output in /tmp/nova-collector-release-web. This is
+  a local export, not a hosted preview or production deployment.
+
+Working-tree fix and workflow edits remain local, uncommitted/unpushed.
+Current-commit GitHub CI still needs a run after these changes are committed.
