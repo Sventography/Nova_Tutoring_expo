@@ -3,6 +3,7 @@
 import "react-native-url-polyfill/auto";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Platform } from "react-native";
 import Constants from "expo-constants";
 import { createClient } from "@supabase/supabase-js";
 
@@ -116,6 +117,29 @@ const supabaseFetch: typeof fetch =
     }
   };
 
+// Expo Router also renders the web app in Node, where browser window and
+// localStorage do not exist. Native platforms still use AsyncStorage as before.
+// On the browser, the same storageKey continues to persist existing sessions.
+// Do not access AsyncStorage from the Node/server-side rendering process.
+const isWebServerRender = () =>
+  Platform.OS === "web" &&
+  typeof (globalThis as { window?: unknown }).window === "undefined";
+
+const authStorage = {
+  getItem: (key: string): Promise<string | null> =>
+    isWebServerRender()
+      ? Promise.resolve(null)
+      : AsyncStorage.getItem(key),
+  setItem: (key: string, value: string): Promise<void> =>
+    isWebServerRender()
+      ? Promise.resolve()
+      : AsyncStorage.setItem(key, value),
+  removeItem: (key: string): Promise<void> =>
+    isWebServerRender()
+      ? Promise.resolve()
+      : AsyncStorage.removeItem(key),
+};
+
 export const supabase = createClient(
   SUPABASE_URL,
   SUPABASE_ANON_KEY,
@@ -124,7 +148,7 @@ export const supabase = createClient(
       fetch: supabaseFetch,
     },
     auth: {
-      storage: AsyncStorage,
+      storage: authStorage,
       storageKey:
         SUPABASE_STORAGE_KEY,
       autoRefreshToken: true,
