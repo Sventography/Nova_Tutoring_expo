@@ -1,5 +1,5 @@
 // app/components/island3d/IslandDecorationLayer.tsx
-import React, { useMemo, useRef } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber/native";
 import * as THREE from "three";
 
@@ -10,6 +10,8 @@ import {
   ISLAND_DECORATION_CATALOG_BY_ID,
   type IslandDecorationCatalogItem,
 } from "../../_lib/islandDecorationCatalog";
+
+import NorasLastLantern from "./NorasLastLantern";
 
 const BUSH_BERRIES: Array<[number, number, number]> = [
   [-0.3, 0.42, 0.24],
@@ -735,7 +737,10 @@ function PortalModel({ item }: { item: IslandDecorationCatalogItem }) {
   );
 }
 
-function Model({ item }: { item: IslandDecorationCatalogItem }) {
+function Model({ item, fireworksTrigger }: { item: IslandDecorationCatalogItem; fireworksTrigger?: number }) {
+  if (item.model === "noras_last_lantern") {
+    return <NorasLastLantern fireworksTrigger={fireworksTrigger} />;
+  }
   if (item.model === "stone") {
     return (
       <group>
@@ -1056,8 +1061,9 @@ function DecorationTapTarget({
     item.model === "floating_rock" ||
     item.model === "ufo";
 
+  const castle = item.model === "noras_last_lantern";
   const pixels =
-    treeLike
+    castle ? 180 : treeLike
       ? 138
       : wideLike
       ? 132
@@ -1082,7 +1088,7 @@ function DecorationTapTarget({
       : 104;
 
   const y =
-    treeLike
+    castle ? 1.7 : treeLike
       ? 1.28
       : item.model === "cosmic_arch"
       ? 1.15
@@ -1111,7 +1117,7 @@ function DecorationTapTarget({
       : 0.56;
 
   const minWorld =
-    treeLike
+    castle ? 4.8 : treeLike
       ? 1.7
       : wideLike
       ? 1.65
@@ -1126,7 +1132,7 @@ function DecorationTapTarget({
       : 1.25;
 
   const maxWorld =
-    treeLike
+    castle ? 9.6 : treeLike
       ? 9.0
       : wideLike
       ? 8.6
@@ -1281,6 +1287,7 @@ export default function IslandDecorationLayer({
 }) {
   const { isEditing } = useIslandBuilder();
   const keepsakes = useIslandKeepsakes();
+  const [fireworks, setFireworks] = useState<Record<string, number>>({});
   const {
     placements,
     selectedPlacementId,
@@ -1308,7 +1315,16 @@ export default function IslandDecorationLayer({
               }
             }}
             onClick={(event) => {
-              if (!isEditing) return;
+              if (!isEditing) {
+                if (item.model === "noras_last_lantern") {
+                  event.stopPropagation();
+                  setFireworks((current) => ({
+                    ...current,
+                    [placement.placementId]: (current[placement.placementId] ?? 0) + 1,
+                  }));
+                }
+                return;
+              }
               event.stopPropagation();
 
               onSelectDecoration?.();
@@ -1320,7 +1336,7 @@ export default function IslandDecorationLayer({
           >
             {selected ? (
               <mesh position={[0, 0.03, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-                <ringGeometry args={[0.72, 0.86, 36]} />
+                <ringGeometry args={item.model === "noras_last_lantern" ? [4.65, 4.8, 48] : [0.72, 0.86, 36]} />
                 <meshBasicMaterial color="#67e8f9" transparent opacity={0.82} side={THREE.DoubleSide} />
               </mesh>
             ) : null}
@@ -1329,7 +1345,7 @@ export default function IslandDecorationLayer({
                 item={item}
               />
             ) : null}
-            <Model item={item} />
+            <Model item={item} fireworksTrigger={fireworks[placement.placementId]} />
           </group>
         );
       })}
