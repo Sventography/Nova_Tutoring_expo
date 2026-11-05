@@ -15,6 +15,8 @@ import IslandDecorationShopPanel from "./IslandDecorationShopPanel";
 import { useIslandKeepsakes } from "../../context/IslandKeepsakeContext";
 import IslandKeepsakeInventoryPanel from "./IslandKeepsakeInventoryPanel";
 
+import { COLLECTOR_REWARD_ID } from "../../_lib/collectorClient";
+
 type Props = {
   selectedPlacementId: string | null;
   onSelectPlacement: (placementId: string | null) => void;
@@ -165,6 +167,7 @@ export default function IslandBuilderPanel({
     cancelEditing: cancelDecorationEditing,
     saveEditing: saveDecorationEditing,
     selectPlacement: selectDecorationPlacement,
+    getInventoryCount: getDecorationInventoryCount,
   } = useIslandDecorations();
 
   const {
@@ -312,6 +315,11 @@ export default function IslandBuilderPanel({
           </Pressable>
         </View>
 
+        {getDecorationInventoryCount(COLLECTOR_REWARD_ID) > 0 ? (
+          <Text style={{ color: "#fde68a", fontSize: 12, lineHeight: 18 }}>
+            🏰 Your collector castle is ready. Tap BUILD, open Decoration Inventory, then PLACE and SAVE.
+          </Text>
+        ) : null}
         {showClosedTip ? (
           <DismissibleTip
             icon="information-circle-outline"

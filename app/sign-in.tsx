@@ -1,10 +1,10 @@
 // app/sign-in.tsx
 
 import React, {
+  useRef,
   useState,
 } from "react";
 import {
-  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -28,6 +28,7 @@ import { useTheme } from "./context/ThemeContext";
 import { useUser } from "./context/UserContext";
 import { DISCORD_INVITE_URL } from "./constants/community";
 import { showToast } from "./utils/toast";
+import { useAuthAlert } from "./_lib/useAuthAlert";
 
 const PENDING_CONFIRMATION_EMAIL_KEY =
   "nova.auth.pending-confirmation-email.v1";
@@ -66,6 +67,7 @@ function errorMessage(
 
 export default function SignInScreen() {
   const router = useRouter();
+  const { alert, feedback } = useAuthAlert();
 
   const params =
     useLocalSearchParams<{
@@ -134,6 +136,9 @@ export default function SignInScreen() {
 
   const [loading, setLoading] =
     useState(false);
+  const [sendingReset, setSendingReset] = useState(false);
+  const resetInFlight = useRef(false);
+  const authBusy = loading || sendingReset;
 
   const [
     discordVisible,
@@ -157,7 +162,7 @@ export default function SignInScreen() {
   ) => {
     if (
       mode === next ||
-      loading
+      authBusy || resetInFlight.current
     ) {
       return;
     }
@@ -185,35 +190,48 @@ export default function SignInScreen() {
   const sendResetEmail = async (
     emailValue: string
   ) => {
+    if (resetInFlight.current || loading) return;
+
     const email =
       normalizeEmail(emailValue);
 
     if (!email) {
-      Alert.alert(
+      alert(
         "Enter your email",
         "Enter the account email first."
       );
       return;
     }
 
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      alert("Invalid email", "Enter a valid email address.");
+      return;
+    }
+
+    resetInFlight.current = true;
+    setSendingReset(true);
+
     try {
       await resetPassword(email);
 
-      Alert.alert(
+      alert(
         "Check your email",
-        `We sent password-reset instructions to:\n\n${email}`
+        "If an account exists for this email, password-reset instructions have been sent. Check your inbox and spam folder."
       );
     } catch (error: any) {
-      Alert.alert(
+      alert(
         "Could not send reset email",
         errorMessage(error) ||
           "Please try again."
       );
+    } finally {
+      resetInFlight.current = false;
+      setSendingReset(false);
     }
   };
 
   const handleSignUp = async () => {
-    if (loading) return;
+    if (authBusy || resetInFlight.current) return;
 
     const username =
       suUsername.trim();
@@ -229,7 +247,7 @@ export default function SignInScreen() {
       !password ||
       !confirmPassword
     ) {
-      Alert.alert(
+      alert(
         "Missing info",
         "Please fill out all fields."
       );
@@ -240,7 +258,7 @@ export default function SignInScreen() {
       !email.includes("@") ||
       !email.includes(".")
     ) {
-      Alert.alert(
+      alert(
         "Invalid email",
         "Enter a valid email address."
       );
@@ -248,7 +266,7 @@ export default function SignInScreen() {
     }
 
     if (username.length < 3) {
-      Alert.alert(
+      alert(
         "Username too short",
         "Usernames must be at least 3 characters long."
       );
@@ -256,7 +274,7 @@ export default function SignInScreen() {
     }
 
     if (username.length > 8) {
-      Alert.alert(
+      alert(
         "Username too long",
         "Usernames can be up to 8 characters long."
       );
@@ -268,7 +286,7 @@ export default function SignInScreen() {
         username
       )
     ) {
-      Alert.alert(
+      alert(
         "Invalid username",
         "Use only letters, numbers, and underscores."
       );
@@ -276,7 +294,7 @@ export default function SignInScreen() {
     }
 
     if (password.length < 6) {
-      Alert.alert(
+      alert(
         "Weak password",
         "Please use a password with at least 6 characters."
       );
@@ -287,7 +305,7 @@ export default function SignInScreen() {
       password !==
       confirmPassword
     ) {
-      Alert.alert(
+      alert(
         "Passwords do not match",
         "Make sure both password fields match."
       );
@@ -379,7 +397,7 @@ export default function SignInScreen() {
           PENDING_CONFIRMATION_EMAIL_KEY
         ).catch(() => {});
 
-        Alert.alert(
+        alert(
           "Email already in use",
           "An account already exists with this email. Log in or reset the password instead.",
           [
@@ -412,7 +430,7 @@ export default function SignInScreen() {
           "already taken"
         )
       ) {
-        Alert.alert(
+        alert(
           "Username already taken",
           "That username is already taken. Please choose another."
         );
@@ -430,12 +448,12 @@ export default function SignInScreen() {
           "email rate"
         )
       ) {
-        Alert.alert(
+        alert(
           "Too many emails",
           "We’ve sent too many emails recently. Please wait a little while and try again."
         );
       } else {
-        Alert.alert(
+        alert(
           "Sign up error",
           message ||
             "Could not sign up right now."
@@ -447,7 +465,7 @@ export default function SignInScreen() {
   };
 
   const handleLogin = async () => {
-    if (loading) return;
+    if (authBusy || resetInFlight.current) return;
 
     const email =
       normalizeEmail(liEmail);
@@ -457,7 +475,7 @@ export default function SignInScreen() {
       !email ||
       !password
     ) {
-      Alert.alert(
+      alert(
         "Missing info",
         "Please enter your email and password."
       );
@@ -511,7 +529,7 @@ export default function SignInScreen() {
           email
         );
 
-        Alert.alert(
+        alert(
           "Email not confirmed",
           "Enter the code from your Nova Tutoring email, or resend the confirmation message.",
           [
@@ -535,7 +553,7 @@ export default function SignInScreen() {
           ]
         );
       } else {
-        Alert.alert(
+        alert(
           "Login error",
           message ||
             "Could not log you in right now."
@@ -551,7 +569,7 @@ export default function SignInScreen() {
       if (
         !DISCORD_INVITE_URL
       ) {
-        Alert.alert(
+        alert(
           "Discord link not configured",
           "Create a permanent Discord invite and add EXPO_PUBLIC_DISCORD_INVITE_URL to the EAS environment."
         );
@@ -564,7 +582,7 @@ export default function SignInScreen() {
           DISCORD_INVITE_URL
         );
       } catch {
-        Alert.alert(
+        alert(
           "Could not open Discord",
           "The Discord invite could not be opened. Please check that the invite is permanent and still valid."
         );
@@ -641,7 +659,7 @@ export default function SignInScreen() {
                     "signup"
                   )
                 }
-                disabled={loading}
+                disabled={authBusy}
               >
                 <Text
                   style={[
@@ -670,7 +688,7 @@ export default function SignInScreen() {
                     "login"
                   )
                 }
-                disabled={loading}
+                disabled={authBusy}
               >
                 <Text
                   style={[
@@ -746,7 +764,7 @@ export default function SignInScreen() {
                   autoCapitalize="none"
                   autoCorrect={false}
                   maxLength={8}
-                  editable={!loading}
+                  editable={!authBusy}
                 />
 
                 <Text
@@ -776,7 +794,7 @@ export default function SignInScreen() {
                   autoCorrect={false}
                   keyboardType="email-address"
                   textContentType="emailAddress"
-                  editable={!loading}
+                  editable={!authBusy}
                 />
 
                 <Text
@@ -806,7 +824,7 @@ export default function SignInScreen() {
                   autoCapitalize="none"
                   autoCorrect={false}
                   textContentType="newPassword"
-                  editable={!loading}
+                  editable={!authBusy}
                 />
 
                 <Text
@@ -838,9 +856,9 @@ export default function SignInScreen() {
                   autoCapitalize="none"
                   autoCorrect={false}
                   textContentType="newPassword"
-                  editable={!loading}
+                  editable={!authBusy}
                   onSubmitEditing={() => {
-                    if (!loading) {
+                    if (!authBusy) {
                       void handleSignUp();
                     }
                   }}
@@ -850,7 +868,7 @@ export default function SignInScreen() {
                   onPress={() =>
                     void handleSignUp()
                   }
-                  disabled={loading}
+                  disabled={authBusy}
                   style={({ pressed }) => [
                     styles.primaryBtn,
                     {
@@ -859,7 +877,7 @@ export default function SignInScreen() {
                     },
                     pressed &&
                       styles.pressed,
-                    loading &&
+                    authBusy &&
                       styles.disabled,
                   ]}
                 >
@@ -933,7 +951,7 @@ export default function SignInScreen() {
                     autoComplete="off"
                     textContentType="none"
                     importantForAutofill="no"
-                    editable={!loading}
+                    editable={!authBusy}
                     returnKeyType="next"
                     selectionColor={
                       tokens.accent
@@ -971,9 +989,9 @@ export default function SignInScreen() {
                   autoComplete="off"
                   textContentType="none"
                   importantForAutofill="no"
-                  editable={!loading}
+                  editable={!authBusy}
                   onSubmitEditing={() => {
-                    if (!loading) {
+                    if (!authBusy) {
                       void handleLogin();
                     }
                   }}
@@ -983,7 +1001,7 @@ export default function SignInScreen() {
                   onPress={() =>
                     void handleLogin()
                   }
-                  disabled={loading}
+                  disabled={authBusy}
                   style={({ pressed }) => [
                     styles.primaryBtn,
                     {
@@ -992,7 +1010,7 @@ export default function SignInScreen() {
                     },
                     pressed &&
                       styles.pressed,
-                    loading &&
+                    authBusy &&
                       styles.disabled,
                   ]}
                 >
@@ -1008,7 +1026,7 @@ export default function SignInScreen() {
                 </Pressable>
 
                 <Pressable
-                  disabled={loading}
+                  disabled={authBusy}
                   onPress={() =>
                     void sendResetEmail(
                       liEmail
@@ -1023,7 +1041,7 @@ export default function SignInScreen() {
                       styles.linkText
                     }
                   >
-                    Forgot Password?
+                    {sendingReset ? "Sending reset email…" : "Forgot Password?"}
                   </Text>
                 </Pressable>
               </View>
@@ -1035,7 +1053,7 @@ export default function SignInScreen() {
                   true
                 )
               }
-              disabled={loading}
+              disabled={authBusy}
               style={
                 styles.discordButton
               }
@@ -1056,7 +1074,7 @@ export default function SignInScreen() {
                   "/"
                 )
               }
-              disabled={loading}
+              disabled={authBusy}
               style={styles.backButton}
             >
               <Text
@@ -1155,6 +1173,7 @@ export default function SignInScreen() {
           </View>
         </View>
       </Modal>
+      {feedback}
     </LinearGradient>
   );
 }

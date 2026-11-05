@@ -1,0 +1,61 @@
+name: Collector production app checks
+
+on:
+  push:
+    branches: [codex/collector-production-app]
+  pull_request:
+    branches: [release/web-ios-working-20260115]
+    paths:
+      - 'app/**'
+      - 'scripts/*collector*'
+      - 'scripts/test-supabase-storage.cjs'
+      - 'scripts/test-auth*.cjs'
+      - 'app.config.js'
+      - 'eas.json'
+      - 'vercel.json'
+      - 'package*.json'
+      - '.github/workflows/collector-production-app.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  collector-app:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      EXPO_NO_DOTENV: '1'
+      EXPO_PUBLIC_SUPABASE_URL: https://abcdefghijklmnopqrst.supabase.co
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-not-a-real-supabase-key
+      EXPO_PUBLIC_BACKEND_URL: https://nove-tutoring-backend.onrender.com
+      EXPO_PUBLIC_COLLECTOR_REDEMPTION_ENABLED: 'false'
+      EXPO_PUBLIC_COLLECTOR_STAGING_MODE: 'false'
+      EXPO_PUBLIC_COLLECTOR_STAGING_WEB_PREVIEW: 'false'
+      EXPO_PUBLIC_NORAS_LANTERN_PREVIEW: 'false'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          lfs: true
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '20.19.4'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Collector API, account isolation and placement regressions
+        run: |
+          node scripts/test-supabase-storage.cjs
+          node scripts/test-auth-recovery-ui.cjs
+          node scripts/test-auth-recovery-redirect.cjs
+          node scripts/test-auth-callback.cjs
+          node scripts/test-collector-client.cjs
+          node scripts/test-collector-ownership.cjs
+          node scripts/test-collector-placement.cjs
+          node scripts/test-collector-landmarks.cjs
+      - name: Typecheck collector entry points and dependencies
+        run: node scripts/check-collector-types.cjs
+      - name: Export production web bundle without live credentials
+        run: npx expo export -p web --max-workers 2
+      - name: Check collector page was exported
+        run: test -f dist/collector.html || test -f dist/collector/index.html

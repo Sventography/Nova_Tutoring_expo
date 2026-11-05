@@ -30,7 +30,8 @@ export type IslandDecorationModel =
   | "flower_bed"
   | "star_lantern"
   | "portal"
-  | "fountain";
+  | "fountain"
+  | "noras_last_lantern";
 
 export type IslandDecorationCategory =
   | "path"
@@ -60,6 +61,7 @@ export type IslandDecorationCatalogItem = {
   defaultScale: number;
   minScale: number;
   maxScale: number;
+  collectorOnly?: boolean;
 };
 
 export const ISLAND_DECORATION_CATALOG: IslandDecorationCatalogItem[] = [
@@ -120,9 +122,15 @@ export const ISLAND_DECORATION_CATALOG: IslandDecorationCatalogItem[] = [
   { id: "nova_star_lantern", title: "Nova Star Lantern", shortTitle: "Star Lantern", description: "A tall lantern crowned with a brilliant floating star.", price: 12, previewEmoji: "⭐", accent: "#fde047", secondaryAccent: "#67e8f9", model: "star_lantern", category: "furniture", rarity: "uncommon", defaultScale: 1, minScale: 0.6, maxScale: 4 },
   { id: "nova_portal", title: "Nova Portal", shortTitle: "Nova Portal", description: "A rare standing portal ring shimmering with cyan and violet energy.", price: 48, previewEmoji: "🌀", accent: "#22d3ee", secondaryAccent: "#a78bfa", model: "portal", category: "cosmic", rarity: "rare", defaultScale: 1, minScale: 0.6, maxScale: 4 },
 
+  { id: "noras_last_lantern_017", title: "Nora's Last Lantern", shortTitle: "Last Lantern", description: "A light kept burning for the one who found the seventeenth star.", price: 0, previewEmoji: "🏰", accent: "#fbbf24", secondaryAccent: "#67e8f9", model: "noras_last_lantern", category: "fantasy", rarity: "rare", collectorOnly: true, defaultScale: 1, minScale: 1, maxScale: 1 },
 ];
 
 export const ISLAND_DECORATION_CATALOG_BY_ID =
   Object.fromEntries(
     ISLAND_DECORATION_CATALOG.map((item) => [item.id, item])
   ) as Record<string, IslandDecorationCatalogItem>;
+
+/** Collector rewards are granted by the server and never sold for coins. */
+export function isIslandDecorationCoinShopItem(item: IslandDecorationCatalogItem): boolean {
+  return item.collectorOnly !== true && item.id !== "noras_last_lantern_017";
+}

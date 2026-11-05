@@ -1,10 +1,13 @@
 // app/components/island3d/IslandDecorationShopPanel.tsx
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import { useCoins } from "../../context/CoinsContext";
 import { useIslandDecorations } from "../../context/IslandDecorationContext";
+
+import { isIslandDecorationCoinShopItem } from "../../_lib/islandDecorationCatalog";
+import { COLLECTOR_REWARD_ID } from "../../_lib/collectorClient";
 
 type ShopFilter =
   | "all"
@@ -66,9 +69,10 @@ export default function IslandDecorationShopPanel() {
 
   const visibleCatalog = useMemo(
     () =>
-      filter === "all"
-        ? catalog
-        : catalog.filter((item) => item.category === filter),
+      catalog.filter((item) =>
+        isIslandDecorationCoinShopItem(item) &&
+        (filter === "all" || item.category === filter)
+      ),
     [catalog, filter]
   );
 
@@ -84,6 +88,11 @@ export default function IslandDecorationShopPanel() {
     () => catalog.filter((item) => getInventoryCount(item.id) > 0),
     [catalog, getInventoryCount, placements]
   );
+
+  const castleWaiting = getInventoryCount(COLLECTOR_REWARD_ID) > 0;
+  useEffect(() => {
+    if (castleWaiting) setInventoryOpen(true);
+  }, [castleWaiting]);
 
   const inventoryTotal = useMemo(
     () => inventoryItems.reduce(
@@ -261,13 +270,16 @@ export default function IslandDecorationShopPanel() {
       <View style={styles.card}>
         <Header
           title="Decoration Inventory"
-          subtitle={`${inventoryTotal} decoration${inventoryTotal === 1 ? "" : "s"} waiting`}
+          subtitle={castleWaiting ? "Collector #017 castle ready · tap PLACE, then SAVE" : `${inventoryTotal} decoration${inventoryTotal === 1 ? "" : "s"} waiting`}
           icon="leaf-outline"
           open={inventoryOpen}
           onToggle={() => setInventoryOpen((value) => !value)}
         />
         {inventoryOpen ? (
           <View style={styles.body}>
+            {castleWaiting ? (
+              <Text style={styles.collectorNotice}>🏰 Nora's Last Lantern is yours. Tap PLACE below, choose its spot, then SAVE.</Text>
+            ) : null}
             {placements.length > 0 ? (
               <Pressable
                 onPress={confirmMoveAll}
@@ -292,7 +304,7 @@ export default function IslandDecorationShopPanel() {
                   <Pressable
                     key={item.id}
                     onPress={() => place(item.id)}
-                    style={({ pressed }) => [styles.item, pressed && styles.pressed]}
+                    style={({ pressed }) => [styles.item, item.collectorOnly && styles.collectorItem, pressed && styles.pressed]}
                   >
                     <Text style={styles.emojiSmall}>{item.previewEmoji}</Text>
                     <Text numberOfLines={2} style={styles.itemTitle}>{item.shortTitle}</Text>
@@ -321,6 +333,8 @@ export default function IslandDecorationShopPanel() {
 }
 
 const styles = StyleSheet.create({
+  collectorNotice: { color: "#fde68a", fontSize: 11, lineHeight: 16 },
+  collectorItem: { borderColor: "#fbbf24", backgroundColor: "rgba(146,64,14,0.14)" },
   card: { borderRadius: 16, borderWidth: 1, borderColor: "rgba(56,189,248,0.20)", backgroundColor: "rgba(8,28,52,0.56)", overflow: "hidden" },
   header: { minHeight: 58, paddingHorizontal: 11, paddingVertical: 9, flexDirection: "row", alignItems: "center", gap: 9 },
   headerIcon: { width: 34, height: 34, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(34,211,238,0.08)" },

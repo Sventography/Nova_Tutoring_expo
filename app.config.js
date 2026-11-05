@@ -1,6 +1,15 @@
 // app.config.js
 
 export default ({ config }) => {
+  // This branch builds the production app only. Staging/preview entitlements
+  // belong to the isolated staging app and must not enter this release.
+  for (const flag of [
+    "EXPO_PUBLIC_COLLECTOR_STAGING_MODE",
+    "EXPO_PUBLIC_COLLECTOR_STAGING_WEB_PREVIEW",
+    "EXPO_PUBLIC_NORAS_LANTERN_PREVIEW",
+  ]) {
+    if (process.env[flag] === "true") throw new Error(`${flag} is not allowed in a production app build`);
+  }
   const backendUrl =
     process.env.EXPO_PUBLIC_BACKEND_URL ||
     "https://nove-tutoring-backend.onrender.com";
@@ -96,6 +105,9 @@ export default ({ config }) => {
       EXPO_PUBLIC_PASSWORD_RECOVERY_URL:
         process.env.EXPO_PUBLIC_PASSWORD_RECOVERY_URL ||
         "https://confirm.sventographystudios.com/auth/confirmed",
+
+      EXPO_PUBLIC_WEB_PASSWORD_RECOVERY_URL:
+        process.env.EXPO_PUBLIC_WEB_PASSWORD_RECOVERY_URL || "",
 
       EXPO_PUBLIC_DISCORD_INVITE_URL:
         process.env.EXPO_PUBLIC_DISCORD_INVITE_URL ||
