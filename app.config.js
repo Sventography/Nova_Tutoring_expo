@@ -106,6 +106,9 @@ export default ({ config }) => {
         process.env.EXPO_PUBLIC_PASSWORD_RECOVERY_URL ||
         "https://confirm.sventographystudios.com/auth/confirmed",
 
+      EXPO_PUBLIC_WEB_PASSWORD_RECOVERY_URL:
+        process.env.EXPO_PUBLIC_WEB_PASSWORD_RECOVERY_URL || "",
+
       EXPO_PUBLIC_DISCORD_INVITE_URL:
         process.env.EXPO_PUBLIC_DISCORD_INVITE_URL ||
         "https://discord.gg/dPKqhhz93Z",

@@ -9,6 +9,7 @@ on:
       - 'app/**'
       - 'scripts/*collector*'
       - 'scripts/test-supabase-storage.cjs'
+      - 'scripts/test-auth*.cjs'
       - 'app.config.js'
       - 'eas.json'
       - 'vercel.json'
@@ -45,6 +46,9 @@ jobs:
       - name: Collector API, account isolation and placement regressions
         run: |
           node scripts/test-supabase-storage.cjs
+          node scripts/test-auth-recovery-ui.cjs
+          node scripts/test-auth-recovery-redirect.cjs
+          node scripts/test-auth-callback.cjs
           node scripts/test-collector-client.cjs
           node scripts/test-collector-ownership.cjs
           node scripts/test-collector-placement.cjs

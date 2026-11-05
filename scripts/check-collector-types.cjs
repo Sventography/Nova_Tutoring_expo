@@ -5,6 +5,10 @@ const ts = require('typescript');
 const path = require('node:path');
 const root = path.resolve(__dirname, '..');
 const entryPoints = [
+  'app/sign-in.tsx',
+  'app/(auth)/forgot.tsx',
+  'app/reset-password.tsx',
+  'app/auth/callback.tsx',
   'app/_lib/collectorClient.ts',
   'app/_lib/islandAutoPlacement.ts',
   'app/_lib/islandDecorationCatalog.ts',

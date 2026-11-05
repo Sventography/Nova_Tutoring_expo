@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -13,9 +14,16 @@ import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
 
 import { supabase } from "../lib/supabase";
+import { callbackPathWithoutCredentials, hasCallbackProof, readAuthParams, type CallbackParams } from "../_lib/authCallback";
 
-type CallbackParams = Record<string, string>;
 type CallbackStage = "loading" | "success" | "error";
+type CallbackBrowserWindow = {
+  location: { href: string };
+  history: {
+    state: unknown;
+    replaceState(data: unknown, unused: string, url: string): void;
+  };
+};
 
 const PENDING_CONFIRMATION_EMAIL_KEY =
   "nova.auth.pending-confirmation-email.v1";
@@ -26,32 +34,6 @@ const AUTH_TIMEOUT_MS = 8000;
 
 function normalizeEmail(value: unknown): string {
   return String(value || "").trim().toLowerCase();
-}
-
-function readAuthParams(url: string): CallbackParams {
-  const queryStart = url.indexOf("?");
-  const hashStart = url.indexOf("#");
-
-  const query =
-    queryStart >= 0
-      ? url.slice(
-          queryStart + 1,
-          hashStart >= 0 && hashStart > queryStart
-            ? hashStart
-            : undefined
-        )
-      : "";
-
-  const hash = hashStart >= 0 ? url.slice(hashStart + 1) : "";
-  const combined = [query, hash].filter(Boolean).join("&");
-  const search = new URLSearchParams(combined);
-  const params: CallbackParams = {};
-
-  search.forEach((value, key) => {
-    params[key] = value;
-  });
-
-  return params;
 }
 
 function safelyDecode(value: string): string {
@@ -111,6 +93,10 @@ export default function AuthCallback() {
   const incomingUrl = Linking.useLinkingURL();
 
   const attemptIdRef = useRef(0);
+  // Capture once before removing browser credentials. Effect reruns must still
+  // use the email link, rather than the scrubbed URL or an existing session.
+  const browserParamsRef = useRef<CallbackParams | null>(null);
+  const sessionAttemptRef = useRef<{ key: string; promise: Promise<boolean> } | null>(null);
   const redirectTimerRef =
     useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -193,7 +179,7 @@ export default function AuthCallback() {
       return !cancelled && attemptId === attemptIdRef.current;
     }
 
-    async function establishSession(
+    async function establishSessionOnce(
       params: CallbackParams
     ): Promise<boolean> {
       const accessToken = params.access_token;
@@ -251,8 +237,39 @@ export default function AuthCallback() {
       return !!current.data.session;
     }
 
+    function establishSession(params: CallbackParams): Promise<boolean> {
+      const key = JSON.stringify(params);
+      if (sessionAttemptRef.current?.key === key) {
+        return sessionAttemptRef.current.promise;
+      }
+      const promise = establishSessionOnce(params);
+      sessionAttemptRef.current = { key, promise };
+      return promise;
+    }
+
     async function run() {
       try {
+        let params: CallbackParams;
+        const browser = (globalThis as typeof globalThis & {
+          window?: CallbackBrowserWindow;
+        }).window;
+        if (Platform.OS === "web" && browser) {
+          if (!browserParamsRef.current) {
+            const url = browser.location.href;
+            browserParamsRef.current = readAuthParams(url);
+            // Do this before storage or auth awaits. Credentials remain only in
+            // this mounted callback's memory while the request is completed.
+            browser.history.replaceState(browser.history.state, "", callbackPathWithoutCredentials(url));
+          }
+          params = browserParamsRef.current;
+        } else {
+          const url = incomingUrl || await withTimeout(
+            Linking.getInitialURL(), 4000, "Reading the email link"
+          );
+          if (!url) throw new Error("Nova did not receive the email link.");
+          params = readAuthParams(url);
+        }
+
         const pendingSignupEmail = normalizeEmail(
           await AsyncStorage.getItem(
             PENDING_CONFIRMATION_EMAIL_KEY
@@ -264,19 +281,6 @@ export default function AuthCallback() {
 
         setLoginEmail(pendingChangedEmail || pendingSignupEmail);
 
-        const url =
-          incomingUrl ||
-          (await withTimeout(
-            Linking.getInitialURL(),
-            4000,
-            "Reading the email link"
-          ));
-
-        if (!url) {
-          throw new Error("Nova did not receive the email link.");
-        }
-
-        const params = readAuthParams(url);
         const flowType = String(params.type || "").toLowerCase();
 
         const providerError =
@@ -288,14 +292,14 @@ export default function AuthCallback() {
           throw new Error(safelyDecode(providerError));
         }
 
-        console.log("[AUTH CALLBACK] URL received:", url);
-        console.log("[AUTH CALLBACK] flow type:", flowType);
-
         /*
          * Password recovery must establish a recovery session before the
          * user can call updateUser({ password }).
          */
         if (flowType === "recovery") {
+          if (!hasCallbackProof(params)) {
+            throw new Error("This reset link is missing its verification details. Request a new reset email and open its newest link.");
+          }
           const hasSession = await establishSession(params);
 
           if (!isCurrent()) return;
@@ -324,10 +328,7 @@ export default function AuthCallback() {
           try {
             await establishSession(params);
           } catch (error) {
-            console.warn(
-              "[AUTH CALLBACK] email-change session warning:",
-              error
-            );
+            console.warn("[AUTH CALLBACK] email-change session could not be refreshed");
           }
 
           try {
@@ -351,10 +352,7 @@ export default function AuthCallback() {
               );
             }
           } catch (error) {
-            console.warn(
-              "[AUTH CALLBACK] email-change refresh warning:",
-              error
-            );
+            console.warn("[AUTH CALLBACK] email-change refresh did not complete");
           }
 
           if (!isCurrent()) return;
@@ -393,11 +391,12 @@ export default function AuthCallback() {
           false
         );
       } catch (error) {
-        console.warn("[AUTH CALLBACK] failed:", error);
+        console.warn("[AUTH CALLBACK] request could not be completed");
 
         if (!isCurrent()) return;
 
         setStage("error");
+        setDestination("login");
         setTitle("We couldn’t finish the request");
         setMessage(friendlyError(error));
       }

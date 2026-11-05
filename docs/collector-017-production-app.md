@@ -10,6 +10,19 @@ This change prepares the Nova Tutoring app for the existing production collector
 - New ownership adds one castle to Decoration Inventory. BUILD → Decoration Inventory → PLACE → SAVE places it separately from Nova, landmarks, and decorations. Moving or resizing landmarks also respects the castle footprint. Tapping the placed castle outside BUILD triggers its lantern/fireworks animation.
 - Collector rewards are absent from the coin shop and cannot be bought through its context API. Existing ordinary decoration prices, builder/decoration storage versions and keys are retained.
 - This is a production-only port. Events, quests, staging auth/seeding, developer preview grants, and the broader feature branch scene changes are excluded.
+- Web sign-in and recovery show visible errors/success even though React Native Web's native Alert API is a no-op. Reset requests show a sending state and reject duplicate clicks. Browser recovery returns through `/auth/callback`, verifies the email link, removes credentials from browser history, and opens a working password-update/Continue screen. Native builds retain their existing HTTPS/app recovery bridge.
+
+## Browser recovery configuration
+
+The preview uses the production Nova Auth project (`owlbqyiqsyfcrpqqfacp`). Its URL and public anon key must belong to that same project. The November 5 preview had a public key from another project, producing HTTP 401 from the public Auth settings endpoint; this prevents login and reset delivery regardless of the entered password. Check the matching pair before asking users to retry credentials.
+
+For the app preview branch, set `EXPO_PUBLIC_WEB_PASSWORD_RECOVERY_URL` to its stable branch address:
+
+`https://nova-tutoring-exp-git-74a404-contactnovatutoring-8350s-projects.vercel.app/auth/callback`
+
+Add that exact URL to Supabase Auth's allowed redirect URLs after approval, preserving the current Site URL and native URLs. Avoid wildcard Vercel domains. If the setting is omitted, browser resets use the current origin's `/auth/callback`, which also requires an exact allowlist entry. A new deployment is required after changing a build-time variable. Check that the stable address serves the repaired build and is accessible to the browser opening the email.
+
+The user requests the reset email and chooses/submits their own new password. No real email delivery or password change is performed by automated regressions. An already-open tab on a different preview origin may require signing in with the new password afterward.
 
 ## Disabled release state
 
@@ -25,6 +38,7 @@ Normal Nova app identity, scheme, version/build numbers and native projects are 
 
 - Production backend already verified by the user's hidden-input check: authenticated entitlements HTTP 200, database query succeeded, owned rewards 0, temporary session signed out. No real code was redeemed. Repeating that login check is unnecessary for this PR.
 - Isolated executable regressions cover API contracts, default-disabled behavior, production backend pinning, fragment/native links, certificate request races, cross-account isolation, cached placement recovery, ownership refresh during edits/SAVE, unique inventory, coin-purchase exclusion, footprint boundaries and inverse landmark collisions.
+- Auth regressions execute the real screen handlers and callback with mocks: visible browser validation/failure/success, pending requests, recovery proof/session establishment, history scrubbing/replay, invalid links, and native redirect preservation. They make no network or account changes.
 - `scripts/check-collector-types.cjs` typechecks all changed collector entry points and their imported dependencies. It intentionally excludes unrelated historical backups included by the repository-wide tsconfig.
 - Static web export runs with dummy Supabase configuration, no local dotenv, and redemption false. This verifies compilation/SSR and generation of `/collector`, not production login or real redemption.
 - `collector-production-app.yml` runs these checks on this branch and release-targeted PRs with LFS assets and no live credentials.
