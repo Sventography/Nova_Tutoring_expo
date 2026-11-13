@@ -310,6 +310,19 @@ export default function Flashcards() {
         </View>
       </View>
 
+      <Pressable
+        accessibilityRole="button"
+        style={styles.smartReviewBtn}
+        onPress={() => {
+          if (activeId) {
+            router.push({ pathname: "/review" as any, params: { topicId: activeId, title: activeTitle } });
+          }
+        }}
+      >
+        <Ionicons name="school-outline" size={20} color="#05202a" />
+        <Text style={styles.smartReviewText}>Smart Review · Practice cards that need attention</Text>
+      </Pressable>
+
       {/* search + topics */}
       <View style={{ paddingHorizontal: 12, paddingBottom: 8 }}>
         <View
@@ -468,6 +481,8 @@ export default function Flashcards() {
 }
 
 const styles = StyleSheet.create({
+  smartReviewBtn: { marginHorizontal: 12, marginBottom: 10, borderRadius: 12, backgroundColor: "#81e6ff", flexDirection: "row", alignItems: "center", padding: 13, gap: 9 },
+  smartReviewText: { color: "#05202a", fontSize: 13, fontWeight: "800", flexShrink: 1 },
   header: {
     paddingHorizontal: 12,
     paddingTop: 10,
