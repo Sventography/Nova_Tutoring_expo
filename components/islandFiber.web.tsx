@@ -20,7 +20,7 @@ export function Canvas({ gl, ...props }: CanvasProps) {
   return (
     <WebCanvas
       {...props}
-      gl={(defaults) => {
+      gl={async (defaults) => {
         try {
           return new WebGLRenderer({ ...defaults, ...gl });
         } catch (cause) {
