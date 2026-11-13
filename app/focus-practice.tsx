@@ -298,7 +298,7 @@ export default function FocusPracticeScreen() {
                 fontWeight: "700",
               }}
             >
-              {"don't delete the wrong ones.\ni need to see what i almost believed."}
+              {"don't delete the wrong ones.\ni need to see what i almost believed.\n\nif all that is left is the correction, i might think i always knew. — n.v."}
             </Text>
           </View>
         ) : null}

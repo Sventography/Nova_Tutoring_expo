@@ -62,7 +62,7 @@ import { startCheckout } from "../utils/checkout";
 import { startCoinCheckout } from "../utils/coinCheckout";
 import { notifyCoinOrder } from "../utils/coin-order";
 import { showToast } from "../utils/toast";
-import { markWhiteRabbitDiscovered } from "../utils/argState";
+import { getArgDiscoveryState, markWhiteRabbitDiscovered } from "../utils/argState";
 
 import AddressSheet, { AddressPayload } from "../components/AddressSheet";
 import { supabase } from "../lib/supabase";
@@ -1308,10 +1308,18 @@ function ItemDetailModal({
   const { tokens } = useTheme();
   const [showAlt, setShowAlt] = useState(false);
   const [showWhiteRabbitTrace, setShowWhiteRabbitTrace] = useState(false);
+  const [rabbitHintReady, setRabbitHintReady] = useState(false);
 
   useEffect(() => {
     setShowAlt(false);
     setShowWhiteRabbitTrace(false);
+    setRabbitHintReady(false);
+    if (item?.id !== "plushie_bunny_white") return;
+    let alive = true;
+    void getArgDiscoveryState().then(state => {
+      if (alive) setRabbitHintReady(state.whiteRabbitClueUnlocked);
+    }).catch(() => {});
+    return () => { alive = false; };
   }, [item?.id]);
 
   if (!item) return null;
@@ -1535,6 +1543,14 @@ function ItemDetailModal({
                 </Text>
               </Pressable>
 
+              {rabbitHintReady &&
+              !showWhiteRabbitTrace &&
+              item.id === "plushie_bunny_white" ? (
+                <Text style={{ color: tokens.isDark ? "#d6a447" : "#8a5d17", fontSize: 11, textAlign: "center", marginBottom: 10, fontStyle: "italic" }}>
+                  An old inventory label is caught beneath the name. Hold on to it a moment.
+                </Text>
+              ) : null}
+
               {showWhiteRabbitTrace &&
               item.id === "plushie_bunny_white" ? (
                 <View
@@ -1577,7 +1593,7 @@ function ItemDetailModal({
                       marginTop: 4,
                     }}
                   >
-                    {"not for studying.\nkeep this one anyway."}
+                    {"not for studying.\nkeep this one anyway.\n\ni repaired the ear myself. if i forget why i kept it, don't throw away the proof. — n.v."}
                   </Text>
                 </View>
               ) : null}
