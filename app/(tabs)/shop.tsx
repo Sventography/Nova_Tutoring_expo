@@ -178,9 +178,9 @@ const REQUIRES_SHIPPING = new Set<Category>([
   "tangibles",
 ]);
 
-// NOVA_MERCH_REWARDS_PHASE1
-// Apple-purchasable Nova Coins are digital-only. Physical merchandise uses
-// a separate earned-only reward balance, wired in the next economy phase.
+// Apple-purchasable Nova Coins are the only in-app spending currency.
+// Physical merchandise uses a separate cash checkout because it requires
+// shipping; do not imply or create a second in-app currency.
 function isPhysicalMerchItem(item: any): boolean {
   const category = item?.category as Category | undefined;
 
@@ -193,7 +193,7 @@ function isPhysicalMerchItem(item: any): boolean {
 }
 
 const NOVA_REWARDS_PHASE1_MESSAGE =
-  "Nova Coins are for digital items only. Physical merchandise will use earned Nova Rewards, with cash checkout for any remaining amount.";
+  "Nova Coins are the in-app currency for digital items. Physical merchandise is purchased separately at checkout; there is no second in-app currency.";
 
 const NEON_BORDER = "#00E5FF";
 

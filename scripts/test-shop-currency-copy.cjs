@@ -1,0 +1,10 @@
+"use strict";
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const source = fs.readFileSync(path.join(__dirname, "..", "app/(tabs)/shop.tsx"), "utf8");
+assert.ok(source.includes("Nova Coins are the in-app currency for digital items"));
+assert.equal(source.includes("earned Nova Rewards"), false);
+assert.equal(source.includes("a separate earned-only reward balance"), false);
+assert.ok(source.includes("REQUIRES_SHIPPING"), "physical goods must retain cash-shipping distinction");
+console.log("PASS: shop copy describes one in-app currency without changing checkout logic.");

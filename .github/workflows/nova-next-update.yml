@@ -23,5 +23,7 @@ jobs:
         run: node scripts/test-spaced-review.cjs
       - name: Validate ARG Act I sequential finale
         run: node scripts/test-arg-act1-finale.cjs
+      - name: Validate one-currency shop wording
+        run: node scripts/test-shop-currency-copy.cjs
       - name: Validate browser auth storage
         run: node scripts/test-supabase-storage.cjs
