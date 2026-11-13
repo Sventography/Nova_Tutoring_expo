@@ -21,7 +21,7 @@ import {
   Canvas,
   useFrame,
   useThree,
-} from "@react-three/fiber/native";
+} from "../../../components/islandFiber";
 import * as THREE from "three";
 
 import {
@@ -12160,7 +12160,7 @@ export default function NovaIsland3DScene({
           }
         }}
         style={
-          StyleSheet.absoluteFill
+          StyleSheet.absoluteFillObject
         }
         dpr={[
           1,
