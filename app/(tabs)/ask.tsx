@@ -31,6 +31,8 @@ import {
   type ArgDiscoveryState,
   classifyNvEntryPrompt,
   getArgDiscoveryState,
+  getLibraryNotebookFollowUp,
+  LIBRARY_NOTEBOOK_REPLY,
   markFocusPracticeUnlocked,
   markLibraryNotebookUnlocked,
   markNvDiscovered,
@@ -200,6 +202,16 @@ function getCanonicalArgReply(
     .filter((message) => message.novaIntrusion)
     .map((message) => normalizeArgPrompt(message.text))
     .join(" ");
+
+  const previousMessage = history[history.length - 1];
+  const notebookFollowUp = getLibraryNotebookFollowUp(
+    prompt,
+    previousMessage?.role === "assistant" && previousMessage.novaIntrusion
+      ? previousMessage.text
+      : "",
+    discovery.libraryNotebookDiscovered
+  );
+  if (notebookFollowUp) return notebookFollowUp;
 
   const asksWhatWasCounted =
     (
@@ -502,11 +514,7 @@ function getCanonicalArgReply(
       )
     )
   ) {
-    return [
-      "She was sure she knew the answer the second time.",
-      "But she couldn't tell whether she'd learned it or only remembered seeing it written down.",
-      "She asked me to keep both versions.",
-    ].join("\n\n");
+    return LIBRARY_NOTEBOOK_REPLY;
   }
 
   if (
