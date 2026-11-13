@@ -262,8 +262,9 @@ function getCanonicalArgReply(
   if (
     discovery.entryNoteDiscovered &&
     asksForArgClarification &&
-    recentArgText.includes(
-      "counting what you could see through glass"
+    (
+      recentArgText.includes("counting what she could see through glass") ||
+      recentArgText.includes("counting what you could see through glass")
     )
   ) {
     return [
