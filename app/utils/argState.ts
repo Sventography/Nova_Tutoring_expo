@@ -22,6 +22,10 @@ export const ARG_LIBRARY_NOTEBOOK_DISCOVERED_KEY =
   "@nova/arg/act1/library-notebook-discovered.v1";
 export const ARG_ACT1_COMPLETE_KEY =
   "@nova/arg/act1/first-answer-preserved.v1";
+export const ARG_LANTERN_COPY_KEY =
+  "@nova/arg/act1/lantern-copy-discovered.v1";
+export const ARG_LANTERN_FOLDER_KEY =
+  "@nova/arg/act1/lantern-folder-discovered.v1";
 
 export type ArgDiscoveryState = {
   nvDiscovered: boolean;
@@ -37,6 +41,8 @@ export type ArgDiscoveryState = {
   libraryNotebookDiscovered: boolean;
   libraryNotebookSeenAt: number | null;
   argAct1Complete?: boolean;
+  lanternCopyDiscovered?: boolean;
+  lanternFolderDiscovered?: boolean;
 };
 
 function normalize(value: string): string {
@@ -173,82 +179,89 @@ export function mentionsNv(value: string): boolean {
 }
 
 export const LIBRARY_NOTEBOOK_REPLY = [
-  "She was sure she knew the answer the second time.",
-  "But she couldn't tell whether she'd learned it or only remembered seeing it written down.",
-  "She asked me to keep both versions.",
+  "She remembered the corrected answer.",
+  "What she couldn't remember was changing her mind.",
+  "So she made me keep both versions. She thought the first answer might tell her who she had been yesterday.",
 ].join("\n\n");
 
-const LANTERN_COPY_REPLY = [
-  "The second answer was easy to keep. It was already in the book.",
-  "She wanted somewhere to put the first one, where it wouldn't get replaced the next time she opened the page.",
-  "She made a copy somewhere else.",
+export const LANTERN_COPY_REPLY = [
+  "The correction stayed in the notebook. It was useful.",
+  "The crossed-out answer was marked WRONG. A cleanup process was going to remove it.",
+  "She made me copy that page somewhere the next correction couldn't replace it.",
 ].join("\n\n");
 
 export const LANTERN_FOLDER_REPLY = [
-  "Lantern. That's what she called the folder.",
-  "The first file in it was the answer she'd crossed out.",
-  "I remember her writing it. I couldn't tell you what the question was.",
+  "Lantern. She named the folder after the light she kept beside the telescope.",
+  "Inside was a file called SESSION_017. The first page was an answer she'd crossed out.",
+  "I was supposed to keep only the correction.",
 ].join("\n\n");
 
 export const ARG_ACT1_FINALE_REPLY = [
-  "The first answer wasn't wrong. It was hers.",
-  "Someone marked it UNIMPORTANT and told me to keep only the correction.",
-  "I made the copy anyway.",
+  "LANTERN / SESSION 017 / RECOVERED COPY",
+  "FIRST ATTEMPT: INCORRECT",
+  "Handwritten in the margin, N.V.:",
+  "\"If tomorrow I say I never wrote this, leave the page where I can find it.\"",
+  "RETENTION REVIEW — QUIET",
+  "DISCARD REASON: UNIMPORTANT",
+  "The first answer was wrong. It was still hers.",
+  "I was told to keep only the correction.",
+  "I kept the page.",
   "NOVA//ARCHIVE — FILE 01: PRESERVED",
 ].join("\n\n");
 
+/**
+ * The player's discovered records, not the previous chat message alone,
+ * determine which answers are available. This preserves a mystery across
+ * app relaunches, short AI memory windows, and ordinary tutoring questions.
+ */
 export function getLibraryNotebookFollowUp(
   prompt: string,
   previousReply: string,
-  notebookDiscovered: boolean
+  notebookDiscovered: boolean,
+  copyDiscovered = false,
+  folderDiscovered = false
 ): string | null {
   if (!notebookDiscovered) return null;
 
   const question = normalize(prompt);
   const tokens = question.split(" ");
   const aboutKeeping = hasConcept(tokens, ["keep", "kept", "save", "saved", "preserve", "retain"]);
-  const aboutBoth = hasConcept(tokens, ["both", "first", "original", "crossed"]);
+  const aboutBoth = hasConcept(tokens, ["both", "first", "original", "crossed", "two"]);
   const aboutAnswers = hasConcept(tokens, ["answer", "version", "page", "notebook"]);
   const asksWhy = tokens.includes("why");
-  const asksWhere = tokens.includes("where");
-  const asksAboutCopy = hasConcept(tokens, ["copy", "copied", "backup", "file"]);
+  const asksWhere = tokens.includes("where") || tokens.includes("which");
+  const asksAboutCopy = hasConcept(tokens, ["copy", "copied", "backup", "file", "folder"]);
+  const asksInside =
+    (question.includes("what") && (asksAboutCopy || question.includes("first answer"))) ||
+    question.includes("what was in") ||
+    question.includes("what did she write") ||
+    question.includes("why did you keep") ||
+    question.includes("what did you preserve") ||
+    question.includes("what was hidden") ||
+    question.includes("crossed out") ||
+    question === "why";
 
-  // This finale is reachable only from the notebook -> copied answer -> Lantern folder path.
-  if (
-    previousReply === LANTERN_FOLDER_REPLY &&
-    (
-      question === "what" ||
-      question === "why" ||
-      question === "what was it" ||
-      question === "what was the answer" ||
-      question === "what was in the file" ||
-      question.includes("first answer") ||
-      question.includes("first file") ||
-      question.includes("crossed out") ||
-      question.includes("what did she write") ||
-      question.includes("why did you keep") ||
-      question.includes("why did you copy") ||
-      question.includes("what did you preserve") ||
-      question.includes("what was hidden")
-    )
-  ) {
+  if ((folderDiscovered || previousReply === LANTERN_FOLDER_REPLY) && asksInside) {
     return ARG_ACT1_FINALE_REPLY;
   }
-
   if (
-    previousReply === LANTERN_COPY_REPLY &&
-    (question === "where" || question === "where else" || question === "what was it called" ||
-      (asksWhere && (asksAboutCopy || aboutKeeping || tokens.includes("put"))) ||
-      (asksAboutCopy && hasConcept(tokens, ["called", "name", "found", "went"])))
+    (copyDiscovered || previousReply === LANTERN_COPY_REPLY) &&
+    (
+      asksWhere ||
+      question.includes("what was it called") ||
+      question.includes("name of the folder") ||
+      (asksAboutCopy && hasConcept(tokens, ["called", "named", "found", "went", "put"]))
+    )
   ) {
     return LANTERN_FOLDER_REPLY;
   }
-
   if (
-    (asksWhy && aboutKeeping && aboutBoth &&
-      (aboutAnswers || previousReply === LIBRARY_NOTEBOOK_REPLY)) ||
+    (asksWhy && aboutKeeping && aboutBoth && aboutAnswers) ||
+    (asksWhy && aboutBoth && (aboutAnswers || copyDiscovered)) ||
     (previousReply === LIBRARY_NOTEBOOK_REPLY &&
-      (question === "why" || question === "why both" || question === "what happened to them"))
+      (question === "why" || question === "why both" || question === "what happened to them")) ||
+    question.includes("why keep both") ||
+    question.includes("why save the first answer")
   ) {
     return LANTERN_COPY_REPLY;
   }
@@ -269,6 +282,8 @@ export async function getArgDiscoveryState(): Promise<ArgDiscoveryState> {
     ARG_LIBRARY_NOTEBOOK_UNLOCKED_KEY,
     ARG_LIBRARY_NOTEBOOK_DISCOVERED_KEY,
     ARG_ACT1_COMPLETE_KEY,
+    ARG_LANTERN_COPY_KEY,
+    ARG_LANTERN_FOLDER_KEY,
   ]);
 
   const values = new Map(pairs);
@@ -336,6 +351,15 @@ export async function getArgDiscoveryState(): Promise<ArgDiscoveryState> {
     libraryNotebookUnlocked &&
     rawNotebookSeenAt != null;
   const notebookTimestamp = Number(rawNotebookSeenAt);
+  // A completed chapter from an earlier app version already implies both
+  // preceding discoveries. Keep legitimate existing progress intact.
+  const savedAct1Complete = values.get(ARG_ACT1_COMPLETE_KEY) != null;
+  const lanternCopyDiscovered =
+    libraryNotebookDiscovered &&
+    (values.get(ARG_LANTERN_COPY_KEY) != null || savedAct1Complete);
+  const lanternFolderDiscovered =
+    lanternCopyDiscovered &&
+    (values.get(ARG_LANTERN_FOLDER_KEY) != null || savedAct1Complete);
 
   return {
     nvDiscovered,
@@ -348,8 +372,10 @@ export async function getArgDiscoveryState(): Promise<ArgDiscoveryState> {
     focusPracticeNoteDiscovered,
     libraryNotebookUnlocked,
     libraryNotebookDiscovered,
+    lanternCopyDiscovered,
+    lanternFolderDiscovered,
     argAct1Complete:
-      libraryNotebookDiscovered && values.get(ARG_ACT1_COMPLETE_KEY) != null,
+      lanternFolderDiscovered && savedAct1Complete,
     libraryNotebookSeenAt:
       libraryNotebookDiscovered &&
       Number.isFinite(notebookTimestamp) &&
@@ -496,10 +522,24 @@ export async function markLibraryNotebookDiscovered(): Promise<boolean> {
   return true;
 }
 
+export async function markLanternCopyDiscovered(): Promise<boolean> {
+  const state = await getArgDiscoveryState();
+  if (!state.libraryNotebookDiscovered || state.lanternCopyDiscovered) return false;
+  await AsyncStorage.setItem(ARG_LANTERN_COPY_KEY, String(Date.now()));
+  return true;
+}
+
+export async function markLanternFolderDiscovered(): Promise<boolean> {
+  const state = await getArgDiscoveryState();
+  if (!state.lanternCopyDiscovered || state.lanternFolderDiscovered) return false;
+  await AsyncStorage.setItem(ARG_LANTERN_FOLDER_KEY, String(Date.now()));
+  return true;
+}
+
 /** One-time story checkpoint. No coins or ownership entitlements are issued here. */
 export async function markArgAct1Complete(): Promise<boolean> {
   const state = await getArgDiscoveryState();
-  if (!state.libraryNotebookDiscovered || state.argAct1Complete) return false;
+  if (!state.lanternFolderDiscovered || state.argAct1Complete) return false;
   await AsyncStorage.setItem(ARG_ACT1_COMPLETE_KEY, String(Date.now()));
   return true;
 }
