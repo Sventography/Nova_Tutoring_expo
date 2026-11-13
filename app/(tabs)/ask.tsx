@@ -33,6 +33,8 @@ import {
   getArgDiscoveryState,
   getLibraryNotebookFollowUp,
   LIBRARY_NOTEBOOK_REPLY,
+  ARG_ACT1_FINALE_REPLY,
+  markArgAct1Complete,
   markFocusPracticeUnlocked,
   markLibraryNotebookUnlocked,
   markNvDiscovered,
@@ -2068,6 +2070,10 @@ export default function Ask() {
             )
           ) {
             await markLibraryNotebookUnlocked();
+          }
+
+          if (canonicalArgReply === ARG_ACT1_FINALE_REPLY) {
+            await markArgAct1Complete();
           }
 
           const answer =

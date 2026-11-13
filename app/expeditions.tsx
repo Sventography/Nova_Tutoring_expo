@@ -224,7 +224,7 @@ const S = StyleSheet.create({
   stepText: { fontSize: 12, letterSpacing: 1.2, fontWeight: "800" },
   question: { fontSize: 19, lineHeight: 26, fontWeight: "800", marginBottom: 4 },
   choice: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderWidth: 1, borderRadius: 12, minHeight: 50, padding: 13 },
-  choiceText: { fontSize: 15, fontWeight: "650", flexShrink: 1 },
+  choiceText: { fontSize: 15, fontWeight: "600", flexShrink: 1 },
   hintButton: { paddingVertical: 10 },
   hintText: { fontWeight: "700" },
   correct: { fontSize: 16, fontWeight: "800" },

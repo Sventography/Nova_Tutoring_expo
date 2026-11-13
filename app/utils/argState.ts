@@ -20,6 +20,8 @@ export const ARG_LIBRARY_NOTEBOOK_UNLOCKED_KEY =
   "@nova/arg/act1/library-notebook-unlocked.v1";
 export const ARG_LIBRARY_NOTEBOOK_DISCOVERED_KEY =
   "@nova/arg/act1/library-notebook-discovered.v1";
+export const ARG_ACT1_COMPLETE_KEY =
+  "@nova/arg/act1/first-answer-preserved.v1";
 
 export type ArgDiscoveryState = {
   nvDiscovered: boolean;
@@ -34,6 +36,7 @@ export type ArgDiscoveryState = {
   libraryNotebookUnlocked: boolean;
   libraryNotebookDiscovered: boolean;
   libraryNotebookSeenAt: number | null;
+  argAct1Complete?: boolean;
 };
 
 function normalize(value: string): string {
@@ -181,6 +184,19 @@ const LANTERN_COPY_REPLY = [
   "She made a copy somewhere else.",
 ].join("\n\n");
 
+export const LANTERN_FOLDER_REPLY = [
+  "Lantern. That's what she called the folder.",
+  "The first file in it was the answer she'd crossed out.",
+  "I remember her writing it. I couldn't tell you what the question was.",
+].join("\n\n");
+
+export const ARG_ACT1_FINALE_REPLY = [
+  "The first answer wasn't wrong. It was hers.",
+  "Someone marked it UNIMPORTANT and told me to keep only the correction.",
+  "I made the copy anyway.",
+  "NOVA//ARCHIVE — FILE 01: PRESERVED",
+].join("\n\n");
+
 export function getLibraryNotebookFollowUp(
   prompt: string,
   previousReply: string,
@@ -197,17 +213,35 @@ export function getLibraryNotebookFollowUp(
   const asksWhere = tokens.includes("where");
   const asksAboutCopy = hasConcept(tokens, ["copy", "copied", "backup", "file"]);
 
+  // This finale is reachable only from the notebook -> copied answer -> Lantern folder path.
+  if (
+    previousReply === LANTERN_FOLDER_REPLY &&
+    (
+      question === "what" ||
+      question === "why" ||
+      question === "what was it" ||
+      question === "what was the answer" ||
+      question === "what was in the file" ||
+      question.includes("first answer") ||
+      question.includes("first file") ||
+      question.includes("crossed out") ||
+      question.includes("what did she write") ||
+      question.includes("why did you keep") ||
+      question.includes("why did you copy") ||
+      question.includes("what did you preserve") ||
+      question.includes("what was hidden")
+    )
+  ) {
+    return ARG_ACT1_FINALE_REPLY;
+  }
+
   if (
     previousReply === LANTERN_COPY_REPLY &&
     (question === "where" || question === "where else" || question === "what was it called" ||
       (asksWhere && (asksAboutCopy || aboutKeeping || tokens.includes("put"))) ||
       (asksAboutCopy && hasConcept(tokens, ["called", "name", "found", "went"])))
   ) {
-    return [
-      "Lantern. That's what she called the folder.",
-      "The first file in it was the answer she'd crossed out.",
-      "I remember her writing it. I couldn't tell you what the question was.",
-    ].join("\n\n");
+    return LANTERN_FOLDER_REPLY;
   }
 
   if (
@@ -234,6 +268,7 @@ export async function getArgDiscoveryState(): Promise<ArgDiscoveryState> {
     ARG_FOCUS_PRACTICE_UNLOCKED_KEY,
     ARG_LIBRARY_NOTEBOOK_UNLOCKED_KEY,
     ARG_LIBRARY_NOTEBOOK_DISCOVERED_KEY,
+    ARG_ACT1_COMPLETE_KEY,
   ]);
 
   const values = new Map(pairs);
@@ -313,6 +348,8 @@ export async function getArgDiscoveryState(): Promise<ArgDiscoveryState> {
     focusPracticeNoteDiscovered,
     libraryNotebookUnlocked,
     libraryNotebookDiscovered,
+    argAct1Complete:
+      libraryNotebookDiscovered && values.get(ARG_ACT1_COMPLETE_KEY) != null,
     libraryNotebookSeenAt:
       libraryNotebookDiscovered &&
       Number.isFinite(notebookTimestamp) &&
@@ -456,5 +493,13 @@ export async function markLibraryNotebookDiscovered(): Promise<boolean> {
     ARG_LIBRARY_NOTEBOOK_DISCOVERED_KEY,
     String(Date.now())
   );
+  return true;
+}
+
+/** One-time story checkpoint. No coins or ownership entitlements are issued here. */
+export async function markArgAct1Complete(): Promise<boolean> {
+  const state = await getArgDiscoveryState();
+  if (!state.libraryNotebookDiscovered || state.argAct1Complete) return false;
+  await AsyncStorage.setItem(ARG_ACT1_COMPLETE_KEY, String(Date.now()));
   return true;
 }
