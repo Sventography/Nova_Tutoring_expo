@@ -169,6 +169,59 @@ export function mentionsNv(value: string): boolean {
   return normalizedMentionsNv(normalize(value));
 }
 
+export const LIBRARY_NOTEBOOK_REPLY = [
+  "She was sure she knew the answer the second time.",
+  "But she couldn't tell whether she'd learned it or only remembered seeing it written down.",
+  "She asked me to keep both versions.",
+].join("\n\n");
+
+const LANTERN_COPY_REPLY = [
+  "The second answer was easy to keep. It was already in the book.",
+  "She wanted somewhere to put the first one, where it wouldn't get replaced the next time she opened the page.",
+  "She made a copy somewhere else.",
+].join("\n\n");
+
+export function getLibraryNotebookFollowUp(
+  prompt: string,
+  previousReply: string,
+  notebookDiscovered: boolean
+): string | null {
+  if (!notebookDiscovered) return null;
+
+  const question = normalize(prompt);
+  const tokens = question.split(" ");
+  const aboutKeeping = hasConcept(tokens, ["keep", "kept", "save", "saved", "preserve", "retain"]);
+  const aboutBoth = hasConcept(tokens, ["both", "first", "original", "crossed"]);
+  const aboutAnswers = hasConcept(tokens, ["answer", "version", "page", "notebook"]);
+  const asksWhy = tokens.includes("why");
+  const asksWhere = tokens.includes("where");
+  const asksAboutCopy = hasConcept(tokens, ["copy", "copied", "backup", "file"]);
+
+  if (
+    previousReply === LANTERN_COPY_REPLY &&
+    (question === "where" || question === "where else" || question === "what was it called" ||
+      (asksWhere && (asksAboutCopy || aboutKeeping || tokens.includes("put"))) ||
+      (asksAboutCopy && hasConcept(tokens, ["called", "name", "found", "went"])))
+  ) {
+    return [
+      "Lantern. That's what she called the folder.",
+      "The first file in it was the answer she'd crossed out.",
+      "I remember her writing it. I couldn't tell you what the question was.",
+    ].join("\n\n");
+  }
+
+  if (
+    (asksWhy && aboutKeeping && aboutBoth &&
+      (aboutAnswers || previousReply === LIBRARY_NOTEBOOK_REPLY)) ||
+    (previousReply === LIBRARY_NOTEBOOK_REPLY &&
+      (question === "why" || question === "why both" || question === "what happened to them"))
+  ) {
+    return LANTERN_COPY_REPLY;
+  }
+
+  return null;
+}
+
 export async function getArgDiscoveryState(): Promise<ArgDiscoveryState> {
   const pairs = await AsyncStorage.multiGet([
     ARG_NV_DISCOVERED_KEY,
