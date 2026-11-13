@@ -342,8 +342,7 @@ function getCanonicalArgReply(
     (
       q.includes("initials") ||
       q.includes("which two") ||
-      q.includes("what were the letters") ||
-      q.includes("n.v.")
+      q.includes("what were the letters")
     )
   ) {
     return "N.V.";
@@ -442,7 +441,7 @@ function getCanonicalArgReply(
 
     if (
       !discovery.whiteRabbitDiscovered &&
-      recentArgText.includes("white rabbit")
+      (recentArgText.includes("white rabbit") || discovery.whiteRabbitClueUnlocked)
     ) {
       return [
         "I don't think it's a symbol. The real one had a repaired seam on one ear.",
@@ -483,8 +482,10 @@ function getCanonicalArgReply(
 
   if (
     discovery.whiteRabbitDiscovered &&
-    recentArgText.includes(
-      "keep wrong answers"
+    (
+      recentArgText.includes("keep wrong answers") ||
+      q.includes("wrong answer") ||
+      q.includes("missed question")
     ) &&
     asksAboutKeptMistakes
   ) {
@@ -619,6 +620,7 @@ function getCanonicalArgReply(
     (
       q.includes("notebook") ||
       q.includes("library") ||
+      q.includes("project") ||
       q.includes("where did she write") ||
       q.includes("where did she keep")
     )
@@ -2049,13 +2051,14 @@ export default function Ask() {
         }
 
         if (localReply) {
+          const loreText = localReply;
           setMessages(current => [
             ...current,
             userMsg,
             {
               id: String(Date.now() + 1),
               role: "assistant",
-              text: localReply,
+              text: loreText,
               personality: activePersonality,
               novaIntrusion: true,
             },

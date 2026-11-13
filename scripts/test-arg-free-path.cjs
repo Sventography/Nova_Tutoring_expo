@@ -11,6 +11,8 @@ const local = sendBody.slice(sendBody.indexOf("if (localReply)"), sendBody.index
 assert.ok(local.includes("novaIntrusion: true"));
 assert.equal(local.includes("addIslandXp"), false, "ARG clues may not farm Island XP");
 assert.equal(local.includes("onAskQuestion"), false, "ARG clues may not farm Ask achievements");
-assert.ok(sendBody.includes("disabled={loading || !input.trim()}"), "send button should work when AI credits are exhausted");
+assert.ok(source.includes("disabled={loading || !input.trim()}"), "send button should work when AI credits are exhausted");
 assert.ok(source.includes("async function resolveLocalArgReply("));
+assert.ok(source.includes("recentArgText.includes(\"white rabbit\") || discovery.whiteRabbitClueUnlocked"));
+assert.equal(source.includes("q.includes(\"n.v.\")"), false, "asking who N.V. is must not return the initials again");
 console.log("PASS: eligible ARG clues work without AI credits, purchases, or repeatable rewards.");
