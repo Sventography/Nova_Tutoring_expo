@@ -1,0 +1,27 @@
+name: Nova next-update learning and ARG checks
+on:
+  push:
+    branches:
+      - work/nova-next-update-20261113
+  pull_request:
+    branches:
+      - release/web-ios-working-20260115
+jobs:
+  learning-and-archive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install packages
+        run: npm ci --ignore-scripts
+      - name: Validate Study Expeditions
+        run: node scripts/test-study-expeditions.cjs
+      - name: Validate Smart Review
+        run: node scripts/test-spaced-review.cjs
+      - name: Validate ARG Act I sequential finale
+        run: node scripts/test-arg-act1-finale.cjs
+      - name: Validate browser auth storage
+        run: node scripts/test-supabase-storage.cjs
