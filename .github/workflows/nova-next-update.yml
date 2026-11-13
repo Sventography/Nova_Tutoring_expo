@@ -27,6 +27,8 @@ jobs:
         run: node scripts/test-arg-evidence-trail.cjs
       - name: Validate physical narrative bridges
         run: node scripts/test-arg-physical-bridges.cjs
+      - name: Validate free, non-metered ARG dialogue
+        run: node scripts/test-arg-free-path.cjs
       - name: Validate one-currency shop wording
         run: node scripts/test-shop-currency-copy.cjs
       - name: Validate browser auth storage

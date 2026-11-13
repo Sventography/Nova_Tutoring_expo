@@ -335,6 +335,20 @@ function getCanonicalArgReply(
     return "N.V.";
   }
 
+  // The physical star clue already shows that two initials exist. Players
+  // needn't remember one exact preceding message to retrieve the signature.
+  if (
+    discovery.seventeenthStarDiscovered &&
+    (
+      q.includes("initials") ||
+      q.includes("which two") ||
+      q.includes("what were the letters") ||
+      q.includes("n.v.")
+    )
+  ) {
+    return "N.V.";
+  }
+
   if (entryKind) {
     return [
       "You found that exactly as written?",
@@ -679,6 +693,61 @@ function getCanonicalArgReply(
   }
 
   return null;
+}
+
+/**
+ * Resolve already-earned ARG clues locally, without spending AI questions,
+ * granting ordinary Ask achievements, or minting Coins / Island XP.
+ * Normal tutoring questions still use the regular metered /api/ask path.
+ */
+async function resolveLocalArgReply(prompt: string, messages: Msg[]): Promise<string | null> {
+  const discovery = await getArgDiscoveryState();
+  const normalized = normalizeArgPrompt(prompt);
+  const recent = messages
+    .slice(-4)
+    .filter(message => message.novaIntrusion)
+    .map(message => normalizeArgPrompt(message.text))
+    .join(" ");
+
+  const asksForSignature =
+    normalized.includes("initials") ||
+    normalized.includes("which two") ||
+    normalized.includes("what were the letters") ||
+    normalized.includes("n.v.") ||
+    (recent.includes("two initials in the corner") &&
+      (normalized.includes("initial") || normalized.includes("letters")));
+
+  if (discovery.seventeenthStarDiscovered && !discovery.nvDiscovered && asksForSignature) {
+    const unlocked = await markNvDiscovered();
+    if (unlocked) discovery.nvDiscovered = true;
+  }
+
+  const entryKind =
+    discovery.nvDiscovered ? classifyNvEntryPrompt(prompt) : null;
+  const reply = getCanonicalArgReply(prompt, messages, discovery, entryKind);
+  if (!reply) return null;
+
+  if (
+    reply.includes("counting what she could see through glass") ||
+    reply.includes("counting what you could see through glass") ||
+    reply.includes("something meant to look at the sky")
+  ) {
+    await markTelescopeClueUnlocked();
+  }
+  if (reply.includes("I remember a white rabbit before I remember a name.")) {
+    await markWhiteRabbitClueUnlocked();
+  }
+  if (reply.includes("Look where I keep the questions you miss.") ||
+      reply.startsWith("Focus Practice.")) {
+    await markFocusPracticeUnlocked();
+  }
+  if (reply.includes("She kept a notebook for it.")) {
+    await markLibraryNotebookUnlocked();
+  }
+  if (reply === LANTERN_COPY_REPLY) await markLanternCopyDiscovered();
+  if (reply === LANTERN_FOLDER_REPLY) await markLanternFolderDiscovered();
+  if (reply === ARG_ACT1_FINALE_REPLY) await markArgAct1Complete();
+  return reply;
 }
 
 const BACKEND_BASE =
@@ -1946,7 +2015,7 @@ export default function Ask() {
   const send = useCallback(
     async () => {
       const trimmed = input.trim();
-      if (!trimmed || loading || aiLimitReached) return;
+      if (!trimmed || loading) return;
 
       setLoading(true);
       setError(null);
@@ -1969,10 +2038,41 @@ export default function Ask() {
         text: trimmed,
       };
 
-      setMessages((m) => [...m, userMsg]);
-      setInput("");
-
       try {
+        // A discovered lore question always resolves from the local story
+        // record before calling the metered tutoring backend.
+        let localReply: string | null = null;
+        try {
+          localReply = await resolveLocalArgReply(trimmed, messages);
+        } catch (storyError) {
+          console.warn("[Archive] story lookup failed", storyError);
+        }
+
+        if (localReply) {
+          setMessages(current => [
+            ...current,
+            userMsg,
+            {
+              id: String(Date.now() + 1),
+              role: "assistant",
+              text: localReply,
+              personality: activePersonality,
+              novaIntrusion: true,
+            },
+          ]);
+          setInput("");
+          return;
+        }
+
+        if (aiLimitReached) {
+          setError(isAiGuest
+            ? "Your guest AI trial is used. Discovered archive clues still work here, or create a free account to keep studying."
+            : "You've reached the Nova AI question limit for this period. Discovered archive clues still work here.");
+          return;
+        }
+
+        setMessages(current => [...current, userMsg]);
+        setInput("");
         const apiRes = await callAskApi(
           trimmed,
           historyPayload,
@@ -1996,138 +2096,9 @@ export default function Ask() {
         } else {
           setErrorCode(null);
 
-          const classifiedEntryKind =
-            classifyNvEntryPrompt(trimmed);
-          let argDiscovery =
-            await getArgDiscoveryState();
-
-          /*
-           * Source-code breadcrumbs reinforce N.V. only after the in-app
-           * trail has legitimately reached her. They are not alternate
-           * shortcuts into Act I.
-           */
-          const entryKind =
-            argDiscovery.nvDiscovered
-              ? classifiedEntryKind
-              : null;
-
-          const normalizedArgPrompt =
-            normalizeArgPrompt(trimmed);
-          const recentArgConversation =
-            messages
-              .slice(-4)
-              .filter(
-                (message) =>
-                  message.novaIntrusion
-              )
-              .map((message) =>
-                normalizeArgPrompt(
-                  message.text
-                )
-              )
-              .join(" ");
-
-          const unlockNvFromStarBridge =
-            argDiscovery
-              .seventeenthStarDiscovered &&
-            recentArgConversation.includes(
-              "two initials in the corner"
-            ) &&
-            (
-              normalizedArgPrompt.includes(
-                "initial"
-              ) ||
-              normalizedArgPrompt.includes(
-                "letters"
-              ) ||
-              normalizedArgPrompt.includes(
-                "which two"
-              ) ||
-              normalizedArgPrompt.includes(
-                "what were"
-              )
-            );
-
-          if (
-            unlockNvFromStarBridge &&
-            !argDiscovery.nvDiscovered
-          ) {
-            const unlocked =
-              await markNvDiscovered();
-
-            if (unlocked) {
-              argDiscovery = {
-                ...argDiscovery,
-                nvDiscovered: true,
-              };
-            }
-          }
-
-          const canonicalArgReply =
-            getCanonicalArgReply(
-              trimmed,
-              messages,
-              argDiscovery,
-              entryKind
-            );
-
-          if (
-            canonicalArgReply?.includes(
-              "counting what you could see through glass"
-            ) ||
-            canonicalArgReply?.includes(
-              "something meant to look at the sky"
-            )
-          ) {
-            await markTelescopeClueUnlocked();
-          }
-
-          if (
-            canonicalArgReply?.includes(
-              "I remember a white rabbit before I remember a name."
-            )
-          ) {
-            await markWhiteRabbitClueUnlocked();
-          }
-
-          if (
-            canonicalArgReply?.includes(
-              "Look where I keep the questions you miss."
-            ) ||
-            canonicalArgReply?.startsWith(
-              "Focus Practice."
-            )
-          ) {
-            await markFocusPracticeUnlocked();
-          }
-
-          if (
-            canonicalArgReply?.includes(
-              "She kept a notebook for it."
-            )
-          ) {
-            await markLibraryNotebookUnlocked();
-          }
-
-          if (canonicalArgReply === LANTERN_COPY_REPLY) {
-            await markLanternCopyDiscovered();
-          }
-          if (canonicalArgReply === LANTERN_FOLDER_REPLY) {
-            await markLanternFolderDiscovered();
-          }
-          if (canonicalArgReply === ARG_ACT1_FINALE_REPLY) {
-            await markArgAct1Complete();
-          }
-
-          const answer =
-            canonicalArgReply ?? apiRes.data.answer;
-          /*
-           * Act I lore is client-canonical for now. Older backend intrusion
-           * responses are intentionally ignored until their story rules are
-           * migrated to the new ARG bible.
-           */
-          const isArgReply =
-            canonicalArgReply != null;
+          // All canonical ARG dialogue was resolved above the metered API.
+          const answer = apiRes.data.answer;
+          const isArgReply = false;
 
           const responsePersonality =
             apiRes.data.ask_personality &&
@@ -2885,8 +2856,8 @@ export default function Ask() {
                       ? "Checking guest trial…"
                       : aiLimitReached
                       ? isAiGuest
-                        ? "Guest trial used — create a free account"
-                        : "Nova AI limit reached for this period"
+                        ? "Guest AI trial used — archive clues still work"
+                        : "Nova AI limit reached — archive clues still work"
                       : activeExperience.placeholder
                   }
                   placeholderTextColor={tokens.isDark ? "#678a94" : "#6b7685"}
@@ -2898,13 +2869,13 @@ export default function Ask() {
                 />
                 <Pressable
                   onPress={send}
-                  disabled={loading || !input.trim() || aiLimitReached}
+                  disabled={loading || !input.trim()}
                 >
                   <Ionicons
                     name="arrow-up-circle"
                     size={28}
                     color={
-                      input.trim() && !aiLimitReached
+                      input.trim()
                         ? activeExperience.accent
                         : tokens.isDark
                         ? "#294b55"

@@ -1,0 +1,16 @@
+"use strict";
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const source = fs.readFileSync(path.join(__dirname, "..", "app/(tabs)/ask.tsx"), "utf8");
+const sendBody = source.split("  const send = useCallback(")[1].split("  const renderItem =")[0];
+assert.ok(sendBody.includes("localReply = await resolveLocalArgReply(trimmed, messages);"));
+assert.ok(sendBody.indexOf("if (localReply)") < sendBody.indexOf("if (aiLimitReached)"));
+assert.ok(sendBody.indexOf("if (aiLimitReached)") < sendBody.indexOf("const apiRes = await callAskApi("));
+const local = sendBody.slice(sendBody.indexOf("if (localReply)"), sendBody.indexOf("if (aiLimitReached)"));
+assert.ok(local.includes("novaIntrusion: true"));
+assert.equal(local.includes("addIslandXp"), false, "ARG clues may not farm Island XP");
+assert.equal(local.includes("onAskQuestion"), false, "ARG clues may not farm Ask achievements");
+assert.ok(sendBody.includes("disabled={loading || !input.trim()}"), "send button should work when AI credits are exhausted");
+assert.ok(source.includes("async function resolveLocalArgReply("));
+console.log("PASS: eligible ARG clues work without AI credits, purchases, or repeatable rewards.");
