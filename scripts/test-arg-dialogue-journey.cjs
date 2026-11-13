@@ -26,8 +26,8 @@ assert.ok(start >= 0 && end > start, "canonical dialogue must be testable apart 
 const extracted = askSource.slice(start, end) + "\nmodule.exports = { getCanonicalArgReply };";
 const script = ts.transpileModule(extracted, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, jsx: ts.JsxEmit.ReactJSX } }).outputText;
 const dialogMod = { exports: {} };
-new Function("module", "promptMentionsNv", "getLibraryNotebookFollowUp", script)(
-  dialogMod, arg.mentionsNv, arg.getLibraryNotebookFollowUp
+new Function("module", "promptMentionsNv", "getLibraryNotebookFollowUp", "LIBRARY_NOTEBOOK_REPLY", script)(
+  dialogMod, arg.mentionsNv, arg.getLibraryNotebookFollowUp, arg.LIBRARY_NOTEBOOK_REPLY
 );
 const reply = (prompt, state, history = []) =>
   dialogMod.exports.getCanonicalArgReply(prompt, history, state, null);
