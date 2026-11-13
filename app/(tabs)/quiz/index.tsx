@@ -16,6 +16,14 @@ export default function QuizTopics() {
     <LinearGradient colors={[BLACK, BLUE]} style={{flex:1}}>
       <View style={S.wrap}>
         <Text style={S.title}>Choose a Topic</Text>
+        <Pressable
+          accessibilityRole="button"
+          style={[S.item, { marginBottom: 16, backgroundColor: "rgba(0,229,255,0.16)" }]}
+          onPress={() => router.push("/expeditions" as any)}
+        >
+          <Text style={S.itemTitle}>Start Today's Study Expedition</Text>
+          <Text style={S.itemMeta}>Three quick challenges, helpful hints, and daily Island XP.</Text>
+        </Pressable>
         <FlatList
           data={topics}
           keyExtractor={(t) => t.id}
