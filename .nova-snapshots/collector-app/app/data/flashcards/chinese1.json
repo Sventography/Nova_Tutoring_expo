@@ -1,0 +1,25 @@
+{
+  "topic": "Chinese I",
+  "cards": [
+    { "q": "Hello", "a": "Nǐ hǎo" },
+    { "q": "Goodbye", "a": "Zàijiàn" },
+    { "q": "Thank you", "a": "Xièxiè" },
+    { "q": "Yes / No", "a": "Shì / Bú shì" },
+    { "q": "Please", "a": "Qǐng" },
+    { "q": "1-5", "a": "yī, èr, sān, sì, wǔ" },
+    { "q": "6-10", "a": "liù, qī, bā, jiǔ, shí" },
+    { "q": "Family words", "a": "māma, bàba, gēge, jiějie" },
+    { "q": "I am a student", "a": "Wǒ shì xuéshēng" },
+    { "q": "What is your name?", "a": "Nǐ jiào shénme míngzi?" },
+    { "q": "Where are you from?", "a": "Nǐ cóng nǎlǐ lái?" },
+    { "q": "This/that", "a": "Zhè / Nà" },
+    { "q": "Numbers tens/hundreds", "a": "shí, bǎi" },
+    { "q": "How much?", "a": "Duōshǎo qián?" },
+    { "q": "I like ...", "a": "Wǒ xǐhuān ..." },
+    { "q": "Food words", "a": "mǐfàn rice, miàntiáo noodles" },
+    { "q": "Drink words", "a": "shuǐ water, chá tea" },
+    { "q": "Colors", "a": "hóng red, lǜ green, huáng yellow" },
+    { "q": "Good morning", "a": "Zǎoshàng hǎo" },
+    { "q": "Good night", "a": "Wǎn'ān" }
+  ]
+}

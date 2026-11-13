@@ -1,0 +1,8 @@
+[
+  {
+    "email": "test@example.com",
+    "password": "$2b$12$pAV4MKyspuB7xYe58Epa1OHWddAqG.dFNeQhILNBXmE97a7pUZkOO",
+    "resetCode": null,
+    "resetExp": 0
+  }
+]

@@ -1,0 +1,25 @@
+{
+  "topic": "Probability Basics",
+  "cards": [
+    { "q": "Sample space (Ω)", "a": "Set of all outcomes" },
+    { "q": "Event", "a": "Subset of sample space" },
+    { "q": "Addition rule", "a": "P(A∪B)=P(A)+P(B)−P(A∩B)" },
+    { "q": "Conditional probability", "a": "P(A|B)=P(A∩B)/P(B)" },
+    { "q": "Independence", "a": "P(A∩B)=P(A)P(B)" },
+    { "q": "Law of total probability", "a": "P(A)=Σ P(A|B_i)P(B_i)" },
+    { "q": "Bayes' theorem", "a": "P(A|B)=P(B|A)P(A)/P(B)" },
+    { "q": "Random variable types", "a": "Discrete vs continuous" },
+    { "q": "Expected value", "a": "E[X]=Σ x p(x) or ∫ x f(x) dx" },
+    { "q": "Variance", "a": "Var(X)=E[X^2]−(E[X])^2" },
+    { "q": "Binomial distribution", "a": "n trials, p success; P(k)=C(n,k)p^k(1−p)^{n−k}" },
+    { "q": "Geometric distribution", "a": "Trials until first success" },
+    { "q": "Poisson distribution", "a": "Counts with rate λ; mean=var=λ" },
+    { "q": "Normal distribution", "a": "Bell curve N(μ,σ^2)" },
+    { "q": "Central Limit Theorem", "a": "Sample mean → normal as n↑" },
+    { "q": "Chebyshev's inequality", "a": "P(|X−μ|≥kσ) ≤ 1/k^2" },
+    { "q": "Covariance", "a": "Cov(X,Y)=E[XY]−E[X]E[Y]" },
+    { "q": "Correlation ρ", "a": "Cov(X,Y)/(σ_X σ_Y)" },
+    { "q": "MGF purpose", "a": "Moment generating function gives moments" },
+    { "q": "Law of large numbers", "a": "Sample mean → true mean as n→∞" }
+  ]
+}

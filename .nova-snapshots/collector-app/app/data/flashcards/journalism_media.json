@@ -1,0 +1,25 @@
+{
+  "topic": "Journalism and Media Studies",
+  "cards": [
+    { "q": "The 5Ws and H", "a": "Who, What, When, Where, Why, How" },
+    { "q": "Inverted pyramid structure", "a": "Lead with most important facts, then details" },
+    { "q": "Hard news vs feature", "a": "Immediate events vs in-depth human interest" },
+    { "q": "Attribution", "a": "Citing sources for statements" },
+    { "q": "Off the record vs on background", "a": "Cannot publish vs publish without naming" },
+    { "q": "Libel definition", "a": "Published false statement harming reputation" },
+    { "q": "Defamation defenses", "a": "Truth, opinion, privilege" },
+    { "q": "Fair use factors", "a": "Purpose, nature, amount, effect on market" },
+    { "q": "Bias types", "a": "Selection, confirmation, framing, omission" },
+    { "q": "AP style purpose", "a": "Standardized news writing rules" },
+    { "q": "Headline best practices", "a": "Concise, active voice, accurate" },
+    { "q": "Lede (lead) sentence goal", "a": "Hook and summarize key point" },
+    { "q": "Fact checking process", "a": "Verify with multiple credible sources" },
+    { "q": "Primary vs secondary source", "a": "Original document vs analysis/summary" },
+    { "q": "Ethical guidelines common", "a": "Seek truth, minimize harm, act independently" },
+    { "q": "Public records request", "a": "FOIA or state open records laws" },
+    { "q": "Broadcast vs print differences", "a": "Shorter sentences, spoken cadence vs detailed text" },
+    { "q": "Social media verification", "a": "Check origin, metadata, corroborate" },
+    { "q": "Data journalism tools example", "a": "Spreadsheets, basic stats, visualization" },
+    { "q": "Media literacy skill", "a": "Distinguish news, opinion, advertising" }
+  ]
+}

@@ -1,0 +1,82 @@
+[
+  {
+    "question": "Risk–return tradeoff",
+    "answer": "Higher expected return requires higher risk"
+  },
+  {
+    "question": "Diversification reduces",
+    "answer": "Unsystematic (idiosyncratic) risk"
+  },
+  {
+    "question": "Asset allocation is",
+    "answer": "Mix of stocks, bonds, cash, alternatives"
+  },
+  {
+    "question": "Index fund tracks",
+    "answer": "Market index like S&P 500"
+  },
+  {
+    "question": "ETF trades like",
+    "answer": "Stock on an exchange"
+  },
+  {
+    "question": "Expense ratio measures",
+    "answer": "Annual fund operating costs"
+  },
+  {
+    "question": "Dollar-cost averaging",
+    "answer": "Invest fixed amount at regular intervals"
+  },
+  {
+    "question": "Rebalancing means",
+    "answer": "Reset allocations to targets"
+  },
+  {
+    "question": "Compound interest formula",
+    "answer": "A = P(1 + r/n)^{nt}"
+  },
+  {
+    "question": "Time horizon importance",
+    "answer": "Longer horizon tolerates more volatility"
+  },
+  {
+    "question": "Inflation risk",
+    "answer": "Purchasing power erosion"
+  },
+  {
+    "question": "Bond price–yield relation",
+    "answer": "Inverse"
+  },
+  {
+    "question": "Duration measures",
+    "answer": "Bond price sensitivity to rates"
+  },
+  {
+    "question": "CAPM expected return",
+    "answer": "Rf + β(E[Rm] − Rf)"
+  },
+  {
+    "question": "Sharpe ratio",
+    "answer": "(Return − Rf)/σ"
+  },
+  {
+    "question": "Alpha measures",
+    "answer": "Excess return over benchmark risk-adjusted"
+  },
+  {
+    "question": "Tax-advantaged account example",
+    "answer": "Roth IRA, 401(k)"
+  },
+  {
+    "question": "Limit order vs market order",
+    "answer": "Set price vs execute at current market"
+  },
+  {
+    "question": "Liquidity means",
+    "answer": "Ease of converting to cash"
+  },
+  {
+    "question": "Behavioral bias example",
+    "answer": "Loss aversion or herd behavior"
+  }
+]

@@ -1,0 +1,82 @@
+[
+  {
+    "question": "First law of thermodynamics",
+    "answer": "ΔU = q + w"
+  },
+  {
+    "question": "Enthalpy change at constant pressure",
+    "answer": "ΔH = q_p"
+  },
+  {
+    "question": "Entropy qualitative trend",
+    "answer": "Increases with disorder and temperature"
+  },
+  {
+    "question": "Gibbs free energy",
+    "answer": "ΔG = ΔH − TΔS"
+  },
+  {
+    "question": "Spontaneity criterion",
+    "answer": "ΔG < 0"
+  },
+  {
+    "question": "Rate law determined by",
+    "answer": "Experimentally from kinetics"
+  },
+  {
+    "question": "Activation energy",
+    "answer": "Minimum energy to react"
+  },
+  {
+    "question": "Arrhenius equation",
+    "answer": "k = A e^(−Ea/RT)"
+  },
+  {
+    "question": "Le Châtelier’s principle",
+    "answer": "System shifts to oppose change"
+  },
+  {
+    "question": "Equilibrium constant depends on",
+    "answer": "Temperature"
+  },
+  {
+    "question": "Bronsted acid/base",
+    "answer": "Proton donor/acceptor"
+  },
+  {
+    "question": "Conjugate acid–base pairs",
+    "answer": "Differ by one proton"
+  },
+  {
+    "question": "Buffer resists",
+    "answer": "pH changes"
+  },
+  {
+    "question": "Henderson–Hasselbalch",
+    "answer": "pH = pKa + log([A−]/[HA])"
+  },
+  {
+    "question": "Solubility product Ksp",
+    "answer": "Equilibrium of sparingly soluble salts"
+  },
+  {
+    "question": "Electrochem cell spontaneity",
+    "answer": "E°cell > 0 is spontaneous"
+  },
+  {
+    "question": "Nernst equation use",
+    "answer": "Cell potential nonstandard conditions"
+  },
+  {
+    "question": "Colligative properties",
+    "answer": "Depend on particle number"
+  },
+  {
+    "question": "Chromatography separates by",
+    "answer": "Differential partitioning"
+  },
+  {
+    "question": "Beer–Lambert law",
+    "answer": "A = εlc"
+  }
+]

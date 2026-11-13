@@ -1,0 +1,25 @@
+{
+  "topic": "Psychology (Advanced)",
+  "cards": [
+    { "q": "Classical vs operant conditioning", "a": "Classical pairs stimuli; operant uses reinforcement/punishment" },
+    { "q": "Schedules of reinforcement (2 examples)", "a": "Fixed ratio, variable ratio, fixed interval, variable interval" },
+    { "q": "Working memory capacity (Miller)", "a": "About 7 plus or minus 2 chunks" },
+    { "q": "Long-term potentiation (LTP) is", "a": "Strengthening of synapses based on recent activity" },
+    { "q": "Piaget stages (order)", "a": "Sensorimotor, preoperational, concrete operational, formal operational" },
+    { "q": "Big Five personality traits", "a": "Openness, Conscientiousness, Extraversion, Agreeableness, Neuroticism" },
+    { "q": "Heuristics: availability vs representativeness", "a": "Availability uses ease of recall; representativeness uses similarity to prototype" },
+    { "q": "Confirmation bias definition", "a": "Seek or interpret info to confirm prior beliefs" },
+    { "q": "Reliability vs validity", "a": "Reliability: consistency; validity: accuracy of measuring construct" },
+    { "q": "DSM primary purpose", "a": "Standardized classification of mental disorders" },
+    { "q": "Major depressive disorder key feature", "a": "At least 2 weeks of depressed mood or anhedonia with other symptoms" },
+    { "q": "Bipolar I hallmark", "a": "At least one manic episode" },
+    { "q": "Schizophrenia positive vs negative symptoms", "a": "Positive: hallucinations, delusions; Negative: flat affect, avolition" },
+    { "q": "CBT core idea", "a": "Modify maladaptive thoughts to change feelings/behaviors" },
+    { "q": "Exposure therapy treats", "a": "Anxiety disorders via controlled exposure to feared stimuli" },
+    { "q": "Placebo effect", "a": "Improvement due to expectation, not active treatment" },
+    { "q": "Correlation does not imply causation because", "a": "Possible confounding or reverse causality" },
+    { "q": "Independent vs dependent variable", "a": "Independent manipulated; dependent measured outcome" },
+    { "q": "Random assignment purpose", "a": "Reduces confounding by balancing groups" },
+    { "q": "Ethics: informed consent means", "a": "Participants know risks/benefits and agree voluntarily" }
+  ]
+}

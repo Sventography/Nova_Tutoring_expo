@@ -1,0 +1,82 @@
+[
+  {
+    "question": "Consumer surplus is",
+    "answer": "Willingness to pay minus price"
+  },
+  {
+    "question": "Producer surplus is",
+    "answer": "Price minus marginal cost"
+  },
+  {
+    "question": "Price ceiling effect",
+    "answer": "Shortage if below equilibrium"
+  },
+  {
+    "question": "Price floor effect",
+    "answer": "Surplus if above equilibrium"
+  },
+  {
+    "question": "Cross-price elasticity sign for substitutes",
+    "answer": "Positive"
+  },
+  {
+    "question": "Cross-price elasticity sign for complements",
+    "answer": "Negative"
+  },
+  {
+    "question": "Perfect competition characteristic",
+    "answer": "Price takers with many firms"
+  },
+  {
+    "question": "Monopoly pricing rule",
+    "answer": "MR = MC but P > MC"
+  },
+  {
+    "question": "Monopolistic competition feature",
+    "answer": "Product differentiation"
+  },
+  {
+    "question": "Oligopoly model example",
+    "answer": "Cournot or Bertrand"
+  },
+  {
+    "question": "First-degree price discrimination",
+    "answer": "Charge each consumer their max WTP"
+  },
+  {
+    "question": "Negative externality optimal policy",
+    "answer": "Pigovian tax equal to marginal external cost"
+  },
+  {
+    "question": "Game theory equilibrium concept",
+    "answer": "Nash equilibrium"
+  },
+  {
+    "question": "Dominant strategy defined",
+    "answer": "Best regardless of opponent’s choice"
+  },
+  {
+    "question": "Marginal rate of substitution",
+    "answer": "Slope of indifference curve"
+  },
+  {
+    "question": "Isoquant shows",
+    "answer": "Inputs yielding same output"
+  },
+  {
+    "question": "Diminishing marginal utility",
+    "answer": "Each additional unit adds less satisfaction"
+  },
+  {
+    "question": "Giffen good trait",
+    "answer": "Demand rises as price rises"
+  },
+  {
+    "question": "Budget line slope",
+    "answer": "−(price_x/price_y)"
+  },
+  {
+    "question": "Short run vs long run",
+    "answer": "Some inputs fixed vs all variable"
+  }
+]

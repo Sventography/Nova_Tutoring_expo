@@ -1,0 +1,82 @@
+[
+  {
+    "question": "Sample space is",
+    "answer": "Set of all possible outcomes"
+  },
+  {
+    "question": "Mutually exclusive events have",
+    "answer": "No outcomes in common"
+  },
+  {
+    "question": "Independent events have",
+    "answer": "P(A∩B)=P(A)P(B)"
+  },
+  {
+    "question": "Addition rule",
+    "answer": "P(A∪B)=P(A)+P(B)−P(A∩B)"
+  },
+  {
+    "question": "Multiplication rule",
+    "answer": "P(A∩B)=P(A|B)P(B)"
+  },
+  {
+    "question": "Conditional probability",
+    "answer": "P(A|B)=P(A∩B)/P(B)"
+  },
+  {
+    "question": "Bayes’ theorem",
+    "answer": "P(A|B)=P(B|A)P(A)/P(B)"
+  },
+  {
+    "question": "Permutations vs combinations",
+    "answer": "Order matters vs order doesn’t"
+  },
+  {
+    "question": "nPr equals",
+    "answer": "n!/(n−r)!"
+  },
+  {
+    "question": "nCr equals",
+    "answer": "n!/[r!(n−r)!]"
+  },
+  {
+    "question": "Expected value definition",
+    "answer": "Weighted average of outcomes"
+  },
+  {
+    "question": "Binomial mean and variance",
+    "answer": "np and np(1−p)"
+  },
+  {
+    "question": "Geometric distribution property",
+    "answer": "Memoryless"
+  },
+  {
+    "question": "Poisson parameter",
+    "answer": "λ equals both mean and variance"
+  },
+  {
+    "question": "Law of total probability",
+    "answer": "Sum over partition of conditional probabilities"
+  },
+  {
+    "question": "Inclusion–exclusion for two sets",
+    "answer": "|A∪B|=|A|+|B|−|A∩B|"
+  },
+  {
+    "question": "Monty Hall winning by switching",
+    "answer": "2/3"
+  },
+  {
+    "question": "Birthday paradox insight",
+    "answer": "High match chance with surprisingly few people"
+  },
+  {
+    "question": "Random variable is",
+    "answer": "Function from outcomes to numbers"
+  },
+  {
+    "question": "Covariance sign meaning",
+    "answer": "Positive co-move vs negative"
+  }
+]

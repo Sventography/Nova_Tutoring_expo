@@ -1,0 +1,129 @@
+{
+  "topics": [
+    {
+      "name": "Spanish Verbs",
+      "questions": [
+        {"q": "How do you say 'I speak' in Spanish?", "a": "Yo hablo"},
+        {"q": "How do you say 'You speak' (informal) in Spanish?", "a": "Tú hablas"},
+        {"q": "How do you say 'He speaks' in Spanish?", "a": "Él habla"},
+        {"q": "How do you say 'We speak' in Spanish?", "a": "Nosotros hablamos"},
+        {"q": "How do you say 'They speak' in Spanish?", "a": "Ellos hablan"},
+        {"q": "How do you say 'I eat' in Spanish?", "a": "Yo como"},
+        {"q": "How do you say 'You eat' (informal) in Spanish?", "a": "Tú comes"},
+        {"q": "How do you say 'She eats' in Spanish?", "a": "Ella come"},
+        {"q": "How do you say 'We eat' in Spanish?", "a": "Nosotros comemos"},
+        {"q": "How do you say 'They eat' in Spanish?", "a": "Ellos comen"},
+        {"q": "How do you say 'I live' in Spanish?", "a": "Yo vivo"},
+        {"q": "How do you say 'You live' in Spanish?", "a": "Tú vives"},
+        {"q": "How do you say 'He lives' in Spanish?", "a": "Él vive"},
+        {"q": "How do you say 'We live' in Spanish?", "a": "Nosotros vivimos"},
+        {"q": "How do you say 'They live' in Spanish?", "a": "Ellos viven"},
+        {"q": "How do you say 'I want' in Spanish?", "a": "Yo quiero"},
+        {"q": "How do you say 'You want' in Spanish?", "a": "Tú quieres"},
+        {"q": "How do you say 'He wants' in Spanish?", "a": "Él quiere"},
+        {"q": "How do you say 'We want' in Spanish?", "a": "Nosotros queremos"},
+        {"q": "How do you say 'They want' in Spanish?", "a": "Ellos quieren"}
+      ]
+    },
+    {
+      "name": "French Food Vocabulary",
+      "questions": [
+        {"q": "How do you say 'bread' in French?", "a": "Pain"},
+        {"q": "How do you say 'cheese' in French?", "a": "Fromage"},
+        {"q": "How do you say 'butter' in French?", "a": "Beurre"},
+        {"q": "How do you say 'milk' in French?", "a": "Lait"},
+        {"q": "How do you say 'chicken' in French?", "a": "Poulet"},
+        {"q": "How do you say 'beef' in French?", "a": "Boeuf"},
+        {"q": "How do you say 'fish' in French?", "a": "Poisson"},
+        {"q": "How do you say 'egg' in French?", "a": "Oeuf"},
+        {"q": "How do you say 'apple' in French?", "a": "Pomme"},
+        {"q": "How do you say 'banana' in French?", "a": "Banane"},
+        {"q": "How do you say 'wine' in French?", "a": "Vin"},
+        {"q": "How do you say 'beer' in French?", "a": "Bière"},
+        {"q": "How do you say 'water' in French?", "a": "Eau"},
+        {"q": "How do you say 'soup' in French?", "a": "Soupe"},
+        {"q": "How do you say 'salad' in French?", "a": "Salade"},
+        {"q": "How do you say 'carrot' in French?", "a": "Carotte"},
+        {"q": "How do you say 'potato' in French?", "a": "Pomme de terre"},
+        {"q": "How do you say 'chocolate' in French?", "a": "Chocolat"},
+        {"q": "How do you say 'ice cream' in French?", "a": "Glace"},
+        {"q": "How do you say 'strawberry' in French?", "a": "Fraise"}
+      ]
+    },
+    {
+      "name": "German Travel Phrases",
+      "questions": [
+        {"q": "How do you say 'Where is the train station?' in German?", "a": "Wo ist der Bahnhof?"},
+        {"q": "How do you say 'A ticket, please' in German?", "a": "Eine Fahrkarte, bitte"},
+        {"q": "How do you say 'How much does this cost?' in German?", "a": "Wie viel kostet das?"},
+        {"q": "How do you say 'I need a hotel' in German?", "a": "Ich brauche ein Hotel"},
+        {"q": "How do you say 'Where is the airport?' in German?", "a": "Wo ist der Flughafen?"},
+        {"q": "How do you say 'I am lost' in German?", "a": "Ich habe mich verirrt"},
+        {"q": "How do you say 'Can you help me?' in German?", "a": "Können Sie mir helfen?"},
+        {"q": "How do you say 'I don’t speak German' in German?", "a": "Ich spreche kein Deutsch"},
+        {"q": "How do you say 'Do you speak English?' in German?", "a": "Sprechen Sie Englisch?"},
+        {"q": "How do you say 'Where is the bathroom?' in German?", "a": "Wo ist die Toilette?"},
+        {"q": "How do you say 'I would like some water' in German?", "a": "Ich hätte gern Wasser"},
+        {"q": "How do you say 'I’m looking for a restaurant' in German?", "a": "Ich suche ein Restaurant"},
+        {"q": "How do you say 'Call a doctor!' in German?", "a": "Rufen Sie einen Arzt!"},
+        {"q": "How do you say 'Where can I buy a ticket?' in German?", "a": "Wo kann ich eine Fahrkarte kaufen?"},
+        {"q": "How do you say 'How far is it?' in German?", "a": "Wie weit ist es?"},
+        {"q": "How do you say 'Left' in German?", "a": "Links"},
+        {"q": "How do you say 'Right' in German?", "a": "Rechts"},
+        {"q": "How do you say 'Straight ahead' in German?", "a": "Geradeaus"},
+        {"q": "How do you say 'I need a taxi' in German?", "a": "Ich brauche ein Taxi"},
+        {"q": "How do you say 'Can I pay by card?' in German?", "a": "Kann ich mit Karte bezahlen?"}
+      ]
+    },
+    {
+      "name": "Japanese Kanji Basics",
+      "questions": [
+        {"q": "What does the kanji 水 mean?", "a": "Water"},
+        {"q": "What does the kanji 火 mean?", "a": "Fire"},
+        {"q": "What does the kanji 木 mean?", "a": "Tree/Wood"},
+        {"q": "What does the kanji 山 mean?", "a": "Mountain"},
+        {"q": "What does the kanji 川 mean?", "a": "River"},
+        {"q": "What does the kanji 日 mean?", "a": "Sun/Day"},
+        {"q": "What does the kanji 月 mean?", "a": "Moon/Month"},
+        {"q": "What does the kanji 人 mean?", "a": "Person"},
+        {"q": "What does the kanji 女 mean?", "a": "Woman"},
+        {"q": "What does the kanji 男 mean?", "a": "Man"},
+        {"q": "What does the kanji 大 mean?", "a": "Big"},
+        {"q": "What does the kanji 小 mean?", "a": "Small"},
+        {"q": "What does the kanji 上 mean?", "a": "Up"},
+        {"q": "What does the kanji 下 mean?", "a": "Down"},
+        {"q": "What does the kanji 左 mean?", "a": "Left"},
+        {"q": "What does the kanji 右 mean?", "a": "Right"},
+        {"q": "What does the kanji 中 mean?", "a": "Middle"},
+        {"q": "What does the kanji 学 mean?", "a": "Study/Learning"},
+        {"q": "What does the kanji 校 mean?", "a": "School"},
+        {"q": "What does the kanji 生 mean?", "a": "Life/Student"}
+      ]
+    },
+    {
+      "name": "Italian Everyday Expressions",
+      "questions": [
+        {"q": "How do you say 'See you later' in Italian?", "a": "A dopo"},
+        {"q": "How do you say 'See you soon' in Italian?", "a": "A presto"},
+        {"q": "How do you say 'See you tomorrow' in Italian?", "a": "A domani"},
+        {"q": "How do you say 'Good luck' in Italian?", "a": "Buona fortuna"},
+        {"q": "How do you say 'Cheers!' in Italian?", "a": "Salute!"},
+        {"q": "How do you say 'Welcome' in Italian?", "a": "Benvenuto"},
+        {"q": "How do you say 'Take care' in Italian?", "a": "Stammi bene"},
+        {"q": "How do you say 'Happy Birthday' in Italian?", "a": "Buon compleanno"},
+        {"q": "How do you say 'Merry Christmas' in Italian?", "a": "Buon Natale"},
+        {"q": "How do you say 'Happy New Year' in Italian?", "a": "Felice Anno Nuovo"},
+        {"q": "How do you say 'Congratulations' in Italian?", "a": "Congratulazioni"},
+        {"q": "How do you say 'Good job' in Italian?", "a": "Bel lavoro"},
+        {"q": "How do you say 'I love you' in Italian?", "a": "Ti amo"},
+        {"q": "How do you say 'I miss you' in Italian?", "a": "Mi manchi"},
+        {"q": "How do you say 'Excuse me' (formal) in Italian?", "a": "Mi scusi"},
+        {"q": "How do you say 'Excuse me' (informal) in Italian?", "a": "Scusa"},
+        {"q": "How do you say 'How beautiful!' in Italian?", "a": "Che bello!"},
+        {"q": "How do you say 'I’m hungry' in Italian?", "a": "Ho fame"},
+        {"q": "How do you say 'I’m thirsty' in Italian?", "a": "Ho sete"},
+        {"q": "How do you say 'I’m tired' in Italian?", "a": "Sono stanco"}
+      ]
+    }
+  ]
+}

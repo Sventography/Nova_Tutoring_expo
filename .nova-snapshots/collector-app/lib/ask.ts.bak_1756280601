@@ -1,0 +1,40 @@
+export async function askNova(question: string) {
+  try {
+    const key = process.env.EXPO_PUBLIC_OPENAI_KEY
+    if (!key) throw new Error("Missing OpenAI key")
+
+    // 1. Hit Wikipedia
+    const wikiRes = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/${encodeURIComponent(question)}`)
+    const wikiJson = await wikiRes.json()
+    const wikiExtract = wikiJson.extract || ""
+
+    // 2. Hit OpenAI
+    const aiRes = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${key}`
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: "Answer sassily but concise, blend Wikipedia facts with style." },
+          { role: "user", content: `Question: ${question}\nWikipedia: ${wikiExtract}` }
+        ]
+      })
+    })
+
+    const aiJson = await aiRes.json()
+    const aiAnswer = aiJson.choices?.[0]?.message?.content?.trim() || "No answer available"
+
+    return {
+      answer: aiAnswer,
+      sources: ["OpenAI", "Wikipedia"]
+    }
+  } catch (err) {
+    return {
+      answer: "Something went wrong, babe. Try again later.",
+      sources: []
+    }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "topic": "Music Theory",
+  "cards": [
+    { "q": "Treble clef", "a": "G clef; higher pitches" },
+    { "q": "Bass clef", "a": "F clef; lower pitches" },
+    { "q": "Staff basics", "a": "5 lines, 4 spaces" },
+    { "q": "Whole step", "a": "2 semitones" },
+    { "q": "Half step", "a": "1 semitone" },
+    { "q": "Major scale pattern", "a": "W W H W W W H" },
+    { "q": "Minor scales", "a": "Natural, harmonic, melodic" },
+    { "q": "Key signature use", "a": "Indicates sharps or flats of key" },
+    { "q": "Circle of fifths", "a": "Shows related keys by fifths" },
+    { "q": "Triad qualities", "a": "Major, minor, diminished, augmented" },
+    { "q": "Seventh chords", "a": "Major7, minor7, dominant7" },
+    { "q": "Time signature top", "a": "Beats per measure" },
+    { "q": "Time signature bottom", "a": "Note value that gets one beat" },
+    { "q": "Tempo allegro", "a": "Fast" },
+    { "q": "Dynamics pp vs ff", "a": "Very soft vs very loud" },
+    { "q": "Cadence", "a": "Harmonic close of a phrase" },
+    { "q": "Modulation", "a": "Change of key" },
+    { "q": "Functional harmony", "a": "Tonic I, subdominant IV, dominant V" },
+    { "q": "Arpeggio", "a": "Chord tones played sequentially" },
+    { "q": "Counterpoint", "a": "Independent melodic lines combined" }
+  ]
+}

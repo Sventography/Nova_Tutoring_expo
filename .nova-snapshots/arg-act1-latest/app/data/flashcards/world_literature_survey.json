@@ -1,0 +1,25 @@
+{
+  "topic": "World Literature Survey",
+  "cards": [
+    { "q": "Epic of Gilgamesh origin", "a": "Ancient Mesopotamia" },
+    { "q": "Homeric epics", "a": "Iliad and Odyssey" },
+    { "q": "Classical Indian epic", "a": "Mahabharata (Bhagavad Gita part)" },
+    { "q": "Classical Chinese master", "a": "Confucius (Analects)" },
+    { "q": "Classical drama Greek", "a": "Sophocles, Euripides, Aeschylus" },
+    { "q": "Roman satire", "a": "Horace, Juvenal" },
+    { "q": "Dante main work", "a": "Divine Comedy" },
+    { "q": "Cervantes novel", "a": "Don Quixote" },
+    { "q": "Shakespeare genres", "a": "Tragedy, comedy, history" },
+    { "q": "Goethe classic", "a": "Faust" },
+    { "q": "Russian realist novelists", "a": "Tolstoy, Dostoevsky" },
+    { "q": "French realism/naturalism", "a": "Flaubert, Zola" },
+    { "q": "Latin American Boom", "a": "García Márquez, Vargas Llosa" },
+    { "q": "Magical realism trait", "a": "Fantastic in the ordinary" },
+    { "q": "Postcolonial voices", "a": "Achebe, Rushdie, Adichie" },
+    { "q": "Modernist hallmarks", "a": "Fragmentation, interior monologue" },
+    { "q": "Haiku origin", "a": "Japan; 5-7-5 form" },
+    { "q": "Epic hero journey", "a": "Departure, initiation, return" },
+    { "q": "Bildungsroman", "a": "Coming-of-age novel" },
+    { "q": "World lit themes", "a": "Identity, power, love, exile" }
+  ]
+}

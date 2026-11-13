@@ -1,0 +1,25 @@
+{
+  "topic": "Physics: Modern Physics",
+  "cards": [
+    { "q": "Photoelectric effect", "a": "E=hf−ϕ; supports photons" },
+    { "q": "de Broglie wavelength", "a": "λ = h/p" },
+    { "q": "Heisenberg uncertainty", "a": "Δx Δp ≥ ħ/2" },
+    { "q": "Schrödinger equation", "a": "Quantum wave evolution" },
+    { "q": "Quantum numbers", "a": "n, l, m_l, m_s" },
+    { "q": "Pauli exclusion", "a": "No identical fermions same state" },
+    { "q": "Atomic spectra", "a": "Discrete lines from transitions" },
+    { "q": "Nuclear binding energy", "a": "Mass defect via E=mc^2" },
+    { "q": "Radioactive decay law", "a": "N=N0 e^{−λt}; t1/2=ln2/λ" },
+    { "q": "Fission vs fusion", "a": "Split heavy vs join light nuclei" },
+    { "q": "Special relativity postulates", "a": "c constant; laws same in inertial frames" },
+    { "q": "Time dilation", "a": "Δt' = γ Δt" },
+    { "q": "Length contraction", "a": "L' = L/γ" },
+    { "q": "Relativistic momentum", "a": "p = γ m v" },
+    { "q": "Standard Model forces", "a": "EM, weak, strong; gravity excluded" },
+    { "q": "Leptons vs quarks", "a": "e, μ, τ; up/down etc." },
+    { "q": "Bosons", "a": "Photon, W/Z, gluon, Higgs" },
+    { "q": "Blackbody radiation", "a": "Planck distribution" },
+    { "q": "Compton scattering", "a": "Photon wavelength increases after scatter" },
+    { "q": "Tunneling", "a": "Quantum penetration through barrier" }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "topic": "Data Analytics",
+  "cards": [
+    { "q": "Data types in stats", "a": "Nominal, ordinal, interval, ratio" },
+    { "q": "Structured vs unstructured data", "a": "Tables vs text/images/audio/etc" },
+    { "q": "SQL stands for", "a": "Structured Query Language" },
+    { "q": "Primary key", "a": "Unique identifier for a record" },
+    { "q": "ETL acronym", "a": "Extract, Transform, Load" },
+    { "q": "Data warehouse", "a": "Centralized store for analytics" },
+    { "q": "OLAP meaning", "a": "Online Analytical Processing" },
+    { "q": "Regression analysis", "a": "Model relation between variables" },
+    { "q": "Correlation coefficient range", "a": "-1 to 1" },
+    { "q": "Classification vs regression", "a": "Category labels vs continuous values" },
+    { "q": "Supervised vs unsupervised", "a": "With labels vs without labels" },
+    { "q": "K-means algorithm", "a": "Unsupervised clustering by centroids" },
+    { "q": "Confusion matrix", "a": "TP, FP, TN, FN summary for classifier" },
+    { "q": "Precision vs recall", "a": "Precision=TP/(TP+FP); Recall=TP/(TP+FN)" },
+    { "q": "ROC curve", "a": "Plot TPR vs FPR; AUC summarizes performance" },
+    { "q": "Big data 3Vs", "a": "Volume, velocity, variety" },
+    { "q": "Viz tool examples", "a": "Tableau, Power BI, matplotlib" },
+    { "q": "API meaning", "a": "Application Programming Interface" },
+    { "q": "A/B testing", "a": "Experiment comparing two variants" },
+    { "q": "Bias-variance tradeoff", "a": "Balance underfitting and overfitting" }
+  ]
+}

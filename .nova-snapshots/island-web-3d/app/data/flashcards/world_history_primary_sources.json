@@ -1,0 +1,25 @@
+{
+  "topic": "World History: Primary Sources",
+  "cards": [
+    { "q": "Code of Hammurabi known for", "a": "Early written laws, eye for an eye" },
+    { "q": "The Analects attributed to", "a": "Confucius (teachings compiled by students)" },
+    { "q": "The Quran significance", "a": "Holy text of Islam" },
+    { "q": "Edicts of Ashoka promoted", "a": "Buddhist ethics and nonviolence" },
+    { "q": "Magna Carta (1215) limited", "a": "English king's power; due process ideas" },
+    { "q": "95 Theses author", "a": "Martin Luther (1517) sparked Reformation" },
+    { "q": "The Prince author", "a": "Niccolo Machiavelli (political realism)" },
+    { "q": "Declaration of the Rights of Man", "a": "1789 French Revolution rights charter" },
+    { "q": "Communist Manifesto authors", "a": "Karl Marx, Friedrich Engels (1848)" },
+    { "q": "Meiji Constitution (1889) effect", "a": "Modernized Japan's government" },
+    { "q": "Treaty of Versailles (1919) key term", "a": "War guilt and reparations for Germany" },
+    { "q": "Balfour Declaration (1917) stated", "a": "Support for a Jewish national home in Palestine" },
+    { "q": "Nuremberg Laws (1935) imposed", "a": "Anti-Jewish racial restrictions in Nazi Germany" },
+    { "q": "UN Charter (1945) purpose", "a": "Framework for international peace and security" },
+    { "q": "Universal Declaration of Human Rights (1948)", "a": "Global human rights standards" },
+    { "q": "Long March accounts describe", "a": "CCP retreat shaping Chinese Revolution" },
+    { "q": "Mao's Little Red Book contained", "a": "Quotations guiding Cultural Revolution" },
+    { "q": "Helsinki Accords (1975) affirmed", "a": "Human rights and European borders" },
+    { "q": "Truth and Reconciliation Commission reports", "a": "South Africa's post-apartheid testimony" },
+    { "q": "Paris Agreement (2015) aims", "a": "Limit global warming well below 2 C" }
+  ]
+}

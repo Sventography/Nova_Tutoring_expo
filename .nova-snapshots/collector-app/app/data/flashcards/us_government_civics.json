@@ -1,0 +1,25 @@
+{
+  "topic": "U.S. Government & Civics (Institutions)",
+  "cards": [
+    { "q": "Separation of powers", "a": "Legislative, executive, judicial branches" },
+    { "q": "Checks and balances example", "a": "Veto, judicial review, impeachment" },
+    { "q": "Federalism", "a": "Power shared national and state" },
+    { "q": "Enumerated powers", "a": "Powers explicitly listed in Constitution" },
+    { "q": "Necessary and Proper Clause", "a": "Implied powers for Congress" },
+    { "q": "House vs Senate terms", "a": "House 2 years; Senate 6 years" },
+    { "q": "Bill to law steps", "a": "Committee, floor, other chamber, conference, president" },
+    { "q": "Filibuster purpose", "a": "Delay Senate action; cloture ends debate" },
+    { "q": "Electoral College role", "a": "Elects President via state electors" },
+    { "q": "Cabinet definition", "a": "Heads of executive departments" },
+    { "q": "Bureaucracy function", "a": "Implements and enforces policy" },
+    { "q": "Judicial review case", "a": "Marbury v. Madison (1803)" },
+    { "q": "Original vs appellate jurisdiction", "a": "First hearing vs review of decisions" },
+    { "q": "Incorporation doctrine", "a": "Apply Bill of Rights to states via 14th" },
+    { "q": "Interest groups tactic", "a": "Lobbying, PACs, litigation" },
+    { "q": "Political socialization", "a": "How people form political beliefs" },
+    { "q": "Primary vs caucus", "a": "Ballot election vs party meeting" },
+    { "q": "Civil liberties vs rights", "a": "Freedoms from gov vs equal protection claims" },
+    { "q": "Media gatekeeping", "a": "Deciding which issues get coverage" },
+    { "q": "Public opinion measurement", "a": "Scientific polling, sampling" }
+  ]
+}

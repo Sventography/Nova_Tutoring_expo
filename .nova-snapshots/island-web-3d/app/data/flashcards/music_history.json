@@ -1,0 +1,25 @@
+{
+  "topic": "Music History",
+  "cards": [
+    { "q": "Gregorian chant trait", "a": "Monophonic, free rhythm" },
+    { "q": "Renaissance music feature", "a": "Polyphony with imitation" },
+    { "q": "Baroque composer examples", "a": "J. S. Bach, Handel, Vivaldi" },
+    { "q": "Classical composer examples", "a": "Mozart, Haydn, early Beethoven" },
+    { "q": "Romantic composer examples", "a": "Chopin, Wagner, Tchaikovsky" },
+    { "q": "Impressionist composers", "a": "Debussy, Ravel" },
+    { "q": "20th century innovations", "a": "Atonality, serialism, minimalism, electronics" },
+    { "q": "Opera origin", "a": "Italy circa 1600, drama with music" },
+    { "q": "Symphony form", "a": "Often 4 movements: fast, slow, dance, fast" },
+    { "q": "Concerto form", "a": "Soloist with orchestra, typically 3 movements" },
+    { "q": "Fugue definition", "a": "Polyphonic form built on a subject/answer" },
+    { "q": "Jazz origins", "a": "Early 1900s New Orleans, blues and ragtime roots" },
+    { "q": "Blues form", "a": "12-bar chord progression pattern" },
+    { "q": "Rock and roll era", "a": "1950s in the United States" },
+    { "q": "Hip hop origin", "a": "1970s Bronx, New York City" },
+    { "q": "World music examples", "a": "West African drumming, Indian raga" },
+    { "q": "Electronic music pioneers", "a": "Stockhausen, Kraftwerk" },
+    { "q": "Minimalism composers", "a": "Steve Reich, Philip Glass" },
+    { "q": "Film score innovators", "a": "Bernard Herrmann, John Williams" },
+    { "q": "Motif in music", "a": "Recurring musical idea with meaning" }
+  ]
+}

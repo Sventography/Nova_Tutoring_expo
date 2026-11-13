@@ -1,0 +1,25 @@
+{
+  "topic": "World History: Middle Ages",
+  "cards": [
+    { "q": "Feudalism", "a": "Political/social system: lords, vassals, serfs" },
+    { "q": "Manorialism", "a": "Economic system centered on manor" },
+    { "q": "Charlemagne empire", "a": "Carolingian; crowned 800 AD" },
+    { "q": "Magna Carta year", "a": "1215; limited king’s power" },
+    { "q": "Crusades purpose", "a": "Christian holy wars for Jerusalem" },
+    { "q": "Black Death years", "a": "1347–1351; plague killed ~1/3 Europe" },
+    { "q": "Hundred Years’ War rivals", "a": "England vs France (1337–1453)" },
+    { "q": "Joan of Arc role", "a": "French heroine, executed 1431" },
+    { "q": "Schism 1054", "a": "Split Roman Catholic & Eastern Orthodox" },
+    { "q": "Schism 1378", "a": "Western Schism, rival popes" },
+    { "q": "Guild purpose", "a": "Regulate crafts/trades" },
+    { "q": "Universities origin", "a": "Bologna, Paris, Oxford in 1100s" },
+    { "q": "Reconquista", "a": "Christian reconquest of Iberia (711–1492)" },
+    { "q": "Byzantine capital", "a": "Constantinople" },
+    { "q": "Justinian Code", "a": "Corpus Juris Civilis, Roman law codified" },
+    { "q": "Battle of Hastings", "a": "1066; Norman conquest of England" },
+    { "q": "Vikings", "a": "Scandinavian raiders, explorers" },
+    { "q": "Knighthood code", "a": "Chivalry" },
+    { "q": "Gothic architecture", "a": "Pointed arches, stained glass" },
+    { "q": "Monastic orders", "a": "Benedictines, Franciscans, Dominicans" }
+  ]
+}

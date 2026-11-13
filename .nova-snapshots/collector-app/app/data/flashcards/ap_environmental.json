@@ -1,0 +1,25 @@
+{
+  "topic": "AP Environmental Science",
+  "cards": [
+    { "q": "Sustainability", "a": "Meet present needs without harming future capacity" },
+    { "q": "Tragedy of the commons", "a": "Overuse of shared resources without regulation" },
+    { "q": "Ecological footprint", "a": "Resource area needed to sustain lifestyle" },
+    { "q": "Renewable resources", "a": "Solar, wind, hydro, geothermal, biomass" },
+    { "q": "Nonrenewable resources", "a": "Coal, oil, natural gas, uranium" },
+    { "q": "Greenhouse gases", "a": "CO2, CH4, N2O, H2O vapor, O3" },
+    { "q": "Eutrophication cause", "a": "Nutrient runoff leads to algal blooms" },
+    { "q": "Point vs nonpoint pollution", "a": "Single identifiable source vs diffuse sources" },
+    { "q": "Biodiversity levels", "a": "Genetic, species, ecosystem" },
+    { "q": "Endangered Species Act", "a": "U.S. law protecting threatened species" },
+    { "q": "Clean Air Act", "a": "Regulates criteria pollutants and emissions" },
+    { "q": "Cap and trade", "a": "Emission cap with tradable permits" },
+    { "q": "Primary vs secondary pollutants", "a": "Emitted directly vs formed in atmosphere" },
+    { "q": "Acid deposition cause", "a": "SO2 and NOx form acids" },
+    { "q": "Keystone species", "a": "Disproportionately large effect on ecosystem" },
+    { "q": "Carrying capacity (K)", "a": "Max population sustained by environment" },
+    { "q": "Bioaccumulation vs biomagnification", "a": "Build up in organism vs increase up food chain" },
+    { "q": "Paris Agreement goal", "a": "Limit warming well below 2 C" },
+    { "q": "Waste hierarchy", "a": "Reduce, reuse, recycle, recover, dispose" },
+    { "q": "Life cycle assessment", "a": "Cradle to grave environmental analysis" }
+  ]
+}

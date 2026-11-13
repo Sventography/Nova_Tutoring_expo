@@ -1,0 +1,82 @@
+[
+  {
+    "question": "Phishing is",
+    "answer": "Fraudulent attempt to obtain sensitive info"
+  },
+  {
+    "question": "Malware types",
+    "answer": "Viruses, worms, trojans"
+  },
+  {
+    "question": "Ransomware does",
+    "answer": "Encrypts files until ransom paid"
+  },
+  {
+    "question": "Firewall purpose",
+    "answer": "Block unauthorized access"
+  },
+  {
+    "question": "Antivirus software detects",
+    "answer": "Malware"
+  },
+  {
+    "question": "Two-factor authentication adds",
+    "answer": "Extra verification step"
+  },
+  {
+    "question": "Strong password trait",
+    "answer": "Long, mixed case, symbols"
+  },
+  {
+    "question": "Encryption purpose",
+    "answer": "Protect confidentiality of data"
+  },
+  {
+    "question": "Public key cryptography uses",
+    "answer": "Key pairs (public/private)"
+  },
+  {
+    "question": "SSL/TLS secures",
+    "answer": "Web traffic (https)"
+  },
+  {
+    "question": "Brute-force attack means",
+    "answer": "Trying all possible combinations"
+  },
+  {
+    "question": "Denial-of-service attack",
+    "answer": "Overwhelm system with traffic"
+  },
+  {
+    "question": "SQL injection targets",
+    "answer": "Databases"
+  },
+  {
+    "question": "Zero-day exploit",
+    "answer": "Unknown vulnerability"
+  },
+  {
+    "question": "Patch management importance",
+    "answer": "Fix security flaws"
+  },
+  {
+    "question": "Social engineering attack",
+    "answer": "Manipulating people to reveal info"
+  },
+  {
+    "question": "VPN purpose",
+    "answer": "Encrypt connection, hide IP"
+  },
+  {
+    "question": "Botnet is",
+    "answer": "Network of compromised devices"
+  },
+  {
+    "question": "Penetration testing purpose",
+    "answer": "Simulate attacks to find weaknesses"
+  },
+  {
+    "question": "CIA triad in security",
+    "answer": "Confidentiality, Integrity, Availability"
+  }
+]

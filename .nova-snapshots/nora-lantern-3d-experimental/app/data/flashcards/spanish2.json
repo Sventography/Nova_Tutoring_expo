@@ -1,0 +1,25 @@
+{
+  "topic": "Spanish II",
+  "cards": [
+    { "q": "Preterite endings for regular -AR verbs (yo→ellos)", "a": "é, aste, ó, amos, asteis, aron" },
+    { "q": "Preterite endings for regular -ER/-IR verbs", "a": "í, iste, ió, imos, isteis, ieron" },
+    { "q": "Imperfect endings for -AR", "a": "aba, abas, aba, ábamos, abais, aban" },
+    { "q": "Imperfect endings for -ER/-IR", "a": "ía, ías, ía, íamos, íais, ían" },
+    { "q": "When to use preterite vs imperfect", "a": "Preterite: completed actions; Imperfect: ongoing, habitual, description" },
+    { "q": "Irregular preterite: ir/ser (yo→ellos)", "a": "fui, fuiste, fue, fuimos, fuisteis, fueron" },
+    { "q": "Irregular preterite: tener (stem)", "a": "tuv- (tuve, tuviste, tuvo, tuvimos, tuvisteis, tuvieron)" },
+    { "q": "Direct object pronouns", "a": "me, te, lo/la, nos, os, los/las" },
+    { "q": "Indirect object pronouns", "a": "me, te, le, nos, os, les (se before lo/la/los/las)" },
+    { "q": "Placement of object pronouns", "a": "Before conjugated verb or attached to infinitive/gerund/affirmative command" },
+    { "q": "Por vs para (basic rules)", "a": "Por: cause, duration, exchange; Para: destination, purpose, deadline" },
+    { "q": "Comparatives: more/less than", "a": "más/menos … que" },
+    { "q": "Superlatives: the most/least", "a": "el/la/los/las más/menos + adj" },
+    { "q": "Formal commands (usted/ustedes) formation", "a": "Subjunctive forms: -e/-en for -AR; -a/-an for -ER/-IR" },
+    { "q": "Present subjunctive formation (general)", "a": "Yo form, drop -o, add opposite endings" },
+    { "q": "Subjunctive triggers (examples)", "a": "Deseo, emoción, duda, negación, recomendación, ojalá" },
+    { "q": "Expressions with tener (cold/hot, hunger, fear)", "a": "tener frío/calor, hambre, miedo" },
+    { "q": "Future with ir + a + infinitive", "a": "Voy a estudiar, etc." },
+    { "q": "Present progressive", "a": "estar + gerundio (estoy hablando, estamos comiendo)" },
+    { "q": "Common irregular gerunds", "a": "leyendo, durmiendo, pidiendo, diciendo" }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "topic": "Genetics",
+  "cards": [
+    { "q": "Genotype vs phenotype", "a": "Genotype: genetic makeup; Phenotype: observable traits" },
+    { "q": "Law of segregation (Mendel)", "a": "Alleles separate during gamete formation; each gamete gets one" },
+    { "q": "Law of independent assortment", "a": "Allele pairs of different genes assort independently (if unlinked)" },
+    { "q": "Incomplete dominance example", "a": "RR red × rr white → Rr pink" },
+    { "q": "Codominance example", "a": "AB blood type expresses A and B equally" },
+    { "q": "Multiple alleles example", "a": "ABO blood group has IA, IB, i alleles" },
+    { "q": "Polygenic inheritance", "a": "Trait controlled by many genes (e.g., height, skin color)" },
+    { "q": "Linked genes", "a": "Genes on same chromosome tend to be inherited together" },
+    { "q": "Recombination frequency 1% equals…", "a": "1 map unit (centiMorgan) genetic distance" },
+    { "q": "DNA replication is semi-conservative meaning", "a": "Each daughter molecule has one old and one new strand" },
+    { "q": "Central dogma", "a": "DNA → RNA → Protein" },
+    { "q": "Transcription enzyme and product", "a": "RNA polymerase; produces RNA from DNA template" },
+    { "q": "Splicing removes what?", "a": "Introns (exons remain and are joined)" },
+    { "q": "Translation sites in ribosome", "a": "A (aminoacyl), P (peptidyl), E (exit)" },
+    { "q": "Start codon and typical amino acid", "a": "AUG; methionine" },
+    { "q": "Silent vs missense vs nonsense mutation", "a": "Silent: no AA change; Missense: AA change; Nonsense: stop codon formed" },
+    { "q": "Operon model (prokaryotes) example", "a": "Lac operon inducible by lactose" },
+    { "q": "PCR purpose", "a": "Amplify DNA sequences exponentially" },
+    { "q": "CRISPR-Cas9 use", "a": "Targeted genome editing guided by RNA" },
+    { "q": "Hardy–Weinberg equilibrium equation", "a": "p^2 + 2pq + q^2 = 1; p + q = 1 (no evolution conditions)" }
+  ]
+}

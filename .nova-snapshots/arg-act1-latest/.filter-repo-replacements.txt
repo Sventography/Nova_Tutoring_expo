@@ -1,0 +1,10 @@
+regex:(sk-[A-Za-z0-9]{20,}):::REDACTED_OPENAI
+regex:(?i)("openai_api_key"\s*:\s*")[^"]+("):::\1REDACTED\2
+regex:(?i)(OPENAI_API_KEY=)[^\n]+:::\1REDACTED
+regex:(?i)("client_secret"\s*:\s*")[^"]+("):::\1REDACTED\2
+regex:(?i)("client_id"\s*:\s*")[^"]+("):::\1REDACTED\2
+regex:(?i)("refresh_token"\s*:\s*")[^"]+("):::\1REDACTED\2
+regex:(?i)("access_token"\s*:\s*")[^"]+("):::\1REDACTED\2
+regex:(?i)(GOOGLE_CLIENT_ID=)[^\n]+:::\1REDACTED
+regex:(?i)(GOOGLE_CLIENT_SECRET=)[^\n]+:::\1REDACTED
+regex:(?i)(GOOGLE_OAUTH[^\n]*=)[^\n]+:::\1REDACTED

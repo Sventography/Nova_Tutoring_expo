@@ -1,0 +1,21 @@
+
+/* --- Nova cursors --- */
+body.cursor-glow {
+  cursor: url("/assets/cursors/glow_cursor.png"), auto !important;
+}
+body.cursor-orb {
+  cursor: url("/assets/cursors/orb_cursor.png"), auto !important;
+}
+body.cursor-star {
+  cursor: url("/assets/cursors/star_trail_cursor.png"), auto !important;
+}
+
+/* --- Nova cursors base classes --- */
+body.cursor-glow { cursor: url("/assets/cursors/glow_cursor.png") 6 6, auto !important; }
+body.cursor-orb { cursor: none !important; }    /* hide system cursor when we show the orb follower */
+body.cursor-star { cursor: none !important; }   /* hide system cursor when trailing stars */
+
+/* tiny default to avoid layout shift if images missing */
+#nova-cursor-orb { will-change: transform; }
+.nova-star { will-change: transform, opacity; }
+

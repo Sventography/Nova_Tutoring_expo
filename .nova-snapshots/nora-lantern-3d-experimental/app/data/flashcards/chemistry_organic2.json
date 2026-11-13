@@ -1,0 +1,25 @@
+{
+  "topic": "Chemistry: Organic II",
+  "cards": [
+    { "q": "Aromaticity rule", "a": "Hückel 4n+2 π electrons; planar, cyclic" },
+    { "q": "Electrophilic aromatic substitution", "a": "Nitration, sulfonation, halogenation, Friedel–Crafts" },
+    { "q": "Activating vs deactivating groups", "a": "EDG activate/ortho-para; EWG deactivate/meta" },
+    { "q": "Aldol reaction", "a": "Enolate + carbonyl → β-hydroxy carbonyl" },
+    { "q": "Claisen condensation", "a": "Ester enolate + ester → β-keto ester" },
+    { "q": "Grignard reagent", "a": "RMgX nucleophile adds to carbonyl" },
+    { "q": "Diels–Alder reaction", "a": "Diene + dienophile cycloaddition" },
+    { "q": "Carboxylic acid derivatives order", "a": "Acid chloride > anhydride > ester ≈ amide" },
+    { "q": "HNMR chemical shift", "a": "Downfield = deshielded; ppm scale" },
+    { "q": "CNMR typical ranges", "a": "0–220 ppm; carbonyl ~160–220" },
+    { "q": "IR carbonyl stretch", "a": "Around 1700 cm^-1" },
+    { "q": "SNAr requirement", "a": "Electron-poor aryl, strong nucleophile" },
+    { "q": "Protecting groups", "a": "TBDMS for alcohols; BOC for amines" },
+    { "q": "Enantioselective catalysis", "a": "Chiral catalysts favor one enantiomer" },
+    { "q": "Carbocation rearrangement", "a": "Hydride/alkyl shifts to stabilize" },
+    { "q": "Wittig reaction", "a": "Ylide converts carbonyl to alkene" },
+    { "q": "Oxidation reagents", "a": "PCC (to aldehyde); Jones (to acid)" },
+    { "q": "Reduction reagents", "a": "NaBH4 (carbonyl); LiAlH4 (stronger)" },
+    { "q": "Radical reactions", "a": "Initiation, propagation, termination" },
+    { "q": "Green chemistry principle", "a": "Minimize waste/hazards" }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "topic": "Biology I",
+  "cards": [
+    { "q": "What is the cell theory?", "a": "All living things are made of cells; cells are the basic unit of life; all cells come from preexisting cells." },
+    { "q": "Prokaryotic vs eukaryotic cells?", "a": "Prokaryotes lack membrane-bound organelles and nucleus; eukaryotes have both." },
+    { "q": "Function of mitochondria", "a": "Cellular respiration; produce ATP." },
+    { "q": "Function of ribosomes", "a": "Protein synthesis." },
+    { "q": "What is diffusion?", "a": "Movement of molecules from high to low concentration." },
+    { "q": "Osmosis definition", "a": "Diffusion of water across a semipermeable membrane." },
+    { "q": "Photosynthesis overall equation", "a": "6CO₂ + 6H₂O + light → C₆H₁₂O₆ + 6O₂" },
+    { "q": "Cellular respiration overall equation", "a": "C₆H₁₂O₆ + 6O₂ → 6CO₂ + 6H₂O + ATP" },
+    { "q": "Stages of mitosis", "a": "Prophase, Metaphase, Anaphase, Telophase (cytokinesis follows)" },
+    { "q": "DNA base pairing rules", "a": "A–T, C–G (RNA: A–U)" },
+    { "q": "Gene vs allele", "a": "Gene: DNA segment for a trait; Allele: variant form of a gene." },
+    { "q": "Homozygous vs heterozygous", "a": "Homozygous: same alleles (AA or aa); Heterozygous: different (Aa)." },
+    { "q": "Dominant vs recessive allele", "a": "Dominant masks recessive; recessive shows only if homozygous." },
+    { "q": "Transcription vs translation", "a": "Transcription makes RNA from DNA; translation makes protein from mRNA." },
+    { "q": "Enzyme definition", "a": "Protein catalyst that lowers activation energy." },
+    { "q": "Natural selection", "a": "Differential survival leads to allele frequency changes over time." },
+    { "q": "Ecosystem vs community", "a": "Ecosystem = community + abiotic factors; community = interacting populations." },
+    { "q": "Producers vs consumers", "a": "Producers make food; consumers eat other organisms." },
+    { "q": "Examples of biomes", "a": "Tundra, desert, rainforest, grassland, temperate forest, taiga." },
+    { "q": "Homeostasis", "a": "Maintaining stable internal environment." }
+  ]
+}

@@ -1,0 +1,22 @@
+[
+  ["Right Triangle Ratios", "SOH-CAH-TOA."],
+  ["Unit Circle", "Circle radius 1 centered at origin."],
+  ["Radians", "Angle measure based on arc length."],
+  ["Pythagorean Identity", "sin²x + cos²x = 1."],
+  ["Angle Sum", "sin(a±b), cos(a±b) formulas."],
+  ["Double Angle", "sin2x=2sinxcosx; cos2x=cos²−sin²."],
+  ["Law of Sines", "a/sinA = b/sinB = c/sinC."],
+  ["Law of Cosines", "c²=a²+b²−2ab cosC."],
+  ["Trig Graphs", "Amplitude, period, phase shift."],
+  ["Inverse Trig", "Arcsin, arccos, arctan."],
+  ["Trig Equations", "Solve using identities."],
+  ["Polar Coordinates", "(r, θ) representation."],
+  ["Complex Numbers", "a+bi with i²=−1."],
+  ["Euler's Formula", "e^{iθ}=cosθ+i sinθ."],
+  ["DeMoivre's Theorem", "(cosθ+i sinθ)^n."],
+  ["Heron's Formula", "A=√[s(s−a)(s−b)(s−c)]."],
+  ["Area by Sine", "A=½ab sinC."],
+  ["Arc Length", "s=rθ."],
+  ["Sector Area", "A=½r²θ."],
+  ["Harmonics", "Superposition of sinusoids."]
+]

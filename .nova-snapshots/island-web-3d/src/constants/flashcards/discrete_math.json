@@ -1,0 +1,82 @@
+[
+  {
+    "question": "Set union symbol",
+    "answer": "∪"
+  },
+  {
+    "question": "Set intersection symbol",
+    "answer": "∩"
+  },
+  {
+    "question": "Power set of a set S",
+    "answer": "All subsets of S"
+  },
+  {
+    "question": "Pigeonhole principle",
+    "answer": "More items than boxes ⇒ at least one box has ≥2"
+  },
+  {
+    "question": "Graph is Eulerian if",
+    "answer": "All vertices have even degree"
+  },
+  {
+    "question": "Graph is Hamiltonian if",
+    "answer": "Contains cycle visiting every vertex once"
+  },
+  {
+    "question": "Bipartite graph property",
+    "answer": "No odd cycles"
+  },
+  {
+    "question": "Big-O notation describes",
+    "answer": "Asymptotic upper bound"
+  },
+  {
+    "question": "Big-Theta gives",
+    "answer": "Tight asymptotic bound"
+  },
+  {
+    "question": "Recurrence T(n)=2T(n/2)+n",
+    "answer": "Θ(n log n)"
+  },
+  {
+    "question": "Inclusion–exclusion principle",
+    "answer": "|A∪B|=|A|+|B|−|A∩B|"
+  },
+  {
+    "question": "Boolean algebra basic ops",
+    "answer": "AND, OR, NOT"
+  },
+  {
+    "question": "De Morgan’s laws",
+    "answer": "¬(A∧B)=¬A∨¬B; ¬(A∨B)=¬A∧¬B"
+  },
+  {
+    "question": "Relation is equivalence if",
+    "answer": "Reflexive, symmetric, transitive"
+  },
+  {
+    "question": "Partial order is",
+    "answer": "Reflexive, antisymmetric, transitive"
+  },
+  {
+    "question": "Hasse diagram visualizes",
+    "answer": "Partial orders"
+  },
+  {
+    "question": "Permutation count of n",
+    "answer": "n!"
+  },
+  {
+    "question": "Combination C(n,k)",
+    "answer": "n!/[k!(n−k)!]"
+  },
+  {
+    "question": "Catalan numbers count",
+    "answer": "Dyck paths, BSTs, parenthesizations"
+  },
+  {
+    "question": "RSA relies on",
+    "answer": "Difficulty of factoring large integers"
+  }
+]

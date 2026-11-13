@@ -1,0 +1,25 @@
+{
+  "topic": "AP Macroeconomics",
+  "cards": [
+    { "q": "GDP", "a": "Value of goods/services produced domestically" },
+    { "q": "Nominal vs real GDP", "a": "Nominal current prices; real adjusted for inflation" },
+    { "q": "Unemployment rate", "a": "Unemployed / labor force" },
+    { "q": "Inflation measured by", "a": "CPI or GDP deflator" },
+    { "q": "Monetary policy", "a": "Control money supply and rates" },
+    { "q": "Fiscal policy", "a": "Gov spending and taxes" },
+    { "q": "Expansionary vs contractionary", "a": "Stimulate vs slow economy" },
+    { "q": "Phillips curve", "a": "Tradeoff inflation vs unemployment (short run)" },
+    { "q": "Crowding out", "a": "Gov borrowing raises rates, reduces investment" },
+    { "q": "Balance of payments", "a": "Current + capital accounts" },
+    { "q": "Exchange rate regimes", "a": "Fixed vs floating" },
+    { "q": "Aggregate demand slope", "a": "Downward due to wealth and interest effects" },
+    { "q": "Aggregate supply", "a": "Short run upward; long run vertical" },
+    { "q": "Stagflation", "a": "High inflation + unemployment" },
+    { "q": "Okun's law", "a": "GDP falls ~2% for 1% unemployment rise" },
+    { "q": "Fed tools", "a": "Open market ops, discount rate, reserve requirements" },
+    { "q": "Quantity theory", "a": "MV=PY identity" },
+    { "q": "Deflation risk", "a": "Delays spending, raises debt burden" },
+    { "q": "Automatic stabilizers", "a": "Taxes, unemployment insurance" },
+    { "q": "Keynes vs classical", "a": "Gov active vs self-correcting markets" }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "topic": "AP Biology: Cell Biology",
+  "cards": [
+    { "q": "Prokaryotic vs eukaryotic", "a": "Prokaryotes lack nucleus/membrane organelles; eukaryotes have both" },
+    { "q": "Organelle for ATP production", "a": "Mitochondria (cellular respiration)" },
+    { "q": "Organelle for photosynthesis", "a": "Chloroplast (thylakoids, stroma)" },
+    { "q": "Ribosome function", "a": "Protein synthesis (translation)" },
+    { "q": "ER types", "a": "Rough ER (proteins); Smooth ER (lipids, detox)" },
+    { "q": "Golgi apparatus role", "a": "Modifies, sorts, ships proteins/lipids" },
+    { "q": "Lysosome function", "a": "Intracellular digestion; low pH hydrolases" },
+    { "q": "Peroxisome function", "a": "Oxidation; H2O2 detox via catalase" },
+    { "q": "Cytoskeleton components", "a": "Microtubules, microfilaments, intermediate filaments" },
+    { "q": "Fluid mosaic model", "a": "Phospholipid bilayer with mobile proteins" },
+    { "q": "Diffusion", "a": "Movement down concentration gradient" },
+    { "q": "Osmosis", "a": "Diffusion of water across semipermeable membrane" },
+    { "q": "Facilitated diffusion", "a": "Channels/carriers move solutes down gradient" },
+    { "q": "Active transport", "a": "Uses energy to move against gradient" },
+    { "q": "Endocytosis vs exocytosis", "a": "Vesicle import vs secretion" },
+    { "q": "Cell cycle stages", "a": "G1, S, G2, M (mitosis) + cytokinesis" },
+    { "q": "Mitosis phases", "a": "Prophase, metaphase, anaphase, telophase" },
+    { "q": "Apoptosis", "a": "Programmed cell death (caspases)" },
+    { "q": "Signal transduction", "a": "Reception → transduction → response" },
+    { "q": "Second messenger example", "a": "cAMP, Ca2+, IP3" }
+  ]
+}

@@ -1,0 +1,1101 @@
+// app/(tabs)/devtest.tsx
+import React, { useMemo } from "react";
+import {
+  Alert,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Redirect } from "expo-router";
+
+import {
+  ACHIEVEMENT_EVENT,
+  AchieveEmitter,
+  useAchievements,
+} from "../context/AchievementsContext";
+import { useCoins } from "../context/CoinsContext";
+import { usePurchases } from "../context/PurchasesContext";
+import { useCompanion } from "../context/CompanionContext";
+import {
+  COMPANIONS,
+  type CompanionItem,
+} from "../_lib/companionsCatalog";
+
+const MECHA_OWL_ID = "companion:mecha_owl";
+const TEST_ACHIEVEMENT_ID = "ask_1000";
+const TEST_ACHIEVEMENT_BASE_COINS = 200;
+const TEST_ACHIEVEMENT_MECHA_COINS = 220;
+
+const LEGENDARY_COMPANIONS = COMPANIONS.filter(
+  (companion) => !!companion.ability
+);
+
+function todayISO() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function todayKey(key: string) {
+  return `riddles:${todayISO()}:${key}`;
+}
+
+function describeAbility(
+  companion: CompanionItem
+): string {
+  const ability = companion.ability;
+
+  if (!ability) return "No legendary ability";
+
+  if (
+    typeof ability.bonusPercent === "number"
+  ) {
+    return `+${Math.round(
+      ability.bonusPercent * 100
+    )}% · ${ability.note ?? ability.type}`;
+  }
+
+  if (
+    typeof ability.extraMinutes === "number"
+  ) {
+    return `+${ability.extraMinutes} minutes · ${
+      ability.note ?? ability.type
+    }`;
+  }
+
+  if (
+    typeof ability.bonusCoinsFlat === "number"
+  ) {
+    return `+${ability.bonusCoinsFlat} coins · ${
+      ability.note ?? ability.type
+    }`;
+  }
+
+  if (
+    typeof ability.cooldownDays === "number"
+  ) {
+    return `Once every ${ability.cooldownDays} days · ${
+      ability.note ?? ability.type
+    }`;
+  }
+
+  return ability.note ?? ability.type;
+}
+
+function useToastSafe(): {
+  info: (
+    title: string,
+    message?: string
+  ) => void;
+  success: (
+    title: string,
+    message?: string
+  ) => void;
+} {
+  try {
+    const toast =
+      require("../context/ToastContext")
+        .useToast?.();
+
+    return {
+      info: (title, message) =>
+        (toast?.show ??
+          ((text: string) =>
+            Alert.alert("Notice", text)))(
+          message ?? title
+        ),
+      success: (title, message) =>
+        (toast?.success ??
+          toast?.show ??
+          ((text: string) =>
+            Alert.alert("Success", text)))(
+          message ?? title
+        ),
+    };
+  } catch {
+    return {
+      info: (title, message) =>
+        Alert.alert(
+          "Notice",
+          message ?? title
+        ),
+      success: (title, message) =>
+        Alert.alert(
+          "Success",
+          message ?? title
+        ),
+    };
+  }
+}
+
+export default function DevTestRoute() {
+  if (!__DEV__) {
+    return <Redirect href="/" />;
+  }
+
+  return <DevTest />;
+}
+
+function DevTest() {
+  const toast = useToastSafe();
+  const { coins, addCoins } = useCoins();
+  const achievements = useAchievements();
+  const {
+    isOwned,
+    grant,
+    revoke,
+  } = usePurchases();
+
+  const {
+    activeCompanionId,
+    activeCompanion,
+    equipCompanion,
+    clearCompanion,
+    isActive,
+  } = useCompanion();
+
+  const ownsMechaOwl =
+    isOwned(MECHA_OWL_ID);
+
+  const mechaOwlEquipped =
+    isActive(MECHA_OWL_ID);
+
+  const testAchievementUnlocked =
+    !!achievements.unlocked[
+      TEST_ACHIEVEMENT_ID
+    ];
+
+  const rewardDebug =
+    achievements
+      .devAchievementCompanionDebug;
+
+  const providerRewardPreview =
+    achievements
+      .devAchievementRewardPreview?.(
+        TEST_ACHIEVEMENT_BASE_COINS,
+        TEST_ACHIEVEMENT_ID
+      ) ??
+    TEST_ACHIEVEMENT_BASE_COINS;
+
+  const ownedLegendaryCount = useMemo(
+    () =>
+      LEGENDARY_COMPANIONS.filter(
+        (companion) =>
+          isOwned(companion.id)
+      ).length,
+    [
+      isOwned,
+      // PurchasesContext returns a new isOwned callback
+      // whenever its ownership map changes.
+    ]
+  );
+
+  async function resetBrainteasersToday() {
+    await AsyncStorage.multiRemove([
+      todayKey("count"),
+      todayKey("correct"),
+      todayKey("bonus"),
+      todayKey("done"),
+    ]);
+
+    toast.success(
+      "Brainteasers reset",
+      "Daily state cleared."
+    );
+  }
+
+  async function grantCoins(
+    amount: number,
+    reason = "manual_test"
+  ) {
+    try {
+      await addCoins(
+        amount,
+        reason,
+        {
+          source: "devtest",
+        }
+      );
+
+      toast.success(
+        `+${amount} coins`,
+        reason
+      );
+    } catch (error) {
+      Alert.alert(
+        "Coin grant failed",
+        String(error)
+      );
+    }
+  }
+
+  async function simulateRiddleCorrect() {
+    await grantCoins(
+      2,
+      "brainteaser_dev_test"
+    );
+  }
+
+  async function simulateRiddleBothCorrect() {
+    await grantCoins(
+      2,
+      "brainteaser_dev_test"
+    );
+    await grantCoins(
+      2,
+      "brainteaser_dev_test"
+    );
+    await grantCoins(
+      10,
+      "brainteaser_perfect_dev_test"
+    );
+
+    await AsyncStorage.multiSet([
+      [todayKey("bonus"), "1"],
+      [todayKey("done"), "1"],
+    ]);
+
+    toast.success(
+      "Both correct",
+      "+10 bonus applied."
+    );
+  }
+
+  async function grantLegendary(
+    companion: CompanionItem
+  ) {
+    try {
+      await grant(companion.id);
+
+      toast.success(
+        `${companion.title} granted`,
+        `Now tap Equip ${companion.title}.`
+      );
+    } catch (error) {
+      Alert.alert(
+        "Grant failed",
+        String(error)
+      );
+    }
+  }
+
+  async function equipLegendary(
+    companion: CompanionItem
+  ) {
+    if (!isOwned(companion.id)) {
+      toast.info(
+        `${companion.title} is not owned`,
+        `Tap Grant ${companion.title} first.`
+      );
+      return;
+    }
+
+    try {
+      await equipCompanion(
+        companion.id
+      );
+
+      toast.success(
+        `${companion.title} equipped`,
+        describeAbility(companion)
+      );
+    } catch (error) {
+      Alert.alert(
+        "Equip failed",
+        String(error)
+      );
+    }
+  }
+
+  async function revokeLegendary(
+    companion: CompanionItem
+  ) {
+    try {
+      if (isActive(companion.id)) {
+        await clearCompanion();
+      }
+
+      await revoke(companion.id);
+
+      toast.success(
+        `${companion.title} removed`,
+        "Development ownership was revoked."
+      );
+    } catch (error) {
+      Alert.alert(
+        "Removal failed",
+        String(error)
+      );
+    }
+  }
+
+  async function grantAllLegendaries() {
+    try {
+      await grant(
+        LEGENDARY_COMPANIONS.map(
+          (companion) =>
+            companion.id
+        )
+      );
+
+      toast.success(
+        "All legendaries granted",
+        "Choose one below to equip."
+      );
+    } catch (error) {
+      Alert.alert(
+        "Grant-all failed",
+        String(error)
+      );
+    }
+  }
+
+  async function removeAllLegendaries() {
+    try {
+      const activeIsLegendary =
+        LEGENDARY_COMPANIONS.some(
+          (companion) =>
+            isActive(companion.id)
+        );
+
+      if (activeIsLegendary) {
+        await clearCompanion();
+      }
+
+      for (
+        const companion of
+        LEGENDARY_COMPANIONS
+      ) {
+        if (isOwned(companion.id)) {
+          await revoke(companion.id);
+        }
+      }
+
+      toast.success(
+        "Legendary test ownership cleared",
+        "All six development entitlements were removed."
+      );
+    } catch (error) {
+      Alert.alert(
+        "Remove-all failed",
+        String(error)
+      );
+    }
+  }
+
+  async function unequipCompanion() {
+    try {
+      await clearCompanion();
+
+      toast.success(
+        "Companion cleared",
+        "No legendary companion is equipped."
+      );
+    } catch (error) {
+      Alert.alert(
+        "Unequip failed",
+        String(error)
+      );
+    }
+  }
+
+  async function resetMechaTestAchievement() {
+    const reset =
+      achievements
+        .devResetAchievement;
+
+    if (
+      typeof reset !== "function"
+    ) {
+      toast.info(
+        "Reset helper unavailable",
+        "Use the current AchievementsContext test version."
+      );
+      return;
+    }
+
+    try {
+      await reset(
+        TEST_ACHIEVEMENT_ID
+      );
+
+      toast.success(
+        "Test achievement reset",
+        `${TEST_ACHIEVEMENT_ID} can be earned again.`
+      );
+    } catch (error) {
+      Alert.alert(
+        "Reset failed",
+        String(error)
+      );
+    }
+  }
+
+  function triggerMechaTestAchievement() {
+    if (
+      testAchievementUnlocked
+    ) {
+      toast.info(
+        "Reset required",
+        "Tap Reset Test Achievement before triggering it again."
+      );
+      return;
+    }
+
+    const unlock =
+      achievements
+        .devUnlockAchievement;
+
+    if (
+      typeof unlock === "function"
+    ) {
+      unlock(
+        TEST_ACHIEVEMENT_ID
+      );
+    } else {
+      AchieveEmitter.emit(
+        ACHIEVEMENT_EVENT,
+        {
+          id:
+            TEST_ACHIEVEMENT_ID,
+        }
+      );
+    }
+
+    toast.success(
+      "Achievement triggered",
+      `Provider-calculated reward: ${providerRewardPreview} coins.`
+    );
+  }
+
+  function triggerQuizAchievement95() {
+    try {
+      achievements.onQuizFinished(
+        95,
+        "Algebra"
+      );
+
+      toast.success(
+        "Quiz achievement check",
+        "onQuizFinished(95, Algebra) was sent."
+      );
+    } catch (error) {
+      Alert.alert(
+        "Quiz test failed",
+        String(error)
+      );
+    }
+  }
+
+  return (
+    <ScrollView
+      contentContainerStyle={
+        S.wrap
+      }
+    >
+      <Text style={S.h1}>
+        Dev Test
+      </Text>
+
+      <View style={S.card}>
+        <Text style={S.label}>
+          Active Companion
+        </Text>
+
+        <StatusLine
+          label="Equipped ID"
+          value={
+            activeCompanionId ??
+            "None"
+          }
+        />
+        <StatusLine
+          label="Name"
+          value={
+            activeCompanion?.title ??
+            "None"
+          }
+        />
+        <StatusLine
+          label="Role"
+          value={
+            activeCompanion?.role ??
+            "None"
+          }
+        />
+        <StatusLine
+          label="Ability type"
+          value={
+            activeCompanion
+              ?.ability?.type ??
+            "None"
+          }
+        />
+        <StatusLine
+          label="Owned legendaries"
+          value={`${ownedLegendaryCount} / ${LEGENDARY_COMPANIONS.length}`}
+        />
+
+        <View style={S.row}>
+          <DevButton
+            label="Grant All Legendaries"
+            onPress={() =>
+              void grantAllLegendaries()
+            }
+          />
+          <DevButton
+            label="Unequip Current"
+            onPress={() =>
+              void unequipCompanion()
+            }
+          />
+          <DevButton
+            label="Remove All Test Legendaries"
+            destructive
+            onPress={() =>
+              void removeAllLegendaries()
+            }
+          />
+        </View>
+      </View>
+
+      <View style={S.card}>
+        <Text style={S.label}>
+          Legendary Companion Controls
+        </Text>
+
+        <Text style={S.small}>
+          Grant and equip one
+          legendary at a time. These
+          controls are available only
+          in development builds.
+        </Text>
+
+        {LEGENDARY_COMPANIONS.map(
+          (companion) => (
+            <LegendaryControlCard
+              key={companion.id}
+              companion={
+                companion
+              }
+              owned={isOwned(
+                companion.id
+              )}
+              active={isActive(
+                companion.id
+              )}
+              onGrant={() =>
+                void grantLegendary(
+                  companion
+                )
+              }
+              onEquip={() =>
+                void equipLegendary(
+                  companion
+                )
+              }
+              onRevoke={() =>
+                void revokeLegendary(
+                  companion
+                )
+              }
+            />
+          )
+        )}
+      </View>
+
+      <View style={S.card}>
+        <Text style={S.label}>
+          Mecha Owl Reward Test
+        </Text>
+
+        <Text style={S.small}>
+          Test achievement:{" "}
+          {TEST_ACHIEVEMENT_ID}
+        </Text>
+        <Text style={S.small}>
+          Base reward:{" "}
+          {
+            TEST_ACHIEVEMENT_BASE_COINS
+          }{" "}
+          coins
+        </Text>
+        <Text style={S.small}>
+          With Mecha Owl:{" "}
+          {
+            TEST_ACHIEVEMENT_MECHA_COINS
+          }{" "}
+          coins
+        </Text>
+        <Text style={S.small}>
+          Owned:{" "}
+          {ownsMechaOwl
+            ? "Yes"
+            : "No"}
+        </Text>
+        <Text style={S.small}>
+          Equipped:{" "}
+          {mechaOwlEquipped
+            ? "Yes"
+            : "No"}
+        </Text>
+        <Text style={S.small}>
+          Achievement status:{" "}
+          {testAchievementUnlocked
+            ? "Unlocked"
+            : "Ready"}
+        </Text>
+
+        <StatusLine
+          label="Provider detects Mecha Owl"
+          value={
+            rewardDebug
+              ?.mechaOwlDetected
+              ? "Yes"
+              : "No"
+          }
+        />
+        <StatusLine
+          label="Provider reward preview"
+          value={`${providerRewardPreview} coins`}
+        />
+        <StatusLine
+          label="Provider token"
+          value={
+            rewardDebug
+              ?.activeCompanionToken ||
+            "None"
+          }
+        />
+
+        <View style={S.row}>
+          <DevButton
+            label="Reset Test Achievement"
+            onPress={() =>
+              void resetMechaTestAchievement()
+            }
+          />
+          <DevButton
+            label="Trigger Reward Test"
+            onPress={
+              triggerMechaTestAchievement
+            }
+          />
+        </View>
+      </View>
+
+      <View style={S.card}>
+        <Text style={S.label}>
+          Coins
+        </Text>
+        <Text style={S.value}>
+          {coins.toLocaleString()}
+        </Text>
+
+        <View style={S.row}>
+          <DevButton
+            label="+2"
+            onPress={() =>
+              void grantCoins(2)
+            }
+          />
+          <DevButton
+            label="+10"
+            onPress={() =>
+              void grantCoins(10)
+            }
+          />
+          <DevButton
+            label="+100"
+            onPress={() =>
+              void grantCoins(100)
+            }
+          />
+        </View>
+      </View>
+
+      <View style={S.card}>
+        <Text style={S.label}>
+          Brainteasers
+        </Text>
+
+        <View style={S.row}>
+          <DevButton
+            label="Reset Today"
+            onPress={() =>
+              void resetBrainteasersToday()
+            }
+          />
+          <DevButton
+            label="Simulate +2"
+            onPress={() =>
+              void simulateRiddleCorrect()
+            }
+          />
+          <DevButton
+            label="Simulate Perfect"
+            onPress={() =>
+              void simulateRiddleBothCorrect()
+            }
+          />
+        </View>
+      </View>
+
+      <View style={S.card}>
+        <Text style={S.label}>
+          Achievements
+        </Text>
+
+        <View style={S.row}>
+          <DevButton
+            label="Quiz 95%"
+            onPress={
+              triggerQuizAchievement95
+            }
+          />
+        </View>
+
+        <Text style={S.small}>
+          Unlocked count:{" "}
+          {
+            Object.keys(
+              achievements.unlocked
+            ).length
+          }
+        </Text>
+
+        <Text style={S.mono}>
+          {JSON.stringify(
+            achievements.unlocked,
+            null,
+            2
+          )}
+        </Text>
+      </View>
+    </ScrollView>
+  );
+}
+
+function LegendaryControlCard({
+  companion,
+  owned,
+  active,
+  onGrant,
+  onEquip,
+  onRevoke,
+}: {
+  companion: CompanionItem;
+  owned: boolean;
+  active: boolean;
+  onGrant: () => void;
+  onEquip: () => void;
+  onRevoke: () => void;
+}) {
+  return (
+    <View
+      style={[
+        S.legendaryCard,
+        active &&
+          S.legendaryCardActive,
+      ]}
+    >
+      <View style={S.legendaryTop}>
+        <View style={{ flex: 1 }}>
+          <Text
+            style={
+              S.legendaryTitle
+            }
+          >
+            {companion.title}
+          </Text>
+          <Text
+            style={
+              S.legendaryAbility
+            }
+          >
+            {describeAbility(
+              companion
+            )}
+          </Text>
+        </View>
+
+        <View
+          style={[
+            S.statePill,
+            active
+              ? S.statePillActive
+              : owned
+              ? S.statePillOwned
+              : S.statePillLocked,
+          ]}
+        >
+          <Text
+            style={
+              S.statePillText
+            }
+          >
+            {active
+              ? "EQUIPPED"
+              : owned
+              ? "OWNED"
+              : "LOCKED"}
+          </Text>
+        </View>
+      </View>
+
+      <StatusLine
+        label="ID"
+        value={companion.id}
+      />
+      <StatusLine
+        label="Role"
+        value={companion.role}
+      />
+      <StatusLine
+        label="Ability"
+        value={
+          companion.ability
+            ?.type ??
+          "None"
+        }
+      />
+
+      <View style={S.row}>
+        <DevButton
+          label={`Grant ${companion.shortLabel ?? companion.title}`}
+          onPress={onGrant}
+        />
+        <DevButton
+          label={`Equip ${companion.shortLabel ?? companion.title}`}
+          onPress={onEquip}
+        />
+        <DevButton
+          label="Revoke Test Ownership"
+          destructive
+          onPress={onRevoke}
+        />
+      </View>
+    </View>
+  );
+}
+
+function StatusLine({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <View style={S.statusRow}>
+      <Text
+        style={S.statusLabel}
+      >
+        {label}
+      </Text>
+      <Text
+        style={S.statusValue}
+      >
+        {value}
+      </Text>
+    </View>
+  );
+}
+
+function DevButton({
+  label,
+  onPress,
+  destructive = false,
+}: {
+  label: string;
+  onPress: () => void;
+  destructive?: boolean;
+}) {
+  return (
+    <Pressable
+      style={({ pressed }) => [
+        S.btn,
+        destructive &&
+          S.btnDestructive,
+        pressed &&
+          S.btnPressed,
+      ]}
+      onPress={onPress}
+    >
+      <Text
+        style={[
+          S.btnt,
+          destructive &&
+            S.btntDestructive,
+        ]}
+      >
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+export const S =
+  StyleSheet.create({
+    wrap: {
+      padding: 16,
+      paddingBottom: 48,
+      gap: 14,
+      backgroundColor:
+        "transparent",
+    },
+    h1: {
+      color: "#00E5FF",
+      fontWeight: "800",
+      fontSize: 22,
+    },
+    card: {
+      backgroundColor: "#0A0F14",
+      borderRadius: 16,
+      padding: 14,
+      borderWidth: 1.5,
+      borderColor: "#123",
+      gap: 8,
+    },
+    label: {
+      color: "#9fe",
+      marginBottom: 4,
+      fontWeight: "700",
+      fontSize: 16,
+    },
+    value: {
+      color: "#fff",
+      fontSize: 20,
+      marginBottom: 6,
+    },
+    row: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 8,
+      marginTop: 4,
+    },
+    btn: {
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+      borderRadius: 10,
+      borderWidth: 1.5,
+      borderColor: "#00E5FF",
+      backgroundColor:
+        "rgba(0,229,255,0.12)",
+    },
+    btnDestructive: {
+      borderColor: "#FF6B7A",
+      backgroundColor:
+        "rgba(255,107,122,0.12)",
+    },
+    btnPressed: {
+      opacity: 0.68,
+    },
+    btnt: {
+      color: "#e6f7ff",
+      fontWeight: "800",
+      fontSize: 12,
+    },
+    btntDestructive: {
+      color: "#FFB8C0",
+    },
+    statusRow: {
+      flexDirection: "row",
+      justifyContent:
+        "space-between",
+      gap: 12,
+    },
+    statusLabel: {
+      color: "#9fe",
+      fontWeight: "700",
+      fontSize: 12,
+    },
+    statusValue: {
+      flex: 1,
+      color: "#fff",
+      textAlign: "right",
+      fontSize: 12,
+    },
+    small: {
+      color: "#9fe",
+      lineHeight: 18,
+    },
+    mono: {
+      marginTop: 6,
+      color: "#cfe",
+      fontFamily:
+        Platform.select({
+          ios: "Menlo",
+          android: "monospace",
+          default: "monospace",
+        }),
+      fontSize: 12,
+    },
+    legendaryCard: {
+      marginTop: 7,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor:
+        "rgba(167,139,250,0.42)",
+      backgroundColor:
+        "rgba(76,29,149,0.12)",
+      padding: 12,
+      gap: 7,
+    },
+    legendaryCardActive: {
+      borderWidth: 2,
+      borderColor: "#FDE047",
+      backgroundColor:
+        "rgba(88,28,135,0.28)",
+    },
+    legendaryTop: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: 10,
+    },
+    legendaryTitle: {
+      color: "#f5d0fe",
+      fontSize: 16,
+      fontWeight: "900",
+    },
+    legendaryAbility: {
+      marginTop: 3,
+      color: "#c4b5fd",
+      fontSize: 11,
+      lineHeight: 16,
+      fontWeight: "700",
+    },
+    statePill: {
+      borderRadius: 999,
+      borderWidth: 1,
+      paddingHorizontal: 8,
+      paddingVertical: 5,
+    },
+    statePillActive: {
+      borderColor: "#FDE047",
+      backgroundColor:
+        "rgba(253,224,71,0.18)",
+    },
+    statePillOwned: {
+      borderColor: "#34D399",
+      backgroundColor:
+        "rgba(52,211,153,0.14)",
+    },
+    statePillLocked: {
+      borderColor: "#64748B",
+      backgroundColor:
+        "rgba(100,116,139,0.14)",
+    },
+    statePillText: {
+      color: "#fff",
+      fontSize: 9,
+      fontWeight: "900",
+      letterSpacing: 0.5,
+    },
+  });

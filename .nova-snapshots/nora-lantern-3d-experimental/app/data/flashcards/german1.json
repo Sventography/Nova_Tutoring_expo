@@ -1,0 +1,25 @@
+{
+  "topic": "German I",
+  "cards": [
+    { "q": "Hello and goodbye in German", "a": "Hallo; Auf Wiedersehen; Tschuess (informal)" },
+    { "q": "Yes and no", "a": "Ja; Nein" },
+    { "q": "Please and thank you", "a": "Bitte; Danke" },
+    { "q": "I am, you are, he is (sein)", "a": "ich bin, du bist, er ist" },
+    { "q": "We are, you (pl) are, they are (sein)", "a": "wir sind, ihr seid, sie sind" },
+    { "q": "To have (haben) present (ich, du, er/sie/es)", "a": "ich habe, du hast, er/sie/es hat" },
+    { "q": "Definite articles", "a": "der (masc), die (fem), das (neut), die (plural)" },
+    { "q": "Indefinite articles", "a": "ein (masc/neut), eine (fem)" },
+    { "q": "Personal pronouns (I, you inf, he, she, we, you pl, they)", "a": "ich, du, er, sie, wir, ihr, sie" },
+    { "q": "Numbers 1 to 10", "a": "eins, zwei, drei, vier, fuenf, sechs, sieben, acht, neun, zehn" },
+    { "q": "Days of the week", "a": "Montag, Dienstag, Mittwoch, Donnerstag, Freitag, Samstag, Sonntag" },
+    { "q": "Common question words", "a": "wer, was, wo, wann, warum, wie" },
+    { "q": "Where is the bathroom?", "a": "Wo ist die Toilette?" },
+    { "q": "I would like..., please", "a": "Ich moechte ..., bitte" },
+    { "q": "Basic word order rule", "a": "Verb in second position in main clauses" },
+    { "q": "Negation word", "a": "nicht (not) and kein (no/none for nouns)" },
+    { "q": "Modal verbs example (can, must)", "a": "koennen, muessen (e.g., Ich kann gehen.)" },
+    { "q": "Possessive adjectives (my, your inf)", "a": "mein, dein" },
+    { "q": "Accusative objects mark", "a": "den for masculine singular; others unchanged" },
+    { "q": "Introduce yourself", "a": "Ich heisse ___. Freut mich." }
+  ]
+}

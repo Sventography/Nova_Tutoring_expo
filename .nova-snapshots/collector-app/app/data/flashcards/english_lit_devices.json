@@ -1,0 +1,25 @@
+{
+  "topic": "English Literature: Devices & Analysis",
+  "cards": [
+    { "q": "Metaphor vs simile", "a": "Implicit comparison vs like/as" },
+    { "q": "Alliteration", "a": "Repeat initial consonant sounds" },
+    { "q": "Assonance", "a": "Repeat vowel sounds" },
+    { "q": "Imagery", "a": "Sensory descriptive language" },
+    { "q": "Symbolism", "a": "Concrete stands for abstract" },
+    { "q": "Irony types", "a": "Verbal, situational, dramatic" },
+    { "q": "Tone vs mood", "a": "Author's attitude vs reader feeling" },
+    { "q": "Theme", "a": "Central idea/insight" },
+    { "q": "Diction & syntax", "a": "Word choice & sentence structure" },
+    { "q": "Meter example", "a": "Iambic pentameter (da-DUM ×5)" },
+    { "q": "Rhyme schemes", "a": "ABAB, AABB, etc." },
+    { "q": "Enjambment", "a": "Line carries over without pause" },
+    { "q": "Allusion", "a": "Reference to external text/event" },
+    { "q": "Foreshadowing", "a": "Hints of future events" },
+    { "q": "Characterization", "a": "Direct & indirect methods" },
+    { "q": "Narrative POV", "a": "1st, 3rd limited/omniscient" },
+    { "q": "Archetype", "a": "Universal pattern/symbol" },
+    { "q": "Allegory", "a": "Story with parallel meanings" },
+    { "q": "Motif", "a": "Recurring element across a work" },
+    { "q": "Close reading step", "a": "Observe → interpret → argue with evidence" }
+  ]
+}

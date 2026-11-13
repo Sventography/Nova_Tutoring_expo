@@ -1,0 +1,25 @@
+{
+  "topic": "Differential Equations (ODEs)",
+  "cards": [
+    { "q": "Order of ODE", "a": "Highest derivative present" },
+    { "q": "Separable equation", "a": "dy/dx = g(x)h(y)" },
+    { "q": "Integrating factor (linear 1st)", "a": "μ(x)=e^{∫P(x)dx} for y'+P y=Q" },
+    { "q": "Homogeneous linear ODE", "a": "y''+ay'+by=0" },
+    { "q": "Characteristic equation", "a": "r^2+ar+b=0 → solution form" },
+    { "q": "Repeated roots case", "a": "y=(C1+C2 x)e^{rx}" },
+    { "q": "Complex roots case", "a": "y=e^{αx}(C1 cos βx + C2 sin βx)" },
+    { "q": "Particular solution method", "a": "Undetermined coefficients" },
+    { "q": "Variation of parameters", "a": "General method for nonhomog." },
+    { "q": "Laplace transform use", "a": "Solve IVPs, handle discontinuities" },
+    { "q": "Convolution", "a": "Inverse Laplace of product" },
+    { "q": "Autonomous ODE", "a": "dy/dx = f(y); phase line" },
+    { "q": "Logistic equation", "a": "dy/dt = r y(1−y/K)" },
+    { "q": "Stability of equilibria", "a": "Sign of f'(y*)" },
+    { "q": "Exact equation", "a": "M dx + N dy = 0 with M_y=N_x" },
+    { "q": "Bernoulli equation", "a": "y'+P y = Q y^n" },
+    { "q": "Systems of ODEs", "a": "Write in vector form x' = A x" },
+    { "q": "Matrix exponential", "a": "x(t)=e^{At}x0" },
+    { "q": "Green's function idea", "a": "Response to impulse" },
+    { "q": "Numerical Euler", "a": "y_{n+1}=y_n+h f(x_n,y_n)" }
+  ]
+}

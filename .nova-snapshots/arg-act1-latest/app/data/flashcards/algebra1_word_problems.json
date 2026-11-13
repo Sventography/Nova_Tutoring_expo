@@ -1,0 +1,25 @@
+{
+  "topic": "Algebra I (Word Problems)",
+  "cards": [
+    { "q": "Translate: 'x increased by 7 equals 20' and solve.", "a": "x + 7 = 20 → x = 13" },
+    { "q": "A number minus 5 is 11. Find the number.", "a": "x − 5 = 11 → x = 16" },
+    { "q": "Twice a number is 18. Find the number.", "a": "2x = 18 → x = 9" },
+    { "q": "Perimeter of rectangle with L=3x and W=x+2?", "a": "P = 2(3x) + 2(x+2) = 8x + 4" },
+    { "q": "Mixing: 10% and 30% solutions to make 20% of 10L. How many L of 30%?", "a": "Let x=30%: 0.30x + 0.10(10−x) = 0.20·10 → x = 5 L" },
+    { "q": "Distance problem: speed 50 mph for 3 h.", "a": "d = rt = 150 miles" },
+    { "q": "Two numbers sum to 35; one is 7 more than the other. Find both.", "a": "x + (x+7) = 35 → x=14, other=21" },
+    { "q": "Price after 8% sales tax on $50?", "a": "$50 × 1.08 = $54.00" },
+    { "q": "Simple interest: $1000 at 5% for 2 years.", "a": "I = Prt = 1000·0.05·2 = $100" },
+    { "q": "Solve: 'three consecutive integers sum to 72'", "a": "x+(x+1)+(x+2)=72 → x=23 (23,24,25)" },
+    { "q": "A test has 20 Q worth 5 points each. Score 85. How many correct?", "a": "85/5 = 17 correct" },
+    { "q": "Discount: 25% off $80, then 10% tax.", "a": "$80×0.75 = $60; then $60×1.10 = $66" },
+    { "q": "Rate problem: fill pool in 6h and 4h together?", "a": "1/6 + 1/4 = 5/12 pool/h → time = 12/5 = 2.4 h" },
+    { "q": "Solve: 3x + 2y = 26 and x − y = 4.", "a": "From x=y+4 → 3(y+4)+2y=26 → y=2; x=6" },
+    { "q": "Scale factor: map 1 cm = 5 km. 12 cm equals?", "a": "60 km" },
+    { "q": "Percent increase: from 40 to 50.", "a": "(10/40)×100% = 25%" },
+    { "q": "Average of 5 numbers is 12. Sum is…", "a": "60" },
+    { "q": "Buy 3 at $4 each and 2 at $7 each.", "a": "$12 + $14 = $26" },
+    { "q": "Rectangle area 84, width 6, length?", "a": "L = 84/6 = 14" },
+    { "q": "Mixture: 2 lb at $6/lb and 3 lb at $8/lb. Average price?", "a": "Total $12 + $24 = $36; 5 lb → $7.20/lb" }
+  ]
+}

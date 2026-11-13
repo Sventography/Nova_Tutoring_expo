@@ -1,0 +1,22 @@
+[
+  ["Relational Model", "Tables with rows and columns."],
+  ["Primary Key", "Unique identifier for a row."],
+  ["Foreign Key", "References a primary key in another table."],
+  ["Normalization", "Reduce redundancy; 1NF, 2NF, 3NF."],
+  ["Index", "Data structure for faster queries."],
+  ["SQL", "Language for relational databases."],
+  ["SELECT", "Query data from tables."],
+  ["JOIN", "Combine rows across tables."],
+  ["ACID", "Atomicity, Consistency, Isolation, Durability."],
+  ["Transaction", "Unit of work that is all-or-nothing."],
+  ["View", "Virtual table from a query."],
+  ["Stored Procedure", "Saved, executable SQL routine."],
+  ["NoSQL", "Non-relational database model."],
+  ["Document Store", "JSON-like records (e.g., MongoDB)."],
+  ["Key-Value Store", "Simple pairs (e.g., Redis)."],
+  ["Columnar DB", "Column-oriented storage (e.g., Cassandra)."],
+  ["Sharding", "Horizontal partitioning of data."],
+  ["Replication", "Copying data for availability."],
+  ["Backup/Restore", "Protect and recover data."],
+  ["ORM", "Map objects to relational tables."]
+]

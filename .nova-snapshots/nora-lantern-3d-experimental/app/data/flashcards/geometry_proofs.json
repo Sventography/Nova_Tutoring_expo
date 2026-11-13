@@ -1,0 +1,25 @@
+{
+  "topic": "Geometry (Proofs)",
+  "cards": [
+    { "q": "Reflexive property in proofs states…", "a": "Any segment/angle is congruent to itself." },
+    { "q": "Definition of midpoint", "a": "Point dividing a segment into two congruent segments." },
+    { "q": "Definition of bisector", "a": "A line/ray/segment that divides an angle or segment into two congruent parts." },
+    { "q": "Vertical angles theorem", "a": "Vertical angles are congruent." },
+    { "q": "Alternate interior angles with parallel lines are…", "a": "Congruent." },
+    { "q": "Corresponding angles with parallel lines are…", "a": "Congruent." },
+    { "q": "Perpendicular lines form…", "a": "Right angles (90°)." },
+    { "q": "Triangle sum theorem", "a": "Interior angles of a triangle sum to 180°." },
+    { "q": "Isosceles triangle base angles are…", "a": "Congruent." },
+    { "q": "Side–Angle–Side (SAS) congruence", "a": "Two sides and included angle are congruent." },
+    { "q": "Angle–Side–Angle (ASA) congruence", "a": "Two angles and included side are congruent." },
+    { "q": "Side–Side–Side (SSS) congruence", "a": "All three corresponding sides are congruent." },
+    { "q": "Hypotenuse–Leg (HL) right triangle congruence", "a": "Right triangles congruent if hypotenuse and one leg match." },
+    { "q": "Definition of perpendicular bisector", "a": "A line that is perpendicular to a segment and passes through its midpoint." },
+    { "q": "Angle bisector theorem (triangle)", "a": "Divides opposite side into segments proportional to adjacent sides." },
+    { "q": "CPCTC means…", "a": "Corresponding Parts of Congruent Triangles are Congruent." },
+    { "q": "Parallelogram opposite sides/angles are…", "a": "Opposite sides parallel & congruent; opposite angles congruent." },
+    { "q": "Midsegment of a triangle properties", "a": "Parallel to third side; length is half of third side." },
+    { "q": "Exterior angle theorem (triangle)", "a": "Exterior angle equals sum of two remote interior angles." },
+    { "q": "Converse of the Pythagorean theorem", "a": "If a² + b² = c², the triangle is right with c as hypotenuse." }
+  ]
+}

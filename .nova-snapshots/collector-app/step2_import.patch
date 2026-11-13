@@ -1,0 +1,5 @@
+--- a/app/tabs/shop.tsx
++++ b/app/tabs/shop.tsx
+@@
+ import AddressSheet from "../components/AddressSheet";
++import { placeOrderEmail } from "../lib/order";

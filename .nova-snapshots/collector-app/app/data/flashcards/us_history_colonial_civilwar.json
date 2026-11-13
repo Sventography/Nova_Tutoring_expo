@@ -1,0 +1,25 @@
+{
+  "topic": "U.S. History: Colonization to Civil War",
+  "cards": [
+    { "q": "Jamestown (1607)", "a": "First permanent English colony" },
+    { "q": "Mayflower Compact", "a": "Self-government agreement (1620)" },
+    { "q": "Triangular trade", "a": "Europe–Africa–Americas exchange" },
+    { "q": "French & Indian War", "a": "1754–63; British debt/taxes" },
+    { "q": "Stamp Act", "a": "1765 direct tax; protests" },
+    { "q": "Declaration of Independence", "a": "1776—break from Britain" },
+    { "q": "Articles of Confederation", "a": "Weak central gov't" },
+    { "q": "Constitution (1787)", "a": "Stronger federal system" },
+    { "q": "Bill of Rights", "a": "First 10 amendments" },
+    { "q": "Louisiana Purchase", "a": "1803 doubles U.S. territory" },
+    { "q": "Manifest Destiny", "a": "Belief in westward expansion" },
+    { "q": "Missouri Compromise", "a": "1820 balance free/slave states" },
+    { "q": "Mexican–American War", "a": "1846–48; SW lands gained" },
+    { "q": "Compromise of 1850", "a": "CA free; Fugitive Slave Act" },
+    { "q": "Kansas–Nebraska Act", "a": "1854 popular sovereignty; Bleeding Kansas" },
+    { "q": "Dred Scott decision", "a": "1857; enslaved lack standing" },
+    { "q": "Lincoln election", "a": "1860; secession follows" },
+    { "q": "Civil War start", "a": "Fort Sumter 1861" },
+    { "q": "Emancipation Proclamation", "a": "1863 frees slaves in rebelling states" },
+    { "q": "Appomattox", "a": "1865 Lee surrenders" }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "topic": "Theater and Drama",
+  "cards": [
+    { "q": "Elements of drama", "a": "Plot, character, theme, diction, music, spectacle" },
+    { "q": "Aristotle unities", "a": "Action, time, place" },
+    { "q": "Tragedy features", "a": "Serious subject, tragic hero, catharsis" },
+    { "q": "Comedy features", "a": "Humor, social critique, happy ending" },
+    { "q": "Stage directions basics", "a": "Upstage, downstage, stage left/right" },
+    { "q": "Blocking definition", "a": "Planned movement on stage" },
+    { "q": "Proscenium vs thrust vs arena", "a": "Picture-frame; audience on 3 sides; theatre-in-the-round" },
+    { "q": "Fourth wall concept", "a": "Imaginary barrier between actors and audience" },
+    { "q": "Monologue vs soliloquy", "a": "Speech to others vs to self/audience" },
+    { "q": "Cue definition", "a": "Signal for next line or action" },
+    { "q": "Tech theatre areas", "a": "Lighting, sound, set, props, costumes" },
+    { "q": "Stanislavski system", "a": "Psychological realism, objectives" },
+    { "q": "Brecht epic theatre", "a": "Alienation effect, social critique" },
+    { "q": "Greek chorus role", "a": "Commentary, mood, moral voice" },
+    { "q": "Commedia dell'arte trait", "a": "Stock characters, masks, improv" },
+    { "q": "Stage manager role", "a": "Runs rehearsals and performances" },
+    { "q": "Cold reading", "a": "Reading script with little prep" },
+    { "q": "Beat in a scene", "a": "Unit of action or shift" },
+    { "q": "Subtext meaning", "a": "Unspoken intention beneath lines" },
+    { "q": "Table read", "a": "First group reading of script" }
+  ]
+}

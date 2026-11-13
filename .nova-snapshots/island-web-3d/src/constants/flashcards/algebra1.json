@@ -1,0 +1,82 @@
+[
+  {
+    "question": "Solve 2x + 6 = 10",
+    "answer": "x = 2"
+  },
+  {
+    "question": "Slope of the line through (2,3) and (5,9)",
+    "answer": "2"
+  },
+  {
+    "question": "Write slope-intercept form",
+    "answer": "y = mx + b"
+  },
+  {
+    "question": "Solve: 3(x−2)=12",
+    "answer": "x = 6"
+  },
+  {
+    "question": "Factor: x^2 − 5x + 6",
+    "answer": "(x−2)(x−3)"
+  },
+  {
+    "question": "Quadratic formula for ax^2+bx+c=0",
+    "answer": "x = [-b ± √(b^2−4ac)]/(2a)"
+  },
+  {
+    "question": "y = 4x − 7: y-intercept",
+    "answer": "−7"
+  },
+  {
+    "question": "Point-slope form through (1,−2) slope −3",
+    "answer": "y + 2 = −3(x − 1)"
+  },
+  {
+    "question": "Solve the system: x+y=7, x−y=3",
+    "answer": "x = 5, y = 2"
+  },
+  {
+    "question": "Simplify: (x^3)(x^4)",
+    "answer": "x^7"
+  },
+  {
+    "question": "Simplify: (2x^3)^2",
+    "answer": "4x^6"
+  },
+  {
+    "question": "Zero of y = (x−5)(x+1)",
+    "answer": "x = 5 or x = −1"
+  },
+  {
+    "question": "Domain of y = 3x + 1",
+    "answer": "All real numbers"
+  },
+  {
+    "question": "Solve |x−3| = 7",
+    "answer": "x = 10 or x = −4"
+  },
+  {
+    "question": "Vertex form of a quadratic",
+    "answer": "y = a(x−h)^2 + k"
+  },
+  {
+    "question": "Solve by factoring: x^2 − 9x = 0",
+    "answer": "x = 0 or x = 9"
+  },
+  {
+    "question": "Complete the square: x^2+6x",
+    "answer": "x^2+6x+9 = (x+3)^2"
+  },
+  {
+    "question": "Graph of y = |x| has a",
+    "answer": "V-shape opening up"
+  },
+  {
+    "question": "Arithmetic sequence common difference d if a1=4,a2=9",
+    "answer": "5"
+  },
+  {
+    "question": "Geometric sequence ratio r if a1=3,a2=−6",
+    "answer": "−2"
+  }
+]

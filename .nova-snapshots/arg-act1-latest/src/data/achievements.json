@@ -1,0 +1,38 @@
+[
+  {
+    "id": "first_quiz",
+    "name": "First Quiz Complete",
+    "description": "Finish your first quiz.",
+    "points": 10
+  },
+  {
+    "id": "speed_runner",
+    "name": "Speed Runner",
+    "description": "Finish any quiz in under 60s.",
+    "points": 20
+  },
+  {
+    "id": "Streak_3",
+    "name": "3-Day Streak",
+    "description": "Open the app 3 days in a row.",
+    "points": 15
+  },
+  {
+    "id": "Streak_7",
+    "name": "7-Day Streak",
+    "description": "Open the app 7 days in a row.",
+    "points": 40
+  },
+  {
+    "id": "score_90",
+    "name": "A Student",
+    "description": "Score 90%+ on any quiz.",
+    "points": 25
+  },
+  {
+    "id": "topic_master",
+    "name": "Topic Master",
+    "description": "Finish 5 different topics.",
+    "points": 50
+  }
+]

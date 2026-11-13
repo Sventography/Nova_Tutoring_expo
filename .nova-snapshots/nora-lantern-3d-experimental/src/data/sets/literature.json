@@ -1,0 +1,22 @@
+[
+  ["Protagonist", "Main character in a story."],
+  ["Antagonist", "Character/force opposing protagonist."],
+  ["Theme", "Underlying central idea or message."],
+  ["Motif", "Recurring image, symbol, or concept."],
+  ["Allusion", "Reference to another text/event."],
+  ["Foreshadowing", "Hinting at future events."],
+  ["Irony", "Contrast between expectation and reality."],
+  ["Metaphor", "Comparison without using 'like' or 'as'."],
+  ["Simile", "Comparison using 'like' or 'as'."],
+  ["Symbolism", "Objects/events represent abstract ideas."],
+  ["Allegory", "Narrative with symbolic meanings."],
+  ["Tone", "Author’s attitude toward subject."],
+  ["Mood", "Emotional atmosphere for reader."],
+  ["Point of View", "Perspective from which story is told."],
+  ["First-Person", "Narrator is a character in the story."],
+  ["Third-Person Omniscient", "Narrator knows all characters’ thoughts."],
+  ["Stream of Consciousness", "Narration mirroring inner thoughts flow."],
+  ["Conflict", "Struggle between opposing forces."],
+  ["Resolution", "Conclusion resolving the conflict."],
+  ["Classic Example", "‘Romeo and Juliet’ by Shakespeare illustrates tragedy."]
+]

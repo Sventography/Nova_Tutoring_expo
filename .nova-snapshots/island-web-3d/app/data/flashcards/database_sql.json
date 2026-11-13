@@ -1,0 +1,25 @@
+{
+  "topic": "Database Systems (SQL)",
+  "cards": [
+    { "q": "Relational model", "a": "Tables (relations) with rows/columns" },
+    { "q": "Primary key", "a": "Unique row identifier" },
+    { "q": "Foreign key", "a": "References primary key in another table" },
+    { "q": "Normalization goal", "a": "Reduce redundancy/anomalies" },
+    { "q": "1NF/2NF/3NF", "a": "Atomic; no partial; no transitive deps" },
+    { "q": "SELECT basics", "a": "SELECT cols FROM table WHERE cond" },
+    { "q": "JOIN types", "a": "INNER, LEFT, RIGHT, FULL" },
+    { "q": "GROUP BY/HAVING", "a": "Aggregate then filter groups" },
+    { "q": "Indexes", "a": "Speed lookups; cost writes/space" },
+    { "q": "Transactions", "a": "ACID: atomicity, consistency, isolation, durability" },
+    { "q": "Isolation levels", "a": "Read committed, repeatable read, serializable" },
+    { "q": "Views", "a": "Virtual tables from queries" },
+    { "q": "Stored procedures", "a": "Predefined routines in DB" },
+    { "q": "ER diagrams", "a": "Entities, attributes, relationships" },
+    { "q": "NoSQL types", "a": "Key-value, document, column, graph" },
+    { "q": "Sharding", "a": "Partition data across nodes" },
+    { "q": "Replication", "a": "Copy data for HA/performance" },
+    { "q": "SQL injection", "a": "Use parameterized queries to prevent" },
+    { "q": "Constraint types", "a": "NOT NULL, UNIQUE, CHECK, FK" },
+    { "q": "Window functions", "a": "OVER() for analytic queries" }
+  ]
+}

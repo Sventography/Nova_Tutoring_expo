@@ -1,0 +1,44 @@
+--- add at top near STORAGE_KEY:
+import { ACH_STORAGE_KEYS } from "@/constants/achievements";
+
+--- in component Shop():
+const [totalCoinsSpent, setTotalCoinsSpent] = useState(0);
+
+useEffect(() => {
+  AsyncStorage.getItem(ACH_STORAGE_KEYS.first_purchase).then((v) => v === "true" && null);
+  AsyncStorage.getItem(ACH_STORAGE_KEYS.big_spender).then((v) => v === "true" && null);
+}, []);
+
+--- in handleBuyCoins():
+if (coinBalance >= item.priceCoins) {
+  setCoinBalance((b) => b - item.priceCoins);
+  setTotalCoinsSpent((s) => {
+    const newSpent = s + (item.priceCoins ?? 0);
+
+    // unlock first_purchase
+    AsyncStorage.getItem(ACH_STORAGE_KEYS.first_purchase).then((v) => {
+      if (v !== "true") {
+        AsyncStorage.setItem(ACH_STORAGE_KEYS.first_purchase, "true");
+        Alert.alert("Achievement unlocked!", "First purchase 🌟");
+      }
+    });
+
+    // unlock big_spender
+    if (newSpent >= 50000) {
+      AsyncStorage.getItem(ACH_STORAGE_KEYS.big_spender).then((v) => {
+        if (v !== "true") {
+          AsyncStorage.setItem(ACH_STORAGE_KEYS.big_spender, "true");
+          Alert.alert("Achievement unlocked!", "Big spender 💎");
+        }
+      });
+    }
+
+    return newSpent;
+  });
+
+  Alert.alert("Purchased", \`You bought \${item.title} for \${item.priceCoins.toLocaleString()} coins!\`);
+} else {
+  const deficit = item.priceCoins - coinBalance;
+  setInsModalDeficit(deficit);
+  setInsModalVisible(true);
+}

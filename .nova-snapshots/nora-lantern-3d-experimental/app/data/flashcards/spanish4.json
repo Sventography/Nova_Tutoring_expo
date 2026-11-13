@@ -1,0 +1,25 @@
+{
+  "topic": "Spanish IV",
+  "cards": [
+    { "q": "Sequence of tenses: present main + present subjunctive when", "a": "Subordinate action is simultaneous or future relative to main" },
+    { "q": "Sequence: past main + imperfect subjunctive when", "a": "Subordinate is simultaneous/past relative to main" },
+    { "q": "Pluperfect subjunctive formation", "a": "hubiera, hubieras, hubiera, hubieramos, hubierais, hubieran + participle" },
+    { "q": "Si clause Type 2 (hypothetical present)", "a": "Si + imperfect subjunctive, conditional (Si tuviera tiempo, viajaria)" },
+    { "q": "Si clause Type 3 (counterfactual past)", "a": "Si + pluperfect subjunctive, conditional perfect" },
+    { "q": "Subjunctive in adjective clauses", "a": "Use when antecedent is unknown/nonexistent (Busco un libro que...)" },
+    { "q": "Subjunctive after adverbial conjunctions", "a": "A menos que, con tal de que, para que, antes de que" },
+    { "q": "Indicative vs subjunctive with cuando", "a": "Indicative past/habitual; subjunctive future/uncertain" },
+    { "q": "Passive se pattern", "a": "Se + 3rd person verb + object (Se venden casas)" },
+    { "q": "Impersonal se", "a": "Se + 3rd singular without explicit subject" },
+    { "q": "Future of probability", "a": "Estara en casa (He is probably at home)" },
+    { "q": "Conditional of probability (past)", "a": "Estaria en casa (He was probably at home)" },
+    { "q": "Por vs para nuance", "a": "Para goal/recipient/deadline; por cause/exchange/route/duration" },
+    { "q": "Relative pronouns", "a": "que, el que, la que, los que, quien(es), lo que, cuyo/a" },
+    { "q": "Accent rule example", "a": "Words ending in vowel, n, s stress next-to-last; else last" },
+    { "q": "Object pronoun order double", "a": "IO before DO; le/les -> se before lo/la/los/las" },
+    { "q": "Commands with pronouns", "a": "Affirmative attach (dime), negative separate (no me digas)" },
+    { "q": "Reported speech example", "a": "Dijo que vendria (He said he would come)" },
+    { "q": "Periphrastic future vs simple future", "a": "Ir a + inf vs future endings; register/time nuance" },
+    { "q": "Concessive aunque + mood", "a": "Aunque + subj if unknown/contrary; indicative if known fact" }
+  ]
+}

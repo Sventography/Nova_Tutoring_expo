@@ -1,0 +1,25 @@
+{
+  "topic": "Number Theory (Intro)",
+  "cards": [
+    { "q": "Division algorithm", "a": "a = bq + r, 0≤r<b" },
+    { "q": "Euclidean algorithm", "a": "Compute gcd(a,b)" },
+    { "q": "Bezout identity", "a": "ax+by=gcd(a,b)" },
+    { "q": "Prime definition", "a": "Only 1 and itself divide" },
+    { "q": "Fundamental theorem of arithmetic", "a": "Unique prime factorization" },
+    { "q": "Modular congruence", "a": "a≡b (mod m) if m|(a−b)" },
+    { "q": "Euler's totient φ(n)", "a": "Count ≤n coprime to n" },
+    { "q": "Fermat's little theorem", "a": "a^{p−1}≡1 (mod p), p prime" },
+    { "q": "Euler's theorem", "a": "a^{φ(n)}≡1 (mod n), gcd(a,n)=1" },
+    { "q": "Chinese remainder", "a": "Solve system for coprime moduli" },
+    { "q": "Quadratic residues", "a": "Solutions to x^2≡a (mod p)" },
+    { "q": "Legendre symbol", "a": "(a/p)=±1 or 0" },
+    { "q": "Multiplicative inverse", "a": "a^{-1} mod m via EGCD" },
+    { "q": "Order of an element", "a": "Smallest k: a^k≡1 (mod n)" },
+    { "q": "Primitive root", "a": "Generator of (Z/pZ)^×" },
+    { "q": "Continued fraction", "a": "Best rational approximations" },
+    { "q": "Pigeonhole in NT", "a": "Remainders repetition argument" },
+    { "q": "RSA basics", "a": "n=pq; e,d with φ(n)" },
+    { "q": "Mersenne primes", "a": "2^p−1 with p prime" },
+    { "q": "Perfect numbers", "a": "Sum of proper divisors equals number" }
+  ]
+}

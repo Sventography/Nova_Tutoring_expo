@@ -1,0 +1,82 @@
+[
+  {
+    "question": "SN1 key steps",
+    "answer": "Carbocation formation then nucleophilic attack"
+  },
+  {
+    "question": "SN2 hallmark",
+    "answer": "Backside attack with inversion"
+  },
+  {
+    "question": "E1 pathway",
+    "answer": "Carbocation then elimination to alkene"
+  },
+  {
+    "question": "E2 requirement",
+    "answer": "Strong base; single-step anti-periplanar elimination"
+  },
+  {
+    "question": "Markovnikov addition",
+    "answer": "H adds to carbon with more Hs"
+  },
+  {
+    "question": "Anti-Markovnikov addition example",
+    "answer": "Hydroboration–oxidation"
+  },
+  {
+    "question": "Radical halogenation initiator",
+    "answer": "Light or peroxide"
+  },
+  {
+    "question": "Oxymercuration–demercuration",
+    "answer": "Markovnikov alcohol without rearrangements"
+  },
+  {
+    "question": "Epoxidation reagent",
+    "answer": "Peracid such as mCPBA"
+  },
+  {
+    "question": "Syn dihydroxylation",
+    "answer": "OsO4 or KMnO4 cold dilute"
+  },
+  {
+    "question": "Ozonolysis of alkenes",
+    "answer": "Cleaves to carbonyls"
+  },
+  {
+    "question": "Friedel–Crafts acylation",
+    "answer": "Aromatic acylation with AlCl3"
+  },
+  {
+    "question": "Aldol condensation",
+    "answer": "Enolate adds to carbonyl then dehydrates"
+  },
+  {
+    "question": "Claisen condensation",
+    "answer": "Ester enolate couples to ester"
+  },
+  {
+    "question": "Michael addition",
+    "answer": "Conjugate addition to α,β-unsaturated carbonyl"
+  },
+  {
+    "question": "Wittig reaction",
+    "answer": "Ylide converts carbonyl to alkene"
+  },
+  {
+    "question": "Grignard addition",
+    "answer": "RMgX adds to carbonyl to form alcohol"
+  },
+  {
+    "question": "Acetal formation",
+    "answer": "Carbonyl + alcohols under acid"
+  },
+  {
+    "question": "Protecting groups used to",
+    "answer": "Mask reactive sites during synthesis"
+  },
+  {
+    "question": "Stereoselectivity means",
+    "answer": "Preference for formation of one stereoisomer"
+  }
+]

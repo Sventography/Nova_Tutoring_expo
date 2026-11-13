@@ -1,0 +1,25 @@
+{
+  "topic": "Biochemistry",
+  "cards": [
+    { "q": "Amino acid classes", "a": "Nonpolar, polar, acidic, basic" },
+    { "q": "Primary–quaternary structure", "a": "Sequence → local → overall fold → subunits" },
+    { "q": "Enzyme kinetics (Michaelis–Menten)", "a": "v = Vmax[S]/(Km+[S])" },
+    { "q": "Competitive inhibitor", "a": "↑Km, same Vmax" },
+    { "q": "Noncompetitive inhibitor", "a": "↓Vmax, same Km" },
+    { "q": "Carbohydrate linkages", "a": "α/β glycosidic bonds" },
+    { "q": "Glycolysis net", "a": "2 ATP + 2 NADH per glucose" },
+    { "q": "TCA cycle output", "a": "3 NADH, 1 FADH2, 1 GTP per acetyl-CoA" },
+    { "q": "ETC ATP yield (approx.)", "a": "~2.5 ATP/NADH; ~1.5 ATP/FADH2" },
+    { "q": "Beta-oxidation", "a": "Fatty acid → acetyl-CoA units" },
+    { "q": "Gluconeogenesis site", "a": "Liver; makes glucose" },
+    { "q": "Urea cycle", "a": "Ammonia detox to urea" },
+    { "q": "pH/pKa buffer rule", "a": "Max buffer near pH ≈ pKa" },
+    { "q": "Henderson–Hasselbalch", "a": "pH = pKa + log(A−/HA)" },
+    { "q": "DNA vs RNA sugar", "a": "Deoxyribose vs ribose" },
+    { "q": "Watson–Crick base pairs", "a": "A–T(2H), G–C(3H)" },
+    { "q": "Central dogma", "a": "DNA → RNA → Protein" },
+    { "q": "Post-translational mods", "a": "Phosphorylation, glycosylation, etc." },
+    { "q": "Allostery", "a": "Effector binding alters activity" },
+    { "q": "Hemoglobin cooperativity", "a": "Sigmoidal O2 binding" }
+  ]
+}

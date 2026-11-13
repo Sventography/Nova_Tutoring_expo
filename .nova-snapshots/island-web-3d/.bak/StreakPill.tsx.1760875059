@@ -1,0 +1,22 @@
+import React, { useEffect } from "react";
+import { View, Text, StyleSheet } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useStreak } from "../context/StreakContext";
+
+export default function StreakPill() {
+  const ctx = useStreak();
+  useEffect(() => { ctx?.touch && ctx.touch(); }, []); // fire once
+  const hydrated = ctx?.hydrated ?? false;
+  const val = ctx?.streak ?? 0;
+  const label = hydrated ? `${Math.max(1, val)}d` : "…";
+  return (
+    <View style={S.pill}>
+      <Ionicons name="flame" size={14} />
+      <Text style={S.txt}>{label}</Text>
+    </View>
+  );
+}
+const S = StyleSheet.create({
+  pill:{ flexDirection:"row", alignItems:"center", gap:6, paddingVertical:6, paddingHorizontal:10, borderRadius:999, borderWidth:1 },
+  txt:{ fontSize:12, fontWeight:"600" },
+});

@@ -1,0 +1,82 @@
+[
+  {
+    "question": "Evolution by natural selection needs",
+    "answer": "Variation, heritability, differential fitness"
+  },
+  {
+    "question": "Fitness in evolutionary terms",
+    "answer": "Reproductive success"
+  },
+  {
+    "question": "Genetic drift most impactful in",
+    "answer": "Small populations"
+  },
+  {
+    "question": "Bottleneck effect",
+    "answer": "Sharp reduction in population size alters allele frequencies"
+  },
+  {
+    "question": "Founder effect",
+    "answer": "New colony with skewed allele frequencies"
+  },
+  {
+    "question": "Gene flow",
+    "answer": "Movement of alleles between populations"
+  },
+  {
+    "question": "Speciation requires",
+    "answer": "Reproductive isolation"
+  },
+  {
+    "question": "Allopatric speciation",
+    "answer": "Geographic isolation leads to species divergence"
+  },
+  {
+    "question": "Sympatric speciation",
+    "answer": "Speciation without geographic separation"
+  },
+  {
+    "question": "Homologous structures indicate",
+    "answer": "Common ancestry"
+  },
+  {
+    "question": "Analogous structures indicate",
+    "answer": "Convergent evolution"
+  },
+  {
+    "question": "Hardy–Weinberg equilibrium conditions",
+    "answer": "Large, random mating, no mutation/migration/selection"
+  },
+  {
+    "question": "H–W genotype frequency",
+    "answer": "p^2 + 2pq + q^2 = 1"
+  },
+  {
+    "question": "Sexual selection",
+    "answer": "Traits increase mating success"
+  },
+  {
+    "question": "Adaptive radiation",
+    "answer": "Rapid speciation from a common ancestor"
+  },
+  {
+    "question": "Balancing selection example",
+    "answer": "Heterozygote advantage"
+  },
+  {
+    "question": "Phylogeny inferred using",
+    "answer": "Morphology and molecular data"
+  },
+  {
+    "question": "Molecular clock assumes",
+    "answer": "Roughly constant mutation rates"
+  },
+  {
+    "question": "Exaptation",
+    "answer": "Trait co-opted for new function"
+  },
+  {
+    "question": "Artificial selection",
+    "answer": "Human-driven breeding for traits"
+  }
+]

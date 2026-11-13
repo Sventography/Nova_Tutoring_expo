@@ -1,0 +1,25 @@
+{
+  "topic": "Finance Basics",
+  "cards": [
+    { "q": "Time value of money", "a": "A dollar today worth more than a dollar tomorrow" },
+    { "q": "NPV definition", "a": "Sum of discounted cash flows minus cost" },
+    { "q": "IRR definition", "a": "Discount rate that sets NPV to zero" },
+    { "q": "Payback period", "a": "Time to recover initial investment" },
+    { "q": "Simple vs compound interest", "a": "Simple on principal; compound on principal plus interest" },
+    { "q": "APR vs APY", "a": "APR nominal rate; APY effective rate with compounding" },
+    { "q": "Diversification", "a": "Reduce risk by holding varied assets" },
+    { "q": "Systematic vs unsystematic risk", "a": "Market risk vs firm-specific risk" },
+    { "q": "Beta measures", "a": "Sensitivity to market movements" },
+    { "q": "CAPM formula (short)", "a": "E[R]=Rf + beta*(Rm - Rf)" },
+    { "q": "Bond price vs yield", "a": "Inverse relationship" },
+    { "q": "Coupon vs yield to maturity", "a": "Coupon fixed payment; YTM overall return if held" },
+    { "q": "Liquidity definition", "a": "Ease of converting to cash without big loss" },
+    { "q": "P/E ratio", "a": "Price divided by earnings per share" },
+    { "q": "DCF analysis", "a": "Value by discounting future cash flows" },
+    { "q": "Working capital", "a": "Current assets minus current liabilities" },
+    { "q": "Leverage", "a": "Use of debt financing" },
+    { "q": "Hedging purpose", "a": "Reduce risk using derivatives" },
+    { "q": "Option call vs put", "a": "Call right to buy; put right to sell" },
+    { "q": "Index fund", "a": "Passive fund tracking a market index" }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "topic": "Physical Geography",
+  "cards": [
+    { "q": "Latitude vs longitude", "a": "Parallel N/S vs meridian E/W" },
+    { "q": "Plate boundaries types", "a": "Convergent, divergent, transform" },
+    { "q": "Weather vs climate", "a": "Short-term conditions vs long-term patterns" },
+    { "q": "Coriolis effect", "a": "Apparent deflection due to Earth rotation" },
+    { "q": "Hadley cell", "a": "Tropical convection circulation" },
+    { "q": "Rain shadow", "a": "Leeward dryness from orographic lifting" },
+    { "q": "Biome definition", "a": "Large ecosystem defined by climate/biota" },
+    { "q": "River delta", "a": "Sediment deposition at mouth" },
+    { "q": "Glacial landforms", "a": "U-shaped valleys, moraines" },
+    { "q": "Karst topography", "a": "Limestone dissolution; sinkholes" },
+    { "q": "Soil horizons", "a": "O, A, E, B, C, R" },
+    { "q": "Albedo", "a": "Reflectivity of a surface" },
+    { "q": "El Niño–Southern Oscillation", "a": "Periodic Pacific warming/cooling" },
+    { "q": "Desert types", "a": "Hot subtropical, rain-shadow, coastal, polar" },
+    { "q": "Tsunami cause", "a": "Seafloor earthquakes/landslides" },
+    { "q": "Monsoon", "a": "Seasonal wind reversal with rains" },
+    { "q": "Permafrost", "a": "Ground frozen ≥2 years" },
+    { "q": "GIS use", "a": "Spatial data analysis/mapping" },
+    { "q": "Latitude of tropics", "a": "Tropic of Cancer ~23.5°N; Capricorn ~23.5°S" },
+    { "q": "Hydrologic budget", "a": "P = ET + R ± ΔS (precip, evapotranspiration, runoff, storage)" }
+  ]
+}

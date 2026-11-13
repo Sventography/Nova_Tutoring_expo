@@ -1,0 +1,25 @@
+{
+  "topic": "Chinese I (Beginner)",
+  "cards": [
+    { "q": "你好 / 再见", "a": "Nǐ hǎo / Zàijiàn — Hello / Goodbye" },
+    { "q": "请 / 谢谢 / 不客气", "a": "Qǐng / Xièxie / Bú kèqi — Please / Thanks / You're welcome" },
+    { "q": "是 / 不是", "a": "Shì / Bú shì — Is / Is not" },
+    { "q": "我 / 你 / 他(她)", "a": "Wǒ / Nǐ / Tā — I / You / He(she)" },
+    { "q": "数字1–10", "a": "yī, èr, sān, sì, wǔ, liù, qī, bā, jiǔ, shí" },
+    { "q": "星期一–星期日", "a": "Mon–Sun: xīngqīyī … xīngqītiān" },
+    { "q": "你叫什么名字？", "a": "Nǐ jiào shénme míngzi? — What’s your name?" },
+    { "q": "我来自…", "a": "Wǒ láizì… — I am from…" },
+    { "q": "量词 '个'", "a": "gè — general measure word" },
+    { "q": "这 / 那", "a": "zhè / nà — this / that" },
+    { "q": "有 / 没有", "a": "yǒu / méiyǒu — have / don’t have" },
+    { "q": "会 / 不会", "a": "huì / búhuì — can (skill) / cannot" },
+    { "q": "想 / 要", "a": "xiǎng / yào — would like / want" },
+    { "q": "多少/几", "a": "duōshao/jǐ — how many/much (unknown/small)" },
+    { "q": "请问…在哪里？", "a": "Qǐngwèn… zài nǎlǐ? — Excuse me, where is…?" },
+    { "q": "点菜用语", "a": "来一份… / 买单 — Order… / Check, please" },
+    { "q": "拼音与声调", "a": "Four tones + neutral; mā/má/mǎ/mà" },
+    { "q": "否定 '不/没'", "a": "bù for habits/state; méi for past/‘have not’" },
+    { "q": "句序", "a": "SVO; time–manner–place often" },
+    { "q": "谢谢，再见！", "a": "Practical sign-off phrase" }
+  ]
+}

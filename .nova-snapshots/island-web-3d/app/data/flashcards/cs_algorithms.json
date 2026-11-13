@@ -1,0 +1,25 @@
+{
+  "topic": "Computer Science: Algorithms",
+  "cards": [
+    { "q": "Big O purpose", "a": "Asymptotic time/space growth rate" },
+    { "q": "O(1) example", "a": "Array indexing" },
+    { "q": "O(log n) example", "a": "Binary search" },
+    { "q": "O(n) example", "a": "Linear scan" },
+    { "q": "O(n log n) example", "a": "Merge sort, heapsort" },
+    { "q": "O(n^2) example", "a": "Bubble/selection/insertion worst" },
+    { "q": "Stable sort", "a": "Preserves order of equal keys" },
+    { "q": "Divide and conquer", "a": "Split, solve recursively, combine" },
+    { "q": "Greedy example", "a": "Interval scheduling, Huffman" },
+    { "q": "Dynamic programming", "a": "Optimal substructure + overlapping subproblems" },
+    { "q": "Dijkstra requirement", "a": "Nonnegative edge weights" },
+    { "q": "Bellman–Ford use", "a": "Handles negative edges; detects cycles" },
+    { "q": "Floyd–Warshall", "a": "All-pairs shortest paths" },
+    { "q": "MST algorithms", "a": "Kruskal (edges), Prim (grow tree)" },
+    { "q": "Topological sort", "a": "Order DAG tasks" },
+    { "q": "Backtracking", "a": "Systematically explore/undo (N-Queens)" },
+    { "q": "Amortized analysis", "a": "Average over operations (dynamic array)" },
+    { "q": "Two-pointer pattern", "a": "Scan from both ends; subarray problems" },
+    { "q": "Union–Find", "a": "Disjoint set union with path compression" },
+    { "q": "Suffix array use", "a": "Fast substring search, suffix order" }
+  ]
+}

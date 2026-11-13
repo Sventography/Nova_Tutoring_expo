@@ -1,0 +1,82 @@
+[
+  {
+    "question": "Integration by parts formula",
+    "answer": "∫u dv = uv − ∫v du"
+  },
+  {
+    "question": "Trig substitution example for √(a^2−x^2)",
+    "answer": "x = a sin θ"
+  },
+  {
+    "question": "Partial fractions purpose",
+    "answer": "Decompose rational functions"
+  },
+  {
+    "question": "Improper integral type I",
+    "answer": "Infinite interval"
+  },
+  {
+    "question": "Improper integral type II",
+    "answer": "Unbounded integrand"
+  },
+  {
+    "question": "Taylor series general form",
+    "answer": "Σ f^(n)(a)/n! (x−a)^n"
+  },
+  {
+    "question": "Maclaurin series for e^x",
+    "answer": "Σ x^n / n!"
+  },
+  {
+    "question": "Maclaurin series for sin x",
+    "answer": "Σ (−1)^n x^(2n+1)/(2n+1)!"
+  },
+  {
+    "question": "Maclaurin series for cos x",
+    "answer": "Σ (−1)^n x^(2n)/(2n)!"
+  },
+  {
+    "question": "Radius of convergence definition",
+    "answer": "Interval where series converges"
+  },
+  {
+    "question": "Alternating series test",
+    "answer": "Terms decrease to 0, series converges"
+  },
+  {
+    "question": "Ratio test applies to",
+    "answer": "Series with positive terms"
+  },
+  {
+    "question": "Root test formula",
+    "answer": "limsup (|a_n|^(1/n))"
+  },
+  {
+    "question": "Absolute convergence means",
+    "answer": "Converges even when terms made positive"
+  },
+  {
+    "question": "Conditional convergence means",
+    "answer": "Converges but not absolutely"
+  },
+  {
+    "question": "Arc length formula",
+    "answer": "∫√(1+(dy/dx)^2) dx"
+  },
+  {
+    "question": "Surface area of revolution",
+    "answer": "2π∫ y ds"
+  },
+  {
+    "question": "Power series centered at a",
+    "answer": "Σ c_n(x−a)^n"
+  },
+  {
+    "question": "Fourier series decomposes",
+    "answer": "Function into sines and cosines"
+  },
+  {
+    "question": "Green’s theorem relates",
+    "answer": "∮_C F·dr = ∬_R (curl F) dA"
+  }
+]

@@ -1,0 +1,82 @@
+[
+  {
+    "question": "Matrix rank is",
+    "answer": "Dimension of column space"
+  },
+  {
+    "question": "Null space consists of",
+    "answer": "Solutions to Ax=0"
+  },
+  {
+    "question": "Invertible matrix condition",
+    "answer": "Determinant nonzero"
+  },
+  {
+    "question": "Eigenvalue equation",
+    "answer": "Av = λv"
+  },
+  {
+    "question": "Characteristic polynomial",
+    "answer": "det(A − λI)"
+  },
+  {
+    "question": "Diagonalizable if",
+    "answer": "n linearly independent eigenvectors"
+  },
+  {
+    "question": "Orthogonal matrix property",
+    "answer": "Q^T Q = I"
+  },
+  {
+    "question": "Gram–Schmidt produces",
+    "answer": "Orthonormal basis"
+  },
+  {
+    "question": "Least squares solves",
+    "answer": "Minimize ||Ax−b||"
+  },
+  {
+    "question": "Normal equations",
+    "answer": "A^T A x = A^T b"
+  },
+  {
+    "question": "SVD factorization",
+    "answer": "A = U Σ V^T"
+  },
+  {
+    "question": "Rank–nullity theorem",
+    "answer": "dim N(A) + rank(A) = n"
+  },
+  {
+    "question": "Determinant of triangular matrix",
+    "answer": "Product of diagonal entries"
+  },
+  {
+    "question": "Inner product properties",
+    "answer": "Linearity, symmetry, positive-definite"
+  },
+  {
+    "question": "Orthogonal projection formula",
+    "answer": "proj_u v = (v·u)/(u·u) u"
+  },
+  {
+    "question": "Change of basis uses",
+    "answer": "Similarity transforms"
+  },
+  {
+    "question": "LU decomposition",
+    "answer": "A = L U with L lower, U upper"
+  },
+  {
+    "question": "Positive definite test",
+    "answer": "x^T A x > 0 for all nonzero x"
+  },
+  {
+    "question": "Spectral theorem",
+    "answer": "Symmetric matrices diagonalize orthogonally"
+  },
+  {
+    "question": "Condition number measures",
+    "answer": "Sensitivity to input perturbations"
+  }
+]

@@ -1,0 +1,129 @@
+{
+  "topics": [
+    {
+      "name": "World History",
+      "questions": [
+        {"q": "Who was the first President of the United States?", "a": "George Washington"},
+        {"q": "What war ended with the Treaty of Versailles?", "a": "World War I"},
+        {"q": "In which year did World War II end?", "a": "1945"},
+        {"q": "Who was known as the Maid of Orléans?", "a": "Joan of Arc"},
+        {"q": "Who was the British Prime Minister during WWII?", "a": "Winston Churchill"},
+        {"q": "Which wall fell in 1989?", "a": "Berlin Wall"},
+        {"q": "Who discovered America in 1492?", "a": "Christopher Columbus"},
+        {"q": "What empire did Genghis Khan found?", "a": "Mongol Empire"},
+        {"q": "Who was assassinated in Sarajevo in 1914?", "a": "Archduke Franz Ferdinand"},
+        {"q": "Who led India’s independence movement?", "a": "Mahatma Gandhi"},
+        {"q": "Who was the first man to step on the moon?", "a": "Neil Armstrong"},
+        {"q": "What ship sank in 1912?", "a": "Titanic"},
+        {"q": "Who was Cleopatra?", "a": "Queen of Egypt"},
+        {"q": "Which empire built the Taj Mahal?", "a": "Mughal Empire"},
+        {"q": "What year did the American Civil War begin?", "a": "1861"},
+        {"q": "Who was the leader of Nazi Germany?", "a": "Adolf Hitler"},
+        {"q": "What was the Cold War about?", "a": "Tension between USA and USSR"},
+        {"q": "What ancient city was destroyed by Vesuvius?", "a": "Pompeii"},
+        {"q": "What year did the French Revolution begin?", "a": "1789"},
+        {"q": "Who was the first emperor of Rome?", "a": "Augustus Caesar"}
+      ]
+    },
+    {
+      "name": "Literature",
+      "questions": [
+        {"q": "Who wrote 'Romeo and Juliet'?", "a": "William Shakespeare"},
+        {"q": "Who wrote '1984'?", "a": "George Orwell"},
+        {"q": "Who wrote 'Pride and Prejudice'?", "a": "Jane Austen"},
+        {"q": "Who wrote 'The Odyssey'?", "a": "Homer"},
+        {"q": "Who created Sherlock Holmes?", "a": "Arthur Conan Doyle"},
+        {"q": "Who wrote 'Moby-Dick'?", "a": "Herman Melville"},
+        {"q": "Who wrote 'The Great Gatsby'?", "a": "F. Scott Fitzgerald"},
+        {"q": "Who wrote 'Hamlet'?", "a": "William Shakespeare"},
+        {"q": "Who wrote 'The Hobbit'?", "a": "J.R.R. Tolkien"},
+        {"q": "Who wrote 'To Kill a Mockingbird'?", "a": "Harper Lee"},
+        {"q": "Who wrote 'Don Quixote'?", "a": "Miguel de Cervantes"},
+        {"q": "Who wrote 'Frankenstein'?", "a": "Mary Shelley"},
+        {"q": "Who wrote 'The Divine Comedy'?", "a": "Dante Alighieri"},
+        {"q": "Who wrote 'Anna Karenina'?", "a": "Leo Tolstoy"},
+        {"q": "Who wrote 'Macbeth'?", "a": "William Shakespeare"},
+        {"q": "Who wrote 'The Catcher in the Rye'?", "a": "J.D. Salinger"},
+        {"q": "Who wrote 'The Iliad'?", "a": "Homer"},
+        {"q": "Who wrote 'Dracula'?", "a": "Bram Stoker"},
+        {"q": "Who wrote 'Crime and Punishment'?", "a": "Fyodor Dostoevsky"},
+        {"q": "Who wrote 'Of Mice and Men'?", "a": "John Steinbeck"}
+      ]
+    },
+    {
+      "name": "Music",
+      "questions": [
+        {"q": "Who was the King of Pop?", "a": "Michael Jackson"},
+        {"q": "Who wrote 'Fur Elise'?", "a": "Beethoven"},
+        {"q": "Who composed 'The Four Seasons'?", "a": "Vivaldi"},
+        {"q": "What band was John Lennon in?", "a": "The Beatles"},
+        {"q": "Who is known as the Queen of Pop?", "a": "Madonna"},
+        {"q": "Who sang 'Like a Rolling Stone'?", "a": "Bob Dylan"},
+        {"q": "Who was a famous jazz trumpeter?", "a": "Louis Armstrong"},
+        {"q": "What band sang 'Bohemian Rhapsody'?", "a": "Queen"},
+        {"q": "Who composed the 'Moonlight Sonata'?", "a": "Beethoven"},
+        {"q": "Who was a famous Austrian composer?", "a": "Mozart"},
+        {"q": "Who was the 'Godfather of Soul'?", "a": "James Brown"},
+        {"q": "Who sang 'Respect'?", "a": "Aretha Franklin"},
+        {"q": "Who was a famous reggae artist?", "a": "Bob Marley"},
+        {"q": "Who composed 'Swan Lake'?", "a": "Tchaikovsky"},
+        {"q": "What band is known as the 'Fab Four'?", "a": "The Beatles"},
+        {"q": "Who sang 'Imagine'?", "a": "John Lennon"},
+        {"q": "Who was the 'King of Rock and Roll'?", "a": "Elvis Presley"},
+        {"q": "Who sang 'Purple Rain'?", "a": "Prince"},
+        {"q": "Who composed 'The Nutcracker'?", "a": "Tchaikovsky"},
+        {"q": "Who is known as the 'Material Girl'?", "a": "Madonna"}
+      ]
+    },
+    {
+      "name": "Art",
+      "questions": [
+        {"q": "Who painted the Mona Lisa?", "a": "Leonardo da Vinci"},
+        {"q": "Who painted the Starry Night?", "a": "Vincent van Gogh"},
+        {"q": "Who painted The Last Supper?", "a": "Leonardo da Vinci"},
+        {"q": "Who painted The Scream?", "a": "Edvard Munch"},
+        {"q": "Who sculpted David?", "a": "Michelangelo"},
+        {"q": "Who painted the Birth of Venus?", "a": "Botticelli"},
+        {"q": "Who painted Girl with a Pearl Earring?", "a": "Johannes Vermeer"},
+        {"q": "Who painted Guernica?", "a": "Pablo Picasso"},
+        {"q": "Who painted American Gothic?", "a": "Grant Wood"},
+        {"q": "Who painted The Persistence of Memory?", "a": "Salvador Dalí"},
+        {"q": "Who painted The School of Athens?", "a": "Raphael"},
+        {"q": "Who sculpted The Thinker?", "a": "Auguste Rodin"},
+        {"q": "Who painted Water Lilies?", "a": "Claude Monet"},
+        {"q": "Who painted The Night Watch?", "a": "Rembrandt"},
+        {"q": "Who painted The Kiss?", "a": "Gustav Klimt"},
+        {"q": "Who painted Campbell's Soup Cans?", "a": "Andy Warhol"},
+        {"q": "Who painted Las Meninas?", "a": "Diego Velázquez"},
+        {"q": "Who painted Liberty Leading the People?", "a": "Eugène Delacroix"},
+        {"q": "Who painted The Arnolfini Portrait?", "a": "Jan van Eyck"},
+        {"q": "Who painted Whistler’s Mother?", "a": "James Whistler"}
+      ]
+    },
+    {
+      "name": "Technology",
+      "questions": [
+        {"q": "Who founded Microsoft?", "a": "Bill Gates"},
+        {"q": "Who founded Apple?", "a": "Steve Jobs"},
+        {"q": "Who created Facebook?", "a": "Mark Zuckerberg"},
+        {"q": "What company created the iPhone?", "a": "Apple"},
+        {"q": "What does CPU stand for?", "a": "Central Processing Unit"},
+        {"q": "What does GPU stand for?", "a": "Graphics Processing Unit"},
+        {"q": "What does RAM stand for?", "a": "Random Access Memory"},
+        {"q": "What does HTML stand for?", "a": "HyperText Markup Language"},
+        {"q": "What does HTTP stand for?", "a": "HyperText Transfer Protocol"},
+        {"q": "What does AI stand for?", "a": "Artificial Intelligence"},
+        {"q": "What company created Windows?", "a": "Microsoft"},
+        {"q": "What company created Android?", "a": "Google"},
+        {"q": "What company created PlayStation?", "a": "Sony"},
+        {"q": "What company created Xbox?", "a": "Microsoft"},
+        {"q": "What company created Tesla cars?", "a": "Tesla, Inc."},
+        {"q": "Who is the CEO of SpaceX?", "a": "Elon Musk"},
+        {"q": "What company created YouTube?", "a": "Google"},
+        {"q": "What does URL stand for?", "a": "Uniform Resource Locator"},
+        {"q": "What does WWW stand for?", "a": "World Wide Web"},
+        {"q": "What programming language is used for web styling?", "a": "CSS"}
+      ]
+    }
+  ]
+}

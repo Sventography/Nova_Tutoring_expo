@@ -1,0 +1,22 @@
+[
+  ["Atom", "Smallest unit of an element"],
+  ["Ion", "Charged atom or molecule"],
+  ["Isotope", "Same element, different neutrons"],
+  ["Mole", "6.022×10^23 particles"],
+  ["Avogadro's law", "Equal gas volumes → equal moles"],
+  ["Ideal gas law", "PV=nRT"],
+  ["Acid", "Proton donor"],
+  ["Base", "Proton acceptor"],
+  ["pH", "-log[H⁺]"],
+  ["Redox", "Electron transfer"],
+  ["Oxidation", "Loss of electrons"],
+  ["Reduction", "Gain of electrons"],
+  ["Le Châtelier", "Shift to oppose change"],
+  ["Endothermic", "Absorbs heat"],
+  ["Exothermic", "Releases heat"],
+  ["Covalent bond", "Shared electrons"],
+  ["Ionic bond", "Transferred electrons"],
+  ["Periodic trend", "Predictable property pattern"],
+  ["Catalyst", "Lowers activation energy"],
+  ["Stoichiometry", "Quantitative reaction ratios"]
+]

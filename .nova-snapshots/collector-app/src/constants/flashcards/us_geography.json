@@ -1,0 +1,82 @@
+[
+  {
+    "question": "Capital of California",
+    "answer": "Sacramento"
+  },
+  {
+    "question": "Capital of Texas",
+    "answer": "Austin"
+  },
+  {
+    "question": "Capital of Florida",
+    "answer": "Tallahassee"
+  },
+  {
+    "question": "Capital of New York",
+    "answer": "Albany"
+  },
+  {
+    "question": "Capital of Illinois",
+    "answer": "Springfield"
+  },
+  {
+    "question": "Longest river in US",
+    "answer": "Missouri River"
+  },
+  {
+    "question": "Largest river by volume",
+    "answer": "Mississippi River"
+  },
+  {
+    "question": "Tallest mountain in US",
+    "answer": "Denali"
+  },
+  {
+    "question": "Great Lakes names",
+    "answer": "Superior, Michigan, Huron, Erie, Ontario"
+  },
+  {
+    "question": "Desert in Arizona",
+    "answer": "Sonoran Desert"
+  },
+  {
+    "question": "Grand Canyon carved by",
+    "answer": "Colorado River"
+  },
+  {
+    "question": "State with most population",
+    "answer": "California"
+  },
+  {
+    "question": "State with least population",
+    "answer": "Wyoming"
+  },
+  {
+    "question": "US shares longest border with",
+    "answer": "Canada"
+  },
+  {
+    "question": "State nickname ‘Sunshine State’",
+    "answer": "Florida"
+  },
+  {
+    "question": "State nickname ‘Lone Star State’",
+    "answer": "Texas"
+  },
+  {
+    "question": "State with Yellowstone",
+    "answer": "Wyoming"
+  },
+  {
+    "question": "State with Everglades",
+    "answer": "Florida"
+  },
+  {
+    "question": "US capital city",
+    "answer": "Washington, D.C."
+  },
+  {
+    "question": "US territory in Caribbean",
+    "answer": "Puerto Rico"
+  }
+]

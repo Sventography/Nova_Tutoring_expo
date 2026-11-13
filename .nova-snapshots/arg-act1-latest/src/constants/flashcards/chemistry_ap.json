@@ -1,0 +1,82 @@
+[
+  {
+    "question": "Le Châtelier’s principle",
+    "answer": "System shifts to counter imposed change"
+  },
+  {
+    "question": "Equilibrium constant K depends on",
+    "answer": "Temperature only"
+  },
+  {
+    "question": "Q vs K comparison predicts",
+    "answer": "Direction to reach equilibrium"
+  },
+  {
+    "question": "Arrhenius equation variables",
+    "answer": "k = A e^(−Ea/RT)"
+  },
+  {
+    "question": "Rate law determined by",
+    "answer": "Experiment, not stoichiometry (unless elementary)"
+  },
+  {
+    "question": "Half-life first-order formula",
+    "answer": "t1/2 = 0.693/k"
+  },
+  {
+    "question": "ΔG° and K relation",
+    "answer": "ΔG° = −RT ln K"
+  },
+  {
+    "question": "ΔG = 0 implies",
+    "answer": "System at equilibrium"
+  },
+  {
+    "question": "Buffers resist",
+    "answer": "pH change upon small acid/base addition"
+  },
+  {
+    "question": "Henderson–Hasselbalch",
+    "answer": "pH = pKa + log([A−]/[HA])"
+  },
+  {
+    "question": "Titration equivalence point",
+    "answer": "Moles acid = moles base"
+  },
+  {
+    "question": "Strong acid strong base titration curve",
+    "answer": "Equivalence pH ≈ 7"
+  },
+  {
+    "question": "Common-ion effect",
+    "answer": "Solubility or ionization suppressed by shared ion"
+  },
+  {
+    "question": "Solubility product Ksp",
+    "answer": "Equilibrium for dissolution of sparingly soluble salts"
+  },
+  {
+    "question": "Entropy generally increases with",
+    "answer": "Temperature, phase change to gas, more particles"
+  },
+  {
+    "question": "ΔH sign for exothermic",
+    "answer": "Negative"
+  },
+  {
+    "question": "Galvanic cell spontaneity",
+    "answer": "E°cell > 0, ΔG° < 0"
+  },
+  {
+    "question": "Nernst equation purpose",
+    "answer": "Cell potential under nonstandard conditions"
+  },
+  {
+    "question": "Colligative properties depend on",
+    "answer": "Number of particles, not identity"
+  },
+  {
+    "question": "Electrolytic cell feature",
+    "answer": "Nonspontaneous, requires external energy"
+  }
+]

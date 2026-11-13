@@ -1,0 +1,25 @@
+{
+  "topic": "French I (Beginner)",
+  "cards": [
+    { "q": "Bonjour / Au revoir", "a": "Hello / Goodbye" },
+    { "q": "S'il vous plaît / Merci / De rien", "a": "Please / Thank you / You're welcome" },
+    { "q": "Oui / Non", "a": "Yes / No" },
+    { "q": "Comment tu t'appelles ?", "a": "What is your name?" },
+    { "q": "Nombres 1–10", "a": "Un, deux, trois, quatre, cinq, six, sept, huit, neuf, dix" },
+    { "q": "Jours (Lun–Dim)", "a": "Lundi, mardi, mercredi, jeudi, vendredi, samedi, dimanche" },
+    { "q": "Être (je/tu/il)", "a": "Je suis, tu es, il est" },
+    { "q": "Avoir (je/tu/il)", "a": "J'ai, tu as, il a" },
+    { "q": "Questions", "a": "Qui, quoi, quand, où, pourquoi, comment" },
+    { "q": "Famille", "a": "Mère, père, frère, sœur, fils, fille" },
+    { "q": "Couleurs", "a": "Rouge, bleu, vert, jaune, noir" },
+    { "q": "Classe", "a": "Livre, crayon, cahier, sac" },
+    { "q": "Présent régulier -er", "a": "e, es, e, ons, ez, ent" },
+    { "q": "Articles & genre", "a": "Le/la/les; un/une/des" },
+    { "q": "Négation", "a": "ne ... pas" },
+    { "q": "Ordre de base", "a": "Sujet–verbe–objet" },
+    { "q": "Vous", "a": "Formel ou pluriel" },
+    { "q": "Comment ça va ?", "a": "How are you?" },
+    { "q": "D'où viens-tu ?", "a": "Where are you from?" },
+    { "q": "J'aime / Je n'aime pas", "a": "I like / I don't like" }
+  ]
+}

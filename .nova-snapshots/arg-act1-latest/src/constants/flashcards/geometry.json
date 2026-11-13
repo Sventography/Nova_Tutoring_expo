@@ -1,0 +1,82 @@
+[
+  {
+    "question": "Sum of interior angles of an n-gon",
+    "answer": "(n−2)·180°"
+  },
+  {
+    "question": "Pythagorean Theorem",
+    "answer": "a^2 + b^2 = c^2"
+  },
+  {
+    "question": "Area of a triangle with base b and height h",
+    "answer": "A = 1/2·b·h"
+  },
+  {
+    "question": "Area of a circle radius r",
+    "answer": "A = πr^2"
+  },
+  {
+    "question": "Circumference of a circle radius r",
+    "answer": "C = 2πr"
+  },
+  {
+    "question": "Angle sum of a triangle",
+    "answer": "180°"
+  },
+  {
+    "question": "Criteria for triangle congruence",
+    "answer": "SSS, SAS, ASA, AAS, HL"
+  },
+  {
+    "question": "Parallel lines cut by a transversal: corresponding angles",
+    "answer": "Congruent"
+  },
+  {
+    "question": "Similar triangles have",
+    "answer": "Equal angles, proportional sides"
+  },
+  {
+    "question": "Volume of a right circular cylinder r,h",
+    "answer": "V = πr^2h"
+  },
+  {
+    "question": "Volume of a rectangular prism l,w,h",
+    "answer": "V = lwh"
+  },
+  {
+    "question": "Area of a trapezoid bases b1,b2 height h",
+    "answer": "A = (b1+b2)/2 · h"
+  },
+  {
+    "question": "Properties of isosceles triangle",
+    "answer": "Two equal sides and base angles"
+  },
+  {
+    "question": "45-45-90 triangle leg = s, hypotenuse =",
+    "answer": "s√2"
+  },
+  {
+    "question": "30-60-90 triangle short leg = s, hyp =",
+    "answer": "2s"
+  },
+  {
+    "question": "Definition of a perpendicular bisector",
+    "answer": "Perpendicular and passes through midpoint"
+  },
+  {
+    "question": "Midsegment in a triangle length",
+    "answer": "Half the third side"
+  },
+  {
+    "question": "Slope of a line perpendicular to slope m",
+    "answer": "−1/m"
+  },
+  {
+    "question": "Distance formula between (x1,y1),(x2,y2)",
+    "answer": "√[(x2−x1)^2+(y2−y1)^2]"
+  },
+  {
+    "question": "Equation of a circle center (h,k) radius r",
+    "answer": "(x−h)^2+(y−k)^2=r^2"
+  }
+]

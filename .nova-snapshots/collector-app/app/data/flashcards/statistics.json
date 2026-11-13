@@ -1,0 +1,25 @@
+{
+  "topic": "Statistics",
+  "cards": [
+    { "q": "Population vs sample", "a": "All individuals vs subset used to infer" },
+    { "q": "Parameter vs statistic", "a": "Pop. measure vs sample measure" },
+    { "q": "Mean, median, mode", "a": "Average; middle; most frequent" },
+    { "q": "Range and IQR", "a": "Max−min; Q3−Q1" },
+    { "q": "Standard deviation (idea)", "a": "Average distance from mean" },
+    { "q": "Empirical rule (normal)", "a": "68%-95%-99.7%" },
+    { "q": "z-score", "a": "(x − μ)/σ" },
+    { "q": "Sampling bias", "a": "Non-representative method skews results" },
+    { "q": "Confounding variable", "a": "Influences both explanatory & response" },
+    { "q": "Correlation r range", "a": "−1 to 1" },
+    { "q": "Least squares regression goal", "a": "Minimize sum of squared residuals" },
+    { "q": "Law of Large Numbers", "a": "Sample mean → population mean as n↑" },
+    { "q": "Central Limit Theorem", "a": "Sample mean approx normal for large n" },
+    { "q": "Null vs alternative hypothesis", "a": "H0: no effect; Ha: effect" },
+    { "q": "Type I vs Type II error", "a": "I: reject true H0; II: fail to reject false H0" },
+    { "q": "p-value meaning", "a": "Prob of data (or more extreme) assuming H0" },
+    { "q": "Confidence interval form", "a": "estimate ± (critical)(SE)" },
+    { "q": "t-test usage", "a": "Unknown σ; small n; use t distribution" },
+    { "q": "Chi-square test usage", "a": "Categorical: GOF, homogeneity, independence" },
+    { "q": "ANOVA purpose", "a": "Compare >2 means" }
+  ]
+}

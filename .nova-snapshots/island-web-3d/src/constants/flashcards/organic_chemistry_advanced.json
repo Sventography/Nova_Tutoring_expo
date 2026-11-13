@@ -1,0 +1,82 @@
+[
+  {
+    "question": "Aldol reaction couples",
+    "answer": "Enolate with carbonyl to form β-hydroxy carbonyl"
+  },
+  {
+    "question": "Claisen condensation forms",
+    "answer": "β-keto esters from esters"
+  },
+  {
+    "question": "Michael addition adds",
+    "answer": "Nucleophile to α,β-unsaturated carbonyl"
+  },
+  {
+    "question": "Diels–Alder produces",
+    "answer": "Cyclohexene from diene + dienophile"
+  },
+  {
+    "question": "Wittig reaction outcome",
+    "answer": "Alkene from carbonyl and phosphonium ylide"
+  },
+  {
+    "question": "Sharpless epoxidation is",
+    "answer": "Enantioselective epoxidation of allylic alcohols"
+  },
+  {
+    "question": "Hydroboration–oxidation yields",
+    "answer": "Anti-Markovnikov alcohol"
+  },
+  {
+    "question": "Ozonolysis of alkenes gives",
+    "answer": "Carbonyl compounds"
+  },
+  {
+    "question": "Friedel–Crafts reactions",
+    "answer": "Alkylation/acylation of aromatics"
+  },
+  {
+    "question": "SN1 favored by",
+    "answer": "Tertiary carbons, polar protic solvents"
+  },
+  {
+    "question": "SN2 favored by",
+    "answer": "Primary carbons, strong nucleophiles"
+  },
+  {
+    "question": "E1 vs E2 key",
+    "answer": "E1 unimolecular via carbocation; E2 concerted"
+  },
+  {
+    "question": "Protecting groups used to",
+    "answer": "Mask reactive sites during synthesis"
+  },
+  {
+    "question": "Enantiomers vs diastereomers",
+    "answer": "Mirror images vs non-mirror stereoisomers"
+  },
+  {
+    "question": "Optical rotation measures",
+    "answer": "Chirality via plane-polarized light"
+  },
+  {
+    "question": "H-NMR downfield shift indicates",
+    "answer": "Deshielding (electronegative groups)"
+  },
+  {
+    "question": "IR ~1700 cm⁻¹ indicates",
+    "answer": "C=O stretch"
+  },
+  {
+    "question": "Mass spec M+ peak shows",
+    "answer": "Molecular ion (approx molar mass)"
+  },
+  {
+    "question": "Grignard adds to",
+    "answer": "Carbonyls to form alcohols"
+  },
+  {
+    "question": "Acid chloride reacts with amines to form",
+    "answer": "Amides"
+  }
+]

@@ -1,0 +1,223 @@
+// app/_lib/islandDecorationCatalog.ts
+
+export type IslandDecorationModel =
+  | "stone"
+  | "flower"
+  | "bush"
+  | "colored_bush"
+  | "mushroom"
+  | "bench"
+  | "lantern"
+  | "tree"
+  | "alien_tree"
+  | "cherry_tree"
+  | "rainbow"
+  | "crystal"
+  | "glow_plant"
+  | "ufo"
+  | "pine_tree"
+  | "palm_tree"
+  | "meteor"
+  | "moon_rock"
+  | "alien_mushroom"
+  | "grass_patch"
+  | "tiny_planet"
+  | "telescope"
+  | "cosmic_arch"
+  | "fence"
+  | "pond"
+  | "floating_rock"
+  | "flower_bed"
+  | "star_lantern"
+  | "portal"
+  | "fountain";
+
+export type IslandDecorationCategory =
+  | "path"
+  | "nature"
+  | "fantasy"
+  | "cosmic"
+  | "furniture"
+  | "water";
+
+export type IslandDecorationRarity =
+  | "common"
+  | "uncommon"
+  | "rare";
+
+export type IslandDecorationSourceType =
+  | "coin_shop"
+  | "event_free"
+  | "event_premium"
+  | "achievement"
+  | "special";
+
+export type IslandDecorationExclusivity =
+  | "standard"
+  | "limited"
+  | "one_time";
+
+export type IslandDecorationCatalogItem = {
+  id: string;
+  title: string;
+  shortTitle: string;
+  description: string;
+  price: number;
+  unlockLevel: number;
+  previewEmoji: string;
+  accent: string;
+  secondaryAccent?: string;
+  model: IslandDecorationModel;
+  category: IslandDecorationCategory;
+  rarity: IslandDecorationRarity;
+
+  /*
+   * Collectible provenance. Existing decorations default to the normal
+   * coin shop + Core Collection, so old catalog entries need no migration.
+   *
+   * Event rewards should set sourceType to event_free/event_premium,
+   * shopVisible to false, and provide eventId/eventName. That keeps them
+   * permanently identifiable without exposing them in the coin shop.
+   */
+  sourceType?: IslandDecorationSourceType;
+  sourceLabel?: string;
+  collectionLabel?: string;
+  eventId?: string;
+  eventName?: string;
+  exclusivity?: IslandDecorationExclusivity;
+  availableFrom?: string;
+  availableUntil?: string;
+  shopVisible?: boolean;
+
+  defaultScale: number;
+  minScale: number;
+  maxScale: number;
+};
+
+export const ISLAND_DECORATION_CATALOG: IslandDecorationCatalogItem[] = [
+  { id: "path_stone", unlockLevel: 1, title: "Path Stone", shortTitle: "Path Stone", description: "A tiny stepping stone for paths, courtyards, gardens, and trails.", price: 1, previewEmoji: "🪨", accent: "#cbd5e1", model: "stone", category: "path", rarity: "common", defaultScale: 1, minScale: 0.55, maxScale: 3.5 },
+  { id: "starflower", unlockLevel: 1, title: "Starflower", shortTitle: "Starflower", description: "A bright little flower for borders, gardens, and colorful filler.", price: 2, previewEmoji: "🌼", accent: "#fde68a", model: "flower", category: "nature", rarity: "common", defaultScale: 1, minScale: 0.55, maxScale: 3.5 },
+  { id: "glow_bush", unlockLevel: 1, title: "Glow Bush", shortTitle: "Glow Bush", description: "A lush rounded bush that makes empty areas feel alive.", price: 3, previewEmoji: "🌿", accent: "#86efac", model: "bush", category: "nature", rarity: "common", defaultScale: 1, minScale: 0.55, maxScale: 3.5 },
+  { id: "moon_mushroom", unlockLevel: 1, title: "Moon Mushroom", shortTitle: "Mushroom", description: "A whimsical moonlit mushroom for forest corners and magical gardens.", price: 4, previewEmoji: "🍄", accent: "#c4b5fd", model: "mushroom", category: "fantasy", rarity: "common", defaultScale: 1, minScale: 0.55, maxScale: 3.5 },
+  { id: "park_bench", unlockLevel: 2, title: "Starlight Bench", shortTitle: "Bench", description: "A cozy little bench for parks, paths, overlooks, and hangout spaces.", price: 8, previewEmoji: "🪑", accent: "#fdba74", model: "bench", category: "furniture", rarity: "common", defaultScale: 1, minScale: 0.65, maxScale: 3.5 },
+  { id: "garden_lantern", unlockLevel: 2, title: "Garden Lantern", shortTitle: "Lantern", description: "A warm standing lantern that helps paths and sitting areas feel finished.", price: 10, previewEmoji: "🏮", accent: "#fef08a", model: "lantern", category: "furniture", rarity: "common", defaultScale: 1, minScale: 0.65, maxScale: 3.5 },
+  { id: "young_tree", unlockLevel: 3, title: "Young Nova Tree", shortTitle: "Tree", description: "A medium tree for forests, parks, winding paths, and landscaped borders.", price: 12, previewEmoji: "🌳", accent: "#4ade80", model: "tree", category: "nature", rarity: "common", defaultScale: 1, minScale: 0.65, maxScale: 4.5 },
+  { id: "mini_fountain", unlockLevel: 3, title: "Moonwell Fountain", shortTitle: "Fountain", description: "A small decorative fountain for plazas, gardens, and centerpiece areas.", price: 25, previewEmoji: "⛲", accent: "#7dd3fc", model: "fountain", category: "water", rarity: "uncommon", defaultScale: 1, minScale: 0.7, maxScale: 3.5 },
+
+  { id: "azure_bush", unlockLevel: 2, title: "Azure Dream Bush", shortTitle: "Azure Bush", description: "A cool blue ornamental bush for colorful gardens and moonlit paths.", price: 4, previewEmoji: "🫐", accent: "#38bdf8", secondaryAccent: "#0ea5e9", model: "colored_bush", category: "nature", rarity: "common", defaultScale: 1, minScale: 0.55, maxScale: 3.5 },
+  { id: "violet_bush", unlockLevel: 2, title: "Violet Nova Bush", shortTitle: "Violet Bush", description: "A rich violet bush dotted with tiny glowing berries.", price: 4, previewEmoji: "🪻", accent: "#a78bfa", secondaryAccent: "#7c3aed", model: "colored_bush", category: "nature", rarity: "common", defaultScale: 1, minScale: 0.55, maxScale: 3.5 },
+  { id: "rose_bush", unlockLevel: 2, title: "Roseflare Bush", shortTitle: "Rose Bush", description: "A warm rose-colored bush that brings bright contrast to green spaces.", price: 4, previewEmoji: "🌺", accent: "#fb7185", secondaryAccent: "#e11d48", model: "colored_bush", category: "nature", rarity: "common", defaultScale: 1, minScale: 0.55, maxScale: 3.5 },
+  { id: "golden_bush", unlockLevel: 4, title: "Golden Sun Bush", shortTitle: "Gold Bush", description: "A luminous golden shrub made for special gardens and glowing borders.", price: 6, previewEmoji: "✨", accent: "#facc15", secondaryAccent: "#f59e0b", model: "colored_bush", category: "fantasy", rarity: "uncommon", defaultScale: 1, minScale: 0.55, maxScale: 3.5 },
+
+  { id: "cherry_blossom", unlockLevel: 4, title: "Nova Cherry Blossom", shortTitle: "Cherry Tree", description: "A soft pink blossom tree for peaceful gardens, paths, and study retreats.", price: 16, previewEmoji: "🌸", accent: "#f9a8d4", secondaryAccent: "#f472b6", model: "cherry_tree", category: "nature", rarity: "uncommon", defaultScale: 1, minScale: 0.7, maxScale: 4.5 },
+  { id: "lunar_cherry", unlockLevel: 5, title: "Lunar Blossom Tree", shortTitle: "Lunar Blossom", description: "A moonlit lavender blossom tree with an otherworldly glow.", price: 24, previewEmoji: "🌸", accent: "#c4b5fd", secondaryAccent: "#8b5cf6", model: "cherry_tree", category: "fantasy", rarity: "rare", defaultScale: 1, minScale: 0.7, maxScale: 4.5 },
+
+  { id: "nebula_tree", unlockLevel: 7, title: "Nebula Willow", shortTitle: "Nebula Tree", description: "An alien tree with dark twisting limbs and a glowing violet canopy.", price: 30, previewEmoji: "🌌", accent: "#a855f7", secondaryAccent: "#22d3ee", model: "alien_tree", category: "cosmic", rarity: "rare", defaultScale: 1, minScale: 0.72, maxScale: 4.5 },
+  { id: "xenoflare_tree", unlockLevel: 8, title: "Xenoflare Halo Tree", shortTitle: "Xenoflare Tree", description: "A cyan-and-rose alien halo tree with a glowing ring suspended around its crown.", price: 36, previewEmoji: "🌳", accent: "#22d3ee", secondaryAccent: "#f472b6", model: "alien_tree", category: "cosmic", rarity: "rare", defaultScale: 1, minScale: 0.72, maxScale: 4.5 },
+  { id: "nova_scout_ufo", unlockLevel: 9, title: "Nova Scout UFO", shortTitle: "Scout UFO", description: "A hovering cosmic scout craft with a luminous dome, glowing engine ring, and soft landing lights.", price: 42, previewEmoji: "🛸", accent: "#67e8f9", secondaryAccent: "#a78bfa", model: "ufo", category: "cosmic", rarity: "rare", defaultScale: 1, minScale: 0.6, maxScale: 4 },
+
+  { id: "prism_rainbow", unlockLevel: 5, title: "Prism Rainbow", shortTitle: "Rainbow", description: "A cheerful rainbow arch for fantasy gardens and colorful island overlooks.", price: 20, previewEmoji: "🌈", accent: "#f472b6", secondaryAccent: "#38bdf8", model: "rainbow", category: "fantasy", rarity: "uncommon", defaultScale: 1, minScale: 0.7, maxScale: 4 },
+  { id: "moonbow", unlockLevel: 6, title: "Celestial Moonbow", shortTitle: "Moonbow", description: "A rare cool-toned rainbow glowing with lunar blues, violets, and starlight.", price: 28, previewEmoji: "🌈", accent: "#818cf8", secondaryAccent: "#67e8f9", model: "rainbow", category: "cosmic", rarity: "rare", defaultScale: 1, minScale: 0.7, maxScale: 4 },
+
+  { id: "crystal_cluster", unlockLevel: 4, title: "Dream Crystal Cluster", shortTitle: "Crystals", description: "A cluster of luminous crystals for magical gardens and hidden corners.", price: 10, previewEmoji: "💎", accent: "#c084fc", secondaryAccent: "#f0abfc", model: "crystal", category: "fantasy", rarity: "uncommon", defaultScale: 1, minScale: 0.55, maxScale: 3.5 },
+  { id: "nova_crystal", unlockLevel: 6, title: "Nova Core Crystal", shortTitle: "Nova Crystal", description: "A bright cosmic crystal formation pulsing with cyan-blue light.", price: 18, previewEmoji: "💠", accent: "#22d3ee", secondaryAccent: "#3b82f6", model: "crystal", category: "cosmic", rarity: "rare", defaultScale: 1, minScale: 0.55, maxScale: 3.5 },
+
+  { id: "glow_reeds", unlockLevel: 3, title: "Aurora Glow Reeds", shortTitle: "Glow Reeds", description: "Slender bioluminescent reeds that make paths and ponds feel enchanted.", price: 6, previewEmoji: "🌾", accent: "#5eead4", secondaryAccent: "#22d3ee", model: "glow_plant", category: "fantasy", rarity: "uncommon", defaultScale: 1, minScale: 0.55, maxScale: 3.5 },
+  { id: "starfern", unlockLevel: 4, title: "Starfern", shortTitle: "Starfern", description: "A tiny alien fern with luminous tips, perfect for filling cosmic gardens.", price: 7, previewEmoji: "🌿", accent: "#86efac", secondaryAccent: "#a78bfa", model: "glow_plant", category: "cosmic", rarity: "uncommon", defaultScale: 0.9, minScale: 0.5, maxScale: 3.5 },
+  { id: "crystal_pine", unlockLevel: 6, title: "Crystal Pine", shortTitle: "Crystal Pine", description: "A tall evergreen dusted with luminous crystal needles.", price: 18, previewEmoji: "🌲", accent: "#67e8f9", secondaryAccent: "#c4b5fd", model: "pine_tree", category: "fantasy", rarity: "uncommon", defaultScale: 1, minScale: 0.65, maxScale: 4.5 },
+  { id: "frost_pine", unlockLevel: 3, title: "Frost Pine", shortTitle: "Frost Pine", description: "A cool blue-green pine for alpine corners and quiet study groves.", price: 12, previewEmoji: "🌲", accent: "#93c5fd", secondaryAccent: "#dbeafe", model: "pine_tree", category: "nature", rarity: "uncommon", defaultScale: 1, minScale: 0.65, maxScale: 4.5 },
+  { id: "saturn_palm", unlockLevel: 8, title: "Saturn Palm", shortTitle: "Saturn Palm", description: "A strange cosmic palm with violet fronds and a starlit crown.", price: 24, previewEmoji: "🌴", accent: "#a78bfa", secondaryAccent: "#67e8f9", model: "palm_tree", category: "cosmic", rarity: "rare", defaultScale: 1, minScale: 0.65, maxScale: 4.5 },
+  { id: "solar_palm", unlockLevel: 4, title: "Solar Palm", shortTitle: "Solar Palm", description: "A warm golden palm that makes bright island retreats feel tropical.", price: 14, previewEmoji: "🌴", accent: "#facc15", secondaryAccent: "#4ade80", model: "palm_tree", category: "nature", rarity: "uncommon", defaultScale: 1, minScale: 0.65, maxScale: 4.5 },
+
+  { id: "meteor_fragment", unlockLevel: 3, title: "Meteor Fragment", shortTitle: "Meteor", description: "A scorched meteor fragment with a faint molten glow in its cracks.", price: 8, previewEmoji: "☄️", accent: "#fb923c", secondaryAccent: "#facc15", model: "meteor", category: "cosmic", rarity: "uncommon", defaultScale: 1, minScale: 0.5, maxScale: 3.5 },
+  { id: "moon_rock_cluster", unlockLevel: 1, title: "Moon Rock Cluster", shortTitle: "Moon Rocks", description: "A small pile of pale cratered stones from somewhere far beyond Nova.", price: 5, previewEmoji: "🌑", accent: "#cbd5e1", secondaryAccent: "#94a3b8", model: "moon_rock", category: "cosmic", rarity: "common", defaultScale: 1, minScale: 0.5, maxScale: 3.5 },
+
+  { id: "lunar_mushroom_grove", unlockLevel: 3, title: "Lunar Mushroom Grove", shortTitle: "Lunar Grove", description: "A cluster of glowing lavender mushrooms for magical forest pockets.", price: 9, previewEmoji: "🍄", accent: "#c4b5fd", secondaryAccent: "#f0abfc", model: "alien_mushroom", category: "fantasy", rarity: "uncommon", defaultScale: 1, minScale: 0.5, maxScale: 3.5 },
+  { id: "nebula_mushroom_grove", unlockLevel: 7, title: "Nebula Mushroom Grove", shortTitle: "Nebula Grove", description: "Cyan-and-violet alien mushrooms pulsing softly beneath their caps.", price: 14, previewEmoji: "🍄", accent: "#22d3ee", secondaryAccent: "#8b5cf6", model: "alien_mushroom", category: "cosmic", rarity: "rare", defaultScale: 1, minScale: 0.5, maxScale: 3.5 },
+
+  { id: "aurora_grass", unlockLevel: 1, title: "Aurora Grass Patch", shortTitle: "Aurora Grass", description: "A cheap patch of glowing grass for filling larger landscapes.", price: 3, previewEmoji: "🌱", accent: "#5eead4", secondaryAccent: "#86efac", model: "grass_patch", category: "fantasy", rarity: "common", defaultScale: 1, minScale: 0.45, maxScale: 3.5 },
+  { id: "stardust_grass", unlockLevel: 3, title: "Stardust Grass Patch", shortTitle: "Stardust Grass", description: "Dark cosmic grass tipped with tiny violet points of light.", price: 4, previewEmoji: "🌱", accent: "#a78bfa", secondaryAccent: "#67e8f9", model: "grass_patch", category: "cosmic", rarity: "common", defaultScale: 1, minScale: 0.45, maxScale: 3.5 },
+
+  { id: "tiny_saturn", unlockLevel: 6, title: "Tiny Saturn", shortTitle: "Tiny Saturn", description: "A miniature ringed planet hovering just above the island.", price: 22, previewEmoji: "🪐", accent: "#fde68a", secondaryAccent: "#c4b5fd", model: "tiny_planet", category: "cosmic", rarity: "rare", defaultScale: 1, minScale: 0.55, maxScale: 4 },
+  { id: "tiny_neptune", unlockLevel: 6, title: "Tiny Neptune", shortTitle: "Tiny Neptune", description: "A tiny deep-blue planet with a glowing cyan orbital ring.", price: 22, previewEmoji: "🔵", accent: "#3b82f6", secondaryAccent: "#67e8f9", model: "tiny_planet", category: "cosmic", rarity: "rare", defaultScale: 1, minScale: 0.55, maxScale: 4 },
+
+  { id: "star_telescope", unlockLevel: 4, title: "Starlight Telescope", shortTitle: "Telescope", description: "A compact observatory telescope aimed toward Nova's night sky.", price: 18, previewEmoji: "🔭", accent: "#67e8f9", secondaryAccent: "#c4b5fd", model: "telescope", category: "furniture", rarity: "uncommon", defaultScale: 1, minScale: 0.6, maxScale: 4 },
+  { id: "crystal_arch", unlockLevel: 9, title: "Prism Crystal Arch", shortTitle: "Crystal Arch", description: "A glowing ceremonial arch built from violet crystal and cyan light.", price: 32, previewEmoji: "✨", accent: "#c084fc", secondaryAccent: "#22d3ee", model: "cosmic_arch", category: "fantasy", rarity: "rare", defaultScale: 1, minScale: 0.6, maxScale: 4 },
+  { id: "crystal_fence", unlockLevel: 2, title: "Crystal Fence Section", shortTitle: "Crystal Fence", description: "A luminous fence section for building borders, gardens, and paths.", price: 5, previewEmoji: "💎", accent: "#a78bfa", secondaryAccent: "#67e8f9", model: "fence", category: "fantasy", rarity: "uncommon", defaultScale: 1, minScale: 0.5, maxScale: 3.5 },
+
+  { id: "moon_pond", unlockLevel: 6, title: "Moonlight Pond", shortTitle: "Moon Pond", description: "A calm luminous pond edged with stone and moon-blue water.", price: 24, previewEmoji: "💧", accent: "#38bdf8", secondaryAccent: "#c4b5fd", model: "pond", category: "water", rarity: "rare", defaultScale: 1, minScale: 0.6, maxScale: 4 },
+  { id: "floating_asteroid", unlockLevel: 5, title: "Floating Asteroid", shortTitle: "Asteroid", description: "A small asteroid hovering over a soft violet anti-gravity glow.", price: 12, previewEmoji: "🪨", accent: "#a78bfa", secondaryAccent: "#64748b", model: "floating_rock", category: "cosmic", rarity: "uncommon", defaultScale: 1, minScale: 0.5, maxScale: 4 },
+
+  { id: "wildflower_bed", unlockLevel: 1, title: "Nova Wildflower Bed", shortTitle: "Flower Bed", description: "A colorful low flower bed made for paths, gardens, and cottage corners.", price: 4, previewEmoji: "🌷", accent: "#fb7185", secondaryAccent: "#fde68a", model: "flower_bed", category: "nature", rarity: "common", defaultScale: 1, minScale: 0.5, maxScale: 3.5 },
+  { id: "nova_star_lantern", unlockLevel: 5, title: "Nova Star Lantern", shortTitle: "Star Lantern", description: "A tall lantern crowned with a brilliant floating star.", price: 12, previewEmoji: "⭐", accent: "#fde047", secondaryAccent: "#67e8f9", model: "star_lantern", category: "furniture", rarity: "uncommon", defaultScale: 1, minScale: 0.6, maxScale: 4 },
+  { id: "nova_portal", unlockLevel: 10, title: "Nova Portal", shortTitle: "Nova Portal", description: "A rare standing portal ring shimmering with cyan and violet energy.", price: 48, previewEmoji: "🌀", accent: "#22d3ee", secondaryAccent: "#a78bfa", model: "portal", category: "cosmic", rarity: "rare", defaultScale: 1, minScale: 0.6, maxScale: 4 },
+
+  // Nova Halloween 2026 — event-only collectibles. Never sold in the coin shop.
+  { id: "halloween_ghostlight_lantern", unlockLevel: 1, title: "Ghostlight Lantern", shortTitle: "Ghostlight", description: "A spectral star lantern glowing with eerie violet and pumpkin-orange light.", price: 0, previewEmoji: "👻", accent: "#c084fc", secondaryAccent: "#fb923c", model: "star_lantern", category: "fantasy", rarity: "rare", sourceType: "event_free", sourceLabel: "Free Event Track", collectionLabel: "Haunted Learning Collection", eventId: "nova-halloween-2026", eventName: "Nova Halloween 2026", exclusivity: "one_time", availableFrom: "2026-09-30", availableUntil: "2026-11-02", shopVisible: false, defaultScale: 1, minScale: 0.6, maxScale: 4 },
+  { id: "halloween_midnight_crystal", unlockLevel: 1, title: "Midnight Study Crystal", shortTitle: "Midnight Crystal", description: "A dark violet crystal formed from concentrated Halloween learning energy.", price: 0, previewEmoji: "🔮", accent: "#8b5cf6", secondaryAccent: "#f97316", model: "crystal", category: "fantasy", rarity: "rare", sourceType: "event_free", sourceLabel: "Free Event Track", collectionLabel: "Haunted Learning Collection", eventId: "nova-halloween-2026", eventName: "Nova Halloween 2026", exclusivity: "one_time", availableFrom: "2026-09-30", availableUntil: "2026-11-02", shopVisible: false, defaultScale: 1, minScale: 0.55, maxScale: 3.5 },
+  { id: "halloween_harvest_portal", unlockLevel: 1, title: "Harvest Moon Portal", shortTitle: "Harvest Portal", description: "A one-time Halloween portal burning with moonlit violet and harvest-orange energy.", price: 0, previewEmoji: "🎃", accent: "#f97316", secondaryAccent: "#a855f7", model: "portal", category: "fantasy", rarity: "rare", sourceType: "event_free", sourceLabel: "Free Event Finale", collectionLabel: "Haunted Learning Collection", eventId: "nova-halloween-2026", eventName: "Nova Halloween 2026", exclusivity: "one_time", availableFrom: "2026-09-30", availableUntil: "2026-11-02", shopVisible: false, defaultScale: 1, minScale: 0.6, maxScale: 4 },
+  { id: "halloween_witchlight_arch", unlockLevel: 1, title: "Witchlight Arch", shortTitle: "Witchlight Arch", description: "A premium ceremonial arch lit by strange green, violet, and moon-blue magic.", price: 0, previewEmoji: "🧙", accent: "#a3e635", secondaryAccent: "#a855f7", model: "cosmic_arch", category: "fantasy", rarity: "rare", sourceType: "event_premium", sourceLabel: "Premium Event Track", collectionLabel: "Haunted Learning Collection", eventId: "nova-halloween-2026", eventName: "Nova Halloween 2026", exclusivity: "one_time", availableFrom: "2026-09-30", availableUntil: "2026-11-02", shopVisible: false, defaultScale: 1, minScale: 0.6, maxScale: 4 },
+  { id: "halloween_phantom_fountain", unlockLevel: 1, title: "Phantom Fountain", shortTitle: "Phantom Fountain", description: "A premium Halloween fountain filled with luminous ghost-blue water.", price: 0, previewEmoji: "💀", accent: "#67e8f9", secondaryAccent: "#c084fc", model: "fountain", category: "water", rarity: "rare", sourceType: "event_premium", sourceLabel: "Premium Event Track", collectionLabel: "Haunted Learning Collection", eventId: "nova-halloween-2026", eventName: "Nova Halloween 2026", exclusivity: "one_time", availableFrom: "2026-09-30", availableUntil: "2026-11-02", shopVisible: false, defaultScale: 1, minScale: 0.7, maxScale: 3.5 },
+
+];
+
+export const ISLAND_DECORATION_CATALOG_BY_ID =
+  Object.fromEntries(
+    ISLAND_DECORATION_CATALOG.map((item) => [item.id, item])
+  ) as Record<string, IslandDecorationCatalogItem>;
+
+export function isIslandDecorationCoinShopItem(
+  item: IslandDecorationCatalogItem
+): boolean {
+  return (
+    item.shopVisible !== false &&
+    (item.sourceType ?? "coin_shop") === "coin_shop"
+  );
+}
+
+export function getIslandDecorationSourceLabel(
+  item: IslandDecorationCatalogItem
+): string {
+  const explicit = item.sourceLabel?.trim();
+  if (explicit) return explicit;
+
+  switch (item.sourceType ?? "coin_shop") {
+    case "event_free":
+      return "Free Event Track";
+    case "event_premium":
+      return "Premium Event Track";
+    case "achievement":
+      return "Achievement Reward";
+    case "special":
+      return "Special Reward";
+    case "coin_shop":
+    default:
+      return "Decoration Shop";
+  }
+}
+
+export function getIslandDecorationCollectionLabel(
+  item: IslandDecorationCatalogItem
+): string {
+  const explicit = item.collectionLabel?.trim();
+  if (explicit) return explicit;
+
+  const eventName = item.eventName?.trim();
+  if (eventName) return eventName;
+
+  return "Core Collection";
+}
+
+export function getIslandDecorationExclusivityLabel(
+  item: IslandDecorationCatalogItem
+): string | null {
+  switch (item.exclusivity ?? "standard") {
+    case "one_time":
+      return "ONE-TIME ONLY";
+    case "limited":
+      return "LIMITED";
+    case "standard":
+    default:
+      return null;
+  }
+}

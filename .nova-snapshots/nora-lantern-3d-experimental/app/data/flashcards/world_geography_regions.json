@@ -1,0 +1,25 @@
+{
+  "topic": "World Geography: Regions",
+  "cards": [
+    { "q": "Middle East languages", "a": "Arabic, Persian, Turkish, Hebrew, Kurdish" },
+    { "q": "South Asia main religions", "a": "Hinduism, Islam, Sikhism, Buddhism" },
+    { "q": "East Asia dominant language families", "a": "Sino-Tibetan, Japonic, Koreanic" },
+    { "q": "Africa largest country by area", "a": "Algeria" },
+    { "q": "Africa most populous country", "a": "Nigeria" },
+    { "q": "Europe political union name", "a": "European Union" },
+    { "q": "Scandinavia countries (3)", "a": "Norway, Sweden, Denmark" },
+    { "q": "Latin America primary languages", "a": "Spanish, Portuguese" },
+    { "q": "Caribbean colonial languages mix", "a": "English, French, Spanish, Dutch" },
+    { "q": "Southeast Asia major economies", "a": "Indonesia, Thailand, Vietnam, Philippines, Malaysia" },
+    { "q": "Central Asia geography trait", "a": "Landlocked, steppe climate" },
+    { "q": "Russia spans which continents", "a": "Europe and Asia" },
+    { "q": "Australia region also called", "a": "Oceania" },
+    { "q": "Arctic indigenous groups example", "a": "Inuit, Sami, Chukchi" },
+    { "q": "Amazon basin biome", "a": "Tropical rainforest" },
+    { "q": "Sahara desert spans how many countries", "a": "About 10" },
+    { "q": "Mediterranean climate trait", "a": "Hot dry summers, mild wet winters" },
+    { "q": "Sub-Saharan Africa health issue", "a": "High HIV/AIDS prevalence" },
+    { "q": "Eastern Europe Cold War term", "a": "Behind the Iron Curtain" },
+    { "q": "South Pacific island challenge", "a": "Rising sea levels (climate change)" }
+  ]
+}

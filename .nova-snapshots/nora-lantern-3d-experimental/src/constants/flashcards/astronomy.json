@@ -1,0 +1,82 @@
+[
+  {
+    "question": "Kepler’s first law",
+    "answer": "Planets orbit in ellipses with Sun at a focus"
+  },
+  {
+    "question": "Kepler’s second law",
+    "answer": "Equal areas in equal times"
+  },
+  {
+    "question": "Kepler’s third law (simplified)",
+    "answer": "P^2 ∝ a^3"
+  },
+  {
+    "question": "H–R diagram axes",
+    "answer": "Luminosity vs temperature"
+  },
+  {
+    "question": "Hottest spectral type in OBAFGKM",
+    "answer": "O"
+  },
+  {
+    "question": "Evidence for expanding universe",
+    "answer": "Cosmological redshift"
+  },
+  {
+    "question": "Definition of a light-year",
+    "answer": "Distance light travels in one year"
+  },
+  {
+    "question": "Parallax measures",
+    "answer": "Stellar distance"
+  },
+  {
+    "question": "Main-sequence energy source",
+    "answer": "Hydrogen fusion in the core"
+  },
+  {
+    "question": "Cosmic microwave background indicates",
+    "answer": "Hot Big Bang"
+  },
+  {
+    "question": "Boundary of no return around a black hole",
+    "answer": "Event horizon"
+  },
+  {
+    "question": "Transit method detects",
+    "answer": "Exoplanets via dips in starlight"
+  },
+  {
+    "question": "Cause of seasons on Earth",
+    "answer": "Axial tilt"
+  },
+  {
+    "question": "Time for lunar phases cycle",
+    "answer": "About 29.5 days"
+  },
+  {
+    "question": "Escape velocity depends on",
+    "answer": "Mass and radius of the body"
+  },
+  {
+    "question": "Roche limit describes",
+    "answer": "Distance where tidal forces disrupt bodies"
+  },
+  {
+    "question": "Tidal locking means",
+    "answer": "Rotational period equals orbital period"
+  },
+  {
+    "question": "Dark matter evidence in galaxies",
+    "answer": "Flat rotation curves"
+  },
+  {
+    "question": "Asteroid vs comet",
+    "answer": "Rocky/metallic vs icy with coma/tail"
+  },
+  {
+    "question": "Solar day vs sidereal day",
+    "answer": "Solar ~24h, sidereal ~23h56m"
+  }
+]

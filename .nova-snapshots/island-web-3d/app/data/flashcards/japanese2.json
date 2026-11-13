@@ -1,0 +1,25 @@
+{
+  "topic": "Japanese II",
+  "cards": [
+    { "q": "Past tense of -ru verbs (dictionary -> past)", "a": "Drop -ru, add -ta (taberu -> tabeta)" },
+    { "q": "Past tense of -u verbs ending in -ku", "a": "-ita (kiku -> kiita)" },
+    { "q": "Past tense of -u verbs ending in -gu", "a": "-ida (oyogu -> oyoida)" },
+    { "q": "Past tense of -u verbs ending in -mu, -bu, -nu", "a": "-nda (yomu -> yonda)" },
+    { "q": "Te-form purpose", "a": "Connect actions, make requests, progressive form" },
+    { "q": "Te-form of -ru verbs", "a": "-te (taberu -> tabete)" },
+    { "q": "Te-form of -u verbs ending in -u, -tsu, -ru", "a": "-tte (au -> atte)" },
+    { "q": "Te-form of -u verbs ending in -mu, -bu, -nu", "a": "-nde (yomu -> yonde)" },
+    { "q": "Te-form of -u verbs ending in -ku", "a": "-ite (kaku -> kaite)" },
+    { "q": "Te-form of -u verbs ending in -gu", "a": "-ide (oyogu -> oyoide)" },
+    { "q": "Te-form of -u verbs ending in -su", "a": "-shite (hanasu -> hanashite)" },
+    { "q": "Adjectives: -i to adverb", "a": "Replace -i with -ku (hayai -> hayaku)" },
+    { "q": "Adjectives: -na to adverb-like", "a": "Add -ni (kirei -> kirei ni)" },
+    { "q": "Saying because: kara", "a": "Clause + kara (because)" },
+    { "q": "Giving/receiving verbs", "a": "ageru (give), kureru (give to me), morau (receive)" },
+    { "q": "Comparatives with yori", "a": "A wa B yori adj desu (A is more adj than B)" },
+    { "q": "Superlative pattern", "a": "A wa ichiban adj desu (A is the most adj)" },
+    { "q": "Potential form (can do)", "a": "Taberu -> taberareru; kaku -> kakeru" },
+    { "q": "Volitional form (let's...)", "a": "Taberu -> tabeyou; iku -> ikou" },
+    { "q": "Plan to do: tsumori", "a": "V dictionary + tsumori desu (intend to do)" }
+  ]
+}

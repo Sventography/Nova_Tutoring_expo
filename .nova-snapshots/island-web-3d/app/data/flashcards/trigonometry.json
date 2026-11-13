@@ -1,0 +1,25 @@
+{
+  "topic": "Trigonometry",
+  "cards": [
+    { "q": "sin 0°", "a": "0" },
+    { "q": "cos 0°", "a": "1" },
+    { "q": "tan 45°", "a": "1" },
+    { "q": "sin 90°", "a": "1" },
+    { "q": "cos 90°", "a": "0" },
+    { "q": "Pythagorean identity", "a": "sin^2θ + cos^2θ = 1" },
+    { "q": "tan identity", "a": "tanθ = sinθ / cosθ" },
+    { "q": "sin double angle", "a": "sin2θ = 2 sinθ cosθ" },
+    { "q": "cos double angle", "a": "cos2θ = cos^2θ - sin^2θ = 2cos^2θ - 1" },
+    { "q": "Half-angle sin^2", "a": "sin^2θ = (1 - cos2θ)/2" },
+    { "q": "Half-angle cos^2", "a": "cos^2θ = (1 + cos2θ)/2" },
+    { "q": "Law of sines", "a": "a/sinA = b/sinB = c/sinC" },
+    { "q": "Law of cosines", "a": "c^2 = a^2 + b^2 - 2ab cosC" },
+    { "q": "Unit circle radius", "a": "1" },
+    { "q": "Radians in 180°", "a": "π radians" },
+    { "q": "Quadrant I signs", "a": "sin, cos, tan all positive" },
+    { "q": "Quadrant II signs", "a": "sin positive; cos, tan negative" },
+    { "q": "Quadrant III signs", "a": "tan positive; sin, cos negative" },
+    { "q": "Quadrant IV signs", "a": "cos positive; sin, tan negative" },
+    { "q": "Angle sum sin", "a": "sin(A+B) = sinA cosB + cosA sinB" }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "topic": "AP Biology",
+  "cards": [
+    { "q": "Cell theory core ideas", "a": "All organisms are cells; cells arise from cells; cells are life units" },
+    { "q": "Prokaryote vs eukaryote", "a": "Prokaryote no nucleus or membrane organelles; eukaryote has both" },
+    { "q": "Mitochondria function", "a": "ATP production via cellular respiration" },
+    { "q": "Chloroplast function", "a": "Photosynthesis; light to chemical energy" },
+    { "q": "Endosymbiosis evidence", "a": "Double membranes, own DNA, 70S ribosomes, binary fission" },
+    { "q": "Diffusion vs osmosis", "a": "Diffusion solutes; osmosis water across membrane" },
+    { "q": "Enzyme effect on reactions", "a": "Lower activation energy; increase rate; not consumed" },
+    { "q": "Glycolysis location/output", "a": "Cytosol; 2 ATP net, 2 NADH, pyruvate" },
+    { "q": "Krebs cycle location", "a": "Mitochondrial matrix" },
+    { "q": "ETC final electron acceptor", "a": "Oxygen -> water" },
+    { "q": "Light reactions vs Calvin cycle", "a": "Light: ATP/NADPH; Calvin: fixes CO2 to sugar" },
+    { "q": "DNA replication is", "a": "Semiconservative using DNA polymerase" },
+    { "q": "Central dogma", "a": "DNA -> RNA -> Protein" },
+    { "q": "Transcription product", "a": "mRNA from DNA template" },
+    { "q": "Translation site", "a": "Ribosome using mRNA and tRNA" },
+    { "q": "Mendel laws", "a": "Segregation; independent assortment" },
+    { "q": "Natural selection needs", "a": "Variation, heritability, differential fitness" },
+    { "q": "Speciation type", "a": "Allopatric or sympatric" },
+    { "q": "Ecological levels", "a": "Organism, population, community, ecosystem, biosphere" },
+    { "q": "Population growth logistic", "a": "S-shaped toward carrying capacity K" }
+  ]
+}

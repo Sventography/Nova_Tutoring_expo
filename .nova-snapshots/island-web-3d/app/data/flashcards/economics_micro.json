@@ -1,0 +1,25 @@
+{
+  "topic": "Economics (Micro)",
+  "cards": [
+    { "q": "Law of demand", "a": "Price up -> quantity demanded down, ceteris paribus" },
+    { "q": "Law of supply", "a": "Price up -> quantity supplied up, ceteris paribus" },
+    { "q": "Elastic demand means", "a": "Quantity demanded responds strongly to price; |Ed| > 1" },
+    { "q": "Cross-price elasticity sign for substitutes", "a": "Positive" },
+    { "q": "Consumer surplus definition", "a": "Willingness to pay minus price paid" },
+    { "q": "Producer surplus definition", "a": "Price received minus minimum acceptable cost" },
+    { "q": "Price ceiling effect (binding)", "a": "Creates shortage" },
+    { "q": "Price floor effect (binding)", "a": "Creates surplus" },
+    { "q": "Tax incidence depends on", "a": "Relative elasticities of supply and demand" },
+    { "q": "Marginal cost (MC) is", "a": "Change in total cost from producing one more unit" },
+    { "q": "Diminishing marginal returns", "a": "Adding variable input to fixed inputs eventually lowers marginal product" },
+    { "q": "Perfect competition features", "a": "Many firms, identical products, price takers, free entry/exit" },
+    { "q": "Monopoly characteristic", "a": "Single seller with market power" },
+    { "q": "Monopolistic competition feature", "a": "Many firms with differentiated products" },
+    { "q": "Oligopoly model example", "a": "Cournot or Bertrand competition among few firms" },
+    { "q": "Externality definition", "a": "Third-party cost/benefit not in market price" },
+    { "q": "Pigouvian tax purpose", "a": "Correct negative externality by aligning private and social costs" },
+    { "q": "Public goods properties", "a": "Nonrival and nonexcludable" },
+    { "q": "Game theory Nash equilibrium", "a": "No player benefits from changing strategy unilaterally" },
+    { "q": "Deadweight loss from tax means", "a": "Lost total surplus due to reduced trades" }
+  ]
+}

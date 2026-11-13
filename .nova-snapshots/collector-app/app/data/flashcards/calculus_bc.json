@@ -1,0 +1,25 @@
+{
+  "topic": "AP Calculus BC",
+  "cards": [
+    { "q": "Taylor series for e^x", "a": "sum x^n/n!" },
+    { "q": "Maclaurin series for sinx", "a": "x - x^3/3! + x^5/5! ..." },
+    { "q": "Maclaurin series for cosx", "a": "1 - x^2/2! + x^4/4! ..." },
+    { "q": "Convergence test: ratio test", "a": "lim |a_(n+1)/a_n|<1 converges" },
+    { "q": "Convergence test: root test", "a": "lim sqrt(n)(|a_n|)<1 converges" },
+    { "q": "Alternating series test conditions", "a": "Terms decrease, limit 0" },
+    { "q": "Parametric arc length formula", "a": "∫ sqrt((dx/dt)^2+(dy/dt)^2) dt" },
+    { "q": "Polar area formula", "a": "(1/2)∫ r^2 dθ" },
+    { "q": "Logistic growth DE", "a": "dP/dt=kP(1-P/K)" },
+    { "q": "Integration by parts formula", "a": "∫u dv=uv-∫v du" },
+    { "q": "Partial fractions use", "a": "Decompose rational functions for integration" },
+    { "q": "Arc length Cartesian", "a": "∫ sqrt(1+(dy/dx)^2) dx" },
+    { "q": "Euler's method purpose", "a": "Approximate DE solutions" },
+    { "q": "Taylor remainder term", "a": "Error bound using next derivative term" },
+    { "q": "Series interval of convergence", "a": "Check endpoints separately" },
+    { "q": "Improper integral converges if", "a": "Area finite as limit taken" },
+    { "q": "Convergence of p-series", "a": "sum 1/n^p converges if p>1" },
+    { "q": "Radius of convergence definition", "a": "Distance series converges around center" },
+    { "q": "Lagrange error bound", "a": "R_n = f^(n+1)(z)(x-c)^(n+1)/(n+1)!" },
+    { "q": "Vector calculus dot product identity", "a": "u dot v=|u||v|cosθ" }
+  ]
+}

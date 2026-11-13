@@ -1,0 +1,25 @@
+{
+  "topic": "Physics II (Electricity & Magnetism)",
+  "cards": [
+    { "q": "Coulomb's law", "a": "F=k q1 q2 / r^2" },
+    { "q": "Electric field formula", "a": "E=F/q" },
+    { "q": "Field of point charge", "a": "E=k q/r^2" },
+    { "q": "Potential energy of charges", "a": "U=k q1 q2 / r" },
+    { "q": "Potential difference definition", "a": "Work per charge moving in field" },
+    { "q": "Capacitance formula", "a": "C=Q/V" },
+    { "q": "Parallel plate capacitor C", "a": "ε0 A/d" },
+    { "q": "Resistors in series", "a": "R_eq=R1+R2+..." },
+    { "q": "Resistors in parallel", "a": "1/R_eq=1/R1+1/R2+..." },
+    { "q": "Ohm's law", "a": "V=IR" },
+    { "q": "Power in circuits", "a": "P=IV=I^2R=V^2/R" },
+    { "q": "Magnetic force", "a": "F=q v B sinθ" },
+    { "q": "Right hand rule use", "a": "Thumb v, fingers B, palm F" },
+    { "q": "Magnetic flux definition", "a": "Φ=BA cosθ" },
+    { "q": "Faraday's law", "a": "emf=-dΦ/dt" },
+    { "q": "Lenz's law", "a": "Induced current opposes change" },
+    { "q": "Inductor voltage relation", "a": "V=L di/dt" },
+    { "q": "AC circuit reactance Xc", "a": "1/(ωC)" },
+    { "q": "AC circuit reactance Xl", "a": "ωL" },
+    { "q": "Transformer turns ratio", "a": "V1/V2=N1/N2" }
+  ]
+}

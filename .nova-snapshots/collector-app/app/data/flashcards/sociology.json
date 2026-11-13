@@ -1,0 +1,25 @@
+{
+  "topic": "Sociology",
+  "cards": [
+    { "q": "Sociology", "a": "Study of society and social behavior" },
+    { "q": "Culture", "a": "Beliefs, norms, values, and symbols" },
+    { "q": "Socialization", "a": "Learning culture through interaction" },
+    { "q": "Deviance", "a": "Behavior violating norms" },
+    { "q": "Social stratification", "a": "Hierarchical ranking of groups" },
+    { "q": "Social class", "a": "Income, education, occupation based group" },
+    { "q": "Status vs role", "a": "Position in society vs expected behavior" },
+    { "q": "Primary vs secondary group", "a": "Close intimate vs larger goal oriented" },
+    { "q": "Ethnocentrism", "a": "Judging others by own culture" },
+    { "q": "Cultural relativism", "a": "Understanding cultures on their terms" },
+    { "q": "Symbolic interactionism", "a": "Micro level meaning making" },
+    { "q": "Conflict theory", "a": "Power and inequality drive change" },
+    { "q": "Functionalism", "a": "Society as interdependent parts" },
+    { "q": "Anomie", "a": "Normlessness (Durkheim)" },
+    { "q": "Social mobility", "a": "Movement between classes" },
+    { "q": "Gender roles", "a": "Expected behaviors by sex" },
+    { "q": "Race vs ethnicity", "a": "Physical traits vs cultural identity" },
+    { "q": "Globalization", "a": "Rising worldwide interconnection" },
+    { "q": "Social institution examples", "a": "Family, education, religion, economy, government" },
+    { "q": "Stigma", "a": "Discrediting attribute that reduces status" }
+  ]
+}

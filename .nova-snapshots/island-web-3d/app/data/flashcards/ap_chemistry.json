@@ -1,0 +1,25 @@
+{
+  "topic": "AP Chemistry",
+  "cards": [
+    { "q": "Atomic number definition", "a": "Number of protons in the nucleus" },
+    { "q": "Isotope definition", "a": "Same element, different number of neutrons" },
+    { "q": "Electronegativity trend", "a": "Increases across a period, decreases down a group" },
+    { "q": "Ionization energy trend", "a": "Increases across, decreases down" },
+    { "q": "Ionic vs covalent bond", "a": "Ionic: electron transfer; Covalent: electron sharing" },
+    { "q": "sp3 geometry and angle", "a": "Tetrahedral, about 109.5 degrees" },
+    { "q": "Mole definition", "a": "Amount containing Avogadro number of particles" },
+    { "q": "Avogadro number", "a": "6.022e23" },
+    { "q": "Ideal gas law", "a": "PV = nRT" },
+    { "q": "STP values", "a": "0 C and 1 atm" },
+    { "q": "Enthalpy (H)", "a": "Heat content at constant pressure" },
+    { "q": "Entropy (S)", "a": "Measure of disorder" },
+    { "q": "Gibbs free energy", "a": "Delta G = Delta H - T Delta S" },
+    { "q": "Catalyst effect", "a": "Lowers activation energy; speeds reaction; not consumed" },
+    { "q": "Equilibrium constant K", "a": "Products^coeff / Reactants^coeff (no solids/liquids)" },
+    { "q": "Le Chatelier principle", "a": "System shifts to counter a disturbance" },
+    { "q": "Oxidation vs reduction", "a": "Oxidation loses e-, reduction gains e-" },
+    { "q": "Strong acid examples", "a": "HCl, HBr, HI, HNO3, H2SO4, HClO4" },
+    { "q": "Buffer definition", "a": "Weak acid/base and conjugate resisting pH changes" },
+    { "q": "pH formula", "a": "pH = -log10[H+]" }
+  ]
+}

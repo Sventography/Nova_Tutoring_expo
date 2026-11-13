@@ -1,0 +1,73 @@
+{
+  "expo": {
+    "name": "Nova Tutoring",
+    "slug": "Nova_Tutoring_expo_3",
+    "version": "1.6.0",
+    "orientation": "portrait",
+    "scheme": "nova",
+    "userInterfaceStyle": "dark",
+    "icon": "./app/assets/favicon.png",
+    "splash": {
+      "image": "./app/assets/favicon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#000000"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.sventography.novatutoring.ios",
+      "buildNumber": "103"
+    },
+    "android": {
+      "package": "com.sventography.novatutoring",
+      "adaptiveIcon": {
+        "foregroundImage": "./app/assets/favicon.png",
+        "backgroundColor": "#000000"
+      },
+      "versionCode": 3
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./app/assets/favicon.png"
+    },
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
+    "plugins": [
+      "expo-mail-composer",
+      "expo-router",
+      "expo-web-browser",
+      "expo-iap",
+      [
+        "@stripe/stripe-react-native",
+        {
+          "enableGooglePay": false
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static"
+          }
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "EXPO_PUBLIC_BACKEND_URL": "https://nove-tutoring-backend.onrender.com",
+      "EXPO_PUBLIC_OPENAI_API_KEY": "dummy-key",
+      "backendBase": "https://nove-tutoring-backend.onrender.com",
+      "eas": {
+        "projectId": "34a00115-306a-4cb6-b58b-97e26409a781"
+      }
+    }
+  }
+}

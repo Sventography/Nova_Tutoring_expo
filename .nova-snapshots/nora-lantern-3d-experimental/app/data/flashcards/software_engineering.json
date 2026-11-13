@@ -1,0 +1,25 @@
+{
+  "topic": "Software Engineering Practices",
+  "cards": [
+    { "q": "Requirements types", "a": "Functional & nonfunctional" },
+    { "q": "Agile values", "a": "Individuals, working software, collaboration, change" },
+    { "q": "Scrum roles", "a": "PO, Scrum Master, Dev Team" },
+    { "q": "Version control", "a": "Git branching/merging" },
+    { "q": "Code review purpose", "a": "Quality, knowledge sharing" },
+    { "q": "Testing pyramid", "a": "Unit, integration, e2e" },
+    { "q": "CI/CD", "a": "Automated build, test, deploy" },
+    { "q": "Static analysis", "a": "Linting, type checks" },
+    { "q": "Refactoring", "a": "Improve design without changing behavior" },
+    { "q": "Design patterns", "a": "Singleton, Factory, Observer, Strategy" },
+    { "q": "SOLID principles", "a": "Five OO design guidelines" },
+    { "q": "Tech debt", "a": "Shortcuts increasing future cost" },
+    { "q": "Observability", "a": "Logs, metrics, tracing" },
+    { "q": "Security basics", "a": "Least privilege, input validation" },
+    { "q": "Scalability", "a": "Handle growth efficiently" },
+    { "q": "Reliability", "a": "Uptime, redundancy, SLO/SLI/SLA" },
+    { "q": "API design", "a": "REST/gRPC; clear contracts" },
+    { "q": "Documentation", "a": "README, ADRs, comments" },
+    { "q": "Incident response", "a": "On-call, postmortems" },
+    { "q": "Ethics in software", "a": "Privacy, bias, accessibility" }
+  ]
+}

@@ -1,0 +1,82 @@
+[
+  {
+    "question": "Mean, median, mode measure",
+    "answer": "Central tendency"
+  },
+  {
+    "question": "Population variance symbol",
+    "answer": "σ^2"
+  },
+  {
+    "question": "Standard deviation is",
+    "answer": "Square root of variance"
+  },
+  {
+    "question": "z-score formula",
+    "answer": "(x − μ)/σ"
+  },
+  {
+    "question": "68–95–99.7 rule applies to",
+    "answer": "Normal distribution"
+  },
+  {
+    "question": "Central Limit Theorem says",
+    "answer": "Sample mean approaches normal as n increases"
+  },
+  {
+    "question": "p-value definition",
+    "answer": "Probability of data as extreme under H0"
+  },
+  {
+    "question": "Type I error",
+    "answer": "Rejecting a true null hypothesis"
+  },
+  {
+    "question": "Type II error",
+    "answer": "Failing to reject a false null"
+  },
+  {
+    "question": "Confidence interval meaning",
+    "answer": "Method captures true parameter with stated frequency"
+  },
+  {
+    "question": "When to use t-test vs z-test",
+    "answer": "t for unknown σ/small n; z for known σ/large n"
+  },
+  {
+    "question": "Chi-square test common use",
+    "answer": "Independence or goodness-of-fit"
+  },
+  {
+    "question": "Correlation coefficient range",
+    "answer": "−1 to +1"
+  },
+  {
+    "question": "Regression slope interpretation",
+    "answer": "Change in y per unit change in x"
+  },
+  {
+    "question": "Residual definition",
+    "answer": "Observed minus predicted"
+  },
+  {
+    "question": "Law of Large Numbers",
+    "answer": "Sample mean converges to population mean"
+  },
+  {
+    "question": "Sampling method to reduce bias",
+    "answer": "Random sampling"
+  },
+  {
+    "question": "IQR stands for",
+    "answer": "Interquartile range"
+  },
+  {
+    "question": "Outlier rule with IQR",
+    "answer": "Below Q1−1.5·IQR or above Q3+1.5·IQR"
+  },
+  {
+    "question": "Difference between population and sample",
+    "answer": "Whole group vs subset used to infer"
+  }
+]

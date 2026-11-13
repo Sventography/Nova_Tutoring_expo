@@ -1,0 +1,25 @@
+{
+  "topic": "Cell Biology",
+  "cards": [
+    { "q": "Cell theory", "a": "Cells are basic unit; arise from preexisting cells" },
+    { "q": "Prokaryote vs eukaryote", "a": "No nucleus vs nucleus + organelles" },
+    { "q": "Plasma membrane model", "a": "Fluid mosaic of lipids/proteins" },
+    { "q": "ER types", "a": "Rough (protein), smooth (lipid, detox)" },
+    { "q": "Golgi function", "a": "Modify, sort, ship proteins" },
+    { "q": "Mitochondria role", "a": "ATP via oxidative phosphorylation" },
+    { "q": "Lysosome function", "a": "Acidic degradation; autophagy" },
+    { "q": "Cytoskeleton", "a": "Microtubules, microfilaments, IFs" },
+    { "q": "Microtubule motors", "a": "Kinesin (→+), dynein (→−)" },
+    { "q": "Cell junctions", "a": "Tight, adherens, desmosome, gap" },
+    { "q": "Signal transduction", "a": "Receptor → cascade → response" },
+    { "q": "GPCR feature", "a": "G protein–coupled; 7TM" },
+    { "q": "RTK feature", "a": "Autophosphorylating dimers" },
+    { "q": "Cell cycle phases", "a": "G1, S, G2, M; checkpoints" },
+    { "q": "Mitosis stages", "a": "Pro, meta, ana, telo + cytokinesis" },
+    { "q": "Apoptosis", "a": "Programmed cell death (caspases)" },
+    { "q": "Endocytosis types", "a": "Phago-, pino-, receptor-mediated" },
+    { "q": "Exocytosis", "a": "Vesicle fusion releases cargo" },
+    { "q": "Primary vs secondary transport", "a": "ATP pump vs gradient-driven" },
+    { "q": "Organelle sorting signal", "a": "Signal peptides/zip codes" }
+  ]
+}

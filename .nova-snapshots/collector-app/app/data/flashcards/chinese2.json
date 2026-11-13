@@ -1,0 +1,25 @@
+{
+  "topic": "Chinese II",
+  "cards": [
+    { "q": "Measure words: ge, zhi, ben", "a": "generic ge, animals zhi, books ben" },
+    { "q": "Past experience particle", "a": "guo (e.g., wo qu guo Beijing)" },
+    { "q": "Completed action particle", "a": "le (e.g., chi le fan)" },
+    { "q": "Progressive aspect", "a": "zai + verb (wo zai xuexi)" },
+    { "q": "Compare A and B", "a": "A bi B geng/more adj" },
+    { "q": "Superlative pattern", "a": "zui + adjective" },
+    { "q": "Result complement example", "a": "kan dong (understand by reading), zuo wan (finish doing)" },
+    { "q": "Potential complement pattern", "a": "verb + de/bu + result (kan de dong / kan bu dong)" },
+    { "q": "Directional complements", "a": "lai (come), qu (go), shang, xia, jin, chu" },
+    { "q": "Time expressions order", "a": "Subject + time + place + manner + verb + object" },
+    { "q": "Modal verb yao", "a": "to want / will (wo yao qu)" },
+    { "q": "Modal verb neng vs hui", "a": "neng ability/permission; hui learned skill" },
+    { "q": "Because... therefore...", "a": "yinwei... suoyi..." },
+    { "q": "Although... but...", "a": "suiran... keshi/danshi..." },
+    { "q": "If... then...", "a": "ruguo... jiu..." },
+    { "q": "Give reasons with de", "a": "de used for adverbial degree (hen hao, feichang kuai)" },
+    { "q": "Make a polite request", "a": "qing + verb, ke yi ma?" },
+    { "q": "Ask for directions", "a": "qing wen ... zai nar? zenme zou?" },
+    { "q": "Future marker", "a": "yao or hui + verb" },
+    { "q": "Plan expression", "a": "wo jihua... / wo da suan..." }
+  ]
+}

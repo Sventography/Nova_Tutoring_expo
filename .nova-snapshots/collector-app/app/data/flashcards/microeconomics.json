@@ -1,0 +1,25 @@
+{
+  "topic": "Microeconomics",
+  "cards": [
+    { "q": "Demand law", "a": "Price ↑ ⇒ quantity demanded ↓ (ceteris paribus)" },
+    { "q": "Supply law", "a": "Price ↑ ⇒ quantity supplied ↑" },
+    { "q": "Equilibrium", "a": "Where Qd = Qs; market-clearing price" },
+    { "q": "Elasticity of demand", "a": "%ΔQ / %ΔP; >1 elastic, <1 inelastic" },
+    { "q": "Cross-price elasticity", "a": "ΔQx/ΔPy; substitutes >0, complements <0" },
+    { "q": "Income elasticity", "a": "ΔQ/ΔIncome; normal >0, inferior <0" },
+    { "q": "Consumer surplus", "a": "WTP − price; area under demand above P" },
+    { "q": "Producer surplus", "a": "Price − cost; area above supply below P" },
+    { "q": "Price ceiling effect", "a": "Below equilibrium ⇒ shortage" },
+    { "q": "Price floor effect", "a": "Above equilibrium ⇒ surplus" },
+    { "q": "Tax incidence", "a": "Burden falls more on inelastic side" },
+    { "q": "Perfect competition", "a": "Many firms, price takers, P=MC in LR" },
+    { "q": "Monopoly rule", "a": "Profit max where MR=MC; P>MC" },
+    { "q": "Monopolistic competition", "a": "Product differentiation; excess capacity LR" },
+    { "q": "Oligopoly models", "a": "Cournot (quantity), Bertrand (price), collusion" },
+    { "q": "Externality", "a": "Spillover costs/benefits; fix with tax/subsidy" },
+    { "q": "Public goods", "a": "Nonrival & nonexcludable; free-rider problem" },
+    { "q": "Price discrimination", "a": "Charging different prices to capture surplus" },
+    { "q": "Diminishing marginal utility", "a": "Extra unit yields less additional satisfaction" },
+    { "q": "Cost curves relation", "a": "MC intersects ATC & AVC at their minima" }
+  ]
+}

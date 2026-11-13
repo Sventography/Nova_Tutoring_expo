@@ -1,0 +1,25 @@
+{
+  "topic": "Earth Science: Meteorology",
+  "cards": [
+    { "q": "Atmosphere layers", "a": "Troposphere, stratosphere, mesosphere, thermosphere" },
+    { "q": "Coriolis effect", "a": "Deflects winds due to rotation" },
+    { "q": "Global circulation cells", "a": "Hadley, Ferrel, Polar" },
+    { "q": "Front types", "a": "Cold, warm, stationary, occluded" },
+    { "q": "Low vs high pressure", "a": "Rising air/clouds vs sinking/clear" },
+    { "q": "Relative humidity", "a": "Water vapor / saturation ×100%" },
+    { "q": "Dew point", "a": "Temp where air saturates" },
+    { "q": "Lapse rate", "a": "Temp decrease with altitude" },
+    { "q": "Stability", "a": "Resists vertical motion; inversions" },
+    { "q": "Thunderstorm stages", "a": "Cumulus → mature → dissipating" },
+    { "q": "Tornado scale", "a": "Enhanced Fujita (EF0–EF5)" },
+    { "q": "Hurricane fuel", "a": "Warm ocean; latent heat" },
+    { "q": "ENSO", "a": "El Niño/La Niña SST anomalies" },
+    { "q": "Jet stream", "a": "Fast upper-level westerlies" },
+    { "q": "Baroclinic vs barotropic", "a": "Temp gradients vs none" },
+    { "q": "Weather vs climate", "a": "Short-term vs long-term patterns" },
+    { "q": "Synoptic charts", "a": "Maps of pressure/fronts/winds" },
+    { "q": "NWP", "a": "Numerical weather prediction models" },
+    { "q": "Orographic lift", "a": "Air rises over terrain → rain" },
+    { "q": "Radiative forcing", "a": "Energy imbalance drivers" }
+  ]
+}

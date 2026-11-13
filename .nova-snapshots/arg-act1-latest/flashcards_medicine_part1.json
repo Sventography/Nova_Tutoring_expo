@@ -1,0 +1,129 @@
+{
+  "topics": [
+    {
+      "name": "Human Anatomy",
+      "questions": [
+        {"q": "What is the largest organ in the body?", "a": "Skin"},
+        {"q": "What is the largest internal organ?", "a": "Liver"},
+        {"q": "What organ pumps blood?", "a": "Heart"},
+        {"q": "What organ filters blood?", "a": "Kidneys"},
+        {"q": "What organ digests food?", "a": "Stomach"},
+        {"q": "What organ absorbs nutrients?", "a": "Small intestine"},
+        {"q": "What organ removes solid waste?", "a": "Large intestine"},
+        {"q": "What organ controls the body?", "a": "Brain"},
+        {"q": "What organ helps us breathe?", "a": "Lungs"},
+        {"q": "What organ produces insulin?", "a": "Pancreas"},
+        {"q": "What is the strongest bone?", "a": "Femur"},
+        {"q": "How many bones are in the adult human body?", "a": "206"},
+        {"q": "What is the smallest bone?", "a": "Stapes (in the ear)"},
+        {"q": "What is the largest artery?", "a": "Aorta"},
+        {"q": "What is the largest vein?", "a": "Vena cava"},
+        {"q": "What is the basic unit of the nervous system?", "a": "Neuron"},
+        {"q": "What is the basic unit of muscles?", "a": "Muscle fibers"},
+        {"q": "What is the basic unit of bones?", "a": "Osteon"},
+        {"q": "What is the basic unit of kidneys?", "a": "Nephron"},
+        {"q": "What is the largest muscle?", "a": "Gluteus maximus"}
+      ]
+    },
+    {
+      "name": "Physiology Basics",
+      "questions": [
+        {"q": "What system carries oxygen in the body?", "a": "Circulatory system"},
+        {"q": "What system fights infections?", "a": "Immune system"},
+        {"q": "What system breaks down food?", "a": "Digestive system"},
+        {"q": "What system controls movement?", "a": "Muscular system"},
+        {"q": "What system protects organs and provides structure?", "a": "Skeletal system"},
+        {"q": "What system controls body functions?", "a": "Nervous system"},
+        {"q": "What system produces hormones?", "a": "Endocrine system"},
+        {"q": "What system removes waste?", "a": "Excretory system"},
+        {"q": "What system produces offspring?", "a": "Reproductive system"},
+        {"q": "What gas do we inhale?", "a": "Oxygen"},
+        {"q": "What gas do we exhale?", "a": "Carbon dioxide"},
+        {"q": "What is homeostasis?", "a": "Maintaining stable internal conditions"},
+        {"q": "What is metabolism?", "a": "All chemical reactions in the body"},
+        {"q": "What is anabolism?", "a": "Building larger molecules"},
+        {"q": "What is catabolism?", "a": "Breaking down molecules"},
+        {"q": "What is ATP?", "a": "Main energy currency of cells"},
+        {"q": "What is blood pressure?", "a": "Force of blood on artery walls"},
+        {"q": "What is heart rate?", "a": "Beats per minute"},
+        {"q": "What is respiration?", "a": "Exchange of gases"},
+        {"q": "What is circulation?", "a": "Movement of blood in the body"}
+      ]
+    },
+    {
+      "name": "Medical Terminology",
+      "questions": [
+        {"q": "What does 'cardio-' mean?", "a": "Heart"},
+        {"q": "What does 'neuro-' mean?", "a": "Nerve"},
+        {"q": "What does 'hemo-' mean?", "a": "Blood"},
+        {"q": "What does 'derm-' mean?", "a": "Skin"},
+        {"q": "What does 'gastro-' mean?", "a": "Stomach"},
+        {"q": "What does 'osteo-' mean?", "a": "Bone"},
+        {"q": "What does 'pulmo-' mean?", "a": "Lung"},
+        {"q": "What does 'renal-' mean?", "a": "Kidney"},
+        {"q": "What does 'hepato-' mean?", "a": "Liver"},
+        {"q": "What does 'myo-' mean?", "a": "Muscle"},
+        {"q": "What does '-itis' mean?", "a": "Inflammation"},
+        {"q": "What does '-ectomy' mean?", "a": "Surgical removal"},
+        {"q": "What does '-ology' mean?", "a": "Study of"},
+        {"q": "What does '-pathy' mean?", "a": "Disease"},
+        {"q": "What does '-algia' mean?", "a": "Pain"},
+        {"q": "What does '-emia' mean?", "a": "Blood condition"},
+        {"q": "What does '-cyte' mean?", "a": "Cell"},
+        {"q": "What does '-osis' mean?", "a": "Abnormal condition"},
+        {"q": "What does '-plasty' mean?", "a": "Surgical repair"},
+        {"q": "What does '-scopy' mean?", "a": "Viewing with an instrument"}
+      ]
+    },
+    {
+      "name": "Pathology",
+      "questions": [
+        {"q": "What is pathology?", "a": "Study of diseases"},
+        {"q": "What is oncology?", "a": "Study of cancer"},
+        {"q": "What is cardiology?", "a": "Study of heart diseases"},
+        {"q": "What is neurology?", "a": "Study of nervous system diseases"},
+        {"q": "What is dermatology?", "a": "Study of skin diseases"},
+        {"q": "What is gastroenterology?", "a": "Study of stomach and intestines"},
+        {"q": "What is nephrology?", "a": "Study of kidney diseases"},
+        {"q": "What is hematology?", "a": "Study of blood diseases"},
+        {"q": "What is immunology?", "a": "Study of the immune system"},
+        {"q": "What is endocrinology?", "a": "Study of hormone disorders"},
+        {"q": "What is diabetes?", "a": "Disease with high blood sugar"},
+        {"q": "What is hypertension?", "a": "High blood pressure"},
+        {"q": "What is anemia?", "a": "Low red blood cells"},
+        {"q": "What is arthritis?", "a": "Inflammation of joints"},
+        {"q": "What is asthma?", "a": "Chronic lung condition"},
+        {"q": "What is pneumonia?", "a": "Infection of the lungs"},
+        {"q": "What is cancer?", "a": "Uncontrolled cell growth"},
+        {"q": "What is stroke?", "a": "Loss of blood flow to brain"},
+        {"q": "What is Alzheimer’s disease?", "a": "Degenerative brain disorder"},
+        {"q": "What is influenza?", "a": "Viral infection (flu)"}
+      ]
+    },
+    {
+      "name": "Pharmacology",
+      "questions": [
+        {"q": "What is pharmacology?", "a": "Study of drugs and their effects"},
+        {"q": "What is aspirin used for?", "a": "Pain relief and reducing fever"},
+        {"q": "What is penicillin?", "a": "Antibiotic"},
+        {"q": "What is insulin used for?", "a": "Lowering blood sugar"},
+        {"q": "What are antibiotics used for?", "a": "Killing bacteria"},
+        {"q": "What are antivirals used for?", "a": "Treating viral infections"},
+        {"q": "What are antifungals used for?", "a": "Treating fungal infections"},
+        {"q": "What are vaccines?", "a": "Preventive medicine for immunity"},
+        {"q": "What is anesthesia?", "a": "Medicine to block pain"},
+        {"q": "What is chemotherapy?", "a": "Drug treatment for cancer"},
+        {"q": "What is an analgesic?", "a": "Painkiller"},
+        {"q": "What is an antibiotic?", "a": "Drug against bacteria"},
+        {"q": "What is a sedative?", "a": "Drug that calms or induces sleep"},
+        {"q": "What is an antidepressant?", "a": "Drug for depression"},
+        {"q": "What is an antihistamine?", "a": "Drug for allergies"},
+        {"q": "What is an antipyretic?", "a": "Drug that reduces fever"},
+        {"q": "What is an antacid?", "a": "Drug that neutralizes stomach acid"},
+        {"q": "What is a diuretic?", "a": "Drug that increases urine output"},
+        {"q": "What is a statin?", "a": "Drug that lowers cholesterol"},
+        {"q": "What is morphine?", "a": "Strong painkiller (opioid)"}
+      ]
+    }
+  ]
+}

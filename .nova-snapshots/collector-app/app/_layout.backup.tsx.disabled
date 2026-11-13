@@ -1,0 +1,15 @@
+// app/_layout.tsx
+import React from "react";
+import { Slot } from "expo-router";
+import AppProviders from "./AppProviders";
+import { StreakProvider } from "../app/context/StreakContext";
+
+export default function RootLayout() {
+  return (
+    <StreakProvider>
+      <AppProviders>
+        <Slot />
+      </AppProviders>
+    </StreakProvider>
+  );
+}

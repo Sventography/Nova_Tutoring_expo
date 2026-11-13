@@ -1,0 +1,82 @@
+[
+  {
+    "question": "Pythagorean identity 1",
+    "answer": "sin^2 x + cos^2 x = 1"
+  },
+  {
+    "question": "Pythagorean identity 2",
+    "answer": "1 + tan^2 x = sec^2 x"
+  },
+  {
+    "question": "Pythagorean identity 3",
+    "answer": "1 + cot^2 x = csc^2 x"
+  },
+  {
+    "question": "Angle addition sin",
+    "answer": "sin(a+b)=sin a cos b + cos a sin b"
+  },
+  {
+    "question": "Angle addition cos",
+    "answer": "cos(a+b)=cos a cos b − sin a sin b"
+  },
+  {
+    "question": "Angle addition tan",
+    "answer": "tan(a+b)=(tan a + tan b)/(1 − tan a tan b)"
+  },
+  {
+    "question": "Double-angle sin",
+    "answer": "sin 2x = 2 sin x cos x"
+  },
+  {
+    "question": "Double-angle cos",
+    "answer": "cos 2x = cos^2 x − sin^2 x"
+  },
+  {
+    "question": "Half-angle sin",
+    "answer": "sin^2(x/2)=(1−cos x)/2"
+  },
+  {
+    "question": "Half-angle cos",
+    "answer": "cos^2(x/2)=(1+cos x)/2"
+  },
+  {
+    "question": "Product-to-sum sin·sin",
+    "answer": "½[cos(a−b)−cos(a+b)]"
+  },
+  {
+    "question": "Product-to-sum sin·cos",
+    "answer": "½[sin(a+b)+sin(a−b)]"
+  },
+  {
+    "question": "Sum-to-product sin + sin",
+    "answer": "2 sin((a+b)/2) cos((a−b)/2)"
+  },
+  {
+    "question": "Sum-to-product cos + cos",
+    "answer": "2 cos((a+b)/2) cos((a−b)/2)"
+  },
+  {
+    "question": "Cofunction identity",
+    "answer": "sin(π/2 − x)=cos x"
+  },
+  {
+    "question": "Odd/even properties",
+    "answer": "sin(−x)=−sin x, cos(−x)=cos x"
+  },
+  {
+    "question": "Inverse relationships",
+    "answer": "sin(arcsin x)=x, arcsin(sin x)=x in principal range"
+  },
+  {
+    "question": "Law of sines",
+    "answer": "a/sin A = b/sin B = c/sin C"
+  },
+  {
+    "question": "Law of cosines",
+    "answer": "c^2=a^2+b^2−2ab cos C"
+  },
+  {
+    "question": "Heron’s formula",
+    "answer": "√[s(s−a)(s−b)(s−c)]"
+  }
+]

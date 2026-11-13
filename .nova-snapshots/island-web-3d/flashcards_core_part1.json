@@ -1,0 +1,129 @@
+{
+  "topics": [
+    {
+      "name": "U.S. History",
+      "questions": [
+        {"q": "Who was the first President of the U.S.?", "a": "George Washington"},
+        {"q": "What year was the Declaration of Independence signed?", "a": "1776"},
+        {"q": "Who wrote the Declaration of Independence?", "a": "Thomas Jefferson"},
+        {"q": "Who was President during the Civil War?", "a": "Abraham Lincoln"},
+        {"q": "What year did the Civil War begin?", "a": "1861"},
+        {"q": "What year did the Civil War end?", "a": "1865"},
+        {"q": "Who was the first African American President?", "a": "Barack Obama"},
+        {"q": "What event happened on December 7, 1941?", "a": "Attack on Pearl Harbor"},
+        {"q": "What event happened on September 11, 2001?", "a": "Terrorist attacks on the U.S."},
+        {"q": "What was the first U.S. state?", "a": "Delaware"},
+        {"q": "Who was the main author of the Constitution?", "a": "James Madison"},
+        {"q": "Who gave the Gettysburg Address?", "a": "Abraham Lincoln"},
+        {"q": "What was the Prohibition era?", "a": "Ban on alcohol (1920–1933)"},
+        {"q": "Who was the U.S. President during WWII?", "a": "Franklin D. Roosevelt"},
+        {"q": "What war was fought between North and South U.S.?", "a": "Civil War"},
+        {"q": "What was the Cold War?", "a": "Tension between U.S. and USSR"},
+        {"q": "What movement fought for civil rights in the 1960s?", "a": "Civil Rights Movement"},
+        {"q": "Who was the leader of the Civil Rights Movement?", "a": "Martin Luther King Jr."},
+        {"q": "What year did women gain the right to vote?", "a": "1920"},
+        {"q": "Who was the first man on the moon?", "a": "Neil Armstrong"}
+      ]
+    },
+    {
+      "name": "World Religions",
+      "questions": [
+        {"q": "What is the holy book of Islam?", "a": "Qur’an"},
+        {"q": "What is the holy book of Christianity?", "a": "Bible"},
+        {"q": "What is the holy book of Judaism?", "a": "Torah"},
+        {"q": "What is the holy book of Hinduism?", "a": "Vedas"},
+        {"q": "What is the holy book of Buddhism?", "a": "Tripitaka"},
+        {"q": "Who is the founder of Buddhism?", "a": "Siddhartha Gautama (Buddha)"},
+        {"q": "Who is the central figure of Christianity?", "a": "Jesus Christ"},
+        {"q": "Who is the prophet of Islam?", "a": "Muhammad"},
+        {"q": "Who led the Israelites out of Egypt?", "a": "Moses"},
+        {"q": "What religion believes in karma and reincarnation?", "a": "Hinduism and Buddhism"},
+        {"q": "What religion worships in a mosque?", "a": "Islam"},
+        {"q": "What religion worships in a church?", "a": "Christianity"},
+        {"q": "What religion worships in a synagogue?", "a": "Judaism"},
+        {"q": "What religion worships in a temple?", "a": "Hinduism or Buddhism"},
+        {"q": "What religion believes in the Eightfold Path?", "a": "Buddhism"},
+        {"q": "What religion believes in the Ten Commandments?", "a": "Judaism and Christianity"},
+        {"q": "What religion celebrates Ramadan?", "a": "Islam"},
+        {"q": "What religion celebrates Easter?", "a": "Christianity"},
+        {"q": "What religion celebrates Diwali?", "a": "Hinduism"},
+        {"q": "What religion celebrates Hanukkah?", "a": "Judaism"}
+      ]
+    },
+    {
+      "name": "Astronomy",
+      "questions": [
+        {"q": "What is the center of our solar system?", "a": "The Sun"},
+        {"q": "What galaxy do we live in?", "a": "Milky Way"},
+        {"q": "What is the closest star to Earth?", "a": "The Sun"},
+        {"q": "What is the second closest star to Earth?", "a": "Proxima Centauri"},
+        {"q": "What are groups of stars called?", "a": "Constellations"},
+        {"q": "What is a giant ball of gas that emits light?", "a": "Star"},
+        {"q": "What is a rocky body orbiting the Sun?", "a": "Asteroid"},
+        {"q": "What is a ball of ice and dust with a tail?", "a": "Comet"},
+        {"q": "What is a shooting star?", "a": "Meteoroid burning in atmosphere"},
+        {"q": "What is a black hole?", "a": "Region with gravity so strong light can’t escape"},
+        {"q": "What is a neutron star?", "a": "Collapsed core of a massive star"},
+        {"q": "What is a galaxy?", "a": "A system of stars, gas, and dust bound by gravity"},
+        {"q": "What is the largest planet in the solar system?", "a": "Jupiter"},
+        {"q": "What is the smallest planet in the solar system?", "a": "Mercury"},
+        {"q": "What planet is called the Red Planet?", "a": "Mars"},
+        {"q": "What planet has rings?", "a": "Saturn"},
+        {"q": "What is the Hubble?", "a": "A space telescope"},
+        {"q": "What is the ISS?", "a": "International Space Station"},
+        {"q": "What does NASA stand for?", "a": "National Aeronautics and Space Administration"},
+        {"q": "What does light-year measure?", "a": "Distance"}
+      ]
+    },
+    {
+      "name": "Engineering Basics",
+      "questions": [
+        {"q": "What do engineers design and build?", "a": "Machines, structures, and systems"},
+        {"q": "What is the branch of engineering about buildings?", "a": "Civil engineering"},
+        {"q": "What is the branch of engineering about electricity?", "a": "Electrical engineering"},
+        {"q": "What is the branch of engineering about machines?", "a": "Mechanical engineering"},
+        {"q": "What is the branch of engineering about chemicals?", "a": "Chemical engineering"},
+        {"q": "What is the branch of engineering about computers?", "a": "Computer engineering"},
+        {"q": "What is CAD software used for?", "a": "Computer-Aided Design"},
+        {"q": "What is the study of forces and motion called?", "a": "Mechanics"},
+        {"q": "What is the study of materials called?", "a": "Materials science"},
+        {"q": "What is the study of energy systems called?", "a": "Thermodynamics"},
+        {"q": "What is the study of fluid motion called?", "a": "Fluid dynamics"},
+        {"q": "What is a prototype?", "a": "An early model of a design"},
+        {"q": "What is an algorithm?", "a": "A step-by-step procedure"},
+        {"q": "What is the SI unit of force?", "a": "Newton"},
+        {"q": "What is the SI unit of pressure?", "a": "Pascal"},
+        {"q": "What is the SI unit of power?", "a": "Watt"},
+        {"q": "What is the SI unit of energy?", "a": "Joule"},
+        {"q": "What is the SI unit of voltage?", "a": "Volt"},
+        {"q": "What is the SI unit of current?", "a": "Ampere"},
+        {"q": "What is the SI unit of resistance?", "a": "Ohm"}
+      ]
+    },
+    {
+      "name": "Economics Advanced",
+      "questions": [
+        {"q": "What is GDP?", "a": "Gross Domestic Product"},
+        {"q": "What is inflation?", "a": "Rise in general price levels"},
+        {"q": "What is deflation?", "a": "Fall in general price levels"},
+        {"q": "What is monetary policy?", "a": "Control of money supply and interest rates"},
+        {"q": "What is fiscal policy?", "a": "Government spending and taxation"},
+        {"q": "What is unemployment rate?", "a": "Percentage of people jobless but seeking work"},
+        {"q": "What is supply and demand?", "a": "Relationship between availability and desire"},
+        {"q": "What is opportunity cost?", "a": "Next best alternative forgone"},
+        {"q": "What is comparative advantage?", "a": "Ability to produce at lower opportunity cost"},
+        {"q": "What is absolute advantage?", "a": "Ability to produce more with same resources"},
+        {"q": "What is a recession?", "a": "Decline in economic activity"},
+        {"q": "What is a depression?", "a": "Severe and prolonged recession"},
+        {"q": "What is a market economy?", "a": "Economy based on supply and demand"},
+        {"q": "What is a command economy?", "a": "Economy controlled by government"},
+        {"q": "What is capitalism?", "a": "System with private ownership"},
+        {"q": "What is socialism?", "a": "System with collective ownership"},
+        {"q": "What is Keynesian economics?", "a": "Government intervention to stabilize economy"},
+        {"q": "What is classical economics?", "a": "Self-regulating free markets"},
+        {"q": "What is microeconomics?", "a": "Study of individual markets"},
+        {"q": "What is macroeconomics?", "a": "Study of entire economy"}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "topic": "French II",
+  "cards": [
+    { "q": "Passé composé with avoir (regular -er)", "a": "j'ai parlé" },
+    { "q": "Passé composé with être verbs", "a": "DR MRS VANDERTRAMP verbs (aller, venir, etc)" },
+    { "q": "Imparfait use", "a": "Ongoing past, description, habitual" },
+    { "q": "Imparfait endings", "a": "-ais, -ais, -ait, -ions, -iez, -aient" },
+    { "q": "Future tense formation", "a": "Infinitive + endings (-ai, -as, -a...)" },
+    { "q": "Conditional tense formation", "a": "Infinitive + imparfait endings" },
+    { "q": "Subjunctive trigger phrase", "a": "Il faut que..." },
+    { "q": "Relative pronouns", "a": "qui, que, dont, où" },
+    { "q": "Direct vs indirect objects", "a": "le/la/les vs lui/leur" },
+    { "q": "Pronoun order in positive command", "a": "Verb-pronoun (Donne-le-moi)" },
+    { "q": "Negative command pronoun order", "a": "Ne me le donne pas" },
+    { "q": "Partitive article rules", "a": "du/de la/de l'/des; de after negation" },
+    { "q": "Comparisons formula", "a": "plus...que, moins...que, aussi...que" },
+    { "q": "Superlative formula", "a": "le plus/le moins" },
+    { "q": "Y pronoun use", "a": "Replaces à+place" },
+    { "q": "En pronoun use", "a": "Replaces de+noun" },
+    { "q": "Reflexive verb example", "a": "se laver" },
+    { "q": "Reflexive in passé composé", "a": "Always with être; agreement when DO before" },
+    { "q": "Future proche formula", "a": "aller + infinitive" },
+    { "q": "Near past formula", "a": "venir de + infinitive" }
+  ]
+}

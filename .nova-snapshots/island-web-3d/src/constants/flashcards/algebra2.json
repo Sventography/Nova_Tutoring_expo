@@ -1,0 +1,82 @@
+[
+  {
+    "question": "Discriminant of ax^2+bx+c",
+    "answer": "Δ = b^2 − 4ac"
+  },
+  {
+    "question": "Nature of roots via Δ",
+    "answer": "Δ>0 two real, Δ=0 one real, Δ<0 complex"
+  },
+  {
+    "question": "Complex number i equals",
+    "answer": "√−1"
+  },
+  {
+    "question": "Conjugate of a+bi",
+    "answer": "a − bi"
+  },
+  {
+    "question": "Exponential growth model",
+    "answer": "y = y0 · a^t"
+  },
+  {
+    "question": "Logarithm definition",
+    "answer": "a^x = y ⇔ log_a y = x"
+  },
+  {
+    "question": "Inverse of exponential is",
+    "answer": "Logarithm"
+  },
+  {
+    "question": "Asymptote of y = a^x",
+    "answer": "y = 0"
+  },
+  {
+    "question": "Rational expression simplification",
+    "answer": "Factor and cancel common factors"
+  },
+  {
+    "question": "Partial fraction decomposition use",
+    "answer": "Integrate or simplify rational functions"
+  },
+  {
+    "question": "Matrix multiplication dimension rule",
+    "answer": "(m×n)(n×p) → m×p"
+  },
+  {
+    "question": "Determinant of 2×2",
+    "answer": "ad − bc"
+  },
+  {
+    "question": "Arithmetic vs geometric sequence",
+    "answer": "Add constant vs multiply constant"
+  },
+  {
+    "question": "Recursive definition example",
+    "answer": "a_n = r a_{n−1}"
+  },
+  {
+    "question": "Absolute value inequality |x−a|<b",
+    "answer": "a−b < x < a+b"
+  },
+  {
+    "question": "Polynomial long division purpose",
+    "answer": "Divide polynomials"
+  },
+  {
+    "question": "Remainder theorem",
+    "answer": "f(c) equals remainder for (x−c)"
+  },
+  {
+    "question": "Synthetic division applies to",
+    "answer": "Dividing by (x − c)"
+  },
+  {
+    "question": "Asymptotes of rational function",
+    "answer": "Vertical zeros of denominator; horizontal via degrees"
+  },
+  {
+    "question": "Sequence sum notation Σ",
+    "answer": "Summation over index"
+  }
+]

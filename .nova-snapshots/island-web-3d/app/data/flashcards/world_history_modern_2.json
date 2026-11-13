@@ -1,0 +1,25 @@
+{
+  "topic": "World History: Cold War to Present",
+  "cards": [
+    { "q": "Cold War definition", "a": "U.S.–USSR ideological & geopolitical rivalry" },
+    { "q": "Containment policy", "a": "Limit spread of communism (Truman Doctrine)" },
+    { "q": "NATO vs Warsaw Pact", "a": "Western alliance vs Soviet bloc" },
+    { "q": "Korean War outcome", "a": "1953 armistice; peninsula divided" },
+    { "q": "Cuban Missile Crisis (1962)", "a": "Nuclear standoff; missiles withdrawn" },
+    { "q": "Vietnam War result", "a": "1975—Saigon falls; unified communist Vietnam" },
+    { "q": "Détente hallmark", "a": "1970s arms control (SALT), improved relations" },
+    { "q": "Gorbachev reforms", "a": "Perestroika (restructuring); glasnost (openness)" },
+    { "q": "USSR dissolution", "a": "1991; independent republics; end of Cold War" },
+    { "q": "European integration", "a": "EU expansion; euro currency" },
+    { "q": "Genocide example", "a": "Rwanda 1994" },
+    { "q": "China economic shift", "a": "Post-1978 market reforms, rapid growth" },
+    { "q": "Middle East upheavals", "a": "Arab Spring (2010–11) and aftermath" },
+    { "q": "Globalization", "a": "Trade/tech interdependence" },
+    { "q": "Brexit referendum", "a": "2016—UK votes to leave EU" },
+    { "q": "Terrorism example", "a": "September 11, 2001 attacks" },
+    { "q": "Digital revolution", "a": "Internet, smartphones, AI" },
+    { "q": "Climate change issue", "a": "Global warming from GHG emissions" },
+    { "q": "Pandemic example", "a": "COVID-19 (2020s)" },
+    { "q": "Multipolar trend", "a": "Rise of several regional powers" }
+  ]
+}

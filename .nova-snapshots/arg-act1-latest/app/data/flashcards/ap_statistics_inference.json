@@ -1,0 +1,25 @@
+{
+  "topic": "AP Statistics: Inference & Tests",
+  "cards": [
+    { "q": "Parameter vs statistic", "a": "Population value vs sample estimate" },
+    { "q": "Sampling distributions", "a": "Distribution of a statistic over samples" },
+    { "q": "Standard error", "a": "SD of sampling distribution" },
+    { "q": "Confidence interval form", "a": "estimate ± (critical)·SE" },
+    { "q": "z vs t", "a": "Known σ/large n vs unknown σ/small n" },
+    { "q": "1-sample z test (prop.)", "a": "H0: p=p0; use z with phat" },
+    { "q": "1-sample t test (mean)", "a": "H0: μ=μ0; df=n−1" },
+    { "q": "2-sample t (means)", "a": "Independent groups; pooled if equal variances" },
+    { "q": "Paired t test", "a": "Differences within subjects" },
+    { "q": "Chi-square GOF", "a": "Categorical counts vs expected" },
+    { "q": "Chi-square independence", "a": "Association in contingency table" },
+    { "q": "ANOVA F-test", "a": "Means across ≥3 groups" },
+    { "q": "Type I vs II error", "a": "False positive α vs false negative β" },
+    { "q": "Power of a test", "a": "1−β; probability to detect effect" },
+    { "q": "p-value meaning", "a": "Prob(data as extreme | H0 true)" },
+    { "q": "Assumptions (t-tests)", "a": "Approx normality/large n; independence" },
+    { "q": "Residual analysis", "a": "Check linear regression assumptions" },
+    { "q": "Multiple testing issue", "a": "Inflated α; use Bonferroni/FDR" },
+    { "q": "Effect size", "a": "Magnitude (e.g., Cohen's d, r^2)" },
+    { "q": "Nonparametric alternative", "a": "Mann–Whitney, Wilcoxon, Kruskal–Wallis" }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "topic": "U.S. Literature: 20th Century",
+  "cards": [
+    { "q": "Lost Generation authors", "a": "Hemingway, Fitzgerald" },
+    { "q": "Harlem Renaissance theme", "a": "African-American pride & art" },
+    { "q": "Modernist traits", "a": "Fragmentation, alienation, experimentation" },
+    { "q": "Southern Gothic writers", "a": "Faulkner, O’Connor" },
+    { "q": "Beat Generation", "a": "Kerouac, Ginsberg" },
+    { "q": "Confessional poets", "a": "Sylvia Plath, Anne Sexton" },
+    { "q": "Postmodern fiction", "a": "Pynchon, Vonnegut, DeLillo" },
+    { "q": "Drama highlight", "a": "Arthur Miller’s The Crucible/Death of a Salesman" },
+    { "q": "Pulitzer-winning novelist", "a": "Toni Morrison, Beloved" },
+    { "q": "Ethnic literature voices", "a": "Amy Tan, Sandra Cisneros" },
+    { "q": "Graphic literature", "a": "Maus by Art Spiegelman" },
+    { "q": "Jazz Age depiction", "a": "The Great Gatsby" },
+    { "q": "Regional literature", "a": "Steinbeck’s Dust Bowl stories" },
+    { "q": "Vietnam War lit", "a": "O’Brien’s The Things They Carried" },
+    { "q": "Environmental lit", "a": "Rachel Carson, Silent Spring" },
+    { "q": "Civil Rights voices", "a": "James Baldwin, Maya Angelou" },
+    { "q": "Satire examples", "a": "Catch-22 by Heller" },
+    { "q": "Minimalist prose", "a": "Raymond Carver" },
+    { "q": "Magical realism in US lit", "a": "Morrison’s Beloved elements" },
+    { "q": "Contemporary themes", "a": "Immigration, identity, technology" }
+  ]
+}

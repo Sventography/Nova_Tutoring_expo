@@ -1,0 +1,1196 @@
+[
+  {
+    "id": "abstract-algebra-intro",
+    "title": "Abstract Algebra (Intro)",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "african-history-survey",
+    "title": "African History Survey",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "algebra-i",
+    "title": "Algebra I",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "algebra-i-word-problems",
+    "title": "Algebra I (Word Problems)",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "algebra-ii",
+    "title": "Algebra II",
+    "group": "mixed",
+    "count": 40
+  },
+  {
+    "id": "american-literature",
+    "title": "American Literature",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "american-literature-survey",
+    "title": "American Literature Survey",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "anatomy-physiology",
+    "title": "Anatomy & Physiology",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "anatomy-physiology-i",
+    "title": "Anatomy & Physiology I",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "anatomy-physiology-ii",
+    "title": "Anatomy & Physiology II",
+    "group": "mixed",
+    "count": 40
+  },
+  {
+    "id": "anthropology",
+    "title": "Anthropology",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "ap-biology",
+    "title": "AP Biology",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "ap-biology-cell-biology",
+    "title": "AP Biology: Cell Biology",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "ap-biology-evolution",
+    "title": "AP Biology: Evolution",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "ap-calculus-ab-essentials",
+    "title": "AP Calculus AB Essentials",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "ap-calculus-bc",
+    "title": "AP Calculus BC",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "ap-chemistry",
+    "title": "AP Chemistry",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "ap-chemistry-stoichiometry-reactions",
+    "title": "AP Chemistry: Stoichiometry & Reactions",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "ap-environmental-science",
+    "title": "AP Environmental Science",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "ap-literature-terms",
+    "title": "AP Literature Terms",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "ap-macroeconomics",
+    "title": "AP Macroeconomics",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "ap-microeconomics",
+    "title": "AP Microeconomics",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "ap-physics-c-electricity-and-magnetism",
+    "title": "AP Physics C: Electricity and Magnetism",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "ap-physics-c-mechanics",
+    "title": "AP Physics C: Mechanics",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "ap-physics-i-mechanics",
+    "title": "AP Physics I (Mechanics)",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "ap-statistics-practice",
+    "title": "AP Statistics Practice",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "ap-statistics-inference-tests",
+    "title": "AP Statistics: Inference & Tests",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "ap-u-s-government",
+    "title": "AP U.S. Government",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "ap-u-s-history-colonial-to-civil-war",
+    "title": "AP U.S. History: Colonial to Civil War",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "ap-u-s-history-reconstruction-to-present",
+    "title": "AP U.S. History: Reconstruction to Present",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "art-history",
+    "title": "Art History",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "art-history-global-survey",
+    "title": "Art History: Global Survey",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "art-studio-fundamentals",
+    "title": "Art Studio Fundamentals",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "asian-history-survey",
+    "title": "Asian History Survey",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "astronomy-core",
+    "title": "Astronomy (Core)",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "astronomy-basics",
+    "title": "Astronomy Basics",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "biochemistry",
+    "title": "Biochemistry",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "biology-i",
+    "title": "Biology I",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "biology-i-cell-molecular",
+    "title": "Biology I (Cell & Molecular)",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "biology-ii-advanced",
+    "title": "Biology II (Advanced)",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "biology-iii-genetics-advanced",
+    "title": "Biology III (Genetics Advanced)",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "biology-anatomy-lab",
+    "title": "Biology: Anatomy Lab",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "biology-ecology",
+    "title": "Biology: Ecology",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "biology-genetics-heredity",
+    "title": "Biology: Genetics & Heredity",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "british-literature-survey",
+    "title": "British Literature Survey",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "business-basics",
+    "title": "Business Basics",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "calculus-ab-derivatives-integrals",
+    "title": "Calculus AB: Derivatives & Integrals",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "calculus-bc-series-parametrics",
+    "title": "Calculus BC: Series & Parametrics",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "calculus-practice-optimization-related-rates",
+    "title": "Calculus Practice (Optimization & Related Rates)",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "cell-biology",
+    "title": "Cell Biology",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "chemistry-ap",
+    "title": "Chemistry AP",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "chemistry-i-general",
+    "title": "Chemistry I (General)",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "chemistry-ii",
+    "title": "Chemistry II",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "chemistry-lab-skills",
+    "title": "Chemistry Lab Skills",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "chemistry-atomic-structure-periodic-trends",
+    "title": "Chemistry: Atomic Structure & Periodic Trends",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "chemistry-electrochemistry-solutions",
+    "title": "Chemistry: Electrochemistry & Solutions",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "chemistry-equilibrium-acids-bases",
+    "title": "Chemistry: Equilibrium & Acids–Bases",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "chemistry-organic-i",
+    "title": "Chemistry: Organic I",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "chemistry-organic-ii",
+    "title": "Chemistry: Organic II",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "chemistry-thermodynamics-kinetics",
+    "title": "Chemistry: Thermodynamics & Kinetics",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "chinese-i",
+    "title": "Chinese I",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "chinese-i-beginner",
+    "title": "Chinese I (Beginner)",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "chinese-ii",
+    "title": "Chinese II",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "cognitive-psychology",
+    "title": "Cognitive Psychology",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "comparative-government-politics",
+    "title": "Comparative Government & Politics",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "comparative-religion",
+    "title": "Comparative Religion",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "computer-networks",
+    "title": "Computer Networks",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "computer-science-fundamentals",
+    "title": "Computer Science Fundamentals",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "computer-science-algorithms",
+    "title": "Computer Science: Algorithms",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "computer-science-data-structures",
+    "title": "Computer Science: Data Structures",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "computer-science-python-programming",
+    "title": "Computer Science: Python Programming",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "data-analytics",
+    "title": "Data Analytics",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "database-systems-sql",
+    "title": "Database Systems (SQL)",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "differential-equations-odes",
+    "title": "Differential Equations (ODEs)",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "discrete-mathematics",
+    "title": "Discrete Mathematics",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "earth-science",
+    "title": "Earth Science",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "earth-science-geology",
+    "title": "Earth Science: Geology",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "earth-science-meteorology",
+    "title": "Earth Science: Meteorology",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "econometrics-intro",
+    "title": "Econometrics (Intro)",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "economics-international",
+    "title": "Economics (International)",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "economics-macro",
+    "title": "Economics (Macro)",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "economics-micro",
+    "title": "Economics (Micro)",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "english-grammar-composition",
+    "title": "English Grammar & Composition",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "english-literature-survey",
+    "title": "English Literature (Survey)",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "english-literature-american",
+    "title": "English Literature: American",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "english-literature-british",
+    "title": "English Literature: British",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "english-literature-devices-analysis",
+    "title": "English Literature: Devices & Analysis",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "environmental-science-ap",
+    "title": "Environmental Science AP",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "european-history-19th-century-nationalism-imperialism",
+    "title": "European History: 19th Century Nationalism & Imperialism",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "european-history-enlightenment-revolutions",
+    "title": "European History: Enlightenment & Revolutions",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "evolution-natural-selection",
+    "title": "Evolution & Natural Selection",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "film-studies",
+    "title": "Film Studies",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "finance-basics",
+    "title": "Finance Basics",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "french-i",
+    "title": "French I",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "french-i-beginner",
+    "title": "French I (Beginner)",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "french-i-extra-set",
+    "title": "French I (Extra Set)",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "french-ii",
+    "title": "French II",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "french-iii",
+    "title": "French III",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "genetics",
+    "title": "Genetics",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "geometry",
+    "title": "Geometry",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "geometry-euclidean",
+    "title": "Geometry (Euclidean)",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "geometry-proofs",
+    "title": "Geometry (Proofs)",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "geometry-essentials",
+    "title": "Geometry Essentials",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "german-i",
+    "title": "German I",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "german-i-beginner",
+    "title": "German I (Beginner)",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "german-ii",
+    "title": "German II",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "german-iii",
+    "title": "German III",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "grammar-composition",
+    "title": "Grammar & Composition",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "health-nutrition-core",
+    "title": "Health & Nutrition (Core)",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "human-geography",
+    "title": "Human Geography",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "intro-to-programming-python",
+    "title": "Intro to Programming (Python)",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "italian-i",
+    "title": "Italian I",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "japanese-i",
+    "title": "Japanese I",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "japanese-ii",
+    "title": "Japanese II",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "japanese-iii",
+    "title": "Japanese III",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "journalism-and-media-studies",
+    "title": "Journalism and Media Studies",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "latin-american-history-survey",
+    "title": "Latin American History Survey",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "latin-i",
+    "title": "Latin I",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "latin-ii",
+    "title": "Latin II",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "latin-iii",
+    "title": "Latin III",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "law-101",
+    "title": "Law 101",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "linear-algebra",
+    "title": "Linear Algebra",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "linear-programming-optimization",
+    "title": "Linear Programming & Optimization",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "macroeconomics",
+    "title": "Macroeconomics",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "microbiology",
+    "title": "Microbiology",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "microeconomics",
+    "title": "Microeconomics",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "middle-east-history-20th-21st-century",
+    "title": "Middle East History: 20th–21st Century",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "molecular-biology",
+    "title": "Molecular Biology",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "multivariable-calculus",
+    "title": "Multivariable Calculus",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "music-history",
+    "title": "Music History",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "music-theory",
+    "title": "Music Theory",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "music-theory-ap",
+    "title": "Music Theory (AP)",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "music-theory-i",
+    "title": "Music Theory I",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "number-theory-intro",
+    "title": "Number Theory (Intro)",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "operating-systems",
+    "title": "Operating Systems",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "organic-chemistry",
+    "title": "Organic Chemistry",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "organic-chemistry-i",
+    "title": "Organic Chemistry I",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "philosophy-101",
+    "title": "Philosophy 101",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "philosophy-basics",
+    "title": "Philosophy Basics",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "physical-geography",
+    "title": "Physical Geography",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "physics-ii-electricity-magnetism",
+    "title": "Physics II (Electricity & Magnetism)",
+    "group": "mixed",
+    "count": 40
+  },
+  {
+    "id": "physics-electricity-magnetism",
+    "title": "Physics: Electricity & Magnetism",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "physics-mechanics",
+    "title": "Physics: Mechanics",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "physics-modern-physics",
+    "title": "Physics: Modern Physics",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "physics-waves-optics",
+    "title": "Physics: Waves & Optics",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "plant-biology-botany",
+    "title": "Plant Biology (Botany)",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "precalculus",
+    "title": "Precalculus",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "precalculus-enhancements",
+    "title": "Precalculus (Enhancements)",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "probability-basics",
+    "title": "Probability Basics",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "psychology-advanced",
+    "title": "Psychology (Advanced)",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "psychology-ap",
+    "title": "Psychology AP",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "renaissance-reformation",
+    "title": "Renaissance & Reformation",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "sociology",
+    "title": "Sociology",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "sociology-basics",
+    "title": "Sociology Basics",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "software-engineering-practices",
+    "title": "Software Engineering Practices",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "spanish-i",
+    "title": "Spanish I",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "spanish-i-beginner",
+    "title": "Spanish I (Beginner)",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "spanish-ii",
+    "title": "Spanish II",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "spanish-iii",
+    "title": "Spanish III",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "spanish-iv",
+    "title": "Spanish IV",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "spanish-v",
+    "title": "Spanish V",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "statistics",
+    "title": "Statistics",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "statistics-inference-regression",
+    "title": "Statistics: Inference & Regression",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "statistics-probability",
+    "title": "Statistics: Probability",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "theater-and-drama",
+    "title": "Theater and Drama",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "trigonometry",
+    "title": "Trigonometry",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "u-s-economics-policy",
+    "title": "U.S. Economics Policy",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "u-s-government-civics-institutions",
+    "title": "U.S. Government & Civics (Institutions)",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "u-s-government-politics",
+    "title": "U.S. Government & Politics",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "u-s-government-landmark-supreme-court-cases",
+    "title": "U.S. Government: Landmark Supreme Court Cases",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "u-s-government-supreme-court-cases",
+    "title": "U.S. Government: Supreme Court Cases",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "u-s-history-i-foundations-civil-war",
+    "title": "U.S. History I (Foundations–Civil War)",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "u-s-history-ii-reconstruction-present",
+    "title": "U.S. History II (Reconstruction–Present)",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "u-s-history-iii-1900-present",
+    "title": "U.S. History III (1900-Present)",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "u-s-history-colonization-to-civil-war",
+    "title": "U.S. History: Colonization to Civil War",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "u-s-history-primary-sources",
+    "title": "U.S. History: Primary Sources",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "u-s-history-reconstruction-era",
+    "title": "U.S. History: Reconstruction Era",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "u-s-literature-20th-century",
+    "title": "U.S. Literature: 20th Century",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "world-geography",
+    "title": "World Geography",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "world-geography-capitals-regions",
+    "title": "World Geography: Capitals & Regions",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "world-geography-regions",
+    "title": "World Geography: Regions",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "world-history-i-ancient-medieval",
+    "title": "World History I (Ancient–Medieval)",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "world-history-ii-1500-1900",
+    "title": "World History II (1500–1900)",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "world-history-iii-20th-21st-century",
+    "title": "World History III (20th-21st Century)",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "world-history-ancient-civilizations",
+    "title": "World History: Ancient Civilizations",
+    "group": "mixed",
+    "count": 40
+  },
+  {
+    "id": "world-history-asia",
+    "title": "World History: Asia",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "world-history-cold-war-to-present",
+    "title": "World History: Cold War to Present",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "world-history-enlightenment-and-revolutions",
+    "title": "World History: Enlightenment and Revolutions",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "world-history-industrialization-to-wwii",
+    "title": "World History: Industrialization to WWII",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "world-history-medieval",
+    "title": "World History: Medieval",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "world-history-middle-ages",
+    "title": "World History: Middle Ages",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "world-history-modern",
+    "title": "World History: Modern",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "world-history-primary-sources",
+    "title": "World History: Primary Sources",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "world-history-reformation-scientific-revolution",
+    "title": "World History: Reformation & Scientific Revolution",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "world-history-renaissance",
+    "title": "World History: Renaissance",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "world-literature",
+    "title": "World Literature",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "world-literature-survey",
+    "title": "World Literature Survey",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "world-religions",
+    "title": "World Religions",
+    "group": "mixed",
+    "count": 20
+  },
+  {
+    "id": "world-religions-core",
+    "title": "World Religions (Core)",
+    "group": "mixed",
+    "count": 20
+  }
+]

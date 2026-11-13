@@ -1,0 +1,25 @@
+{
+  "topic": "World History: Modern",
+  "cards": [
+    { "q": "Renaissance center", "a": "Italy (Florence)" },
+    { "q": "Printing press inventor", "a": "Johannes Gutenberg" },
+    { "q": "Reformation leader", "a": "Martin Luther (95 Theses 1517)" },
+    { "q": "Age of Exploration motive", "a": "God, Gold, Glory" },
+    { "q": "Columbian Exchange meaning", "a": "Transfer of goods, people, diseases Old/New World" },
+    { "q": "Scientific Revolution thinkers", "a": "Copernicus, Galileo, Newton" },
+    { "q": "Enlightenment ideals", "a": "Reason, liberty, progress" },
+    { "q": "French Revolution start year", "a": "1789" },
+    { "q": "Industrial Revolution features", "a": "Machines, factories, urbanization" },
+    { "q": "Marx and Engels book", "a": "The Communist Manifesto" },
+    { "q": "WWI spark", "a": "Assassination of Archduke Franz Ferdinand" },
+    { "q": "Treaty of Versailles year", "a": "1919" },
+    { "q": "League of Nations purpose", "a": "Post-WWI peacekeeping (failed)" },
+    { "q": "WWII Axis powers", "a": "Germany, Italy, Japan" },
+    { "q": "Cold War rivals", "a": "U.S. and USSR" },
+    { "q": "Decolonization period", "a": "Post-WWII independence in Asia, Africa" },
+    { "q": "Fall of Berlin Wall year", "a": "1989" },
+    { "q": "Apartheid ended decade", "a": "1990s (Nelson Mandela elected 1994)" },
+    { "q": "Globalization definition", "a": "Increasing interconnectedness of world" },
+    { "q": "21st century challenges", "a": "Climate change, terrorism, pandemics" }
+  ]
+}

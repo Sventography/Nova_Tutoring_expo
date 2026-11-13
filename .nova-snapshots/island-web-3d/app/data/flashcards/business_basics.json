@@ -1,0 +1,25 @@
+{
+  "topic": "Business Basics",
+  "cards": [
+    { "q": "Mission vs vision", "a": "Mission what we do now; vision future aspiration" },
+    { "q": "Stakeholders", "a": "Employees, customers, owners, suppliers, community" },
+    { "q": "SWOT analysis", "a": "Strengths, Weaknesses, Opportunities, Threats" },
+    { "q": "Revenue vs profit", "a": "Revenue sales; profit revenue minus costs" },
+    { "q": "Fixed vs variable cost", "a": "Fixed do not vary with output; variable do" },
+    { "q": "Break-even point", "a": "Quantity where profit = 0" },
+    { "q": "Market segmentation", "a": "Divide customers by characteristics" },
+    { "q": "4 Ps of marketing", "a": "Product, Price, Place, Promotion" },
+    { "q": "B2B vs B2C", "a": "Business to business vs business to consumer" },
+    { "q": "Cash flow statement shows", "a": "Operating, investing, financing cash" },
+    { "q": "Balance sheet equation", "a": "Assets = Liabilities + Equity" },
+    { "q": "Income statement shows", "a": "Revenues and expenses over period" },
+    { "q": "Unit economics", "a": "Revenue and cost per unit/customer" },
+    { "q": "Economies of scale", "a": "Average cost falls as scale rises" },
+    { "q": "Competitive advantage", "a": "Unique value hard to copy" },
+    { "q": "KPIs meaning", "a": "Key performance indicators" },
+    { "q": "Gross margin", "a": "(Revenue - COGS) / Revenue" },
+    { "q": "Runway for startup", "a": "Cash on hand divided by burn rate" },
+    { "q": "CAC vs LTV", "a": "Customer acquisition cost vs lifetime value" },
+    { "q": "Churn rate", "a": "Percent customers lost per period" }
+  ]
+}

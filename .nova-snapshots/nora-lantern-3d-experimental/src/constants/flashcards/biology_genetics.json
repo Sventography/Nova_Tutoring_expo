@@ -1,0 +1,82 @@
+[
+  {
+    "question": "DNA double helix base pairing",
+    "answer": "A–T, C–G"
+  },
+  {
+    "question": "Sugar in DNA",
+    "answer": "Deoxyribose"
+  },
+  {
+    "question": "Process making RNA from DNA",
+    "answer": "Transcription"
+  },
+  {
+    "question": "Process making protein from mRNA",
+    "answer": "Translation"
+  },
+  {
+    "question": "Three-base unit on mRNA",
+    "answer": "Codon"
+  },
+  {
+    "question": "Cell division producing gametes",
+    "answer": "Meiosis"
+  },
+  {
+    "question": "Cell division for growth/repair",
+    "answer": "Mitosis"
+  },
+  {
+    "question": "Alternative forms of a gene",
+    "answer": "Alleles"
+  },
+  {
+    "question": "Observable traits",
+    "answer": "Phenotype"
+  },
+  {
+    "question": "Allele combination",
+    "answer": "Genotype"
+  },
+  {
+    "question": "Same alleles at a locus",
+    "answer": "Homozygous"
+  },
+  {
+    "question": "Different alleles at a locus",
+    "answer": "Heterozygous"
+  },
+  {
+    "question": "When both alleles are expressed equally",
+    "answer": "Codominance"
+  },
+  {
+    "question": "When heterozygote shows intermediate phenotype",
+    "answer": "Incomplete dominance"
+  },
+  {
+    "question": "Genes on X chromosome show",
+    "answer": "Sex-linked inheritance"
+  },
+  {
+    "question": "Exchange of genetic material in meiosis I",
+    "answer": "Crossing over"
+  },
+  {
+    "question": "Mendel’s Law of Segregation",
+    "answer": "Allele pairs separate during gamete formation"
+  },
+  {
+    "question": "Mendel’s Law of Independent Assortment",
+    "answer": "Genes on different chromosomes assort independently"
+  },
+  {
+    "question": "Dihybrid cross phenotypic ratio (complete dominance)",
+    "answer": "9:3:3:1"
+  },
+  {
+    "question": "Technique separating DNA by size",
+    "answer": "Gel electrophoresis"
+  }
+]

@@ -1,0 +1,82 @@
+[
+  {
+    "question": "Treble clef also called",
+    "answer": "G clef"
+  },
+  {
+    "question": "Bass clef also called",
+    "answer": "F clef"
+  },
+  {
+    "question": "Staff lines number",
+    "answer": "5"
+  },
+  {
+    "question": "Quarter note duration",
+    "answer": "1 beat (common time)"
+  },
+  {
+    "question": "Half note duration",
+    "answer": "2 beats"
+  },
+  {
+    "question": "Whole note duration",
+    "answer": "4 beats"
+  },
+  {
+    "question": "Sharp raises note by",
+    "answer": "Half step"
+  },
+  {
+    "question": "Flat lowers note by",
+    "answer": "Half step"
+  },
+  {
+    "question": "Key signature shows",
+    "answer": "Sharps or flats in a piece"
+  },
+  {
+    "question": "Time signature top number means",
+    "answer": "Beats per measure"
+  },
+  {
+    "question": "Time signature bottom number means",
+    "answer": "Note value per beat"
+  },
+  {
+    "question": "Major scale pattern",
+    "answer": "W W H W W W H"
+  },
+  {
+    "question": "Minor scale pattern",
+    "answer": "W H W W H W W"
+  },
+  {
+    "question": "Chord built on 1st scale degree",
+    "answer": "Tonic"
+  },
+  {
+    "question": "Chord built on 5th degree",
+    "answer": "Dominant"
+  },
+  {
+    "question": "Perfect fifth interval",
+    "answer": "7 semitones"
+  },
+  {
+    "question": "Tempo definition",
+    "answer": "Speed of music"
+  },
+  {
+    "question": "Dynamics examples",
+    "answer": "p, f, crescendo, decrescendo"
+  },
+  {
+    "question": "Fermata symbol means",
+    "answer": "Hold note longer"
+  },
+  {
+    "question": "Legato marking",
+    "answer": "Smooth, connected"
+  }
+]

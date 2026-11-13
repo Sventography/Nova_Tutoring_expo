@@ -1,0 +1,25 @@
+{
+  "topic": "World History II (1500–1900)",
+  "cards": [
+    { "q": "Age of Exploration motives", "a": "Gold, God, Glory; trade routes, empire building" },
+    { "q": "Columbian Exchange impact", "a": "Transfer of crops, animals, diseases between Old and New Worlds" },
+    { "q": "Ottoman Empire significance (early modern)", "a": "Controlled trade routes; cultural and military power" },
+    { "q": "Mughal Empire hallmark", "a": "Persianate culture; Akbar’s policies; Taj Mahal" },
+    { "q": "Tokugawa Japan policy", "a": "Sakoku (relative isolation), internal stability" },
+    { "q": "Scientific Revolution figures", "a": "Copernicus, Galileo, Kepler, Newton (heliocentrism, laws of motion)" },
+    { "q": "Enlightenment themes", "a": "Reason, rights, social contract, separation of powers" },
+    { "q": "American Revolution dates", "a": "1775–1783" },
+    { "q": "French Revolution start year", "a": "1789" },
+    { "q": "Napoleonic era effects", "a": "Napoleonic Code; spread of nationalism; redrawn Europe" },
+    { "q": "Latin American independence leaders", "a": "Simón Bolívar, José de San Martín, others" },
+    { "q": "Industrial Revolution birthplace and features", "a": "Britain; mechanization, factories, urbanization" },
+    { "q": "Social consequences of industrialization", "a": "Labor movements, child labor issues, class tensions" },
+    { "q": "Imperialism motives (19th c.)", "a": "Resources, markets, prestige, strategic control" },
+    { "q": "Scramble for Africa", "a": "Rapid European colonization (Berlin Conference 1884–85 context)" },
+    { "q": "Meiji Restoration (Japan) impact", "a": "Rapid modernization, industrialization, Westernization" },
+    { "q": "Opium Wars results", "a": "Unequal treaties; spheres of influence in China" },
+    { "q": "Nationalism’s role in Italy/Germany", "a": "Unification movements (Cavour, Garibaldi; Bismarck)" },
+    { "q": "Russo-Japanese War significance (1904–05)", "a": "First major Asian victory over European power; sign of rising Japan" },
+    { "q": "Global migrations (19th c.) patterns", "a": "Mass European emigration to Americas; indentured labor flows" }
+  ]
+}

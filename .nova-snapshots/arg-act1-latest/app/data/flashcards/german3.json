@@ -1,0 +1,25 @@
+{
+  "topic": "German III",
+  "cards": [
+    { "q": "Konjunktiv I reported speech", "a": "Er sage, er komme" },
+    { "q": "Konjunktiv II polite request", "a": "Konnten Sie mir helfen?" },
+    { "q": "Subjunctive past forms", "a": "haette, waere, wuerde + infinitive" },
+    { "q": "Passive present", "a": "werden + Partizip II (Der Text wird gelesen)" },
+    { "q": "Passive past", "a": "wurde + Partizip II" },
+    { "q": "Causative lassen", "a": "Ich lasse das Auto reparieren" },
+    { "q": "Relativsatz comma rule", "a": "Relative clause separated by commas; verb at end" },
+    { "q": "Konzessivsatz obwohl", "a": "Obwohl es regnet, gehen wir" },
+    { "q": "Temporalsatz waehrend, nachdem", "a": "Verb goes to end" },
+    { "q": "Konjunktorische Nebensatz word order", "a": "Subordinating conjunction pushes verb to end" },
+    { "q": "Indirekte Rede", "a": "Reported speech often Konjunktiv I" },
+    { "q": "Genitive prepositions", "a": "wahrend, wegen, trotz, innerhalb, ausserhalb" },
+    { "q": "Participial adjectives", "a": "gebacken Brot, lachende Kinder" },
+    { "q": "Word formation prefixes", "a": "be-, ver-, zer-, ent-, er-" },
+    { "q": "Separable prefixes", "a": "ab-, an-, auf-, ein-, mit-, vor-, zu-" },
+    { "q": "Negation nicht vs kein", "a": "Nicht with verbs/adjectives; kein with nouns without article" },
+    { "q": "Idioms example", "a": "Da liegt der Hund begraben (that is the crux)" },
+    { "q": "Numbers million billion", "a": "eine Million, eine Milliarde" },
+    { "q": "Academic register markers", "a": "laut, hinsichtlich, aufgrund, jedoch" },
+    { "q": "Email salutation/closing", "a": "Sehr geehrte, Mit freundlichen Gruessen" }
+  ]
+}

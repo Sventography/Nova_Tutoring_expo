@@ -1,0 +1,6092 @@
+// app/components/island3d/NovaIsland3DScene.tsx
+
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import {
+  PanResponder,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { Asset } from "expo-asset";
+import { Ionicons } from "@expo/vector-icons";
+import {
+  Canvas,
+  useFrame,
+} from "@react-three/fiber/native";
+import * as THREE from "three";
+
+import {
+  ISLAND_MILESTONES,
+  type IslandMilestone,
+} from "../../context/IslandContext";
+
+export type Island3DZone =
+  | "grove"
+  | "garden"
+  | "library"
+  | "waterfall"
+  | "observatory"
+  | "habitat"
+  | "open_grass";
+
+export type Island3DDiscovery = {
+  key: string;
+  kind: "keepsake" | "resident";
+  title: string;
+  accent: string;
+  zone: Island3DZone;
+
+  /*
+   * Preserved for the resident-model registry.
+   * Generic residents still render safely when no dedicated model exists.
+   */
+  companionId?: string;
+};
+
+type Props = {
+  level: number;
+  height?: number;
+  selectedMilestoneId: string;
+  selectedDiscoveryKey: string | null;
+  discoveries: Island3DDiscovery[];
+  onSelectMilestone: (
+    milestoneId: string
+  ) => void;
+  onSelectDiscovery: (
+    discoveryKey: string
+  ) => void;
+  onInteractionChange?: (
+    active: boolean
+  ) => void;
+};
+
+type Vec3 = [
+  number,
+  number,
+  number
+];
+
+type OrbitControlsState = {
+  azimuth: number;
+  polar: number;
+  distance: number;
+  desiredAzimuth: number;
+  desiredPolar: number;
+  desiredTarget: Vec3;
+  desiredDistance: number;
+};
+
+type OrbitVelocityState = {
+  azimuth: number;
+  polar: number;
+};
+
+type TimePalette = {
+  label: string;
+  skyTop: string;
+  skyBottom: string;
+  horizon: string;
+  ambient: number;
+  keyLight: number;
+  fillLight: number;
+  starsOpacity: number;
+  celestialColor: string;
+  celestialGlow: string;
+  celestialPosition: Vec3;
+  celestialKind: "sun" | "moon";
+  cloudOpacity: number;
+};
+
+const DEFAULT_TARGET: Vec3 = [
+  0,
+  0.45,
+  0,
+];
+
+/*
+ * Use Nova's approved tutorial artwork for the Island resident until a
+ * professionally modeled and rigged GLB is available. This avoids the
+ * uncanny procedural humanoid while preserving a real in-world object,
+ * shadow, bobbing animation, and fixed relationship to the Island.
+ */
+const NOVA_ISLAND_MASCOT_ART =
+  require("../../assets/tutorial/nova_welcome.png");
+
+const LANDMARK_POSITIONS: Record<
+  string,
+  Vec3
+> = {
+  // Central island — completed before any outer realm appears.
+  study_grove: [
+    -3.45,
+    1.08,
+    -0.85,
+  ],
+  starlight_garden: [
+    -2.25,
+    0.98,
+    2.15,
+  ],
+  nova_library: [
+    0.15,
+    1.12,
+    -1.15,
+  ],
+  whisperwind_mill: [
+    -1.85,
+    1.08,
+    -2.75,
+  ],
+  learning_falls: [
+    2.45,
+    0.82,
+    2.05,
+  ],
+  moonwell: [
+    -0.35,
+    0.98,
+    1.35,
+  ],
+  sky_observatory: [
+    3.2,
+    1.1,
+    -0.95,
+  ],
+  companion_habitat: [
+    1.35,
+    0.94,
+    -3.25,
+  ],
+
+  // Outer realms — question beacons only until their land unlocks.
+  castle_reach: [
+    -5.25,
+    1.12,
+    -0.65,
+  ],
+  starport_dock: [
+    5.25,
+    1.05,
+    1.1,
+  ],
+  crystal_wilds: [
+    1.0,
+    1.08,
+    -5.15,
+  ],
+  moon_temple: [
+    -0.75,
+    1.08,
+    4.9,
+  ],
+};
+
+const DISCOVERY_ZONE_POSITIONS: Record<
+  Island3DZone,
+  Vec3
+> = {
+  grove: [
+    -2.7,
+    1.02,
+    0.55,
+  ],
+  garden: [
+    -1.35,
+    0.94,
+    2.85,
+  ],
+  library: [
+    0.75,
+    1.02,
+    -0.55,
+  ],
+  waterfall: [
+    2.65,
+    0.8,
+    1.35,
+  ],
+  observatory: [
+    2.7,
+    1.0,
+    -1.85,
+  ],
+  habitat: [
+    0.35,
+    0.92,
+    -3.55,
+  ],
+  open_grass: [
+    -0.45,
+    0.96,
+    1.35,
+  ],
+};
+
+const LANDMARK_LORE: Record<
+  string,
+  string
+> = {
+  study_grove:
+    "The first roots of Nova Island grow wherever curiosity is practiced.",
+  starlight_garden:
+    "Each flower stores a tiny spark from a question you were brave enough to ask.",
+  nova_library:
+    "The Library remembers lessons, cards, and discoveries gathered across your journey.",
+  whisperwind_mill:
+    "Its turning sails gather wandering thoughts and return them as focused energy.",
+  learning_falls:
+    "Learning energy becomes water here, flowing more brightly as your habits strengthen.",
+  moonwell:
+    "The Moonwell remembers quiet wishes made beneath the stars.",
+  sky_observatory:
+    "The Observatory watches distant goals and turns progress into constellations.",
+  companion_habitat:
+    "Bonded companions find a lasting home here, even when another friend is equipped.",
+  castle_reach:
+    "Across the bridge, the castle guards the oldest stories of the Nova realm.",
+  starport_dock:
+    "The dock waits at the edge of the sky for journeys beyond the island.",
+  crystal_wilds:
+    "Every crystal hums with a different memory of learning and discovery.",
+  moon_temple:
+    "The moon gate opens only for an island that has grown through patience.",
+};
+
+const clamp = (
+  value: number,
+  min: number,
+  max: number
+) =>
+  Math.max(
+    min,
+    Math.min(max, value)
+  );
+
+const damp = (
+  current: number,
+  target: number,
+  smoothing: number,
+  delta: number
+): number => {
+  const amount =
+    1 -
+    Math.exp(
+      -smoothing * delta
+    );
+
+  return current +
+    (target - current) *
+      amount;
+};
+
+const distanceBetweenTouches = (
+  touches: readonly any[]
+): number => {
+  if (touches.length < 2) {
+    return 0;
+  }
+
+  const dx =
+    touches[0].pageX -
+    touches[1].pageX;
+
+  const dy =
+    touches[0].pageY -
+    touches[1].pageY;
+
+  return Math.sqrt(
+    dx * dx + dy * dy
+  );
+};
+
+function mixHex(
+  a: string,
+  b: string,
+  amount: number
+): string {
+  const t = clamp(
+    amount,
+    0,
+    1
+  );
+
+  const parse = (value: string) => {
+    const normalized =
+      value.replace("#", "");
+
+    return [
+      parseInt(
+        normalized.slice(0, 2),
+        16
+      ),
+      parseInt(
+        normalized.slice(2, 4),
+        16
+      ),
+      parseInt(
+        normalized.slice(4, 6),
+        16
+      ),
+    ];
+  };
+
+  const first = parse(a);
+  const second = parse(b);
+
+  const result = first.map(
+    (channel, index) =>
+      Math.round(
+        channel +
+          (second[index] -
+            channel) *
+            t
+      )
+  );
+
+  return `#${result
+    .map((channel) =>
+      channel
+        .toString(16)
+        .padStart(2, "0")
+    )
+    .join("")}`;
+}
+
+function paletteForDate(
+  date: Date
+): TimePalette {
+  const hour =
+    date.getHours() +
+    date.getMinutes() / 60;
+
+  if (hour >= 5 && hour < 8) {
+    const t = (hour - 5) / 3;
+
+    return {
+      label: "Dawn",
+      skyTop: mixHex(
+        "#180d35",
+        "#4d79ad",
+        t
+      ),
+      skyBottom: mixHex(
+        "#d56a73",
+        "#9ad8ef",
+        t
+      ),
+      horizon: "#ffd0a3",
+      ambient: 0.72,
+      keyLight: 1.28,
+      fillLight: 0.68,
+      starsOpacity:
+        0.7 * (1 - t),
+      celestialColor: "#ffd7a0",
+      celestialGlow: "#ff9f68",
+      celestialPosition: [
+        -6 + t * 4,
+        3.5 + t * 2,
+        -8,
+      ],
+      celestialKind: "sun",
+      cloudOpacity: 0.58,
+    };
+  }
+
+  if (hour >= 8 && hour < 17) {
+    const arc =
+      (hour - 8) / 9;
+
+    return {
+      label: "Day",
+      skyTop: "#248bdf",
+      skyBottom: "#8bdcf5",
+      horizon: "#d7f5ff",
+      ambient: 1.02,
+      keyLight: 2.2,
+      fillLight: 0.82,
+      starsOpacity: 0,
+      celestialColor: "#fff4b0",
+      celestialGlow: "#ffd84d",
+      celestialPosition: [
+        -5 + arc * 10,
+        6.6 +
+          Math.sin(
+            arc * Math.PI
+          ) *
+            1.2,
+        -8,
+      ],
+      celestialKind: "sun",
+      cloudOpacity: 0.9,
+    };
+  }
+
+  if (hour >= 17 && hour < 20) {
+    const t = (hour - 17) / 3;
+
+    return {
+      label: "Sunset",
+      skyTop: mixHex(
+        "#3b63a6",
+        "#120624",
+        t
+      ),
+      skyBottom: mixHex(
+        "#ff9f6b",
+        "#5d285f",
+        t
+      ),
+      horizon: "#ffc68a",
+      ambient:
+        0.84 - t * 0.22,
+      keyLight:
+        1.7 - t * 0.68,
+      fillLight:
+        0.72 - t * 0.2,
+      starsOpacity:
+        0.12 + t * 0.7,
+      celestialColor: "#ffcb8a",
+      celestialGlow: "#ff7a59",
+      celestialPosition: [
+        4 + t * 2,
+        5 - t * 2.2,
+        -8,
+      ],
+      celestialKind: "sun",
+      cloudOpacity:
+        0.68 - t * 0.24,
+    };
+  }
+
+  const afterMidnight =
+    hour < 5;
+
+  const moonArc = afterMidnight
+    ? hour / 5
+    : (hour - 20) / 9;
+
+  return {
+    label: "Night",
+    skyTop: "#01030b",
+    skyBottom: "#081c3b",
+    horizon: "#17365a",
+    ambient: 0.42,
+    keyLight: 0.78,
+    fillLight: 0.38,
+    starsOpacity: 0.95,
+    celestialColor: "#e7efff",
+    celestialGlow: "#8ab4ff",
+    celestialPosition: [
+      -5 + moonArc * 10,
+      5.4 +
+        Math.sin(
+          moonArc * Math.PI
+        ) *
+          0.9,
+      -8,
+    ],
+    celestialKind: "moon",
+    cloudOpacity: 0.3,
+  };
+}
+
+function CameraRig({
+  controlsRef,
+  velocityRef,
+}: {
+  controlsRef: React.MutableRefObject<OrbitControlsState>;
+  velocityRef: React.MutableRefObject<OrbitVelocityState>;
+}) {
+  const currentTarget =
+    useRef(
+      new THREE.Vector3(
+        ...DEFAULT_TARGET
+      )
+    );
+
+  useFrame(
+    ({ camera }, delta) => {
+      const controls =
+        controlsRef.current;
+
+      const velocity =
+        velocityRef.current;
+
+      /*
+       * Momentum changes the desired orbit, never the camera directly.
+       * The actual camera then eases toward that target, which removes the
+       * small snapping/jitter that direct PanResponder updates created.
+       */
+      if (
+        Math.abs(
+          velocity.azimuth
+        ) > 0.0001
+      ) {
+        controls.desiredAzimuth +=
+          velocity.azimuth *
+          delta;
+      }
+
+      if (
+        Math.abs(
+          velocity.polar
+        ) > 0.0001
+      ) {
+        controls.desiredPolar =
+          clamp(
+            controls.desiredPolar +
+              velocity.polar *
+                delta,
+            0.5,
+            1.34
+          );
+      }
+
+      const momentumDecay =
+        Math.exp(
+          -5.4 * delta
+        );
+
+      velocity.azimuth *=
+        momentumDecay;
+
+      velocity.polar *=
+        momentumDecay;
+
+      controls.azimuth =
+        damp(
+          controls.azimuth,
+          controls.desiredAzimuth,
+          8.2,
+          delta
+        );
+
+      controls.polar =
+        damp(
+          controls.polar,
+          controls.desiredPolar,
+          8.2,
+          delta
+        );
+
+      controls.distance =
+        damp(
+          controls.distance,
+          controls.desiredDistance,
+          7.4,
+          delta
+        );
+
+      const desiredTarget =
+        new THREE.Vector3(
+          ...controls.desiredTarget
+        );
+
+      currentTarget.current.lerp(
+        desiredTarget,
+        1 -
+          Math.exp(
+            -6.8 * delta
+          )
+      );
+
+      const sinPolar =
+        Math.sin(
+          controls.polar
+        );
+
+      const x =
+        currentTarget.current.x +
+        controls.distance *
+          sinPolar *
+          Math.sin(
+            controls.azimuth
+          );
+
+      const y =
+        currentTarget.current.y +
+        controls.distance *
+          Math.cos(
+            controls.polar
+          );
+
+      const z =
+        currentTarget.current.z +
+        controls.distance *
+          sinPolar *
+          Math.cos(
+            controls.azimuth
+          );
+
+      camera.position.set(
+        x,
+        y,
+        z
+      );
+
+      camera.lookAt(
+        currentTarget.current
+      );
+
+      camera.updateProjectionMatrix();
+    }
+  );
+
+  return null;
+}
+
+function StarField({
+  opacity,
+}: {
+  opacity: number;
+}) {
+  const group =
+    useRef<THREE.Group>(
+      null
+    );
+
+  const brightMaterial =
+    useRef<THREE.PointsMaterial>(
+      null
+    );
+
+  const softMaterial =
+    useRef<THREE.PointsMaterial>(
+      null
+    );
+
+  const stars = useMemo(() => {
+    const bright: number[] = [];
+    const soft: number[] = [];
+    const band: number[] = [];
+
+    /*
+     * A deterministic dome surrounds the full scene rather than placing a
+     * thin row above the island. This keeps stars visible while orbiting.
+     */
+    for (
+      let index = 0;
+      index < 360;
+      index += 1
+    ) {
+      const theta =
+        ((index * 137.508) %
+          360) *
+        (Math.PI / 180);
+
+      const normalized =
+        ((index * 73) % 997) /
+        997;
+
+      const phi =
+        0.13 +
+        normalized * 1.25;
+
+      const radius =
+        19 +
+        ((index * 31) % 10);
+
+      const x =
+        Math.cos(theta) *
+        Math.sin(phi) *
+        radius;
+
+      const y =
+        Math.cos(phi) *
+          radius +
+        2.5;
+
+      const z =
+        Math.sin(theta) *
+          Math.sin(phi) *
+          radius -
+        3;
+
+      const target =
+        index % 5 === 0
+          ? bright
+          : soft;
+
+      target.push(
+        x,
+        y,
+        z
+      );
+    }
+
+    // A faint diagonal galaxy band gives the night sky depth.
+    for (
+      let index = 0;
+      index < 130;
+      index += 1
+    ) {
+      const t =
+        index / 129;
+
+      const angle =
+        -1.3 +
+        t * Math.PI * 2.6;
+
+      const radius =
+        21 +
+        ((index * 19) % 5);
+
+      const spread =
+        (((index * 47) % 100) /
+          100 -
+          0.5) *
+        3.4;
+
+      band.push(
+        Math.cos(angle) *
+          radius,
+        7.8 +
+          Math.sin(angle * 0.55) *
+            5.8 +
+          spread,
+        Math.sin(angle) *
+          radius -
+          5
+      );
+    }
+
+    return {
+      bright:
+        new Float32Array(
+          bright
+        ),
+      soft:
+        new Float32Array(
+          soft
+        ),
+      band:
+        new Float32Array(
+          band
+        ),
+    };
+  }, []);
+
+  useFrame(
+    ({ clock }, delta) => {
+      if (group.current) {
+        group.current.rotation.y +=
+          delta * 0.003;
+      }
+
+      const twinkle =
+        0.82 +
+        Math.sin(
+          clock.elapsedTime *
+            1.7
+        ) *
+          0.18;
+
+      if (
+        brightMaterial.current
+      ) {
+        brightMaterial.current.opacity =
+          opacity * twinkle;
+      }
+
+      if (
+        softMaterial.current
+      ) {
+        softMaterial.current.opacity =
+          opacity * 0.72;
+      }
+    }
+  );
+
+  if (opacity <= 0.01) {
+    return null;
+  }
+
+  return (
+    <group ref={group}>
+      <points>
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            args={[
+              stars.soft,
+              3,
+            ]}
+          />
+        </bufferGeometry>
+
+        <pointsMaterial
+          ref={softMaterial}
+          color="#dbeafe"
+          size={0.095}
+          transparent
+          opacity={
+            opacity * 0.72
+          }
+          sizeAttenuation
+          depthWrite={false}
+          fog={false}
+        />
+      </points>
+
+      <points>
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            args={[
+              stars.bright,
+              3,
+            ]}
+          />
+        </bufferGeometry>
+
+        <pointsMaterial
+          ref={brightMaterial}
+          color="#ffffff"
+          size={0.16}
+          transparent
+          opacity={opacity}
+          sizeAttenuation
+          depthWrite={false}
+          fog={false}
+        />
+      </points>
+
+      <points>
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            args={[
+              stars.band,
+              3,
+            ]}
+          />
+        </bufferGeometry>
+
+        <pointsMaterial
+          color="#c4b5fd"
+          size={0.12}
+          transparent
+          opacity={
+            opacity * 0.34
+          }
+          sizeAttenuation
+          depthWrite={false}
+          fog={false}
+        />
+      </points>
+    </group>
+  );
+}
+
+function DetailedMoon({
+  palette,
+}: {
+  palette: TimePalette;
+}) {
+  const halo =
+    useRef<THREE.Mesh>(
+      null
+    );
+
+  useFrame(
+    ({ clock }) => {
+      if (!halo.current) {
+        return;
+      }
+
+      const pulse =
+        1.72 +
+        Math.sin(
+          clock.elapsedTime *
+            0.8
+        ) *
+          0.06;
+
+      halo.current.scale.set(
+        pulse,
+        pulse,
+        pulse
+      );
+    }
+  );
+
+  return (
+    <group
+      position={
+        palette.celestialPosition
+      }
+      scale={1.18}
+    >
+      <pointLight
+        color="#dbeafe"
+        intensity={1.8}
+        distance={24}
+      />
+
+      <mesh>
+        <sphereGeometry
+          args={[
+            0.68,
+            36,
+            30,
+          ]}
+        />
+        <meshStandardMaterial
+          color="#f2f5ff"
+          emissive="#dbeafe"
+          emissiveIntensity={0.72}
+          roughness={0.72}
+          fog={false}
+        />
+      </mesh>
+
+      {[
+        [-0.2, 0.2, 0.628, 0.13],
+        [0.23, 0.1, 0.63, 0.1],
+        [0.08, -0.24, 0.632, 0.15],
+        [-0.3, -0.17, 0.625, 0.075],
+        [0.3, -0.27, 0.615, 0.065],
+      ].map(
+        ([
+          x,
+          y,
+          z,
+          size,
+        ], index) => (
+          <mesh
+            key={index}
+            position={[
+              x,
+              y,
+              z,
+            ]}
+            scale={[
+              size,
+              size * 0.62,
+              0.025,
+            ]}
+          >
+            <sphereGeometry
+              args={[
+                1,
+                16,
+                12,
+              ]}
+            />
+            <meshBasicMaterial
+              color="#aeb8cf"
+              transparent
+              opacity={0.48}
+              fog={false}
+            />
+          </mesh>
+        )
+      )}
+
+      <mesh
+        ref={halo}
+        scale={1.72}
+      >
+        <sphereGeometry
+          args={[
+            0.68,
+            22,
+            18,
+          ]}
+        />
+        <meshBasicMaterial
+          color="#9ec5ff"
+          transparent
+          opacity={0.16}
+          depthWrite={false}
+          fog={false}
+        />
+      </mesh>
+
+      <mesh scale={2.35}>
+        <sphereGeometry
+          args={[
+            0.68,
+            20,
+            16,
+          ]}
+        />
+        <meshBasicMaterial
+          color="#dbeafe"
+          transparent
+          opacity={0.055}
+          depthWrite={false}
+          fog={false}
+        />
+      </mesh>
+    </group>
+  );
+}
+
+function DetailedSun({
+  palette,
+}: {
+  palette: TimePalette;
+}) {
+  const corona =
+    useRef<THREE.Group>(
+      null
+    );
+
+  useFrame(
+    ({ clock }, delta) => {
+      if (corona.current) {
+        corona.current.rotation.z +=
+          delta * 0.06;
+
+        const pulse =
+          1 +
+          Math.sin(
+            clock.elapsedTime *
+              1.1
+          ) *
+            0.025;
+
+        corona.current.scale.set(
+          pulse,
+          pulse,
+          pulse
+        );
+      }
+    }
+  );
+
+  return (
+    <group
+      position={
+        palette.celestialPosition
+      }
+      scale={1.14}
+    >
+      <pointLight
+        color="#fff4b0"
+        intensity={2.5}
+        distance={30}
+      />
+
+      <mesh>
+        <sphereGeometry
+          args={[
+            0.72,
+            34,
+            28,
+          ]}
+        />
+        <meshBasicMaterial
+          color="#fffbd0"
+          fog={false}
+        />
+      </mesh>
+
+      <mesh scale={1.38}>
+        <sphereGeometry
+          args={[
+            0.72,
+            24,
+            20,
+          ]}
+        />
+        <meshBasicMaterial
+          color="#ffd84d"
+          transparent
+          opacity={0.3}
+          depthWrite={false}
+          fog={false}
+        />
+      </mesh>
+
+      <group ref={corona}>
+        {[0, 1, 2].map(
+          (ring) => (
+            <mesh
+              key={ring}
+              rotation={[
+                Math.PI / 2,
+                ring * 0.62,
+                ring * 0.4,
+              ]}
+              scale={
+                1.62 +
+                ring * 0.28
+              }
+            >
+              <torusGeometry
+                args={[
+                  0.72,
+                  0.035,
+                  8,
+                  42,
+                ]}
+              />
+              <meshBasicMaterial
+                color={
+                  ring === 0
+                    ? "#fff7b2"
+                    : "#ffd166"
+                }
+                transparent
+                opacity={
+                  0.24 -
+                  ring * 0.045
+                }
+                depthWrite={false}
+                fog={false}
+              />
+            </mesh>
+          )
+        )}
+      </group>
+
+      <mesh scale={2.6}>
+        <sphereGeometry
+          args={[
+            0.72,
+            20,
+            16,
+          ]}
+        />
+        <meshBasicMaterial
+          color="#fff3a3"
+          transparent
+          opacity={0.07}
+          depthWrite={false}
+          fog={false}
+        />
+      </mesh>
+    </group>
+  );
+}
+
+function CelestialBody({
+  palette,
+}: {
+  palette: TimePalette;
+}) {
+  return palette.celestialKind ===
+    "moon" ? (
+    <DetailedMoon
+      palette={palette}
+    />
+  ) : (
+    <DetailedSun
+      palette={palette}
+    />
+  );
+}
+
+function Cloud({
+  startX,
+  y,
+  z,
+  speed,
+  scale,
+  opacity,
+}: {
+  startX: number;
+  y: number;
+  z: number;
+  speed: number;
+  scale: number;
+  opacity: number;
+}) {
+  const ref =
+    useRef<THREE.Group>(
+      null
+    );
+
+  useFrame(
+    (_, delta) => {
+      if (!ref.current) {
+        return;
+      }
+
+      ref.current.position.x +=
+        speed * delta;
+
+      if (
+        ref.current.position.x >
+        17
+      ) {
+        ref.current.position.x =
+          -17;
+      }
+    }
+  );
+
+  return (
+    <group
+      ref={ref}
+      position={[
+        startX,
+        y,
+        z,
+      ]}
+      scale={scale}
+    >
+      {[
+        [-1.12, -0.04, 0.02, 0.78],
+        [-0.55, 0.18, 0, 1.02],
+        [0.05, 0.34, 0, 1.16],
+        [0.76, 0.16, 0.03, 0.96],
+        [1.34, -0.04, 0, 0.72],
+        [-0.05, -0.18, 0.08, 1.05],
+      ].map(
+        ([
+          x,
+          cloudY,
+          cloudZ,
+          size,
+        ], index) => (
+          <mesh
+            key={index}
+            position={[
+              x,
+              cloudY,
+              cloudZ,
+            ]}
+            scale={[
+              size,
+              size * 0.72,
+              size * 0.82,
+            ]}
+          >
+            <sphereGeometry
+              args={[
+                0.78,
+                16,
+                12,
+              ]}
+            />
+            <meshStandardMaterial
+              color="#ffffff"
+              emissive="#dff6ff"
+              emissiveIntensity={0.12}
+              transparent
+              opacity={opacity}
+              roughness={1}
+              depthWrite={false}
+              fog={false}
+            />
+          </mesh>
+        )
+      )}
+    </group>
+  );
+}
+
+function IslandBase() {
+  return (
+    <group>
+      <mesh
+        position={[
+          0,
+          0.15,
+          0,
+        ]}
+      >
+        <cylinderGeometry
+          args={[
+            5.35,
+            4.85,
+            0.95,
+            48,
+          ]}
+        />
+        <meshStandardMaterial
+          color="#3ba86c"
+          roughness={0.9}
+        />
+      </mesh>
+
+      <mesh
+        position={[
+          0,
+          0.68,
+          0,
+        ]}
+      >
+        <cylinderGeometry
+          args={[
+            5.2,
+            5.28,
+            0.22,
+            48,
+          ]}
+        />
+        <meshStandardMaterial
+          color="#72dc91"
+          roughness={0.84}
+        />
+      </mesh>
+
+      <mesh
+        position={[
+          0,
+          -2.3,
+          0,
+        ]}
+        rotation={[
+          Math.PI,
+          0,
+          0,
+        ]}
+      >
+        <coneGeometry
+          args={[
+            4.9,
+            5.1,
+            42,
+          ]}
+        />
+        <meshStandardMaterial
+          color="#644638"
+          roughness={1}
+        />
+      </mesh>
+
+      <mesh
+        position={[
+          -1.15,
+          -1.85,
+          0.65,
+        ]}
+        rotation={[
+          Math.PI,
+          0,
+          0,
+        ]}
+        scale={[
+          0.72,
+          0.72,
+          0.72,
+        ]}
+      >
+        <coneGeometry
+          args={[
+            2.7,
+            4.25,
+            24,
+          ]}
+        />
+        <meshStandardMaterial
+          color="#765547"
+          roughness={1}
+        />
+      </mesh>
+
+      {[
+        [-3.5, -1.05, 1.1],
+        [2.8, -1.2, -1.45],
+        [0.4, -2.3, 1.5],
+      ].map(
+        (position, index) => (
+          <mesh
+            key={index}
+            position={
+              position as Vec3
+            }
+            rotation={[
+              Math.PI,
+              index * 0.8,
+              0,
+            ]}
+            scale={[
+              0.45,
+              0.45,
+              0.45,
+            ]}
+          >
+            <coneGeometry
+              args={[
+                1.5,
+                3.2,
+                14,
+              ]}
+            />
+            <meshStandardMaterial
+              color="#52382f"
+              roughness={1}
+            />
+          </mesh>
+        )
+      )}
+    </group>
+  );
+}
+
+type IslandExpansionProps = {
+  level: number;
+  requiredLevel: number;
+  center: Vec3;
+  scale: Vec3;
+  connectorPosition: Vec3;
+  connectorScale: Vec3;
+  grassColor: string;
+  stoneColor: string;
+};
+
+function IslandExpansion({
+  level,
+  requiredLevel,
+  center,
+  scale,
+  connectorPosition,
+  connectorScale,
+  grassColor,
+  stoneColor,
+}: IslandExpansionProps) {
+  const group =
+    useRef<THREE.Group>(
+      null
+    );
+
+  const growth =
+    useRef(
+      level >= requiredLevel
+        ? 0.04
+        : 0
+    );
+
+  useFrame(
+    (_, delta) => {
+      if (!group.current) {
+        return;
+      }
+
+      growth.current =
+        damp(
+          growth.current,
+          1,
+          3.4,
+          delta
+        );
+
+      const value =
+        Math.max(
+          0.04,
+          growth.current
+        );
+
+      group.current.scale.set(
+        value,
+        value,
+        value
+      );
+
+      group.current.position.y =
+        center[1] -
+        (1 - value) *
+          1.5;
+    }
+  );
+
+  if (level < requiredLevel) {
+    return null;
+  }
+
+  return (
+    <group
+      ref={group}
+      position={center}
+      scale={[
+        0.04,
+        0.04,
+        0.04,
+      ]}
+    >
+      <mesh
+        position={[
+          0,
+          0.12,
+          0,
+        ]}
+        scale={scale}
+      >
+        <cylinderGeometry
+          args={[
+            2.15,
+            1.95,
+            0.9,
+            34,
+          ]}
+        />
+        <meshStandardMaterial
+          color={grassColor}
+          roughness={0.9}
+        />
+      </mesh>
+
+      <mesh
+        position={[
+          0,
+          0.64,
+          0,
+        ]}
+        scale={scale}
+      >
+        <cylinderGeometry
+          args={[
+            2.06,
+            2.12,
+            0.18,
+            34,
+          ]}
+        />
+        <meshStandardMaterial
+          color="#7ce39c"
+          roughness={0.86}
+        />
+      </mesh>
+
+      <mesh
+        position={[
+          0,
+          -1.82,
+          0,
+        ]}
+        rotation={[
+          Math.PI,
+          0,
+          0,
+        ]}
+        scale={[
+          scale[0],
+          1,
+          scale[2],
+        ]}
+      >
+        <coneGeometry
+          args={[
+            1.95,
+            4.1,
+            30,
+          ]}
+        />
+        <meshStandardMaterial
+          color={stoneColor}
+          roughness={1}
+        />
+      </mesh>
+
+      <mesh
+        position={[
+          connectorPosition[0] -
+            center[0],
+          connectorPosition[1] -
+            center[1],
+          connectorPosition[2] -
+            center[2],
+        ]}
+        scale={connectorScale}
+      >
+        <boxGeometry
+          args={[
+            1,
+            1,
+            1,
+          ]}
+        />
+        <meshStandardMaterial
+          color="#59bd75"
+          roughness={0.9}
+        />
+      </mesh>
+
+      {[
+        [-1.25, -0.25, 0.9],
+        [1.05, -0.38, -0.8],
+        [0.35, -0.52, 1.25],
+      ].map(
+        (position, index) => (
+          <mesh
+            key={index}
+            position={
+              position as Vec3
+            }
+            rotation={[
+              Math.PI,
+              index * 0.7,
+              0,
+            ]}
+            scale={[
+              0.24,
+              0.24,
+              0.24,
+            ]}
+          >
+            <coneGeometry
+              args={[
+                1.1,
+                2.2,
+                10,
+              ]}
+            />
+            <meshStandardMaterial
+              color={stoneColor}
+              roughness={1}
+            />
+          </mesh>
+        )
+      )}
+    </group>
+  );
+}
+
+function IslandExpansions({
+  level,
+}: {
+  level: number;
+}) {
+  return (
+    <>
+      <IslandExpansion
+        level={level}
+        requiredLevel={12}
+        center={[
+          -5.15,
+          0.08,
+          -0.7,
+        ]}
+        scale={[
+          1.12,
+          1,
+          0.94,
+        ]}
+        connectorPosition={[
+          -3.8,
+          0.57,
+          -0.62,
+        ]}
+        connectorScale={[
+          2.7,
+          0.34,
+          1.35,
+        ]}
+        grassColor="#3ca66a"
+        stoneColor="#604137"
+      />
+
+      <IslandExpansion
+        level={level}
+        requiredLevel={15}
+        center={[
+          5.0,
+          0.04,
+          1.05,
+        ]}
+        scale={[
+          1.12,
+          1,
+          0.92,
+        ]}
+        connectorPosition={[
+          3.7,
+          0.56,
+          0.82,
+        ]}
+        connectorScale={[
+          2.7,
+          0.34,
+          1.28,
+        ]}
+        grassColor="#369f69"
+        stoneColor="#594039"
+      />
+
+      <IslandExpansion
+        level={level}
+        requiredLevel={18}
+        center={[
+          1.0,
+          0.08,
+          -5.0,
+        ]}
+        scale={[
+          0.98,
+          1,
+          1.12,
+        ]}
+        connectorPosition={[
+          0.7,
+          0.58,
+          -3.72,
+        ]}
+        connectorScale={[
+          1.32,
+          0.34,
+          2.75,
+        ]}
+        grassColor="#389f68"
+        stoneColor="#564039"
+      />
+
+      <IslandExpansion
+        level={level}
+        requiredLevel={21}
+        center={[
+          -0.7,
+          0.08,
+          4.72,
+        ]}
+        scale={[
+          1.02,
+          1,
+          1.14,
+        ]}
+        connectorPosition={[
+          -0.48,
+          0.58,
+          3.55,
+        ]}
+        connectorScale={[
+          1.38,
+          0.34,
+          2.65,
+        ]}
+        grassColor="#41a96e"
+        stoneColor="#62443a"
+      />
+    </>
+  );
+}
+
+function SelectionRing({
+  color,
+}: {
+  color: string;
+}) {
+  const ref =
+    useRef<THREE.Mesh>(
+      null
+    );
+
+  useFrame(
+    ({ clock }) => {
+      if (!ref.current) {
+        return;
+      }
+
+      const pulse =
+        1 +
+        Math.sin(
+          clock.elapsedTime * 3.2
+        ) *
+          0.08;
+
+      ref.current.scale.set(
+        pulse,
+        pulse,
+        pulse
+      );
+
+      ref.current.rotation.z +=
+        0.006;
+    }
+  );
+
+  return (
+    <mesh
+      ref={ref}
+      position={[
+        0,
+        -0.05,
+        0,
+      ]}
+      rotation={[
+        -Math.PI / 2,
+        0,
+        0,
+      ]}
+    >
+      <torusGeometry
+        args={[
+          0.78,
+          0.055,
+          10,
+          42,
+        ]}
+      />
+      <meshBasicMaterial
+        color={color}
+        transparent
+        opacity={0.88}
+        depthWrite={false}
+      />
+    </mesh>
+  );
+}
+
+function Tree({
+  unlocked,
+}: {
+  unlocked: boolean;
+}) {
+  const leafColor = unlocked
+    ? "#53c878"
+    : "#46505d";
+
+  const trunkColor = unlocked
+    ? "#855a3d"
+    : "#3c4149";
+
+  return (
+    <group>
+      <mesh
+        position={[
+          0,
+          0.65,
+          0,
+        ]}
+      >
+        <cylinderGeometry
+          args={[
+            0.18,
+            0.25,
+            1.3,
+            10,
+          ]}
+        />
+        <meshStandardMaterial
+          color={trunkColor}
+          roughness={1}
+        />
+      </mesh>
+
+      {[
+        [0, 1.55, 0, 0.78],
+        [-0.52, 1.35, 0, 0.58],
+        [0.5, 1.35, 0.08, 0.62],
+        [0.05, 1.42, -0.48, 0.56],
+      ].map(
+        ([
+          x,
+          y,
+          z,
+          size,
+        ], index) => (
+          <mesh
+            key={index}
+            position={[
+              x,
+              y,
+              z,
+            ]}
+            scale={size}
+          >
+            <sphereGeometry
+              args={[
+                0.82,
+                14,
+                12,
+              ]}
+            />
+            <meshStandardMaterial
+              color={leafColor}
+              roughness={0.9}
+              emissive={
+                unlocked
+                  ? "#0b3d24"
+                  : "#000000"
+              }
+              emissiveIntensity={
+                unlocked
+                  ? 0.35
+                  : 0
+              }
+            />
+          </mesh>
+        )
+      )}
+    </group>
+  );
+}
+
+function Garden({
+  unlocked,
+}: {
+  unlocked: boolean;
+}) {
+  const colors = unlocked
+    ? [
+        "#f0abfc",
+        "#67e8f9",
+        "#fde68a",
+        "#86efac",
+        "#fda4af",
+      ]
+    : [
+        "#525866",
+        "#525866",
+        "#525866",
+        "#525866",
+        "#525866",
+      ];
+
+  return (
+    <group>
+      {[
+        [-0.55, 0, -0.2],
+        [-0.15, 0.04, 0.28],
+        [0.28, 0, -0.12],
+        [0.6, 0.02, 0.3],
+        [0.1, 0.05, 0.62],
+      ].map(
+        ([
+          x,
+          y,
+          z,
+        ], index) => (
+          <group
+            key={index}
+            position={[
+              x,
+              y,
+              z,
+            ]}
+          >
+            <mesh
+              position={[
+                0,
+                0.25,
+                0,
+              ]}
+            >
+              <cylinderGeometry
+                args={[
+                  0.025,
+                  0.035,
+                  0.5,
+                  7,
+                ]}
+              />
+              <meshStandardMaterial
+                color={
+                  unlocked
+                    ? "#3f9b63"
+                    : "#424852"
+                }
+              />
+            </mesh>
+
+            <mesh
+              position={[
+                0,
+                0.55,
+                0,
+              ]}
+            >
+              <octahedronGeometry
+                args={[
+                  0.18,
+                  0,
+                ]}
+              />
+              <meshStandardMaterial
+                color={
+                  colors[index]
+                }
+                emissive={
+                  colors[index]
+                }
+                emissiveIntensity={
+                  unlocked
+                    ? 0.65
+                    : 0
+                }
+              />
+            </mesh>
+          </group>
+        )
+      )}
+    </group>
+  );
+}
+
+function Library({
+  unlocked,
+}: {
+  unlocked: boolean;
+}) {
+  const wall = unlocked
+    ? "#d8c9a7"
+    : "#535963";
+
+  const roof = unlocked
+    ? "#516a8f"
+    : "#3e434b";
+
+  return (
+    <group>
+      <mesh
+        position={[
+          0,
+          0.58,
+          0,
+        ]}
+      >
+        <boxGeometry
+          args={[
+            1.6,
+            1.15,
+            1.35,
+          ]}
+        />
+        <meshStandardMaterial
+          color={wall}
+          roughness={0.82}
+        />
+      </mesh>
+
+      <mesh
+        position={[
+          0,
+          1.42,
+          0,
+        ]}
+        rotation={[
+          0,
+          Math.PI / 4,
+          0,
+        ]}
+      >
+        <coneGeometry
+          args={[
+            1.25,
+            0.82,
+            4,
+          ]}
+        />
+        <meshStandardMaterial
+          color={roof}
+          roughness={0.76}
+        />
+      </mesh>
+
+      <mesh
+        position={[
+          0,
+          0.42,
+          0.69,
+        ]}
+      >
+        <boxGeometry
+          args={[
+            0.38,
+            0.68,
+            0.08,
+          ]}
+        />
+        <meshStandardMaterial
+          color={
+            unlocked
+              ? "#5a3b2f"
+              : "#34383f"
+          }
+        />
+      </mesh>
+
+      {[
+        [-0.52, 0.76],
+        [0.52, 0.76],
+      ].map(
+        ([x, y], index) => (
+          <mesh
+            key={index}
+            position={[
+              x,
+              y,
+              0.7,
+            ]}
+          >
+            <boxGeometry
+              args={[
+                0.31,
+                0.32,
+                0.06,
+              ]}
+            />
+            <meshStandardMaterial
+              color={
+                unlocked
+                  ? "#7de7ff"
+                  : "#424852"
+              }
+              emissive={
+                unlocked
+                  ? "#38bdf8"
+                  : "#000000"
+              }
+              emissiveIntensity={
+                unlocked
+                  ? 0.45
+                  : 0
+              }
+            />
+          </mesh>
+        )
+      )}
+    </group>
+  );
+}
+
+function Waterfall({
+  unlocked,
+}: {
+  unlocked: boolean;
+}) {
+  const ref =
+    useRef<THREE.Group>(
+      null
+    );
+
+  useFrame(
+    ({ clock }) => {
+      if (!ref.current) {
+        return;
+      }
+
+      ref.current.position.y =
+        Math.sin(
+          clock.elapsedTime * 2.8
+        ) *
+        0.035;
+    }
+  );
+
+  return (
+    <group>
+      <mesh
+        position={[
+          0,
+          0.18,
+          -0.25,
+        ]}
+      >
+        <boxGeometry
+          args={[
+            1.45,
+            0.55,
+            1.15,
+          ]}
+        />
+        <meshStandardMaterial
+          color={
+            unlocked
+              ? "#546a66"
+              : "#454b52"
+          }
+          roughness={1}
+        />
+      </mesh>
+
+      <group
+        ref={ref}
+        position={[
+          0,
+          0.2,
+          0.56,
+        ]}
+      >
+        {[
+          [-0.35, 0.34],
+          [0, 0.42],
+          [0.35, 0.3],
+        ].map(
+          ([
+            x,
+            height,
+          ], index) => (
+            <mesh
+              key={index}
+              position={[
+                x,
+                -0.28,
+                0,
+              ]}
+            >
+              <boxGeometry
+                args={[
+                  0.28,
+                  1.25 +
+                    height,
+                  0.08,
+                ]}
+              />
+              <meshStandardMaterial
+                color={
+                  unlocked
+                    ? "#7ddcff"
+                    : "#56616a"
+                }
+                transparent
+                opacity={
+                  unlocked
+                    ? 0.74
+                    : 0.38
+                }
+                emissive={
+                  unlocked
+                    ? "#1fa8e3"
+                    : "#000000"
+                }
+                emissiveIntensity={
+                  unlocked
+                    ? 0.56
+                    : 0
+                }
+              />
+            </mesh>
+          )
+        )}
+      </group>
+
+      <mesh
+        position={[
+          0,
+          -1.02,
+          0.62,
+        ]}
+        rotation={[
+          -Math.PI / 2,
+          0,
+          0,
+        ]}
+      >
+        <circleGeometry
+          args={[
+            0.86,
+            28,
+          ]}
+        />
+        <meshBasicMaterial
+          color={
+            unlocked
+              ? "#6edcff"
+              : "#4f5963"
+          }
+          transparent
+          opacity={
+            unlocked
+              ? 0.66
+              : 0.28
+          }
+        />
+      </mesh>
+    </group>
+  );
+}
+
+function Observatory({
+  unlocked,
+}: {
+  unlocked: boolean;
+}) {
+  return (
+    <group>
+      <mesh
+        position={[
+          0,
+          0.65,
+          0,
+        ]}
+      >
+        <cylinderGeometry
+          args={[
+            0.72,
+            0.88,
+            1.3,
+            18,
+          ]}
+        />
+        <meshStandardMaterial
+          color={
+            unlocked
+              ? "#c8d6e7"
+              : "#525965"
+          }
+          roughness={0.65}
+        />
+      </mesh>
+
+      <mesh
+        position={[
+          0,
+          1.45,
+          0,
+        ]}
+        scale={[
+          1,
+          0.62,
+          1,
+        ]}
+      >
+        <sphereGeometry
+          args={[
+            0.82,
+            20,
+            16,
+            0,
+            Math.PI * 2,
+            0,
+            Math.PI / 2,
+          ]}
+        />
+        <meshStandardMaterial
+          color={
+            unlocked
+              ? "#6daee8"
+              : "#3e4650"
+          }
+          metalness={
+            unlocked
+              ? 0.45
+              : 0
+          }
+          roughness={0.38}
+          emissive={
+            unlocked
+              ? "#1d4d87"
+              : "#000000"
+          }
+          emissiveIntensity={
+            unlocked
+              ? 0.28
+              : 0
+          }
+        />
+      </mesh>
+
+      <mesh
+        position={[
+          0.26,
+          1.75,
+          0,
+        ]}
+        rotation={[
+          0,
+          0,
+          -0.48,
+        ]}
+      >
+        <cylinderGeometry
+          args={[
+            0.08,
+            0.1,
+            1.25,
+            10,
+          ]}
+        />
+        <meshStandardMaterial
+          color={
+            unlocked
+              ? "#dce8f4"
+              : "#444b54"
+          }
+          metalness={0.4}
+        />
+      </mesh>
+    </group>
+  );
+}
+
+function Habitat({
+  unlocked,
+}: {
+  unlocked: boolean;
+}) {
+  const color = unlocked
+    ? "#a78bfa"
+    : "#4a505a";
+
+  return (
+    <group>
+      <mesh
+        position={[
+          -0.68,
+          0.46,
+          0,
+        ]}
+      >
+        <boxGeometry
+          args={[
+            0.22,
+            0.92,
+            0.22,
+          ]}
+        />
+        <meshStandardMaterial
+          color={color}
+        />
+      </mesh>
+
+      <mesh
+        position={[
+          0.68,
+          0.46,
+          0,
+        ]}
+      >
+        <boxGeometry
+          args={[
+            0.22,
+            0.92,
+            0.22,
+          ]}
+        />
+        <meshStandardMaterial
+          color={color}
+        />
+      </mesh>
+
+      <mesh
+        position={[
+          0,
+          0.86,
+          0,
+        ]}
+        rotation={[
+          Math.PI / 2,
+          0,
+          0,
+        ]}
+      >
+        <torusGeometry
+          args={[
+            0.69,
+            0.13,
+            10,
+            28,
+            Math.PI,
+          ]}
+        />
+        <meshStandardMaterial
+          color={color}
+          emissive={
+            unlocked
+              ? "#4c1d95"
+              : "#000000"
+          }
+          emissiveIntensity={
+            unlocked
+              ? 0.35
+              : 0
+          }
+        />
+      </mesh>
+
+      <mesh
+        position={[
+          0,
+          0.1,
+          0,
+        ]}
+        rotation={[
+          -Math.PI / 2,
+          0,
+          0,
+        ]}
+      >
+        <circleGeometry
+          args={[
+            0.78,
+            24,
+          ]}
+        />
+        <meshStandardMaterial
+          color={
+            unlocked
+              ? "#6d5b9f"
+              : "#424851"
+          }
+          roughness={0.88}
+        />
+      </mesh>
+    </group>
+  );
+}
+
+function Windmill() {
+  const blades =
+    useRef<THREE.Group>(
+      null
+    );
+
+  useFrame(
+    (_, delta) => {
+      if (blades.current) {
+        blades.current.rotation.z -=
+          delta * 0.72;
+      }
+    }
+  );
+
+  return (
+    <group
+      rotation={[
+        0,
+        -0.38,
+        0,
+      ]}
+      scale={0.84}
+    >
+      <mesh
+        position={[
+          0,
+          0.82,
+          0,
+        ]}
+      >
+        <cylinderGeometry
+          args={[
+            0.46,
+            0.68,
+            1.65,
+            14,
+          ]}
+        />
+        <meshStandardMaterial
+          color="#e7dac0"
+          roughness={0.9}
+        />
+      </mesh>
+
+      <mesh
+        position={[
+          0,
+          1.86,
+          0,
+        ]}
+      >
+        <coneGeometry
+          args={[
+            0.7,
+            0.82,
+            14,
+          ]}
+        />
+        <meshStandardMaterial
+          color="#526d85"
+          roughness={0.72}
+        />
+      </mesh>
+
+      <group
+        ref={blades}
+        position={[
+          0,
+          1.42,
+          0.5,
+        ]}
+      >
+        <mesh>
+          <cylinderGeometry
+            args={[
+              0.12,
+              0.12,
+              0.34,
+              12,
+            ]}
+          />
+          <meshStandardMaterial
+            color="#6b4b35"
+          />
+        </mesh>
+
+        {[0, 1, 2, 3].map(
+          (index) => (
+            <group
+              key={index}
+              rotation={[
+                0,
+                0,
+                index *
+                  (Math.PI / 2),
+              ]}
+            >
+              <mesh
+                position={[
+                  0,
+                  0.62,
+                  0,
+                ]}
+              >
+                <boxGeometry
+                  args={[
+                    0.16,
+                    1.12,
+                    0.07,
+                  ]}
+                />
+                <meshStandardMaterial
+                  color="#f4ead5"
+                  emissive="#fff1c7"
+                  emissiveIntensity={0.12}
+                />
+              </mesh>
+            </group>
+          )
+        )}
+      </group>
+
+      <mesh
+        position={[
+          0,
+          0.42,
+          0.58,
+        ]}
+      >
+        <boxGeometry
+          args={[
+            0.28,
+            0.58,
+            0.08,
+          ]}
+        />
+        <meshStandardMaterial
+          color="#6a4631"
+        />
+      </mesh>
+    </group>
+  );
+}
+
+function Moonwell() {
+  const water =
+    useRef<THREE.Mesh>(
+      null
+    );
+
+  useFrame(
+    ({ clock }) => {
+      if (!water.current) {
+        return;
+      }
+
+      const pulse =
+        1 +
+        Math.sin(
+          clock.elapsedTime *
+            2.2
+        ) *
+          0.045;
+
+      water.current.scale.set(
+        pulse,
+        pulse,
+        pulse
+      );
+    }
+  );
+
+  return (
+    <group scale={0.82}>
+      <mesh
+        position={[
+          0,
+          0.34,
+          0,
+        ]}
+      >
+        <cylinderGeometry
+          args={[
+            0.66,
+            0.72,
+            0.58,
+            18,
+          ]}
+        />
+        <meshStandardMaterial
+          color="#87909a"
+          roughness={0.96}
+        />
+      </mesh>
+
+      <mesh
+        ref={water}
+        position={[
+          0,
+          0.66,
+          0,
+        ]}
+        rotation={[
+          -Math.PI / 2,
+          0,
+          0,
+        ]}
+      >
+        <circleGeometry
+          args={[
+            0.48,
+            28,
+          ]}
+        />
+        <meshStandardMaterial
+          color="#8be7ff"
+          emissive="#38bdf8"
+          emissiveIntensity={0.9}
+          transparent
+          opacity={0.84}
+        />
+      </mesh>
+
+      {[-0.72, 0.72].map(
+        (x) => (
+          <mesh
+            key={x}
+            position={[
+              x,
+              1.15,
+              0,
+            ]}
+          >
+            <cylinderGeometry
+              args={[
+                0.07,
+                0.09,
+                1.55,
+                10,
+              ]}
+            />
+            <meshStandardMaterial
+              color="#6a4a35"
+            />
+          </mesh>
+        )
+      )}
+
+      <mesh
+        position={[
+          0,
+          1.88,
+          0,
+        ]}
+        rotation={[
+          0,
+          0,
+          Math.PI / 2,
+        ]}
+      >
+        <cylinderGeometry
+          args={[
+            0.07,
+            0.07,
+            1.65,
+            10,
+          ]}
+        />
+        <meshStandardMaterial
+          color="#6a4a35"
+        />
+      </mesh>
+
+      <mesh
+        position={[
+          0,
+          2.08,
+          0,
+        ]}
+        rotation={[
+          0,
+          Math.PI / 4,
+          0,
+        ]}
+        scale={[
+          1.1,
+          0.42,
+          0.8,
+        ]}
+      >
+        <coneGeometry
+          args={[
+            0.96,
+            0.62,
+            4,
+          ]}
+        />
+        <meshStandardMaterial
+          color="#455b78"
+        />
+      </mesh>
+    </group>
+  );
+}
+
+function CastleReach() {
+  return (
+    <group scale={0.72}>
+      <mesh
+        position={[
+          0,
+          0.08,
+          0,
+        ]}
+        rotation={[
+          -Math.PI / 2,
+          0,
+          0,
+        ]}
+      >
+        <ringGeometry
+          args={[
+            1.48,
+            2.05,
+            42,
+          ]}
+        />
+        <meshStandardMaterial
+          color="#59d8ff"
+          emissive="#0ea5e9"
+          emissiveIntensity={0.44}
+          transparent
+          opacity={0.78}
+          side={
+            THREE.DoubleSide
+          }
+        />
+      </mesh>
+
+      <mesh
+        position={[
+          0,
+          0.18,
+          1.78,
+        ]}
+      >
+        <boxGeometry
+          args={[
+            0.68,
+            0.18,
+            1.62,
+          ]}
+        />
+        <meshStandardMaterial
+          color="#9b7950"
+          roughness={0.9}
+        />
+      </mesh>
+
+      <mesh
+        position={[
+          0,
+          1.02,
+          0,
+        ]}
+      >
+        <boxGeometry
+          args={[
+            1.75,
+            1.72,
+            1.55,
+          ]}
+        />
+        <meshStandardMaterial
+          color="#d7d5d2"
+          roughness={0.78}
+        />
+      </mesh>
+
+      {[
+        [-1.15, 0, -1.02],
+        [1.15, 0, -1.02],
+        [-1.15, 0, 1.02],
+        [1.15, 0, 1.02],
+      ].map(
+        ([
+          x,
+          _,
+          z,
+        ], index) => (
+          <group
+            key={index}
+            position={[
+              x,
+              0,
+              z,
+            ]}
+          >
+            <mesh
+              position={[
+                0,
+                1.15,
+                0,
+              ]}
+            >
+              <cylinderGeometry
+                args={[
+                  0.42,
+                  0.5,
+                  2.3,
+                  14,
+                ]}
+              />
+              <meshStandardMaterial
+                color="#cbd5e1"
+                roughness={0.75}
+              />
+            </mesh>
+
+            <mesh
+              position={[
+                0,
+                2.5,
+                0,
+              ]}
+            >
+              <coneGeometry
+                args={[
+                  0.62,
+                  0.88,
+                  14,
+                ]}
+              />
+              <meshStandardMaterial
+                color={
+                  index % 2
+                    ? "#6d5aa7"
+                    : "#506f9c"
+                }
+                emissive="#4338ca"
+                emissiveIntensity={0.18}
+              />
+            </mesh>
+          </group>
+        )
+      )}
+
+      <mesh
+        position={[
+          0,
+          2.18,
+          0,
+        ]}
+      >
+        <coneGeometry
+          args={[
+            1.2,
+            1.15,
+            4,
+          ]}
+        />
+        <meshStandardMaterial
+          color="#7560ad"
+          emissive="#4c1d95"
+          emissiveIntensity={0.22}
+        />
+      </mesh>
+
+      <mesh
+        position={[
+          0,
+          0.72,
+          0.8,
+        ]}
+      >
+        <boxGeometry
+          args={[
+            0.48,
+            0.88,
+            0.08,
+          ]}
+        />
+        <meshStandardMaterial
+          color="#513729"
+        />
+      </mesh>
+    </group>
+  );
+}
+
+function StarportDock() {
+  const ship =
+    useRef<THREE.Group>(
+      null
+    );
+
+  useFrame(
+    ({ clock }) => {
+      if (!ship.current) {
+        return;
+      }
+
+      ship.current.position.y =
+        1.18 +
+        Math.sin(
+          clock.elapsedTime *
+            1.35
+        ) *
+          0.08;
+    }
+  );
+
+  return (
+    <group
+      rotation={[
+        0,
+        -0.5,
+        0,
+      ]}
+      scale={0.78}
+    >
+      <mesh
+        position={[
+          -0.55,
+          0.3,
+          0,
+        ]}
+      >
+        <boxGeometry
+          args={[
+            2.9,
+            0.22,
+            1.3,
+          ]}
+        />
+        <meshStandardMaterial
+          color="#64748b"
+          metalness={0.62}
+          roughness={0.4}
+        />
+      </mesh>
+
+      {[-1.45, 0.25].map(
+        (x) => (
+          <mesh
+            key={x}
+            position={[
+              x,
+              0.48,
+              0.48,
+            ]}
+          >
+            <cylinderGeometry
+              args={[
+                0.07,
+                0.07,
+                0.62,
+                10,
+              ]}
+            />
+            <meshStandardMaterial
+              color="#a5f3fc"
+              emissive="#22d3ee"
+              emissiveIntensity={0.78}
+            />
+          </mesh>
+        )
+      )}
+
+      <group
+        ref={ship}
+        position={[
+          0.6,
+          1.18,
+          0,
+        ]}
+      >
+        <mesh
+          rotation={[
+            0,
+            0,
+            Math.PI / 2,
+          ]}
+        >
+          <capsuleGeometry
+            args={[
+              0.42,
+              1.45,
+              8,
+              18,
+            ]}
+          />
+          <meshStandardMaterial
+            color="#e2e8f0"
+            metalness={0.72}
+            roughness={0.28}
+          />
+        </mesh>
+
+        <mesh
+          position={[
+            0.65,
+            0.18,
+            0,
+          ]}
+          rotation={[
+            0,
+            0,
+            Math.PI / 2,
+          ]}
+          scale={[
+            0.72,
+            0.52,
+            0.72,
+          ]}
+        >
+          <sphereGeometry
+            args={[
+              0.48,
+              20,
+              16,
+            ]}
+          />
+          <meshStandardMaterial
+            color="#55d9ff"
+            emissive="#0284c7"
+            emissiveIntensity={0.55}
+            transparent
+            opacity={0.86}
+          />
+        </mesh>
+
+        {[-1, 1].map(
+          (side) => (
+            <mesh
+              key={side}
+              position={[
+                -0.15,
+                -0.05,
+                side * 0.72,
+              ]}
+              rotation={[
+                side * 0.16,
+                0,
+                0,
+              ]}
+            >
+              <boxGeometry
+                args={[
+                  1.05,
+                  0.08,
+                  0.8,
+                ]}
+              />
+              <meshStandardMaterial
+                color="#8b5cf6"
+                metalness={0.5}
+                roughness={0.38}
+              />
+            </mesh>
+          )
+        )}
+
+        <mesh
+          position={[
+            -0.92,
+            0,
+            0,
+          ]}
+          rotation={[
+            0,
+            0,
+            Math.PI / 2,
+          ]}
+        >
+          <coneGeometry
+            args={[
+              0.32,
+              0.78,
+              18,
+            ]}
+          />
+          <meshStandardMaterial
+            color="#67e8f9"
+            emissive="#22d3ee"
+            emissiveIntensity={1.1}
+            transparent
+            opacity={0.86}
+          />
+        </mesh>
+      </group>
+    </group>
+  );
+}
+
+function CrystalWilds() {
+  return (
+    <group scale={0.82}>
+      {[
+        [-0.95, 0, -0.45, 1.25, "#67e8f9"],
+        [-0.25, 0, 0.35, 1.75, "#c084fc"],
+        [0.55, 0, -0.18, 1.4, "#a5b4fc"],
+        [1.0, 0, 0.65, 0.92, "#f0abfc"],
+        [0.2, 0, -0.92, 1.05, "#5eead4"],
+        [-0.8, 0, 0.85, 0.76, "#fde68a"],
+      ].map(
+        ([
+          x,
+          _,
+          z,
+          height,
+          color,
+        ], index) => (
+          <group
+            key={index}
+            position={[
+              x as number,
+              0,
+              z as number,
+            ]}
+          >
+            <mesh
+              position={[
+                0,
+                (height as number) *
+                  0.45,
+                0,
+              ]}
+              scale={[
+                0.34,
+                height as number,
+                0.34,
+              ]}
+            >
+              <octahedronGeometry
+                args={[
+                  0.58,
+                  0,
+                ]}
+              />
+              <meshStandardMaterial
+                color={
+                  color as string
+                }
+                emissive={
+                  color as string
+                }
+                emissiveIntensity={0.72}
+                metalness={0.34}
+                roughness={0.2}
+              />
+            </mesh>
+
+            <pointLight
+              color={
+                color as string
+              }
+              intensity={0.34}
+              distance={3}
+            />
+          </group>
+        )
+      )}
+
+      <mesh
+        position={[
+          0,
+          0.03,
+          0,
+        ]}
+        rotation={[
+          -Math.PI / 2,
+          0,
+          0,
+        ]}
+      >
+        <ringGeometry
+          args={[
+            1.15,
+            1.34,
+            38,
+          ]}
+        />
+        <meshBasicMaterial
+          color="#c4b5fd"
+          transparent
+          opacity={0.32}
+          side={
+            THREE.DoubleSide
+          }
+        />
+      </mesh>
+    </group>
+  );
+}
+
+function MoonTemple() {
+  const orb =
+    useRef<THREE.Group>(
+      null
+    );
+
+  useFrame(
+    ({ clock }, delta) => {
+      if (!orb.current) {
+        return;
+      }
+
+      orb.current.rotation.y +=
+        delta * 0.4;
+
+      orb.current.position.y =
+        1.75 +
+        Math.sin(
+          clock.elapsedTime *
+            1.4
+        ) *
+          0.11;
+    }
+  );
+
+  return (
+    <group scale={0.78}>
+      <mesh
+        position={[
+          0,
+          0.12,
+          0,
+        ]}
+      >
+        <cylinderGeometry
+          args={[
+            1.55,
+            1.8,
+            0.24,
+            26,
+          ]}
+        />
+        <meshStandardMaterial
+          color="#9aa7ba"
+          roughness={0.68}
+        />
+      </mesh>
+
+      {[-0.9, 0.9].map(
+        (x) => (
+          <mesh
+            key={x}
+            position={[
+              x,
+              1.12,
+              0,
+            ]}
+          >
+            <cylinderGeometry
+              args={[
+                0.18,
+                0.22,
+                2.05,
+                14,
+              ]}
+            />
+            <meshStandardMaterial
+              color="#dbe4f0"
+              roughness={0.62}
+            />
+          </mesh>
+        )
+      )}
+
+      <mesh
+        position={[
+          0,
+          2.05,
+          0,
+        ]}
+        rotation={[
+          Math.PI / 2,
+          0,
+          0,
+        ]}
+      >
+        <torusGeometry
+          args={[
+            1.02,
+            0.17,
+            14,
+            44,
+            Math.PI
+          ]}
+        />
+        <meshStandardMaterial
+          color="#d8d4ff"
+          emissive="#8b5cf6"
+          emissiveIntensity={0.48}
+        />
+      </mesh>
+
+      <group
+        ref={orb}
+        position={[
+          0,
+          1.75,
+          0,
+        ]}
+      >
+        <mesh>
+          <sphereGeometry
+            args={[
+              0.38,
+              24,
+              20,
+            ]}
+          />
+          <meshStandardMaterial
+            color="#f5f3ff"
+            emissive="#c4b5fd"
+            emissiveIntensity={0.9}
+          />
+        </mesh>
+
+        <mesh scale={1.8}>
+          <sphereGeometry
+            args={[
+              0.38,
+              18,
+              14,
+            ]}
+          />
+          <meshBasicMaterial
+            color="#a78bfa"
+            transparent
+            opacity={0.12}
+            depthWrite={false}
+          />
+        </mesh>
+      </group>
+    </group>
+  );
+}
+
+
+function NovaResidentModel() {
+  const root =
+    useRef<THREE.Group>(
+      null
+    );
+
+  const [
+    texture,
+    setTexture,
+  ] = useState<
+    THREE.Texture | null
+  >(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    let loadedTexture:
+      | THREE.Texture
+      | null = null;
+
+    void (async () => {
+      try {
+        const asset =
+          Asset.fromModule(
+            NOVA_ISLAND_MASCOT_ART
+          );
+
+        await asset.downloadAsync();
+
+        const uri =
+          asset.localUri ??
+          asset.uri;
+
+        loadedTexture =
+          await new Promise<
+            THREE.Texture
+          >(
+            (
+              resolve,
+              reject
+            ) => {
+              new THREE.TextureLoader().load(
+                uri,
+                resolve,
+                undefined,
+                reject
+              );
+            }
+          );
+
+        loadedTexture.colorSpace =
+          THREE.SRGBColorSpace;
+
+        loadedTexture.needsUpdate =
+          true;
+
+        if (!cancelled) {
+          setTexture(
+            loadedTexture
+          );
+        }
+      } catch (error) {
+        console.warn(
+          "[Nova Island] Could not load approved Nova mascot artwork.",
+          error
+        );
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+
+      if (loadedTexture) {
+        loadedTexture.dispose();
+      }
+    };
+  }, []);
+
+  useFrame(
+    ({ clock }) => {
+      if (!root.current) {
+        return;
+      }
+
+      /*
+       * Only a small vertical idle animation is applied. Nova never turns
+       * toward the camera independently; she remains physically attached to
+       * the Island and rotates only when the Island itself rotates.
+       */
+      root.current.position.y =
+        0.9 +
+        Math.sin(
+          clock.elapsedTime *
+            1.6
+        ) *
+          0.035;
+    }
+  );
+
+  return (
+    <group
+      ref={root}
+      position={[
+        -1.08,
+        0.9,
+        0.2,
+      ]}
+      rotation={[
+        0,
+        -0.16,
+        0,
+      ]}
+      scale={0.82}
+    >
+      {/* Soft ground shadow */}
+      <mesh
+        position={[
+          0,
+          0.02,
+          0,
+        ]}
+        rotation={[
+          -Math.PI / 2,
+          0,
+          0,
+        ]}
+        scale={[
+          0.76,
+          0.46,
+          1,
+        ]}
+      >
+        <circleGeometry
+          args={[
+            0.52,
+            30,
+          ]}
+        />
+        <meshBasicMaterial
+          color="#020617"
+          transparent
+          opacity={0.22}
+          depthWrite={false}
+        />
+      </mesh>
+
+      {/* Small magical pedestal gives the flat mascot physical presence. */}
+      <mesh
+        position={[
+          0,
+          0.11,
+          0,
+        ]}
+      >
+        <cylinderGeometry
+          args={[
+            0.42,
+            0.48,
+            0.18,
+            28,
+          ]}
+        />
+        <meshStandardMaterial
+          color="#5b2a43"
+          emissive="#8b1e4a"
+          emissiveIntensity={0.2}
+          roughness={0.5}
+        />
+      </mesh>
+
+      <mesh
+        position={[
+          0,
+          0.22,
+          0,
+        ]}
+        rotation={[
+          -Math.PI / 2,
+          0,
+          0,
+        ]}
+      >
+        <torusGeometry
+          args={[
+            0.38,
+            0.035,
+            10,
+            34,
+          ]}
+        />
+        <meshBasicMaterial
+          color="#ff5c75"
+          transparent
+          opacity={0.8}
+        />
+      </mesh>
+
+      {texture ? (
+        <>
+          {/*
+           * The card is fixed to the Island. It deliberately does not use
+           * camera.lookAt(), billboard behavior, or independent rotation.
+           */}
+          <mesh
+            position={[
+              0,
+              0.92,
+              0.03,
+            ]}
+          >
+            <planeGeometry
+              args={[
+                1.12,
+                1.38,
+              ]}
+            />
+            <meshBasicMaterial
+              map={texture}
+              transparent
+              alphaTest={0.03}
+              side={
+                THREE.DoubleSide
+              }
+              toneMapped={false}
+            />
+          </mesh>
+
+          {/*
+           * A subtle dark backing keeps Nova from disappearing completely at
+           * oblique angles and makes the resident feel like a storybook
+           * figurine rather than a floating UI image.
+           */}
+          <mesh
+            position={[
+              0,
+              0.92,
+              -0.035,
+            ]}
+            scale={[
+              0.54,
+              0.67,
+              0.055,
+            ]}
+          >
+            <capsuleGeometry
+              args={[
+                0.56,
+                0.68,
+                8,
+                18,
+              ]}
+            />
+            <meshStandardMaterial
+              color="#17131a"
+              emissive="#2e1020"
+              emissiveIntensity={0.12}
+              roughness={0.62}
+            />
+          </mesh>
+        </>
+      ) : (
+        /*
+         * A harmless loading placeholder is shown for only the brief moment
+         * before the local image texture becomes available.
+         */
+        <group
+          position={[
+            0,
+            0.86,
+            0,
+          ]}
+        >
+          <mesh
+            scale={[
+              0.42,
+              0.52,
+              0.32,
+            ]}
+          >
+            <sphereGeometry
+              args={[
+                0.7,
+                20,
+                16,
+              ]}
+            />
+            <meshStandardMaterial
+              color="#2b1825"
+              emissive="#6b1738"
+              emissiveIntensity={0.18}
+              roughness={0.65}
+            />
+          </mesh>
+
+          <pointLight
+            color="#ff6b8a"
+            intensity={0.32}
+            distance={2.5}
+          />
+        </group>
+      )}
+
+      {/* Tiny resident sparkles */}
+      {[
+        [
+          -0.52,
+          1.25,
+          0.08,
+          0.055,
+        ],
+        [
+          0.5,
+          1.05,
+          0.08,
+          0.045,
+        ],
+        [
+          0.4,
+          1.52,
+          0.08,
+          0.035,
+        ],
+      ].map(
+        (
+          [
+            x,
+            y,
+            z,
+            size,
+          ],
+          index
+        ) => (
+          <mesh
+            key={index}
+            position={[
+              x,
+              y,
+              z,
+            ]}
+            rotation={[
+              0,
+              0,
+              Math.PI / 4,
+            ]}
+            scale={[
+              size,
+              size,
+              size,
+            ]}
+          >
+            <octahedronGeometry
+              args={[
+                1,
+                0,
+              ]}
+            />
+            <meshBasicMaterial
+              color={
+                index === 1
+                  ? "#67e8f9"
+                  : "#ff8aa4"
+              }
+            />
+          </mesh>
+        )
+      )}
+    </group>
+  );
+}
+
+function LunisResidentModel() {
+  const root =
+    useRef<THREE.Group>(
+      null
+    );
+
+  const leftEar =
+    useRef<THREE.Group>(
+      null
+    );
+
+  const rightEar =
+    useRef<THREE.Group>(
+      null
+    );
+
+  const eyes =
+    useRef<THREE.Group>(
+      null
+    );
+
+  useFrame(
+    ({ clock }, delta) => {
+      const time =
+        clock.elapsedTime;
+
+      if (root.current) {
+        const hop =
+          Math.max(
+            0,
+            Math.sin(
+              time * 1.3
+            )
+          );
+
+        root.current.position.y =
+          0.92 +
+          hop * hop * 0.075;
+
+        root.current.rotation.y =
+          0.2 +
+          Math.sin(
+            time * 0.68
+          ) *
+            0.09;
+      }
+
+      if (leftEar.current) {
+        leftEar.current.rotation.z =
+          0.16 +
+          Math.sin(
+            time * 1.0
+          ) *
+            0.08;
+      }
+
+      if (rightEar.current) {
+        rightEar.current.rotation.z =
+          -0.16 +
+          Math.sin(
+            time * 1.0 +
+              1.1
+          ) *
+            0.08;
+      }
+
+      if (eyes.current) {
+        const cycle =
+          time % 5.4;
+
+        const blink =
+          cycle > 5.16
+            ? 0.08
+            : 1;
+
+        eyes.current.scale.y =
+          damp(
+            eyes.current.scale.y,
+            blink,
+            24,
+            delta
+          );
+      }
+    }
+  );
+
+  const fur = "#211e20";
+  const furSoft = "#3a3337";
+  const innerEar = "#f3c56b";
+  const nose = "#43d7e8";
+
+  return (
+    <group
+      ref={root}
+      position={[
+        0.28,
+        0.89,
+        0.82,
+      ]}
+      rotation={[
+        0,
+        0.2,
+        0,
+      ]}
+      scale={0.28}
+    >
+      {/* Shadow */}
+      <mesh
+        position={[
+          0,
+          0.02,
+          0,
+        ]}
+        rotation={[
+          -Math.PI / 2,
+          0,
+          0,
+        ]}
+        scale={[
+          0.76,
+          0.52,
+          1,
+        ]}
+      >
+        <circleGeometry
+          args={[
+            0.68,
+            28,
+          ]}
+        />
+        <meshBasicMaterial
+          color="#020617"
+          transparent
+          opacity={0.2}
+          depthWrite={false}
+        />
+      </mesh>
+
+      {/* Feet */}
+      {[-0.28, 0.28].map(
+        (x) => (
+          <mesh
+            key={x}
+            position={[
+              x,
+              0.22,
+              0.15,
+            ]}
+            scale={[
+              0.38,
+              0.24,
+              0.54,
+            ]}
+          >
+            <sphereGeometry
+              args={[
+                1,
+                18,
+                14,
+              ]}
+            />
+            <meshStandardMaterial
+              color={furSoft}
+              roughness={0.84}
+            />
+          </mesh>
+        )
+      )}
+
+      {/* Body */}
+      <mesh
+        position={[
+          0,
+          0.84,
+          0,
+        ]}
+        scale={[
+          0.72,
+          0.8,
+          0.66,
+        ]}
+      >
+        <sphereGeometry
+          args={[
+            0.78,
+            24,
+            20,
+          ]}
+        />
+        <meshStandardMaterial
+          color={fur}
+          roughness={0.82}
+        />
+      </mesh>
+
+      {/* Chest tuft */}
+      <mesh
+        position={[
+          0,
+          1.03,
+          0.49,
+        ]}
+        scale={[
+          0.34,
+          0.21,
+          0.1,
+        ]}
+      >
+        <octahedronGeometry
+          args={[
+            1,
+            0,
+          ]}
+        />
+        <meshStandardMaterial
+          color="#3b3538"
+          roughness={0.86}
+        />
+      </mesh>
+
+      {/* Arms */}
+      {[-1, 1].map(
+        (side) => (
+          <mesh
+            key={side}
+            position={[
+              side * 0.48,
+              0.96,
+              0.12,
+            ]}
+            rotation={[
+              0,
+              0,
+              side * -0.44,
+            ]}
+            scale={[
+              0.24,
+              0.42,
+              0.24,
+            ]}
+          >
+            <capsuleGeometry
+              args={[
+                0.36,
+                0.42,
+                8,
+                12,
+              ]}
+            />
+            <meshStandardMaterial
+              color={furSoft}
+              roughness={0.82}
+            />
+          </mesh>
+        )
+      )}
+
+      {/* Head */}
+      <mesh
+        position={[
+          0,
+          1.8,
+          0.1,
+        ]}
+        scale={[
+          0.82,
+          0.75,
+          0.75,
+        ]}
+      >
+        <sphereGeometry
+          args={[
+            0.82,
+            26,
+            22,
+          ]}
+        />
+        <meshStandardMaterial
+          color={fur}
+          roughness={0.8}
+        />
+      </mesh>
+
+      {/* Ears */}
+      <group
+        ref={leftEar}
+        position={[
+          -0.36,
+          2.49,
+          0.06,
+        ]}
+        rotation={[
+          0,
+          0,
+          0.16,
+        ]}
+      >
+        <mesh
+          scale={[
+            0.42,
+            0.9,
+            0.34,
+          ]}
+        >
+          <capsuleGeometry
+            args={[
+              0.3,
+              0.92,
+              8,
+              14,
+            ]}
+          />
+          <meshStandardMaterial
+            color={fur}
+            roughness={0.8}
+          />
+        </mesh>
+
+        <mesh
+          position={[
+            0,
+            0,
+            0.26,
+          ]}
+          scale={[
+            0.21,
+            0.64,
+            0.06,
+          ]}
+        >
+          <capsuleGeometry
+            args={[
+              0.3,
+              0.92,
+              8,
+              14,
+            ]}
+          />
+          <meshStandardMaterial
+            color={innerEar}
+            emissive="#6d4300"
+            emissiveIntensity={0.08}
+            roughness={0.66}
+          />
+        </mesh>
+      </group>
+
+      <group
+        ref={rightEar}
+        position={[
+          0.36,
+          2.49,
+          0.06,
+        ]}
+        rotation={[
+          0,
+          0,
+          -0.16,
+        ]}
+      >
+        <mesh
+          scale={[
+            0.42,
+            0.9,
+            0.34,
+          ]}
+        >
+          <capsuleGeometry
+            args={[
+              0.3,
+              0.92,
+              8,
+              14,
+            ]}
+          />
+          <meshStandardMaterial
+            color={fur}
+            roughness={0.8}
+          />
+        </mesh>
+
+        <mesh
+          position={[
+            0,
+            0,
+            0.26,
+          ]}
+          scale={[
+            0.21,
+            0.64,
+            0.06,
+          ]}
+        >
+          <capsuleGeometry
+            args={[
+              0.3,
+              0.92,
+              8,
+              14,
+            ]}
+          />
+          <meshStandardMaterial
+            color={innerEar}
+            emissive="#6d4300"
+            emissiveIntensity={0.08}
+            roughness={0.66}
+          />
+        </mesh>
+      </group>
+
+      {/* Eyes */}
+      <group
+        ref={eyes}
+        position={[
+          0,
+          1.86,
+          0.65,
+        ]}
+      >
+        {[-0.24, 0.24].map(
+          (x) => (
+            <group
+              key={x}
+              position={[
+                x,
+                0,
+                0,
+              ]}
+            >
+              <mesh
+                scale={[
+                  0.15,
+                  0.2,
+                  0.052,
+                ]}
+              >
+                <sphereGeometry
+                  args={[
+                    1,
+                    16,
+                    12,
+                  ]}
+                />
+                <meshBasicMaterial
+                  color="#f8fafc"
+                />
+              </mesh>
+
+              <mesh
+                position={[
+                  0,
+                  -0.012,
+                  0.044,
+                ]}
+                scale={[
+                  0.078,
+                  0.106,
+                  0.028,
+                ]}
+              >
+                <sphereGeometry
+                  args={[
+                    1,
+                    14,
+                    10,
+                  ]}
+                />
+                <meshBasicMaterial
+                  color="#171215"
+                />
+              </mesh>
+
+              <mesh
+                position={[
+                  -0.022,
+                  0.05,
+                  0.064,
+                ]}
+                scale={[
+                  0.024,
+                  0.03,
+                  0.009,
+                ]}
+              >
+                <sphereGeometry
+                  args={[
+                    1,
+                    10,
+                    8,
+                  ]}
+                />
+                <meshBasicMaterial
+                  color="#ffffff"
+                />
+              </mesh>
+            </group>
+          )
+        )}
+      </group>
+
+      {/* Nose */}
+      <mesh
+        position={[
+          0,
+          1.66,
+          0.71,
+        ]}
+        scale={[
+          0.145,
+          0.09,
+          0.07,
+        ]}
+      >
+        <sphereGeometry
+          args={[
+            1,
+            16,
+            12,
+          ]}
+        />
+        <meshStandardMaterial
+          color={nose}
+          emissive="#0891b2"
+          emissiveIntensity={0.58}
+          roughness={0.3}
+        />
+      </mesh>
+
+      {/* Smile */}
+      <mesh
+        position={[
+          0,
+          1.52,
+          0.69,
+        ]}
+        scale={[
+          0.19,
+          0.125,
+          0.048,
+        ]}
+      >
+        <sphereGeometry
+          args={[
+            1,
+            16,
+            12,
+          ]}
+        />
+        <meshBasicMaterial
+          color="#5d241b"
+        />
+      </mesh>
+
+      <mesh
+        position={[
+          0,
+          1.48,
+          0.73,
+        ]}
+        scale={[
+          0.1,
+          0.05,
+          0.019,
+        ]}
+      >
+        <sphereGeometry
+          args={[
+            1,
+            14,
+            10,
+          ]}
+        />
+        <meshBasicMaterial
+          color="#ff9b75"
+        />
+      </mesh>
+
+      {/* Tail */}
+      <mesh
+        position={[
+          -0.5,
+          0.74,
+          -0.44,
+        ]}
+        scale={[
+          0.4,
+          0.4,
+          0.4,
+        ]}
+      >
+        <sphereGeometry
+          args={[
+            0.72,
+            18,
+            14,
+          ]}
+        />
+        <meshStandardMaterial
+          color="#3a3437"
+          roughness={0.92}
+        />
+      </mesh>
+    </group>
+  );
+}
+
+
+function StoryResidents({
+  level,
+}: {
+  level: number;
+}) {
+  if (level < 1) {
+    return null;
+  }
+
+  return (
+    <group>
+      <NovaResidentModel />
+      <LunisResidentModel />
+    </group>
+  );
+}
+
+function MagicWisps({
+  level,
+}: {
+  level: number;
+}) {
+  const group =
+    useRef<THREE.Group>(
+      null
+    );
+
+  const positions =
+    useMemo(() => {
+      const values: number[] = [];
+
+      const count =
+        Math.min(
+          72,
+          22 + level * 3
+        );
+
+      for (
+        let index = 0;
+        index < count;
+        index += 1
+      ) {
+        const angle =
+          ((index * 137.5) %
+            360) *
+          (Math.PI / 180);
+
+        const radius =
+          1.5 +
+          ((index * 29) % 35) /
+            10;
+
+        values.push(
+          Math.cos(angle) *
+            radius,
+          1.15 +
+            ((index * 43) % 20) /
+              10,
+          Math.sin(angle) *
+            radius
+        );
+      }
+
+      return new Float32Array(
+        values
+      );
+    }, [level]);
+
+  useFrame(
+    ({ clock }, delta) => {
+      if (!group.current) {
+        return;
+      }
+
+      group.current.rotation.y +=
+        delta * 0.045;
+
+      group.current.position.y =
+        Math.sin(
+          clock.elapsedTime *
+            0.75
+        ) *
+          0.08;
+    }
+  );
+
+  return (
+    <group ref={group}>
+      <points>
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            args={[
+              positions,
+              3,
+            ]}
+          />
+        </bufferGeometry>
+
+        <pointsMaterial
+          color="#a5f3fc"
+          size={0.075}
+          transparent
+          opacity={0.64}
+          sizeAttenuation
+          depthWrite={false}
+        />
+      </points>
+    </group>
+  );
+}
+
+function MysteryBeacon({
+  selected,
+}: {
+  selected: boolean;
+}) {
+  const group =
+    useRef<THREE.Group>(
+      null
+    );
+
+  useFrame(
+    ({ clock }, delta) => {
+      if (!group.current) {
+        return;
+      }
+
+      group.current.rotation.y +=
+        delta * 0.55;
+
+      group.current.position.y =
+        1.45 +
+        Math.sin(
+          clock.elapsedTime *
+            1.8
+        ) *
+          0.12;
+    }
+  );
+
+  return (
+    <group
+      ref={group}
+      position={[
+        0,
+        1.45,
+        0,
+      ]}
+    >
+      {selected ? (
+        <SelectionRing
+          color="#c4b5fd"
+        />
+      ) : null}
+
+      <mesh scale={1.55}>
+        <sphereGeometry
+          args={[
+            0.56,
+            18,
+            16,
+          ]}
+        />
+        <meshStandardMaterial
+          color="#12182a"
+          transparent
+          opacity={0.72}
+          emissive="#4c1d95"
+          emissiveIntensity={0.35}
+        />
+      </mesh>
+
+      <mesh
+        rotation={[
+          0,
+          0,
+          -0.22,
+        ]}
+      >
+        <torusGeometry
+          args={[
+            0.31,
+            0.085,
+            12,
+            34,
+            Math.PI * 1.45,
+          ]}
+        />
+        <meshStandardMaterial
+          color="#ddd6fe"
+          emissive="#8b5cf6"
+          emissiveIntensity={0.95}
+          metalness={0.18}
+          roughness={0.28}
+        />
+      </mesh>
+
+      <mesh
+        position={[
+          0.1,
+          -0.39,
+          0,
+        ]}
+        rotation={[
+          0,
+          0,
+          0.16,
+        ]}
+      >
+        <cylinderGeometry
+          args={[
+            0.075,
+            0.075,
+            0.24,
+            12,
+          ]}
+        />
+        <meshStandardMaterial
+          color="#ddd6fe"
+          emissive="#8b5cf6"
+          emissiveIntensity={0.95}
+        />
+      </mesh>
+
+      <mesh
+        position={[
+          0.13,
+          -0.7,
+          0,
+        ]}
+      >
+        <sphereGeometry
+          args={[
+            0.1,
+            14,
+            12,
+          ]}
+        />
+        <meshStandardMaterial
+          color="#f5f3ff"
+          emissive="#a78bfa"
+          emissiveIntensity={1.1}
+        />
+      </mesh>
+
+      <mesh scale={2.45}>
+        <sphereGeometry
+          args={[
+            0.56,
+            16,
+            14,
+          ]}
+        />
+        <meshBasicMaterial
+          color="#a78bfa"
+          transparent
+          opacity={0.075}
+          depthWrite={false}
+        />
+      </mesh>
+
+      <mesh
+        rotation={[
+          -Math.PI / 2,
+          0,
+          0,
+        ]}
+      >
+        <torusGeometry
+          args={[
+            0.72,
+            0.035,
+            8,
+            40,
+          ]}
+        />
+        <meshBasicMaterial
+          color="#c4b5fd"
+          transparent
+          opacity={0.42}
+          depthWrite={false}
+        />
+      </mesh>
+    </group>
+  );
+}
+
+function LandmarkObject({
+  milestone,
+  level,
+  selected,
+  onSelect,
+}: {
+  milestone: IslandMilestone;
+  level: number;
+  selected: boolean;
+  onSelect: (
+    milestoneId: string,
+    position: Vec3
+  ) => void;
+}) {
+  const position =
+    LANDMARK_POSITIONS[
+      milestone.id
+    ] ?? DEFAULT_TARGET;
+
+  const unlocked =
+    level >= milestone.level;
+
+  const object = (() => {
+    if (!unlocked) {
+      return null;
+    }
+
+    switch (milestone.id) {
+      case "study_grove":
+        return (
+          <Tree unlocked />
+        );
+
+      case "starlight_garden":
+        return (
+          <Garden unlocked />
+        );
+
+      case "nova_library":
+        return (
+          <Library unlocked />
+        );
+
+      case "whisperwind_mill":
+        return <Windmill />;
+
+      case "learning_falls":
+        return (
+          <Waterfall unlocked />
+        );
+
+      case "moonwell":
+        return <Moonwell />;
+
+      case "sky_observatory":
+        return (
+          <Observatory unlocked />
+        );
+
+      case "companion_habitat":
+        return (
+          <Habitat unlocked />
+        );
+
+      case "castle_reach":
+        return <CastleReach />;
+
+      case "starport_dock":
+        return <StarportDock />;
+
+      case "crystal_wilds":
+        return <CrystalWilds />;
+
+      case "moon_temple":
+        return <MoonTemple />;
+
+      default:
+        return null;
+    }
+  })();
+
+  return (
+    <group
+      position={position}
+      onClick={(event) => {
+        event.stopPropagation();
+        onSelect(
+          milestone.id,
+          position
+        );
+      }}
+    >
+      {unlocked ? (
+        <>
+          {selected ? (
+            <SelectionRing
+              color="#67e8f9"
+            />
+          ) : null}
+
+          {object}
+        </>
+      ) : (
+        <MysteryBeacon
+          selected={selected}
+        />
+      )}
+    </group>
+  );
+}
+
+function DiscoveryMarker({
+  discovery,
+  index,
+  selected,
+  onSelect,
+}: {
+  discovery: Island3DDiscovery;
+  index: number;
+  selected: boolean;
+  onSelect: (
+    discoveryKey: string,
+    position: Vec3
+  ) => void;
+}) {
+  const base =
+    DISCOVERY_ZONE_POSITIONS[
+      discovery.zone
+    ];
+
+  const angle =
+    index * 1.79;
+
+  const offset =
+    0.28 +
+    (index % 3) * 0.11;
+
+  const position: Vec3 = [
+    base[0] +
+      Math.cos(angle) *
+        offset,
+    base[1] +
+      (index % 2) * 0.08,
+    base[2] +
+      Math.sin(angle) *
+        offset,
+  ];
+
+  const marker =
+    useRef<THREE.Group>(
+      null
+    );
+
+  useFrame(
+    ({ clock }) => {
+      if (!marker.current) {
+        return;
+      }
+
+      marker.current.position.y =
+        position[1] +
+        Math.sin(
+          clock.elapsedTime *
+            1.9 +
+            index
+        ) *
+          0.08;
+
+      marker.current.rotation.y +=
+        discovery.kind ===
+        "keepsake"
+          ? 0.012
+          : 0.004;
+    }
+  );
+
+  return (
+    <group
+      ref={marker}
+      position={position}
+      onClick={(event) => {
+        event.stopPropagation();
+        onSelect(
+          discovery.key,
+          position
+        );
+      }}
+    >
+      {selected ? (
+        <SelectionRing
+          color={
+            discovery.accent
+          }
+        />
+      ) : null}
+
+      {discovery.kind ===
+      "resident" ? (
+        <group>
+          <mesh
+            position={[
+              0,
+              0.28,
+              0,
+            ]}
+          >
+            <sphereGeometry
+              args={[
+                0.26,
+                16,
+                14,
+              ]}
+            />
+            <meshStandardMaterial
+              color={
+                discovery.accent
+              }
+              emissive={
+                discovery.accent
+              }
+              emissiveIntensity={0.3}
+            />
+          </mesh>
+
+          <mesh
+            position={[
+              0,
+              0.02,
+              0,
+            ]}
+            scale={[
+              0.78,
+              0.48,
+              0.78,
+            ]}
+          >
+            <sphereGeometry
+              args={[
+                0.32,
+                16,
+                14,
+              ]}
+            />
+            <meshStandardMaterial
+              color="#f8fafc"
+              roughness={0.72}
+            />
+          </mesh>
+        </group>
+      ) : (
+        <mesh
+          position={[
+            0,
+            0.25,
+            0,
+          ]}
+        >
+          <octahedronGeometry
+            args={[
+              0.3,
+              0,
+            ]}
+          />
+          <meshStandardMaterial
+            color={
+              discovery.accent
+            }
+            emissive={
+              discovery.accent
+            }
+            emissiveIntensity={0.68}
+            metalness={0.22}
+            roughness={0.28}
+          />
+        </mesh>
+      )}
+
+      <mesh scale={1.8}>
+        <sphereGeometry
+          args={[
+            0.28,
+            12,
+            10,
+          ]}
+        />
+        <meshBasicMaterial
+          color={
+            discovery.accent
+          }
+          transparent
+          opacity={0.08}
+          depthWrite={false}
+        />
+      </mesh>
+    </group>
+  );
+}
+
+function IslandWorld({
+  level,
+  palette,
+  selectedMilestoneId,
+  selectedDiscoveryKey,
+  discoveries,
+  onSelectMilestone,
+  onSelectDiscovery,
+  controlsRef,
+  velocityRef,
+}: {
+  level: number;
+  palette: TimePalette;
+  selectedMilestoneId: string;
+  selectedDiscoveryKey: string | null;
+  discoveries: Island3DDiscovery[];
+  onSelectMilestone: (
+    milestoneId: string,
+    position: Vec3
+  ) => void;
+  onSelectDiscovery: (
+    discoveryKey: string,
+    position: Vec3
+  ) => void;
+  controlsRef: React.MutableRefObject<OrbitControlsState>;
+  velocityRef: React.MutableRefObject<OrbitVelocityState>;
+}) {
+  return (
+    <>
+      <fog
+        attach="fog"
+        args={[
+          palette.skyTop,
+          13,
+          34,
+        ]}
+      />
+
+      <ambientLight
+        intensity={
+          palette.ambient
+        }
+      />
+
+      <hemisphereLight
+        args={[
+          palette.horizon,
+          "#332821",
+          palette.fillLight,
+        ]}
+      />
+
+      <directionalLight
+        position={
+          palette.celestialPosition
+        }
+        intensity={
+          palette.keyLight
+        }
+        color={
+          palette.celestialColor
+        }
+      />
+
+      <pointLight
+        position={[
+          0,
+          5,
+          2,
+        ]}
+        color="#7dd3fc"
+        intensity={0.46}
+        distance={18}
+      />
+
+      <StarField
+        opacity={
+          palette.starsOpacity
+        }
+      />
+
+      <CelestialBody
+        palette={palette}
+      />
+
+      {[
+        {
+          startX: -14,
+          y: 6.2,
+          z: -5,
+          speed: 0.28,
+          scale: 1.05,
+          opacity: 1,
+        },
+        {
+          startX: -8,
+          y: 8.1,
+          z: -11,
+          speed: 0.17,
+          scale: 1.55,
+          opacity: 0.78,
+        },
+        {
+          startX: -2,
+          y: 5.4,
+          z: -3,
+          speed: 0.23,
+          scale: 0.84,
+          opacity: 0.9,
+        },
+        {
+          startX: 4,
+          y: 7.2,
+          z: -7,
+          speed: 0.2,
+          scale: 1.22,
+          opacity: 0.88,
+        },
+        {
+          startX: 10,
+          y: 5.9,
+          z: -2,
+          speed: 0.26,
+          scale: 0.94,
+          opacity: 0.82,
+        },
+        {
+          startX: 14,
+          y: 8.8,
+          z: -13,
+          speed: 0.14,
+          scale: 1.72,
+          opacity: 0.68,
+        },
+        {
+          startX: -5,
+          y: 9.5,
+          z: 1,
+          speed: 0.12,
+          scale: 1.08,
+          opacity: 0.62,
+        },
+        {
+          startX: 7,
+          y: 6.6,
+          z: 2,
+          speed: 0.19,
+          scale: 0.78,
+          opacity: 0.7,
+        },
+      ].map(
+        (cloud, index) => (
+          <Cloud
+            key={index}
+            startX={
+              cloud.startX
+            }
+            y={cloud.y}
+            z={cloud.z}
+            speed={
+              cloud.speed
+            }
+            scale={
+              cloud.scale
+            }
+            opacity={
+              palette.cloudOpacity *
+              cloud.opacity
+            }
+          />
+        )
+      )}
+
+      <group
+        rotation={[
+          0,
+          -0.08,
+          0,
+        ]}
+      >
+        <IslandBase />
+
+        <IslandExpansions
+          level={level}
+        />
+
+        <MagicWisps
+          level={level}
+        />
+
+        <StoryResidents
+          level={level}
+        />
+
+        {ISLAND_MILESTONES.map(
+          (milestone) => (
+            <LandmarkObject
+              key={
+                milestone.id
+              }
+              milestone={
+                milestone
+              }
+              level={level}
+              selected={
+                selectedMilestoneId ===
+                  milestone.id &&
+                !selectedDiscoveryKey
+              }
+              onSelect={
+                onSelectMilestone
+              }
+            />
+          )
+        )}
+
+        {discoveries.map(
+          (discovery, index) => (
+            <DiscoveryMarker
+              key={
+                discovery.key
+              }
+              discovery={
+                discovery
+              }
+              index={index}
+              selected={
+                selectedDiscoveryKey ===
+                discovery.key
+              }
+              onSelect={
+                onSelectDiscovery
+              }
+            />
+          )
+        )}
+      </group>
+
+      <CameraRig
+        controlsRef={
+          controlsRef
+        }
+        velocityRef={
+          velocityRef
+        }
+      />
+    </>
+  );
+}
+
+export default function NovaIsland3DScene({
+  level,
+  height = 450,
+  selectedMilestoneId,
+  selectedDiscoveryKey,
+  discoveries,
+  onSelectMilestone,
+  onSelectDiscovery,
+  onInteractionChange,
+}: Props) {
+  const [now, setNow] =
+    useState(
+      () => new Date()
+    );
+
+  const controlsRef =
+    useRef<OrbitControlsState>({
+      azimuth: 0.58,
+      polar: 0.98,
+      distance: 17.2,
+      desiredAzimuth: 0.58,
+      desiredPolar: 0.98,
+      desiredTarget: [
+        ...DEFAULT_TARGET,
+      ],
+      desiredDistance: 17.2,
+    });
+
+  const velocityRef =
+    useRef<OrbitVelocityState>({
+      azimuth: 0,
+      polar: 0,
+    });
+
+  const gestureStartRef =
+    useRef({
+      azimuth: 0.58,
+      polar: 0.98,
+      distance: 17.2,
+      pinchDistance: 0,
+    });
+
+  const interactionActiveRef =
+    useRef(false);
+
+  const setInteractionActive =
+    useCallback(
+      (active: boolean) => {
+        if (
+          interactionActiveRef.current ===
+          active
+        ) {
+          return;
+        }
+
+        interactionActiveRef.current =
+          active;
+
+        onInteractionChange?.(
+          active
+        );
+      },
+      [onInteractionChange]
+    );
+
+  useEffect(() => {
+    const timer =
+      setInterval(() => {
+        setNow(new Date());
+      }, 60_000);
+
+    return () => {
+      clearInterval(timer);
+    };
+  }, []);
+
+  const palette =
+    useMemo(
+      () =>
+        paletteForDate(now),
+      [now]
+    );
+
+  const focusPosition =
+    useCallback(
+      (
+        position: Vec3,
+        distance = 7.1
+      ) => {
+        controlsRef.current.desiredTarget =
+          [
+            position[0],
+            Math.max(
+              0.6,
+              position[1] + 0.48
+            ),
+            position[2],
+          ];
+
+        controlsRef.current.desiredDistance =
+          distance;
+
+        velocityRef.current = {
+          azimuth: 0,
+          polar: 0,
+        };
+      },
+      []
+    );
+
+  const resetView =
+    useCallback(() => {
+      controlsRef.current.desiredTarget =
+        [
+          ...DEFAULT_TARGET,
+        ];
+
+      controlsRef.current.desiredDistance =
+        17.2;
+
+      controlsRef.current.desiredAzimuth =
+        0.58;
+
+      controlsRef.current.desiredPolar =
+        0.98;
+
+      velocityRef.current = {
+        azimuth: 0,
+        polar: 0,
+      };
+    }, []);
+
+  const selectMilestone =
+    useCallback(
+      (
+        milestoneId: string,
+        position: Vec3
+      ) => {
+        onSelectMilestone(
+          milestoneId
+        );
+
+        focusPosition(
+          position,
+          7.3
+        );
+      },
+      [
+        focusPosition,
+        onSelectMilestone,
+      ]
+    );
+
+  const selectDiscovery =
+    useCallback(
+      (
+        discoveryKey: string,
+        position: Vec3
+      ) => {
+        onSelectDiscovery(
+          discoveryKey
+        );
+
+        focusPosition(
+          position,
+          6.2
+        );
+      },
+      [
+        focusPosition,
+        onSelectDiscovery,
+      ]
+    );
+
+  const panResponder =
+    useMemo(
+      () =>
+        PanResponder.create({
+          onStartShouldSetPanResponder:
+            () => false,
+
+          onMoveShouldSetPanResponder:
+            (
+              event,
+              gesture
+            ) => {
+              const touches =
+                event.nativeEvent
+                  .touches;
+
+              return (
+                touches.length >=
+                  2 ||
+                Math.abs(
+                  gesture.dx
+                ) > 1.5 ||
+                Math.abs(
+                  gesture.dy
+                ) > 1.5
+              );
+            },
+
+          onMoveShouldSetPanResponderCapture:
+            (
+              event,
+              gesture
+            ) => {
+              const touches =
+                event.nativeEvent
+                  .touches;
+
+              return (
+                touches.length >=
+                  2 ||
+                Math.abs(
+                  gesture.dx
+                ) > 1.5 ||
+                Math.abs(
+                  gesture.dy
+                ) > 1.5
+              );
+            },
+
+          onPanResponderGrant:
+            (event) => {
+              setInteractionActive(
+                true
+              );
+
+              gestureStartRef.current =
+                {
+                  azimuth:
+                    controlsRef
+                      .current
+                      .desiredAzimuth,
+                  polar:
+                    controlsRef
+                      .current
+                      .desiredPolar,
+                  distance:
+                    controlsRef
+                      .current
+                      .desiredDistance,
+                  pinchDistance:
+                    distanceBetweenTouches(
+                      event
+                        .nativeEvent
+                        .touches
+                    ),
+                };
+
+              velocityRef.current =
+                {
+                  azimuth: 0,
+                  polar: 0,
+                };
+            },
+
+          onPanResponderMove:
+            (
+              event,
+              gesture
+            ) => {
+              const touches =
+                event.nativeEvent
+                  .touches;
+
+              if (
+                touches.length >= 2
+              ) {
+                const currentPinch =
+                  distanceBetweenTouches(
+                    touches
+                  );
+
+                const startingPinch =
+                  Math.max(
+                    1,
+                    gestureStartRef
+                      .current
+                      .pinchDistance
+                  );
+
+                const ratio =
+                  currentPinch /
+                  startingPinch;
+
+                const pinchTarget =
+                  clamp(
+                    gestureStartRef
+                      .current
+                      .distance /
+                      Math.pow(
+                        ratio,
+                        0.72
+                      ),
+                    6,
+                    21
+                  );
+
+                controlsRef.current.desiredDistance =
+                  damp(
+                    controlsRef.current.desiredDistance,
+                    pinchTarget,
+                    15,
+                    1 / 60
+                  );
+
+                return;
+              }
+
+              controlsRef.current.desiredAzimuth =
+                gestureStartRef
+                  .current
+                  .azimuth -
+                gesture.dx *
+                  0.0062;
+
+              controlsRef.current.desiredPolar =
+                clamp(
+                  gestureStartRef
+                    .current
+                    .polar +
+                    gesture.dy *
+                      0.0038,
+                  0.5,
+                  1.34
+                );
+            },
+
+          onPanResponderRelease:
+            (
+              _,
+              gesture
+            ) => {
+              velocityRef.current =
+                {
+                  azimuth:
+                    -gesture.vx *
+                    0.62,
+                  polar:
+                    gesture.vy *
+                    0.34,
+                };
+
+              setInteractionActive(
+                false
+              );
+            },
+
+          onPanResponderTerminate:
+            () => {
+              velocityRef.current =
+                {
+                  azimuth: 0,
+                  polar: 0,
+                };
+
+              setInteractionActive(
+                false
+              );
+            },
+
+          /*
+           * Once the scene has claimed a rotation/pinch gesture, the parent
+           * ScrollView may not steal it midway through.
+           */
+          onPanResponderTerminationRequest:
+            () => false,
+
+          onShouldBlockNativeResponder:
+            () => true,
+        }),
+      [setInteractionActive]
+    );
+
+  const selectedMilestone =
+    ISLAND_MILESTONES.find(
+      (item) =>
+        item.id ===
+        selectedMilestoneId
+    ) ??
+    ISLAND_MILESTONES[0];
+
+  const selectedDiscovery =
+    discoveries.find(
+      (item) =>
+        item.key ===
+        selectedDiscoveryKey
+    ) ?? null;
+
+  const unlocked =
+    level >=
+    selectedMilestone.level;
+
+  const selectedTitle =
+    selectedDiscovery?.title ??
+    (unlocked
+      ? selectedMilestone.title
+      : "Unknown Discovery");
+
+  const selectedLore =
+    selectedDiscovery
+      ? selectedDiscovery.kind ===
+        "resident"
+        ? "A bonded companion now calls this island home."
+        : "A friendship keepsake has taken root in this part of the island."
+      : unlocked
+      ? LANDMARK_LORE[
+          selectedMilestone.id
+        ] ??
+        selectedMilestone.description
+      : `A hidden part of Nova Island will reveal itself at Level ${selectedMilestone.level}.`;
+
+  return (
+    <View
+      style={[
+        styles.container,
+        {
+          height,
+        },
+      ]}
+      /*
+       * Disable the page scroll as soon as a finger touches the 3D viewport.
+       * These touch callbacks do not claim the responder, so Canvas taps still
+       * reach landmarks normally.
+       */
+      onTouchStart={() =>
+        setInteractionActive(
+          true
+        )
+      }
+      onTouchEnd={() =>
+        setInteractionActive(
+          false
+        )
+      }
+      onTouchCancel={() =>
+        setInteractionActive(
+          false
+        )
+      }
+      {...panResponder.panHandlers}
+    >
+      <LinearGradient
+        colors={[
+          palette.skyTop,
+          palette.skyBottom,
+        ]}
+        style={
+          StyleSheet.absoluteFill
+        }
+      />
+
+      <Canvas
+        style={
+          StyleSheet.absoluteFill
+        }
+        dpr={[
+          1,
+          1.5,
+        ]}
+        gl={{
+          antialias: true,
+          alpha: true,
+        }}
+        camera={{
+          fov: 46,
+          near: 0.1,
+          far: 100,
+          position: [
+            7,
+            8,
+            10,
+          ],
+        }}
+      >
+        <IslandWorld
+          level={level}
+          palette={palette}
+          selectedMilestoneId={
+            selectedMilestoneId
+          }
+          selectedDiscoveryKey={
+            selectedDiscoveryKey
+          }
+          discoveries={
+            discoveries
+          }
+          onSelectMilestone={
+            selectMilestone
+          }
+          onSelectDiscovery={
+            selectDiscovery
+          }
+          controlsRef={
+            controlsRef
+          }
+          velocityRef={
+            velocityRef
+          }
+        />
+      </Canvas>
+
+      <View
+        pointerEvents="box-none"
+        style={
+          StyleSheet.absoluteFill
+        }
+      >
+        <View
+          pointerEvents="none"
+          style={
+            styles.topRow
+          }
+        >
+          <View
+            style={
+              styles.timePill
+            }
+          >
+            <Ionicons
+              name={
+                palette.label ===
+                "Night"
+                  ? "moon"
+                  : palette.label ===
+                    "Day"
+                  ? "sunny"
+                  : "partly-sunny"
+              }
+              color="#ffffff"
+              size={14}
+            />
+            <Text
+              style={
+                styles.timeText
+              }
+            >
+              {palette.label} · Local
+              time
+            </Text>
+          </View>
+
+          <View
+            style={
+              styles.levelPill
+            }
+          >
+            <Text
+              style={
+                styles.levelText
+              }
+            >
+              LEVEL {level}
+            </Text>
+          </View>
+        </View>
+
+        <Pressable
+          onPress={resetView}
+          style={({ pressed }) => [
+            styles.resetButton,
+            {
+              opacity: pressed
+                ? 0.7
+                : 1,
+            },
+          ]}
+        >
+          <Ionicons
+            name="scan-outline"
+            color="#e0f2fe"
+            size={18}
+          />
+          <Text
+            style={
+              styles.resetText
+            }
+          >
+            Full view
+          </Text>
+        </Pressable>
+
+        <View
+          pointerEvents="none"
+          style={
+            styles.selectedCard
+          }
+        >
+          <View
+            style={
+              styles.selectedTop
+            }
+          >
+            <Text
+              numberOfLines={1}
+              style={
+                styles.selectedTitle
+              }
+            >
+              {selectedTitle}
+            </Text>
+
+            <View
+              style={[
+                styles.statusPill,
+                {
+                  backgroundColor:
+                    selectedDiscovery
+                      ? selectedDiscovery.kind ===
+                        "resident"
+                        ? "rgba(16,185,129,0.18)"
+                        : "rgba(250,204,21,0.16)"
+                      : unlocked
+                      ? "rgba(34,211,238,0.16)"
+                      : "rgba(100,116,139,0.3)",
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.statusText,
+                  {
+                    color:
+                      selectedDiscovery
+                        ? selectedDiscovery.kind ===
+                          "resident"
+                          ? "#6ee7b7"
+                          : "#fde68a"
+                        : unlocked
+                        ? "#67e8f9"
+                        : "#cbd5e1",
+                  },
+                ]}
+              >
+                {selectedDiscovery
+                  ? selectedDiscovery.kind ===
+                    "resident"
+                    ? "RESIDENT"
+                    : "KEEPSAKE"
+                  : unlocked
+                  ? "AWAKE"
+                  : `LEVEL ${selectedMilestone.level}`}
+              </Text>
+            </View>
+          </View>
+
+          <Text
+            numberOfLines={2}
+            style={
+              styles.selectedLore
+            }
+          >
+            {selectedLore}
+          </Text>
+        </View>
+
+        <View
+          pointerEvents="none"
+          style={
+            styles.hint
+          }
+        >
+          <Ionicons
+            name="hand-left-outline"
+            color="#bae6fd"
+            size={14}
+          />
+          <Text
+            style={
+              styles.hintText
+            }
+          >
+            Drag to rotate · Pinch to
+            zoom · Tap to explore
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+const styles =
+  StyleSheet.create({
+    container: {
+      width: "100%",
+      overflow: "hidden",
+      backgroundColor:
+        "#07152f",
+    },
+    topRow: {
+      position: "absolute",
+      top: 12,
+      left: 12,
+      right: 12,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent:
+        "space-between",
+      gap: 8,
+    },
+    timePill: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor:
+        "rgba(255,255,255,0.24)",
+      backgroundColor:
+        "rgba(2,6,23,0.58)",
+      paddingHorizontal: 10,
+      paddingVertical: 7,
+    },
+    timeText: {
+      color: "#f8fafc",
+      fontSize: 10,
+      fontWeight: "800",
+    },
+    levelPill: {
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor:
+        "rgba(103,232,249,0.42)",
+      backgroundColor:
+        "rgba(8,145,178,0.22)",
+      paddingHorizontal: 10,
+      paddingVertical: 7,
+    },
+    levelText: {
+      color: "#a5f3fc",
+      fontSize: 10,
+      fontWeight: "900",
+      letterSpacing: 0.5,
+    },
+    resetButton: {
+      position: "absolute",
+      top: 52,
+      right: 12,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      minHeight: 38,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor:
+        "rgba(186,230,253,0.35)",
+      backgroundColor:
+        "rgba(2,6,23,0.72)",
+      paddingHorizontal: 10,
+    },
+    resetText: {
+      color: "#e0f2fe",
+      fontSize: 10,
+      fontWeight: "800",
+    },
+    selectedCard: {
+      position: "absolute",
+      left: 12,
+      right: 12,
+      bottom: 42,
+      borderRadius: 15,
+      borderWidth: 1,
+      borderColor:
+        "rgba(103,232,249,0.34)",
+      backgroundColor:
+        "rgba(2,6,23,0.76)",
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+    },
+    selectedTop: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    selectedTitle: {
+      flex: 1,
+      color: "#f8fafc",
+      fontSize: 13,
+      fontWeight: "900",
+    },
+    statusPill: {
+      borderRadius: 999,
+      paddingHorizontal: 7,
+      paddingVertical: 4,
+    },
+    statusText: {
+      fontSize: 8.5,
+      fontWeight: "900",
+      letterSpacing: 0.42,
+    },
+    selectedLore: {
+      color: "#cbd5e1",
+      fontSize: 10.5,
+      lineHeight: 15,
+      marginTop: 5,
+    },
+    hint: {
+      position: "absolute",
+      left: 12,
+      bottom: 10,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      borderRadius: 999,
+      backgroundColor:
+        "rgba(2,6,23,0.68)",
+      paddingHorizontal: 9,
+      paddingVertical: 6,
+    },
+    hintText: {
+      color: "#bae6fd",
+      fontSize: 9.5,
+      fontWeight: "700",
+    },
+  });

@@ -1,0 +1,82 @@
+[
+  {
+    "question": "Solve for x: 2x+3=11",
+    "answer": "x=4"
+  },
+  {
+    "question": "Slope of line through (1,2) and (3,6)",
+    "answer": "2"
+  },
+  {
+    "question": "Equation of line slope 3, y-int 2",
+    "answer": "y=3x+2"
+  },
+  {
+    "question": "Quadratic formula",
+    "answer": "x=[-b±√(b^2-4ac)]/(2a)"
+  },
+  {
+    "question": "Factor x^2-9",
+    "answer": "(x-3)(x+3)"
+  },
+  {
+    "question": "Solve: |x-5|=3",
+    "answer": "x=8 or x=2"
+  },
+  {
+    "question": "Simplify: (x^2)(x^3)",
+    "answer": "x^5"
+  },
+  {
+    "question": "Simplify: (2x^3)^2",
+    "answer": "4x^6"
+  },
+  {
+    "question": "Volume of cylinder r=3,h=5",
+    "answer": "45π"
+  },
+  {
+    "question": "Area of circle r=7",
+    "answer": "49π"
+  },
+  {
+    "question": "Pythagorean triple example",
+    "answer": "3-4-5"
+  },
+  {
+    "question": "Distance between (0,0) and (6,8)",
+    "answer": "10"
+  },
+  {
+    "question": "Mean of 2,4,6,8",
+    "answer": "5"
+  },
+  {
+    "question": "Median of 1,7,3",
+    "answer": "3"
+  },
+  {
+    "question": "Mode of 2,3,3,4,5",
+    "answer": "3"
+  },
+  {
+    "question": "Probability coin lands heads",
+    "answer": "1/2"
+  },
+  {
+    "question": "Probability of rolling 5 on die",
+    "answer": "1/6"
+  },
+  {
+    "question": "Convert 3/4 to decimal",
+    "answer": "0.75"
+  },
+  {
+    "question": "Percent of 50 is 20",
+    "answer": "40%"
+  },
+  {
+    "question": "Solve system: x+y=5, x-y=1",
+    "answer": "x=3, y=2"
+  }
+]

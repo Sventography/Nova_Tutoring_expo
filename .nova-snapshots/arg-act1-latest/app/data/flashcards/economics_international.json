@@ -1,0 +1,25 @@
+{
+  "topic": "Economics (International)",
+  "cards": [
+    { "q": "Absolute vs comparative advantage", "a": "Absolute: more output; Comparative: lower opportunity cost" },
+    { "q": "Terms of trade meaning", "a": "Export prices relative to import prices" },
+    { "q": "Tariff effect", "a": "Raises import price; reduces quantity; creates DWL" },
+    { "q": "Quota effect", "a": "Quantity limit; similar to tariff without revenue" },
+    { "q": "Exchange rate appreciation impact", "a": "Exports fall, imports rise" },
+    { "q": "Current account components", "a": "Goods, services, income, transfers" },
+    { "q": "Capital and financial account", "a": "Investment flows, assets, reserves" },
+    { "q": "Balance of payments identity", "a": "Current + Capital/Financial + Errors = 0 (by accounting)" },
+    { "q": "Fixed vs floating exchange rate", "a": "Fixed pegged by central bank; floating set by market" },
+    { "q": "PPP concept", "a": "Prices should equalize across countries" },
+    { "q": "J-curve describes", "a": "Trade balance worsens before improving after depreciation" },
+    { "q": "Heckscher-Ohlin theory", "a": "Countries export goods using abundant factors" },
+    { "q": "Stolper-Samuelson result", "a": "Trade benefits abundant factor, hurts scarce" },
+    { "q": "Trade creation vs diversion", "a": "Creation: more efficient sources; Diversion: shift from low-cost nonmembers" },
+    { "q": "WTO main role", "a": "Enforce trade rules, settle disputes" },
+    { "q": " IMF typical roles ", "a": "Lender of last resort, stabilization programs" },
+    { "q": "Exchange rate regimes examples", "a": "Free float, managed float, peg, currency board" },
+    { "q": "Currency crisis trigger example", "a": "Speculation, reserves shortage, fixed-peg break" },
+    { "q": "Sovereign debt default risk", "a": "Inability or unwillingness to pay public debt" },
+    { "q": "Regional trade bloc example", "a": "EU, USMCA, ASEAN, Mercosur" }
+  ]
+}

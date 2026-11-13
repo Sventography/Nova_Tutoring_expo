@@ -1,0 +1,25 @@
+{
+  "topic": "Organic Chemistry",
+  "cards": [
+    { "q": "Hybridization of carbon in methane", "a": "sp3" },
+    { "q": "Hybridization of carbon in ethene", "a": "sp2" },
+    { "q": "Hybridization of carbon in ethyne", "a": "sp" },
+    { "q": "General formula for alkanes", "a": "CnH2n+2" },
+    { "q": "General formula for alkenes", "a": "CnH2n" },
+    { "q": "General formula for alkynes", "a": "CnH2n-2" },
+    { "q": "Functional group: OH", "a": "Alcohol" },
+    { "q": "Functional group: COOH", "a": "Carboxylic acid" },
+    { "q": "Functional group: C=O (middle of chain)", "a": "Ketone" },
+    { "q": "Functional group: C=O (end of chain)", "a": "Aldehyde" },
+    { "q": "SN1 vs SN2 difference", "a": "SN1: 2-step, carbocation; SN2: 1-step, backside attack" },
+    { "q": "E1 vs E2 difference", "a": "E1: 2-step elimination; E2: 1-step elimination" },
+    { "q": "Aromaticity rule", "a": "Huckel's rule: 4n+2 pi electrons" },
+    { "q": "Common aromatic compound", "a": "Benzene" },
+    { "q": "Stereoisomers types", "a": "Enantiomers and diastereomers" },
+    { "q": "Chiral center definition", "a": "Carbon with 4 different substituents" },
+    { "q": "cis vs trans isomer", "a": "Cis = same side, Trans = opposite side (double bonds)" },
+    { "q": "Markovnikov's rule", "a": "H adds to carbon with more H in HX addition to alkenes" },
+    { "q": "Polymerization definition", "a": "Small monomers join to form large polymers" },
+    { "q": "Mass spectrometry use", "a": "Identify molecular weight and fragments" }
+  ]
+}

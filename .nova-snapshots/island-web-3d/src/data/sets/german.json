@@ -1,0 +1,22 @@
+[
+  ["Hallo", "Hello"],
+  ["Auf Wiedersehen", "Goodbye"],
+  ["Bitte", "Please"],
+  ["Danke", "Thank you"],
+  ["Ja", "Yes"],
+  ["Nein", "No"],
+  ["Wo ist die Toilette?", "Where is the bathroom?"],
+  ["Wie viel kostet das?", "How much is this?"],
+  ["Ich verstehe nicht", "I don't understand"],
+  ["Sprechen Sie Englisch?", "Do you speak English?"],
+  ["Hilfe", "Help"],
+  ["Ich brauche einen Arzt", "I need a doctor"],
+  ["Eins bis zehn", "One to ten"],
+  ["Wochentage", "Monday to Sunday"],
+  ["Monate", "January to December"],
+  ["Farben", "Basic colors"],
+  ["Essen", "Common foods"],
+  ["Wegbeschreibung", "Left, right, straight"],
+  ["Uhrzeit", "Time"],
+  ["Familie", "Family members"]
+]

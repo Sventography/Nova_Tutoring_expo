@@ -1,0 +1,25 @@
+{
+  "topic": "Chemistry: Electrochemistry & Solutions",
+  "cards": [
+    { "q": "Oxidation vs reduction", "a": "Lose e− vs gain e−" },
+    { "q": "Anode vs cathode", "a": "Oxidation at anode; reduction at cathode" },
+    { "q": "Galvanic cell sign", "a": "Spontaneous; E°cell > 0" },
+    { "q": "Electrolytic cell", "a": "Nonspontaneous; requires power" },
+    { "q": "Standard potential", "a": "E°cell = E°cath − E°an" },
+    { "q": "Nernst equation", "a": "E = E° − (0.0592/n) log Q (25°C)" },
+    { "q": "Faraday's law", "a": "m = (ItM)/(nF)" },
+    { "q": "Concentration cell", "a": "Same electrodes, diff concentrations" },
+    { "q": "Conductivity factors", "a": "Ion concentration, mobility, temperature" },
+    { "q": "Colligative properties", "a": "Depend on particle number" },
+    { "q": "Boiling point elevation", "a": "ΔTb = i Kb m" },
+    { "q": "Freezing point depression", "a": "ΔTf = i Kf m" },
+    { "q": "Osmotic pressure", "a": "π = iMRT" },
+    { "q": "Activity vs concentration", "a": "Effective vs nominal" },
+    { "q": "Solubility vs miscibility", "a": "Amount dissolves vs mix in all proportions" },
+    { "q": "Henry's law", "a": "S_gas = k_H P_gas" },
+    { "q": "Raoult's law", "a": "P_solution = X_solvent P°" },
+    { "q": "Ionic strength", "a": "I = 1/2 Σ c_i z_i^2" },
+    { "q": "Salt bridge role", "a": "Maintain charge neutrality" },
+    { "q": "Primary standard", "a": "Highly pure for titrations" }
+  ]
+}

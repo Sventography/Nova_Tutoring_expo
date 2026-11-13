@@ -1,0 +1,25 @@
+{
+  "topic": "World History I (Ancient–Medieval)",
+  "cards": [
+    { "q": "Cradles of civilization", "a": "Mesopotamia, Egypt, Indus Valley, Yellow River (China)." },
+    { "q": "Key features of ancient Egypt", "a": "Pharaohs, pyramids, Nile-based agriculture, hieroglyphics." },
+    { "q": "Greek city-states contrast", "a": "Athens (democracy, culture) vs Sparta (military, oligarchy)." },
+    { "q": "Roman Republic to Empire shift", "a": "Civil wars; Augustus established empire (27 BCE)." },
+    { "q": "Fall of Western Roman Empire (traditional date)", "a": "476 CE." },
+    { "q": "Byzantine Empire significance", "a": "Preserved Roman/Greek knowledge; Orthodox Christianity; Justinian Code." },
+    { "q": "Origins of Islam (century & place)", "a": "7th century CE, Arabian Peninsula." },
+    { "q": "Silk Road importance", "a": "Trade network linking East and West; goods, ideas, disease spread." },
+    { "q": "Indian empires (classical)", "a": "Maurya and Gupta." },
+    { "q": "Chinese dynasties (classical to medieval)", "a": "Han, Tang, Song (innovations: paper, printing, compass, gunpowder)." },
+    { "q": "European feudalism basics", "a": "Lords, vassals, fiefs; mutual obligations; manorialism." },
+    { "q": "Crusades aims & effects", "a": "Retake Holy Land; increased trade/cultural contact, lasting tensions." },
+    { "q": "Mongol Empire impact", "a": "Largest land empire; promoted trade, but caused destruction; Pax Mongolica." },
+    { "q": "Black Death (century & effect)", "a": "14th century; massive population loss, social and economic change." },
+    { "q": "Japanese feudal structure", "a": "Emperor, shogun, daimyo, samurai, peasants." },
+    { "q": "Mesoamerican civilizations", "a": "Maya, Aztec; in Andes: Inca." },
+    { "q": "African trade kingdoms (West)", "a": "Ghana, Mali, Songhai (gold-salt trade)." },
+    { "q": "Renaissance beginnings", "a": "14th–15th c. Italy; revival of classical learning, humanism, arts." },
+    { "q": "Spread of printing press (inventor)", "a": "Johannes Gutenberg; enabled mass literacy and Reformation." },
+    { "q": "Medieval universities’ role", "a": "Centers for theology, law, medicine, liberal arts in Europe." }
+  ]
+}

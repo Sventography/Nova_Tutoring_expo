@@ -1,0 +1,25 @@
+{
+  "topic": "Computer Science: Data Structures",
+  "cards": [
+    { "q": "Array vs linked list", "a": "Contiguous O(1) index vs pointer-based O(n) index" },
+    { "q": "Stack operations", "a": "LIFO; push/pop/peek" },
+    { "q": "Queue operations", "a": "FIFO; enqueue/dequeue" },
+    { "q": "Hash table", "a": "Key→index via hash; average O(1) lookup" },
+    { "q": "Binary search tree (BST)", "a": "Left<root<right; average O(log n)" },
+    { "q": "AVL/Red–Black tree", "a": "Self-balancing BST variants" },
+    { "q": "Heap (binary)", "a": "Complete tree; max/min at root" },
+    { "q": "Priority queue", "a": "Abstract heap interface" },
+    { "q": "Trie", "a": "Prefix tree for strings" },
+    { "q": "Disjoint Set (Union–Find)", "a": "Union by rank + path compression" },
+    { "q": "Graph adjacency list vs matrix", "a": "Sparse efficient vs dense fast lookup" },
+    { "q": "Topological order", "a": "Linear order of DAG nodes" },
+    { "q": "Bloom filter", "a": "Probabilistic set with false positives" },
+    { "q": "Segment tree", "a": "Range queries/updates in O(log n)" },
+    { "q": "Fenwick (BIT)", "a": "Prefix sums in O(log n)" },
+    { "q": "LRU cache idea", "a": "Evict least recently used" },
+    { "q": "Amortized O(1) structure", "a": "Dynamic array push" },
+    { "q": "Immutable/persistent DS", "a": "Structural sharing between versions" },
+    { "q": "Graph coloring use", "a": "Register allocation, scheduling" },
+    { "q": "Space–time tradeoff", "a": "More memory for faster access" }
+  ]
+}

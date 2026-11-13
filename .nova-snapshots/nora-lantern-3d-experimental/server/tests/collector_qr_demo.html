@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="robots" content="noindex,nofollow,noarchive" />
+  <meta name="referrer" content="no-referrer" />
+  <title>Nova // Archive · QR Staging</title>
+  <style>
+    :root { color-scheme: dark; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; background:#120d22; color:#eee4f6; }
+    * { box-sizing:border-box; }
+    body { margin:0; padding:0; }
+    main { max-width:520px; margin:0 auto; padding:44px 20px 72px; text-align:center; }
+    .kicker { color:#c5acd9; letter-spacing:3px; font-size:11px; font-weight:800; }
+    h1 { font-size:30px; letter-spacing:-0.7px; color:#f9e9c4; margin:16px auto 6px; }
+    .subtitle { font-size:13px; color:#bfaecf; line-height:1.6; }
+    .star { color:#f0c97d; font-size:22px; letter-spacing:7px; margin:23px 0; }
+    .staging { padding:11px 14px; border:1px solid #a16c35; border-radius:12px; background:#3b271d; color:#fbd9a4; font-size:13px; line-height:1.5; margin:22px 0; }
+    .card { background:linear-gradient(150deg,#261938,#1a112d); border:1px solid #a8814a; border-radius:22px; padding:28px 24px; box-shadow:0 15px 45px #06030d66; }
+    .overline { color:#e1c18b; font-size:11px; letter-spacing:2px; font-weight:800; }
+    .number { font-size:70px; color:#f5d189; font-weight:800; letter-spacing:7px; margin:16px 0 4px; }
+    .heading { font-size:24px; color:#f8e9ca; font-weight:700; margin-top:18px; }
+    .gold { font-size:12px; color:#f4c97b; letter-spacing:2px; font-weight:700; }
+    .line { height:1px; background:#6e537c; margin:24px auto; width:75%; }
+    .description { color:#e0d4e8; line-height:1.65; font-size:15px; }
+    .quote { font-style:italic; color:#f3d08d; font-size:16px; line-height:1.5; margin-top:19px; }
+    button { font:inherit; font-weight:750; border:none; border-radius:13px; min-height:48px; padding:11px 17px; cursor:pointer; }
+    button:disabled { opacity:.45; cursor:default; }
+    .goldbtn { background:#f0cb81; color:#20142d; }
+    .outline { background:#322540; border:1px solid #8567a1; color:#f8edff; }
+    .controls { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:20px 0; }
+    .actions { display:flex; flex-wrap:wrap; justify-content:center; gap:9px; margin:18px 0 0; }
+    .tiny { color:#b4a2c5; font-size:12px; line-height:1.55; }
+    .status { border-radius:11px; background:#21162f; border:1px solid #5b456b; padding:13px; margin:20px 0; font-size:14px; line-height:1.6; min-height:50px; }
+    .status.good { border-color:#5b996e; color:#baf5c7; }
+    .status.bad { border-color:#ae6363; color:#ffd1d1; }
+    .inventory { border-radius:14px; margin-top:20px; padding:18px; border:1px solid #69537a; background:#191126; }
+    .inventory h2 { color:#f5ddaf; font-size:16px; margin:0 0 12px; }
+    .inventory p { color:#dccfe3; margin:8px 0; font-size:14px; }
+    .stage-qr { width:min(230px,100%); padding:12px; background:white; border-radius:12px; }
+    .qr-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:25px 0; }
+    .qr-grid section { background:#211630; border:1px solid #54406a; border-radius:16px; padding:15px 11px; }
+    .qr-grid img { max-width:100%; width:160px; height:160px; background:white; border:8px solid white; border-radius:9px; }
+    .qr-grid strong { display:block; color:#f6ddad; margin:12px 0 6px; }
+    .qr-grid p { font-size:12px; line-height:1.4; color:#beafca; }
+    .link { color:#e8c58b; overflow-wrap:anywhere; }
+    .footer { color:#786c87; font-size:11px; letter-spacing:2px; margin-top:36px; }
+    [hidden] { display:none !important; }
+    @media(max-width:400px){ .qr-grid{grid-template-columns:1fr;} }
+  </style>
+</head>
+<body>
+<main>
+  <div class="kicker">NOVA // ARCHIVE</div>
+  <h1>Nora's Last Lantern</h1>
+  <div class="star">✦ · ✦ · ✦</div>
+  <div class="staging">LOCAL TEST ONLY — Fake accounts and disposable QR codes. Nothing here grants a real Nova item.</div>
+
+  <div id="scanner" hidden>
+    <div class="card">
+      <div class="overline" id="certificateTag">SEALED ARCHIVE</div>
+      <div class="heading" id="certificateHeading">A light left burning.</div>
+      <div class="number" id="serial" hidden>017</div>
+      <div class="gold" id="serialTitle" hidden>THE SEVENTEENTH STAR</div>
+      <div class="line"></div>
+      <p class="description">Some things were never meant to be forgotten. This lantern was one of them.</p>
+      <p class="quote">“I kept the light on. Just in case.”</p>
+      <p class="description" id="certificateLine">Scan verification pending.</p>
+    </div>
+
+    <p class="subtitle">Sign in as one of the two temporary test accounts to verify your scanned QR code.</p>
+    <div class="controls">
+      <button class="outline" id="alice" type="button">Test Owner A</button>
+      <button class="outline" id="bob" type="button">Test Owner B</button>
+    </div>
+    <div class="tiny" id="loggedIn">Not signed in to the local test.</div>
+    <div class="status" id="status" aria-live="polite">QR code received. Select a test account.</div>
+    <div class="actions">
+      <button class="outline" id="verify" type="button" disabled>Verify authenticity</button>
+      <button class="goldbtn" id="redeem" type="button" disabled>Claim Nora's Last Lantern</button>
+      <button class="outline" id="sync" type="button" disabled>Check island inventory</button>
+    </div>
+    <div class="inventory" id="inventory" hidden>
+      <h2>Server-confirmed test inventory</h2>
+      <p id="inventoryText"></p>
+      <p class="tiny">This reads the temporary PostgreSQL entitlement—not Nova's production island inventory.</p>
+    </div>
+    <div class="tiny" style="margin-top:25px">To test another account, tap Test Owner B above and verify the SAME QR. After a claim, B should see “already redeemed.” Reload to confirm the server remembers the owner.</div>
+  </div>
+
+  <div id="launcher" hidden>
+    <p class="subtitle">Open this page on your Mac. Scan one of these disposable codes with your iPhone camera while both devices use the same Wi‑Fi.</p>
+    <div class="qr-grid">
+      <section>
+        <img src="__QR_017__" alt="Temporary test QR for serial 017" />
+        <strong>Test serial 017</strong>
+        <p>The only test item that grants the castle.</p>
+        <a class="link" href="__LINK_017__">Open on this browser</a>
+      </section>
+      <section>
+        <img src="__QR_023__" alt="Temporary test QR for serial 023" />
+        <strong>Test serial 023</strong>
+        <p>Authentic, but never grants Nora's castle.</p>
+        <a class="link" href="__LINK_023__">Open on this browser</a>
+      </section>
+    </div>
+    <p class="tiny">The code stays in the URL fragment; it isn't sent to the web server until you press Verify. Codes are randomly generated for this single staging session and deleted when the test stops.</p>
+  </div>
+
+  <div class="footer">NORA VALE · SESSION 017 · STAGING</div>
+</main>
+
+<script>
+(function() {
+  "use strict";
+  const $ = id => document.getElementById(id);
+  const code = new URLSearchParams(location.hash.slice(1)).get("code");
+  const validCode = typeof code === "string" && /^[A-Za-z0-9_-]{32,128}$/.test(code);
+  const stage = !!window.__NOVA_LOCAL_COLLECTOR_STAGE__;
+  let token = null;
+  let identity = null;
+  let verification = null;
+  if (!stage) {
+    $("launcher").hidden = false;
+    $("status").textContent = "Local staging is unavailable.";
+    return;
+  }
+  $("scanner").hidden = !validCode;
+  $("launcher").hidden = validCode;
+  if (!validCode) return;
+  function showStatus(message, kind) {
+    $("status").className = "status" + (kind ? " " + kind : "");
+    $("status").textContent = message;
+  }
+  function render() {
+    const verified = verification?.authentic === true;
+    const seventeen = verified && verification.serial_number === 17;
+    $("certificateTag").textContent = verified ? "AUTHENTIC TEST COLLECTOR EDITION" : "SEALED ARCHIVE";
+    $("certificateHeading").hidden = seventeen;
+    $("serial").hidden = !seventeen;
+    $("serialTitle").hidden = !seventeen;
+    $("certificateLine").textContent = verified
+      ? "Verified test edition · " + verification.serial_number + " of " + verification.edition_size
+      : "Authenticity not yet verified.";
+    $("verify").disabled = !token;
+    $("redeem").disabled = !token || !seventeen || verification.claim_state !== "available";
+    $("sync").disabled = !token;
+    $("loggedIn").textContent = identity
+      ? "Signed in to the LOCAL TEST as " + (identity === "alice" ? "Test Owner A" : "Test Owner B")
+      : "Not signed in to the local test.";
+  }
+  async function api(path, body) {
+    if (!token) throw new Error("Choose a test account first.");
+    const response = await fetch(path, {
+      method: body ? "POST" : "GET",
+      headers: {
+        "Authorization": "Bearer " + token,
+        ...(body ? {"Content-Type":"application/json"} : {})
+      },
+      ...(body ? {body: JSON.stringify(body)} : {}),
+      cache: "no-store",
+      referrerPolicy: "no-referrer"
+    });
+    const result = await response.json();
+    if (!response.ok || result.ok !== true) throw new Error(result.error || "request_failed");
+    return result;
+  }
+  async function login(person) {
+    try {
+      verification = null;
+      token = null;
+      identity = null;
+      $("inventory").hidden = true;
+      render();
+      const response = await fetch("/demo/login", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({identity:person}), cache:"no-store"
+      });
+      if (!response.ok) throw new Error("Local test sign-in failed.");
+      const body = await response.json();
+      if (body.ok !== true || !body.token) throw new Error("Local test account unavailable.");
+      token = body.token;
+      identity = person;
+      render();
+      showStatus("Test account selected. Checking the QR authenticity…");
+      await verify();
+    } catch(error) { showStatus(error.message, "bad"); }
+  }
+  async function verify() {
+    try {
+      const result = await api("/api/collector/verify", {code});
+      verification = result;
+      render();
+      const state = result.claim_state;
+      showStatus(
+        state === "available"
+          ? "Authentic. This temporary code has not been claimed."
+          : state === "yours"
+            ? "Authentic. This test account already owns the reward."
+            : "Authentic, but this code has already been redeemed by another account.",
+        state === "claimed" ? "bad" : "good"
+      );
+    } catch(error) { verification = null; render(); showStatus(error.message, "bad"); }
+  }
+  async function redeem() {
+    if (!verification || verification.serial_number !== 17 || verification.claim_state !== "available") return;
+    $("redeem").disabled = true;
+    try {
+      const result = await api("/api/collector/redeem", {code});
+      verification = { ...verification, claim_state: "yours" };
+      render();
+      showStatus(result.status === "claimed" ? "SESSION 017 — MEMORY RECOVERED. Test claim successful!" : "Already owned by this account.", "good");
+      await sync();
+    } catch(error) { showStatus(error.message, "bad"); await verify(); }
+  }
+  async function sync() {
+    try {
+      const result = await api("/api/collector/entitlements");
+      const owned = result.entitlements.some(item => item.reward_id === "noras_last_lantern_017");
+      $("inventory").hidden = false;
+      $("inventoryText").textContent = owned
+        ? "🏰 Nora's Last Lantern — 1 permanent TEST entitlement"
+        : "No collector castle entitlement for this test account.";
+      showStatus(owned ? "The test backend confirmed this account owns the castle." : "The test backend confirms no castle entitlement for this account.", owned ? "good" : "");
+    } catch(error) { showStatus(error.message, "bad"); }
+  }
+  $("alice").addEventListener("click", () => login("alice"));
+  $("bob").addEventListener("click", () => login("bob"));
+  $("verify").addEventListener("click", verify);
+  $("redeem").addEventListener("click", redeem);
+  $("sync").addEventListener("click", sync);
+  render();
+})();
+</script>
+</body>
+</html>

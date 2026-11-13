@@ -1,0 +1,25 @@
+{
+  "topic": "Algebra I",
+  "cards": [
+    { "q": "What is the commutative property of addition?", "a": "Changing order doesn’t change the sum: a + b = b + a." },
+    { "q": "What is the associative property of multiplication?", "a": "Grouping doesn’t change the product: (ab)c = a(bc)." },
+    { "q": "Distribute: 3(2x − 5) =", "a": "6x − 15" },
+    { "q": "Combine like terms: 4x + 7 − 2x + 3 =", "a": "2x + 10" },
+    { "q": "Solve: 5x − 12 = 3x + 4", "a": "2x = 16 → x = 8" },
+    { "q": "Slope formula between (x₁,y₁) and (x₂,y₂)?", "a": "m = (y₂ − y₁) / (x₂ − x₁)" },
+    { "q": "Slope-intercept form of a line?", "a": "y = mx + b" },
+    { "q": "Point-slope form of a line?", "a": "y − y₁ = m(x − x₁)" },
+    { "q": "Solve: 2(x − 3) = 10", "a": "x − 3 = 5 → x = 8" },
+    { "q": "Factor: x² − 9", "a": "(x − 3)(x + 3)" },
+    { "q": "Factor: x² + 5x + 6", "a": "(x + 2)(x + 3)" },
+    { "q": "Solve: x² = 49", "a": "x = ±7" },
+    { "q": "Evaluate: |−8|", "a": "8" },
+    { "q": "Convert 40% to a fraction in simplest terms.", "a": "2/5" },
+    { "q": "Solve the proportion: 3/4 = x/12", "a": "x = 9" },
+    { "q": "Simplify: (2x³)(3x²)", "a": "6x⁵" },
+    { "q": "Simplify: x⁵ / x²", "a": "x³" },
+    { "q": "Any nonzero number to the 0 power equals…", "a": "1" },
+    { "q": "Scientific notation for 0.00045", "a": "4.5 × 10⁻⁴" },
+    { "q": "Solve the system x + y = 10, x − y = 2", "a": "Add → 2x = 12 → x = 6; then y = 4" }
+  ]
+}

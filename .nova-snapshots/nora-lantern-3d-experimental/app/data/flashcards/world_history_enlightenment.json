@@ -1,0 +1,25 @@
+{
+  "topic": "World History: Enlightenment and Revolutions",
+  "cards": [
+    { "q": "Enlightenment core values", "a": "Reason, liberty, progress, secularism" },
+    { "q": "Hobbes view", "a": "Strong sovereign to control state of nature" },
+    { "q": "Locke view", "a": "Natural rights life liberty property; consent of governed" },
+    { "q": "Montesquieu idea", "a": "Separation of powers" },
+    { "q": "Rousseau idea", "a": "Social contract; general will" },
+    { "q": "Voltaire stance", "a": "Civil liberties; free speech and religion" },
+    { "q": "American Revolution dates", "a": "1775 to 1783" },
+    { "q": "French Revolution start", "a": "1789; storming of the Bastille" },
+    { "q": "Reign of Terror leader", "a": "Robespierre, Committee of Public Safety" },
+    { "q": "Napoleon impact", "a": "Napoleonic Code; spread of nationalism" },
+    { "q": "Haitian Revolution leader", "a": "Toussaint Louverture" },
+    { "q": "Latin American revolutions figures", "a": "Simon Bolivar, Jose de San Martin" },
+    { "q": "Industrial Revolution shift", "a": "Manual to machine; urbanization" },
+    { "q": "Luddite movement", "a": "Textile workers resisting machines" },
+    { "q": "Reform acts Britain", "a": "Expanded suffrage 19th century" },
+    { "q": "Nationalism 19th century", "a": "Unification of Italy and Germany" },
+    { "q": "1848 revolutions theme", "a": "Liberal and nationalist uprisings Europe wide" },
+    { "q": "Opium Wars result", "a": "Unequal treaties; spheres of influence in China" },
+    { "q": "Meiji Restoration", "a": "Japan modernization from 1868" },
+    { "q": "Long term outcome", "a": "Modern state ideals and global change" }
+  ]
+}

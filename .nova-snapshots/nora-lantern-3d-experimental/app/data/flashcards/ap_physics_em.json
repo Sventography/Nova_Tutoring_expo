@@ -1,0 +1,25 @@
+{
+  "topic": "AP Physics C: Electricity and Magnetism",
+  "cards": [
+    { "q": "Coulomb law", "a": "F = k q1 q2 / r^2" },
+    { "q": "Electric field", "a": "E = F/q; for point charge E = k q / r^2" },
+    { "q": "Electric potential energy", "a": "U = qV" },
+    { "q": "Capacitance", "a": "C = Q/V" },
+    { "q": "Parallel plate capacitor", "a": "C = epsilon0 A / d" },
+    { "q": "Ohm law", "a": "V = I R" },
+    { "q": "Electrical power", "a": "P = I V = I^2 R = V^2 / R" },
+    { "q": "Resistors in series", "a": "R_total = R1 + R2 + ..." },
+    { "q": "Resistors in parallel", "a": "1/R_total = 1/R1 + 1/R2 + ..." },
+    { "q": "Kirchhoff current law (KCL)", "a": "Sum of currents into node equals sum out" },
+    { "q": "Kirchhoff voltage law (KVL)", "a": "Sum of potential changes around a loop is zero" },
+    { "q": "Magnetic force on charge", "a": "F = q v B sin(theta)" },
+    { "q": "Right hand rule", "a": "Thumb v, fingers B, palm force on positive charge" },
+    { "q": "Faraday law", "a": "emf = - d(phi)/dt" },
+    { "q": "Lenz law", "a": "Induced current opposes flux change" },
+    { "q": "Inductor voltage", "a": "V_L = -L dI/dt" },
+    { "q": "Energy in capacitor", "a": "U = 0.5 C V^2" },
+    { "q": "Energy in inductor", "a": "U = 0.5 L I^2" },
+    { "q": "Maxwell unification", "a": "Electricity and magnetism form EM waves" },
+    { "q": "Speed of light", "a": "c about 3.00e8 m/s" }
+  ]
+}

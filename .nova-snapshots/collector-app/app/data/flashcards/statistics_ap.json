@@ -1,0 +1,25 @@
+{
+  "topic": "AP Statistics Practice",
+  "cards": [
+    { "q": "Population vs sample", "a": "Population all; sample subset" },
+    { "q": "Parameter vs statistic", "a": "Parameter population; statistic sample" },
+    { "q": "Random sampling", "a": "Reduces bias" },
+    { "q": "Simple random sample", "a": "Equal chance for all members" },
+    { "q": "Stratified sample", "a": "Groups then sample within each" },
+    { "q": "Cluster sample", "a": "Random clusters chosen" },
+    { "q": "Mean vs median", "a": "Mean avg; median middle" },
+    { "q": "Standard deviation", "a": "Spread around mean" },
+    { "q": "Z-score formula", "a": "(x - mean)/SD" },
+    { "q": "Normal distribution", "a": "Symmetric bell curve" },
+    { "q": "Central Limit Theorem", "a": "Sample means ~ normal" },
+    { "q": "Confidence interval", "a": "Range likely to contain parameter" },
+    { "q": "Null vs alternative", "a": "H0 no effect; Ha effect" },
+    { "q": "Type I vs II error", "a": "I: reject true H0; II: fail reject false H0" },
+    { "q": "p-value meaning", "a": "Probability of data given H0 true" },
+    { "q": "t-test use", "a": "Compare means" },
+    { "q": "Chi-square test", "a": "Association between categories" },
+    { "q": "Regression line", "a": "y = a + bx" },
+    { "q": "R-squared", "a": "Proportion variance explained" },
+    { "q": "Law of Large Numbers", "a": "Sample mean approaches population mean" }
+  ]
+}

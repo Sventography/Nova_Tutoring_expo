@@ -1,0 +1,25 @@
+{
+  "topic": "Chemistry: Thermodynamics & Kinetics",
+  "cards": [
+    { "q": "First law of thermodynamics", "a": "ΔU = q + w" },
+    { "q": "Enthalpy definition", "a": "H = U + pV; ΔH at constant p ~ heat" },
+    { "q": "Exothermic vs endothermic", "a": "Releases heat vs absorbs heat" },
+    { "q": "Hess's law", "a": "ΔH is path independent" },
+    { "q": "Entropy (S)", "a": "Disorder; number of microstates" },
+    { "q": "Second law", "a": "ΔS_universe ≥ 0" },
+    { "q": "Gibbs free energy", "a": "ΔG = ΔH − TΔS" },
+    { "q": "Spontaneity criterion", "a": "ΔG < 0 (at constant T, p)" },
+    { "q": "Standard ΔG° relation", "a": "ΔG° = −RT ln K" },
+    { "q": "Rate law form", "a": "rate = k[A]^m[B]^n" },
+    { "q": "Order of reaction", "a": "Sum of exponents in rate law" },
+    { "q": "Arrhenius equation", "a": "k = A e^{−Ea/RT}" },
+    { "q": "Catalyst effect", "a": "Lowers Ea; increases rate" },
+    { "q": "Half-life first order", "a": "t1/2 = 0.693/k" },
+    { "q": "Collision theory", "a": "Proper orientation + sufficient energy" },
+    { "q": "Reaction mechanism", "a": "Elementary steps; rate-determining step" },
+    { "q": "Le Châtelier's principle", "a": "System shifts to relieve stress" },
+    { "q": "Equilibrium constant K", "a": "Products^coeff / Reactants^coeff" },
+    { "q": "Q vs K", "a": "Q uses current concentrations; compare to K" },
+    { "q": "van 't Hoff relation", "a": "d(ln K)/dT = ΔH°/(RT^2)" }
+  ]
+}

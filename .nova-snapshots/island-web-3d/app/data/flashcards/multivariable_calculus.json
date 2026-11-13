@@ -1,0 +1,25 @@
+{
+  "topic": "Multivariable Calculus",
+  "cards": [
+    { "q": "Gradient ∇f meaning", "a": "Vector of partials; direction of steepest increase" },
+    { "q": "Directional derivative", "a": "D_u f = ∇f · û" },
+    { "q": "Chain rule (multivariable)", "a": "dz/dt = f_x x' + f_y y' (+ ...)" },
+    { "q": "Critical point test", "a": "Use Hessian for max/min/saddle" },
+    { "q": "Lagrange multipliers", "a": "Optimize f with constraint g: ∇f=λ∇g" },
+    { "q": "Double integral meaning", "a": "Volume under surface over region" },
+    { "q": "Change of variables", "a": "Jacobian determinant adjusts area/volume" },
+    { "q": "Polar coordinates Jacobian", "a": "r" },
+    { "q": "Cylindrical coordinates", "a": "(r,θ,z); Jacobian r" },
+    { "q": "Spherical coordinates", "a": "(ρ,φ,θ); Jacobian ρ^2 sinφ" },
+    { "q": "Line integral (scalar)", "a": "∫_C f ds" },
+    { "q": "Line integral (vector)", "a": "∫_C F · dr" },
+    { "q": "Conservative field test", "a": "∇×F=0 in simply connected region" },
+    { "q": "Gradient theorem", "a": "∫_C ∇f · dr = f(B)−f(A)" },
+    { "q": "Green's theorem", "a": "∮C (L dx + M dy) = ∬(∂M/∂x − ∂L/∂y) dA" },
+    { "q": "Stokes' theorem", "a": "∮C F·dr = ∬_S (∇×F)·n̂ dS" },
+    { "q": "Divergence theorem", "a": "∭_V (∇·F) dV = ∬_∂V F·n̂ dS" },
+    { "q": "Divergence operator", "a": "∇·F = ∂F_x/∂x + ∂F_y/∂y + ∂F_z/∂z" },
+    { "q": "Curl operator", "a": "∇×F = det|i j k; ∂x ∂y ∂z; F_x F_y F_z|" },
+    { "q": "Surface integral", "a": "∬_S F · n̂ dS or ∬_S f dS" }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "topic": "Chemistry Lab Skills",
+  "cards": [
+    { "q": "Meniscus reading", "a": "Read bottom of curve at eye level" },
+    { "q": "Volumetric flask", "a": "Prepare precise solution volume" },
+    { "q": "Pipette", "a": "Transfer exact liquid volume" },
+    { "q": "Buret", "a": "Deliver titrant in titration" },
+    { "q": "Analytical balance", "a": "Precision to 0.0001 g" },
+    { "q": "Filtration", "a": "Separate solid from liquid" },
+    { "q": "Distillation", "a": "Separate liquids by boiling points" },
+    { "q": "Chromatography", "a": "Separate by phase affinity" },
+    { "q": "Safety gear", "a": "Goggles, lab coat, gloves" },
+    { "q": "Fume hood", "a": "Ventilate hazardous vapors" },
+    { "q": "MSDS purpose", "a": "Info on chemical hazards" },
+    { "q": "Titration endpoint", "a": "Color change signals neutralization" },
+    { "q": "Gravimetric analysis", "a": "Measure mass of product" },
+    { "q": "Calorimetry", "a": "Measure heat transfer" },
+    { "q": "Centrifuge", "a": "Separate by density" },
+    { "q": "Spectrophotometer", "a": "Measure light absorbance" },
+    { "q": "pH meter", "a": "Measure acidity" },
+    { "q": "Desiccator", "a": "Keep samples dry" },
+    { "q": "Recrystallization", "a": "Purify solids" },
+    { "q": "Standard solution", "a": "Known concentration reference" }
+  ]
+}

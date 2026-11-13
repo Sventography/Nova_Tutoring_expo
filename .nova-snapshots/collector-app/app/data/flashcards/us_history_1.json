@@ -1,0 +1,25 @@
+{
+  "topic": "U.S. History I (Foundations–Civil War)",
+  "cards": [
+    { "q": "Three colonial regions", "a": "New England, Middle, Southern colonies." },
+    { "q": "Main causes of the American Revolution", "a": "Taxation without representation, British policies, colonial resistance." },
+    { "q": "Declaration of Independence year", "a": "1776." },
+    { "q": "U.S. Constitution drafted year/location", "a": "1787, Philadelphia Convention." },
+    { "q": "Federalists vs Anti-Federalists", "a": "Federalists supported Constitution; Anti-Federalists wanted stronger state power and a Bill of Rights." },
+    { "q": "Bill of Rights purpose", "a": "First 10 amendments protecting individual liberties." },
+    { "q": "Louisiana Purchase year & significance", "a": "1803; doubled U.S. size." },
+    { "q": "War of 1812 outcome (general)", "a": "Stalemate; confirmed U.S. independence; fostered nationalism." },
+    { "q": "Monroe Doctrine (1823) message", "a": "Warned Europe against colonization in the Americas." },
+    { "q": "Jacksonian democracy hallmark", "a": "Expanded suffrage to more white males; strong executive." },
+    { "q": "Manifest Destiny meaning", "a": "Belief that U.S. was destined to expand westward." },
+    { "q": "Mexican–American War dates & result", "a": "1846–1848; U.S. gained Southwest (Treaty of Guadalupe Hidalgo)." },
+    { "q": "Missouri Compromise (1820)", "a": "Admitted Missouri (slave) & Maine (free); 36°30′ line." },
+    { "q": "Compromise of 1850", "a": "California free; stricter Fugitive Slave Act; popular sovereignty in some territories." },
+    { "q": "Kansas–Nebraska Act (1854)", "a": "Popular sovereignty on slavery; repealed Missouri Compromise line." },
+    { "q": "Dred Scott decision (1857)", "a": "Enslaved people not citizens; Congress couldn’t ban slavery in territories." },
+    { "q": "Abolitionist movement aim", "a": "End slavery in the United States." },
+    { "q": "Abraham Lincoln elected year", "a": "1860." },
+    { "q": "Secession & Civil War begin year", "a": "1861." },
+    { "q": "Union advantages at war’s start", "a": "Larger population, industry, railroads, navy." }
+  ]
+}

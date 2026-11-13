@@ -1,0 +1,25 @@
+{
+  "topic": "World Religions (Core)",
+  "cards": [
+    { "q": "Hinduism key texts", "a": "Vedas, Upanishads, Bhagavad Gita" },
+    { "q": "Buddhism Four Noble Truths", "a": "Suffering, origin, cessation, path" },
+    { "q": "Eightfold Path areas", "a": "View, intention, speech, action, livelihood, effort, mindfulness, concentration" },
+    { "q": "Judaism covenant idea", "a": "Sacred agreement between God and people" },
+    { "q": "Judaism sacred texts", "a": "Tanakh (Hebrew Bible), Talmud" },
+    { "q": "Christianity core belief", "a": "Jesus as Christ; salvation through faith/grace" },
+    { "q": "Christianity texts", "a": "Old and New Testaments" },
+    { "q": "Islam pillars (5)", "a": "Shahada, Salat, Zakat, Sawm, Hajj" },
+    { "q": "Islam sacred text", "a": "Quran" },
+    { "q": "Sikhism founder and text", "a": "Guru Nanak; Guru Granth Sahib" },
+    { "q": "Confucianism focus", "a": "Ethics, family, social harmony" },
+    { "q": "Taoism (Daoism) focus", "a": "Alignment with the Dao; wu-wei" },
+    { "q": "Shinto core idea", "a": "Kami (spirits) and ritual purity" },
+    { "q": "Indigenous religions trait", "a": "Animism, ancestor veneration, ritual" },
+    { "q": "Syncretism definition", "a": "Blending of religious traditions" },
+    { "q": "Monotheism vs polytheism", "a": "One deity vs many deities" },
+    { "q": "Orthodoxy vs orthopraxy", "a": "Right belief vs right practice" },
+    { "q": "Secularism meaning", "a": "Separation of religion from civic affairs" },
+    { "q": "Pilgrimage example", "a": "Hajj to Mecca; Kumbh Mela in India" },
+    { "q": "Religious tolerance concept", "a": "Allowing diverse beliefs and practices" }
+  ]
+}

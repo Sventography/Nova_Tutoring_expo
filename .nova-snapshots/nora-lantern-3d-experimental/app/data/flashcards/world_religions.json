@@ -1,0 +1,25 @@
+{
+  "topic": "World Religions",
+  "cards": [
+    { "q": "Five major world religions", "a": "Christianity, Islam, Hinduism, Buddhism, Judaism" },
+    { "q": "Christianity holy book", "a": "Bible" },
+    { "q": "Islam holy book", "a": "Qur’an" },
+    { "q": "Judaism holy text", "a": "Tanakh (Hebrew Bible)" },
+    { "q": "Hindu sacred texts", "a": "Vedas, Upanishads, Bhagavad Gita" },
+    { "q": "Buddhism Four Noble Truths", "a": "Suffering, cause, end, Eightfold Path" },
+    { "q": "Five Pillars of Islam", "a": "Faith, prayer, almsgiving, fasting, pilgrimage" },
+    { "q": "Christian Trinity", "a": "Father, Son, Holy Spirit" },
+    { "q": "Judaism covenant", "a": "Agreement between God & Abraham" },
+    { "q": "Hindu deities example", "a": "Vishnu, Shiva, Devi" },
+    { "q": "Buddhist Nirvana", "a": "State free of suffering/rebirth" },
+    { "q": "Confucian focus", "a": "Ethics, family, ritual order" },
+    { "q": "Taoist yin-yang", "a": "Balance of opposites" },
+    { "q": "Shinto belief", "a": "Kami spirits in nature" },
+    { "q": "Sikh scripture", "a": "Guru Granth Sahib" },
+    { "q": "Zoroastrian dualism", "a": "Ahura Mazda vs Angra Mainyu" },
+    { "q": "Animism", "a": "Belief spirits inhabit natural world" },
+    { "q": "Secularism trend", "a": "Decline in religious observance" },
+    { "q": "Syncretism", "a": "Blending traditions" },
+    { "q": "Religious diaspora example", "a": "Jewish diaspora after 70 CE" }
+  ]
+}

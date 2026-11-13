@@ -1,0 +1,82 @@
+[
+  {
+    "question": "French definite articles",
+    "answer": "le, la, les"
+  },
+  {
+    "question": "Indefinite articles",
+    "answer": "un, une, des"
+  },
+  {
+    "question": "Plural of ‘chien’",
+    "answer": "chiens"
+  },
+  {
+    "question": "Je suis means",
+    "answer": "I am"
+  },
+  {
+    "question": "Numbers 1–5",
+    "answer": "un, deux, trois, quatre, cinq"
+  },
+  {
+    "question": "Days of the week start with",
+    "answer": "lundi"
+  },
+  {
+    "question": "Months of the year start with",
+    "answer": "janvier"
+  },
+  {
+    "question": "Common greeting ‘hello’",
+    "answer": "bonjour"
+  },
+  {
+    "question": "How to say ‘thank you’",
+    "answer": "merci"
+  },
+  {
+    "question": "How to say ‘goodbye’",
+    "answer": "au revoir"
+  },
+  {
+    "question": "Conjugate avoir (je)",
+    "answer": "j’ai"
+  },
+  {
+    "question": "Conjugate être (tu)",
+    "answer": "tu es"
+  },
+  {
+    "question": "Possessive for ‘my’ singular",
+    "answer": "mon/ma"
+  },
+  {
+    "question": "Colors red, blue, green",
+    "answer": "rouge, bleu, vert"
+  },
+  {
+    "question": "Family words",
+    "answer": "mère, père, frère, sœur"
+  },
+  {
+    "question": "Il y a means",
+    "answer": "there is/there are"
+  },
+  {
+    "question": "Oui vs non",
+    "answer": "yes vs no"
+  },
+  {
+    "question": "Question word ‘where’",
+    "answer": "où"
+  },
+  {
+    "question": "Very in French",
+    "answer": "très"
+  },
+  {
+    "question": "Hungry phrase",
+    "answer": "j’ai faim"
+  }
+]

@@ -1,0 +1,22 @@
+ENV
+v22.19.0
+10.9.3
+54.0.1
+JSON_VALIDATE
+package.json ok
+app.json ok
+ENTRY_CHECK
+/Users/sventography/Desktop/Nova_Tutoring_expo 3/node_modules/expo-router/entry.js
+FILES_CHECK
+has app/_layout.tsx
+has app/(tabs)/_layout.tsx
+ROUTE_CONFLICT_SCAN
+SCHEME_CHECK
+scheme: nova
+web.bundler: metro
+plugins: expo-router
+TYPECHECK
+CLEAN_PORTS
+EXPO_DOCTOR
+EXPO_START
+EXIT_CODE 0

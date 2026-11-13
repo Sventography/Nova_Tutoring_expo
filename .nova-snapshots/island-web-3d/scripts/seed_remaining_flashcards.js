@@ -1,0 +1,165 @@
+const fs=require('fs'),p='app/data/flashcards.json';const d=JSON.parse(fs.readFileSync(p,'utf8'));const U=(t,c)=>{const i=(d.topics||[]).findIndex(x=>x.title===t);const cards=c.map(([q,a])=>({q,a}));if(i>=0)d.topics[i]={title:t,cards};else(d.topics||(d.topics=[])).push({title:t,cards})};
+
+U("APIs & Microservices",[
+["What is REST?","Representational State Transfer; stateless, resource-based APIs over HTTP"],
+["HTTP GET vs POST","GET retrieves; POST creates or processes with a body"],
+["Idempotent methods","GET, PUT, DELETE are idempotent; POST is not"],
+["2xx vs 4xx vs 5xx","Success vs client error vs server error"],
+["Pagination purpose","Limit result size; navigate via page/limit or cursors"],
+["Rate limiting","Protects services by capping request rates"],
+["Auth vs AuthZ","Authentication proves identity; Authorization grants permissions"],
+["OAuth 2.0","Delegated auth via flows like Auth Code"],
+["JWT","Signed token carrying claims, used for stateless auth"],
+["API versioning","Prefix (v1) or media-type; avoid breaking changes"],
+["Webhooks","Server-to-server callbacks on events"],
+["gRPC","Binary RPC over HTTP/2 with protobuf"],
+["Service discovery","Locate service instances dynamically"],
+["Circuit breaker","Fail fast on repeated errors to avoid cascades"],
+["API gateway","Central entry, routing, auth, throttling"],
+["Request tracing","Propagate trace/span IDs across services"],
+["Health checks","/health or /ready endpoints for liveness/readiness"],
+["12-factor app","Best practices for cloud-native apps"],
+["Blue/green deploys","Two prod envs; switch traffic when ready"],
+["SLA vs SLO vs SLI","Commitment vs objective vs measurement"]
+]);
+
+U("Computer Science",[
+["Binary vs decimal","Base-2 vs base-10 number systems"],
+["Bit vs byte","1 bit = 0/1; 1 byte = 8 bits"],
+["Compiler vs interpreter","Translate ahead vs execute line-by-line"],
+["Time complexity","Asymptotic cost, Big-O notation"],
+["Recursion","Function calling itself with base case"],
+["Stack vs heap","Call frames vs dynamic memory"],
+["Process vs thread","Own address space vs shared within process"],
+["Garbage collection","Automatic reclaiming of unused memory"],
+["Pointer","Stores memory address"],
+["Immutable data","Cannot change after creation"],
+["Functional programming","Pure functions, immutability"],
+["OOP pillars","Encapsulation, inheritance, polymorphism, abstraction"],
+["REST vs RPC","Resource vs action oriented"],
+["Idempotency key","Client token to de-dupe retries"],
+["Race condition","Outcome depends on timing interleavings"],
+["Deadlock","Mutual waiting preventing progress"],
+["Hash function","Deterministic mapping to fixed-size value"],
+["Event loop","Queues and dispatches async tasks"],
+["Serialization","Convert object to transferable format"],
+["Endianness","Byte order: little vs big"]
+]);
+
+U("Cloud Computing",[
+["IaaS vs PaaS vs SaaS","Infra vs platform vs complete software"],
+["Regions vs AZs","Geographic areas vs isolated datacenter zones"],
+["Object vs block storage","Buckets of objects vs disk-like volumes"],
+["VPC","Isolated virtual network in cloud"],
+["Load balancer","Distributes traffic across instances"],
+["Auto scaling","Adjust capacity to demand"],
+["Serverless","Managed execution; billed per invocation"],
+["Cold start","Initial spin-up latency for serverless"],
+["IAM","Identity and access management"],
+["Spot instances","Discount compute with preemption risk"],
+["IaC","Infrastructure as code (e.g., Terraform)"],
+["State locking","Prevents concurrent IaC state edits"],
+["Cost optimization","Rightsize, reserved/spot, delete idle"],
+["Reserved instances","Commitment for lower cost"],
+["Multi-cloud","Workloads across providers"],
+["Monitoring/metrics","Collect and alert on signals"],
+["S3 consistency","Strong for new objects; updated strong now in major clouds"],
+["Egress cost","Charges for data leaving cloud"],
+["KMS","Managed key encryption service"],
+["Well-Architected","Cloud best-practice framework"]
+]);
+
+U("DevOps",[
+["CI vs CD","Integrate code vs deliver/deploy continuously"],
+["Pipeline stages","Build, test, scan, deploy"],
+["GitFlow","Feature/develop/release branches"],
+["Trunk-based dev","Short-lived branches; frequent merges"],
+["Feature flags","Toggle features without redeploy"],
+["Artifact registry","Stores versioned build outputs"],
+["Containerization","Package app and deps together"],
+["Image layers","Union FS caching of layers"],
+["Kubernetes pod","One or more containers sharing net/volumes"],
+["Service vs deployment","Stable virtual IP vs replica set management"],
+["Ingress","External HTTP routing to services"],
+["Helm","K8s templating and releases"],
+["Blue/green","Two envs; switch traffic"],
+["Canary","Gradual rollout to subset of users"],
+["Observability","Logs, metrics, traces"],
+["SLOs","Reliability targets for users"],
+["Postmortems","Blameless incident analysis"],
+["Runbooks","Step-by-step operational procedures"],
+["ChatOps","Operate via chat integrations"],
+["Secrets","Manage via Vault/KMS, not env files"]
+]);
+
+U("AI & Machine Learning",[
+["Supervised vs unsupervised","Labeled targets vs structure discovery"],
+["Train/val/test split","Fit/tune/evaluate generalization"],
+["Overfitting","Fits noise; poor generalization"],
+["Regularization","Penalize complexity to reduce overfit"],
+["Gradient descent","Iterative parameter updates by loss gradient"],
+["Learning rate","Step size of updates"],
+["Loss function","Measures error (e.g., MSE, CE)"],
+["Classification vs regression","Discrete label vs continuous value"],
+["Precision vs recall","Correct positives vs coverage of positives"],
+["ROC AUC","Ranking metric for classifiers"],
+["Feature scaling","Normalize/standardize inputs"],
+["One-hot encoding","Binary vectors for categories"],
+["Cross-validation","K-fold rotating validation sets"],
+["Bias-variance trade-off","Under/overfit balance"],
+["Confusion matrix","TP FP FN TN counts"],
+["Tree models","Decision tree, Random Forest"],
+["Ensembles","Combine models to improve accuracy"],
+["Neural networks","Layers of nonlinear units"],
+["Activation functions","ReLU, sigmoid, tanh"],
+["Embeddings","Dense vector representations"]
+]);
+
+U("Statistics",[
+["Population vs sample","Entire group vs subset"],
+["Mean, median, mode","Average, middle, most frequent"],
+["Variance/SD","Spread around mean"],
+["Law of large numbers","Sample mean→population mean"],
+["Central limit theorem","Sample mean approx normal"],
+["Z-score","Std deviations from mean"],
+["Confidence interval","Range likely containing parameter"],
+["p-value","Probability of data under H0"],
+["Type I vs II error","False positive vs false negative"],
+["t-test","Compare means between groups"],
+["ANOVA","Compare means across many groups"],
+["Correlation vs causation","Association ≠ cause"],
+["Linear regression","Fit line minimizing squared error"],
+["R²","Variance explained by model"],
+["Residuals","Observed−predicted"],
+["Bayes’ theorem","Update beliefs with evidence"],
+["Prior/posterior","Before vs after observing data"],
+["MLE","Choose parameters maximizing likelihood"],
+["Hypothesis testing","Decide with significance level α"],
+["Nonparametric tests","Distribution-free methods"]
+]);
+
+U("Software Design",[
+["SOLID","Five OOP design principles"],
+["KISS","Keep it simple, stupid"],
+["DRY","Don’t repeat yourself"],
+["YAGNI","You aren’t gonna need it"],
+["Cohesion","How focused a module is"],
+["Coupling","Degree of interdependence"],
+["Factory pattern","Create objects via interface"],
+["Singleton caveat","Global state; hard to test"],
+["Strategy pattern","Swap algorithms at runtime"],
+["Observer","Publish/subscribe notifications"],
+["Decorator","Add behavior by wrapping"],
+["Adapter","Convert one interface to another"],
+["Facade","Simplify complex subsystem"],
+["Repository","Data access abstraction"],
+["CQRS","Separate read and write models"],
+["Event sourcing","State from event log"],
+["Hexagonal","Ports and adapters architecture"],
+["Clean architecture","Entities→use cases→adapters"],
+["Domain-driven design","Model core domain in code"],
+["Anti-corruption layer","Isolate legacy model"]
+]);
+
+fs.writeFileSync(p,JSON.stringify(d,null,2));
+console.log('topics',d.topics.length,'cards',d.topics.reduce((s,t)=>s+t.cards.length,0));

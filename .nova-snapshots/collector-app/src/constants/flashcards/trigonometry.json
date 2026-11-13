@@ -1,0 +1,82 @@
+[
+  {
+    "question": "SOH-CAH-TOA means",
+    "answer": "sin=opp/hyp, cos=adj/hyp, tan=opp/adj"
+  },
+  {
+    "question": "Pythagorean identity",
+    "answer": "sin^2 x + cos^2 x = 1"
+  },
+  {
+    "question": "Angle addition formula for sin",
+    "answer": "sin(a+b)=sin a cos b + cos a sin b"
+  },
+  {
+    "question": "Angle addition formula for cos",
+    "answer": "cos(a+b)=cos a cos b − sin a sin b"
+  },
+  {
+    "question": "Double-angle sin 2x",
+    "answer": "2 sin x cos x"
+  },
+  {
+    "question": "Double-angle cos 2x",
+    "answer": "cos^2 x − sin^2 x"
+  },
+  {
+    "question": "tan x equals",
+    "answer": "sin x / cos x"
+  },
+  {
+    "question": "sec x equals",
+    "answer": "1 / cos x"
+  },
+  {
+    "question": "Inverse trig domain for arcsin",
+    "answer": "[−π/2, π/2]"
+  },
+  {
+    "question": "Law of sines",
+    "answer": "a/sin A = b/sin B = c/sin C"
+  },
+  {
+    "question": "Law of cosines",
+    "answer": "c^2=a^2+b^2−2ab cos C"
+  },
+  {
+    "question": "Radian to degree conversion",
+    "answer": "180°/π per radian"
+  },
+  {
+    "question": "Period of tan x",
+    "answer": "π"
+  },
+  {
+    "question": "Amplitude applies to",
+    "answer": "Sine and cosine functions"
+  },
+  {
+    "question": "Graph of y=sin x crosses at",
+    "answer": "x=0, ±π, ±2π, …"
+  },
+  {
+    "question": "Reference angle is",
+    "answer": "Acute angle to the x-axis"
+  },
+  {
+    "question": "sin(−x) and cos(−x)",
+    "answer": "−sin x, cos x"
+  },
+  {
+    "question": "Sum-to-product identity",
+    "answer": "sin a + sin b = 2 sin((a+b)/2) cos((a−b)/2)"
+  },
+  {
+    "question": "Product-to-sum identity",
+    "answer": "sin a cos b = 1/2[sin(a+b)+sin(a−b)]"
+  },
+  {
+    "question": "Right triangle area using trig",
+    "answer": "(1/2)ab sin C for included angle C"
+  }
+]

@@ -1,0 +1,22 @@
+[
+  ["Big-O", "Asymptotic time/space complexity."],
+  ["Sorting", "Quick, merge, heap, insertion, selection."],
+  ["Searching", "Linear vs binary search."],
+  ["Recursion", "Define problem via smaller instances."],
+  ["Divide and Conquer", "Split problem, solve, combine."],
+  ["Dynamic Programming", "Optimize overlapping subproblems."],
+  ["Greedy", "Local choice aiming for global optimum."],
+  ["Graph", "Nodes and edges structure."],
+  ["BFS", "Level-order traversal with queue."],
+  ["DFS", "Depth-first traversal with stack/recursion."],
+  ["Shortest Path", "Dijkstra, Bellman-Ford."],
+  ["MST", "Kruskal, Prim."],
+  ["Hashing", "Map keys to indices."],
+  ["Heaps", "Priority queue structure."],
+  ["Backtracking", "Explore choices, undo when invalid."],
+  ["NP-Completeness", "Class of hard decision problems."],
+  ["Approximation", "Near-optimal solutions efficiently."],
+  ["Randomized", "Use randomness to improve performance."],
+  ["String Matching", "KMP, Rabin–Karp, Z-algorithm."],
+  ["Computational Geometry", "Convex hull, sweep line."]
+]

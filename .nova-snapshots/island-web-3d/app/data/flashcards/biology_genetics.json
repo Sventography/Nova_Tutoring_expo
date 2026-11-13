@@ -1,0 +1,25 @@
+{
+  "topic": "Biology: Genetics & Heredity",
+  "cards": [
+    { "q": "Gene vs allele", "a": "Gene = DNA unit; allele = variant of a gene" },
+    { "q": "Genotype vs phenotype", "a": "Genetic makeup vs observable traits" },
+    { "q": "Homozygous vs heterozygous", "a": "Same alleles vs different alleles" },
+    { "q": "Dominant vs recessive", "a": "Dominant masks recessive in heterozygote" },
+    { "q": "Mendel's Law of Segregation", "a": "Alleles separate into gametes" },
+    { "q": "Mendel's Law of Independent Assortment", "a": "Genes on different chromosomes assort independently" },
+    { "q": "Incomplete dominance example", "a": "Red × white → pink snapdragons" },
+    { "q": "Codominance example", "a": "AB blood type" },
+    { "q": "Polygenic trait", "a": "Influenced by many genes (e.g., height)" },
+    { "q": "Pleiotropy", "a": "One gene affects multiple traits" },
+    { "q": "Linked genes", "a": "Genes close together on same chromosome" },
+    { "q": "Crossing over", "a": "Homologs exchange segments in meiosis I" },
+    { "q": "Sex-linked inheritance", "a": "Gene on X or Y; e.g., colorblindness (X-linked)" },
+    { "q": "DNA to protein flow", "a": "Replication → transcription → translation" },
+    { "q": "Transcription enzyme", "a": "RNA polymerase" },
+    { "q": "Translation site", "a": "Ribosome reads mRNA to make protein" },
+    { "q": "Mutation types", "a": "Point, insertion, deletion, frameshift" },
+    { "q": "Punnett square purpose", "a": "Predict offspring genotype probabilities" },
+    { "q": "Pedigree symbol for male/female", "a": "Square = male; circle = female" },
+    { "q": "Hardy–Weinberg equation", "a": "p^2 + 2pq + q^2 = 1; p + q = 1" }
+  ]
+}

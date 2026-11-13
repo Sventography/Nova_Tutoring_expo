@@ -1,0 +1,82 @@
+[
+  {
+    "question": "Coulomb’s law",
+    "answer": "F = k q1 q2 / r^2"
+  },
+  {
+    "question": "Electric field of point charge",
+    "answer": "E = k q / r^2"
+  },
+  {
+    "question": "Electric potential V units",
+    "answer": "Volts (J/C)"
+  },
+  {
+    "question": "Capacitance of parallel plates",
+    "answer": "C = εA/d"
+  },
+  {
+    "question": "Energy in capacitor",
+    "answer": "U = 1/2 C V^2"
+  },
+  {
+    "question": "Ohm’s law",
+    "answer": "V = IR"
+  },
+  {
+    "question": "Series resistors",
+    "answer": "Add directly"
+  },
+  {
+    "question": "Parallel resistors",
+    "answer": "Reciprocals add"
+  },
+  {
+    "question": "Kirchhoff’s junction rule",
+    "answer": "Currents in equal currents out"
+  },
+  {
+    "question": "Kirchhoff’s loop rule",
+    "answer": "Sum of potential changes around loop is zero"
+  },
+  {
+    "question": "Magnetic force on charge",
+    "answer": "F = q v B sinθ"
+  },
+  {
+    "question": "Magnetic force on wire",
+    "answer": "F = I L B sinθ"
+  },
+  {
+    "question": "Biot–Savart gives",
+    "answer": "Magnetic field from currents"
+  },
+  {
+    "question": "Ampère’s law relates",
+    "answer": "∮B·dl = μ0 I_enclosed"
+  },
+  {
+    "question": "Faraday’s law",
+    "answer": "ε = −dΦB/dt"
+  },
+  {
+    "question": "Lenz’s law",
+    "answer": "Induced current opposes change"
+  },
+  {
+    "question": "Inductance energy",
+    "answer": "U = 1/2 L I^2"
+  },
+  {
+    "question": "RMS voltage",
+    "answer": "Vrms = Vmax/√2"
+  },
+  {
+    "question": "AC circuit resonance",
+    "answer": "ω0 = 1/√(LC)"
+  },
+  {
+    "question": "Poynting vector describes",
+    "answer": "Energy flow of EM waves"
+  }
+]

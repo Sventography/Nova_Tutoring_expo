@@ -1,0 +1,25 @@
+{
+  "topic": "Biology I (Cell & Molecular)",
+  "cards": [
+    { "q": "Primary functions of plasma membrane", "a": "Selective permeability, cell signaling, structural boundary." },
+    { "q": "Phospholipid bilayer features", "a": "Hydrophilic heads outward, hydrophobic tails inward; fluid mosaic." },
+    { "q": "Active vs passive transport", "a": "Active requires energy (against gradient); passive does not (down gradient)." },
+    { "q": "Endocytosis types", "a": "Phagocytosis, pinocytosis, receptor-mediated endocytosis." },
+    { "q": "Rough vs smooth ER", "a": "Rough: protein synthesis; Smooth: lipids, detox, Ca²⁺ storage." },
+    { "q": "Golgi apparatus role", "a": "Protein modification, sorting, and packaging." },
+    { "q": "Lysosome function", "a": "Intracellular digestion and recycling." },
+    { "q": "Cytoskeleton main components", "a": "Microfilaments (actin), intermediate filaments, microtubules." },
+    { "q": "Chemiosmosis in mitochondria", "a": "Proton gradient drives ATP synthase to make ATP." },
+    { "q": "Photosystems I and II location", "a": "Thylakoid membranes of chloroplasts." },
+    { "q": "Allosteric regulation", "a": "Effector binds at site other than active site to modulate enzyme activity." },
+    { "q": "Feedback inhibition", "a": "Pathway end product inhibits an earlier step." },
+    { "q": "Cell cycle phases", "a": "G1, S, G2, M (mitosis + cytokinesis)." },
+    { "q": "Checkpoints in cell cycle", "a": "G1/S, G2/M, and spindle (M) checkpoint." },
+    { "q": "Apoptosis definition", "a": "Programmed cell death; controlled and non-inflammatory." },
+    { "q": "Signal transduction pathway", "a": "Reception → transduction (cascade) → response." },
+    { "q": "Second messengers examples", "a": "cAMP, Ca²⁺, IP3, DAG." },
+    { "q": "Transcription factors do…", "a": "Bind DNA to regulate gene expression." },
+    { "q": "Epigenetic modifications", "a": "DNA methylation, histone modification affecting gene expression without sequence change." },
+    { "q": "Telomeres and telomerase", "a": "Protect chromosome ends; telomerase extends telomeres in some cells." }
+  ]
+}

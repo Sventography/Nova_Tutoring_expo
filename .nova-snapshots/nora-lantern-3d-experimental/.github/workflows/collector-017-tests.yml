@@ -1,0 +1,89 @@
+# Intentionally manual-only: pushes were generating an email for every
+# unfinished change. Run from Actions > Collector 017 > Run workflow.
+name: Collector 017 security and app checks
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  collector-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install minimal test requirements
+        run: python -m pip install 'Flask>=3.0,<4' 'flask-cors>=4,<7' 'requests>=2.31,<3' 'psycopg[binary]==3.2.10'
+      - name: Compile collector route and tests
+        run: python -m py_compile server/collector_redemption.py server/collector_staging_server.py server/tests/test_collector_redemption.py server/tests/test_collector_staging_server.py
+      - name: Exercise collector ownership and security rules
+        env:
+          PYTHONPATH: server
+        run: python -m unittest discover -s server/tests -p 'test_collector*.py' -v
+
+  collector-web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # PNG/JPG assets live in Git LFS. The default checkout otherwise
+          # leaves 130-byte text pointers which Expo/Jimp cannot read.
+          lfs: true
+      - name: Verify Expo icon was hydrated from Git LFS
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          icon = Path("app/assets/favicon.png")
+          data = icon.read_bytes()
+          if not data.startswith(b"\x89PNG\r\n\x1a\n"):
+              raise SystemExit(
+                  "::error::Expo favicon is not a real PNG. Check the Git LFS checkout."
+              )
+          print(f"Git LFS favicon hydrated: {len(data)} bytes")
+          PY
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install Expo application dependencies
+        run: npm ci --ignore-scripts
+      - name: Validate staging isolation and per-project session keys
+        run: node scripts/test-collector-staging-config.cjs
+      - name: Validate collector staging skips unavailable streak economy RPCs
+        run: node scripts/test-collector-staging-streak.cjs
+      - name: Validate separate iPhone staging app identifiers and safe EAS build
+        run: node scripts/test-collector-ios-staging-build.cjs
+      - name: Validate Xcode native staging identity and automatic source restoration
+        run: node scripts/test-collector-staging-native-ios.cjs
+      - name: Validate #017 castle footprint, safe placement, and inventory guidance
+        run: node scripts/test-collector-castle-placement.cjs
+      - name: Validate island BUILD camera controls and desktop pan/orbit
+        run: node scripts/test-island-build-camera.cjs
+      - name: Check TypeScript diagnostics in collector-touched files only
+        shell: bash
+        run: |
+          # The repository-wide tsc currently emits more than 1,000 unrelated
+          # errors from legacy/quarantined code; do not misreport this as a
+          # full-project pass. Capture diagnostics and require clean touched files.
+          npx tsc --noEmit --pretty false > /tmp/nova-tsc.log 2>&1 || true
+          if grep -E '^(app/collector/|app/_lib/collectorClient\.ts|app/_lib/collectorStaging\.ts|app/_lib/islandAutoPlacement\.ts|app/_lib/islandCameraNavigation\.ts|app/collector-staging\.tsx|app/lib/supabase\.ts|app/context/IslandDecorationContext\.tsx|app/context/StreakContext\.tsx|app/components/HeaderBar\.tsx|app/components/island3d/IslandDecorationLayer\.tsx|app/components/island3d/IslandBuilderPanel\.tsx|app/components/island3d/IslandDecorationShopPanel\.tsx)\([0-9]+,[0-9]+\): error TS' /tmp/nova-tsc.log; then
+            echo "::error::Collector-touched files have TypeScript errors"
+            exit 1
+          fi
+          echo "::warning::Repository-wide TypeScript has known unrelated errors; touched-file diagnostics only were checked."
+          echo "Total repository TS errors: $(grep -c 'error TS' /tmp/nova-tsc.log || true)"
+      - name: Export static Expo web route
+        # This is a throwaway CI build, NOT a deployment. Use public-shaped,
+        # nonexistent test endpoints rather than live Nova credentials.
+        # The staging guard and Auth client both require nonblank config.
+        env:
+          EXPO_PUBLIC_COLLECTOR_STAGING_MODE: "true"
+          EXPO_PUBLIC_COLLECTOR_STAGING_WEB_PREVIEW: "true"
+          EXPO_PUBLIC_COLLECTOR_REDEMPTION_ENABLED: "false"
+          EXPO_PUBLIC_SUPABASE_URL: "https://abcdefghijklmnopqrst.supabase.co"
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: "ci-placeholder-not-a-real-supabase-key"
+          EXPO_PUBLIC_BACKEND_URL: "https://collector-ci.invalid"
+        run: npx expo export -p web

@@ -1,0 +1,25 @@
+{
+  "topic": "Anatomy & Physiology II",
+  "cards": [
+    { "q": "Cardiac conduction", "a": "SA node → AV node → Bundle → Purkinje" },
+    { "q": "Blood pressure definition", "a": "Force of blood on vessel walls" },
+    { "q": "Respiratory gas exchange", "a": "Alveoli: O2 in, CO2 out" },
+    { "q": "Hemoglobin role", "a": "O2 transport; cooperative binding" },
+    { "q": "Innate immunity", "a": "Nonspecific barriers/inflammation" },
+    { "q": "Adaptive immunity", "a": "Specific B/T cells; memory" },
+    { "q": "Antibody classes", "a": "IgG, IgM, IgA, IgE, IgD" },
+    { "q": "Nephron function", "a": "Filtration, reabsorption, secretion" },
+    { "q": "ADH effect", "a": "Water reabsorption in collecting duct" },
+    { "q": "Liver functions", "a": "Metabolism, detox, bile production" },
+    { "q": "Endocrine–insulin", "a": "Lowers blood glucose" },
+    { "q": "Glucagon", "a": "Raises blood glucose" },
+    { "q": "Thyroid hormones", "a": "T3/T4 increase metabolic rate" },
+    { "q": "Female cycle hormones", "a": "FSH, LH, estrogen, progesterone" },
+    { "q": "Action potential", "a": "Depolarization → repolarization" },
+    { "q": "Synapse types", "a": "Chemical vs electrical" },
+    { "q": "ANS divisions", "a": "Sympathetic vs parasympathetic" },
+    { "q": "Sensory transduction", "a": "Stimulus → receptor potential" },
+    { "q": "Muscle contraction", "a": "Actin–myosin cross-bridge; Ca2+, ATP" },
+    { "q": "Bone remodeling cells", "a": "Osteoclasts (resorb), osteoblasts (form)" }
+  ]
+}

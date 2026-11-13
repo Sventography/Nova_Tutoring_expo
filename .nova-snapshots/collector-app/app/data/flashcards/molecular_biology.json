@@ -1,0 +1,25 @@
+{
+  "topic": "Molecular Biology",
+  "cards": [
+    { "q": "DNA replication enzymes", "a": "Helicase, primase, DNA pol, ligase" },
+    { "q": "Okazaki fragments", "a": "Lagging-strand pieces" },
+    { "q": "Transcription steps", "a": "Initiation, elongation, termination" },
+    { "q": "RNA processing (euk.)", "a": "5' cap, splicing, poly-A tail" },
+    { "q": "Genetic code property", "a": "Redundant, nearly universal" },
+    { "q": "Ribosome sites", "a": "A, P, E for tRNA" },
+    { "q": "Operon (prokaryotes)", "a": "Promoter + operator + genes" },
+    { "q": "Lac operon control", "a": "Induced by lactose; repressed by glucose" },
+    { "q": "Epigenetics", "a": "DNA methylation, histone modification" },
+    { "q": "PCR purpose", "a": "Amplify DNA fragments" },
+    { "q": "Gel electrophoresis", "a": "Separate nucleic acids by size" },
+    { "q": "CRISPR–Cas9", "a": "Targeted genome editing" },
+    { "q": "Sanger sequencing", "a": "Chain-terminating ddNTPs" },
+    { "q": "Next-gen sequencing", "a": "Massively parallel reads" },
+    { "q": "cDNA", "a": "DNA from mRNA via reverse transcriptase" },
+    { "q": "qPCR use", "a": "Quantify nucleic acid levels" },
+    { "q": "Western blot", "a": "Protein detection" },
+    { "q": "RNAi/siRNA", "a": "Knockdown gene expression" },
+    { "q": "Reporter genes", "a": "e.g., GFP to track expression" },
+    { "q": "Plasmid vector features", "a": "ORI, MCS, selectable marker" }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "topic": "Spanish III",
+  "cards": [
+    { "q": "Present perfect formation", "a": "haber (he, has, ha, hemos, habéis, han) + past participle" },
+    { "q": "Past participle irregulars examples", "a": "abierto, dicho, escrito, hecho, visto, vuelto" },
+    { "q": "Pluperfect (past perfect) formation", "a": "había, habías, había, habíamos, habíais, habían + participle" },
+    { "q": "Future tense regular endings", "a": "é, ás, á, emos, éis, án (added to infinitive)" },
+    { "q": "Conditional tense endings", "a": "ía, ías, ía, íamos, íais, ían (added to infinitive)" },
+    { "q": "Future/conditional irregular stems examples", "a": "dir-, har-, podr-, pondr-, querr-, sabr-, saldr-, tendr-, vendr-" },
+    { "q": "Present subjunctive stem-changers rule", "a": "Apply except in nosotros/vosotros for -ar/-er; all forms for -ir" },
+    { "q": "Present subjunctive irregulars examples", "a": "sea, vaya, dé, esté, sepa" },
+    { "q": "Imperfect subjunctive endings", "a": "ra, ras, ra, ramos, rais, ran" },
+    { "q": "Imperfect subjunctive example (hablar)", "a": "hablara, hablaras, hablara, habláramos, hablarais, hablaran" },
+    { "q": "If clauses with imperfect subjunctive", "a": "Si tuviera dinero, viajaría (If I had money, I would travel)" },
+    { "q": "Subjunctive uses categories", "a": "Wishes, Emotion, Impersonal, Recommendations, Doubt, Ojala (WEIRDO)" },
+    { "q": "Relative pronouns examples", "a": "que, quien(es), lo que, cuyo/a" },
+    { "q": "Commands: tu positive vs negative", "a": "Positive: el form; Negative: subjunctive (no hables)" },
+    { "q": "Commands: usted/ustedes formation", "a": "Subjunctive forms" },
+    { "q": "Por expressions examples", "a": "por fin, por ejemplo, por supuesto, por eso" },
+    { "q": "Para expressions examples", "a": "para siempre, para entonces, para que" },
+    { "q": "Passive voice with ser", "a": "La novela fue escrita por Garcia Marquez" },
+    { "q": "Se impersonal example", "a": "Se habla espanol aqui (Spanish is spoken here)" },
+    { "q": "Cultural unit: notable authors", "a": "Gabriel Garcia Marquez, Isabel Allende, Jorge Luis Borges" }
+  ]
+}

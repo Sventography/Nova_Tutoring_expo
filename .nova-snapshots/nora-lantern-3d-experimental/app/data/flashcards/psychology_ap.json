@@ -1,0 +1,25 @@
+{
+  "topic": "Psychology AP",
+  "cards": [
+    { "q": "Classical conditioning founder", "a": "Ivan Pavlov; associations between stimuli" },
+    { "q": "Operant conditioning", "a": "B. F. Skinner; reinforcement and punishment" },
+    { "q": "Observational learning", "a": "Bandura; modeling" },
+    { "q": "Memory stages", "a": "Sensory, short term/working, long term" },
+    { "q": "Encoding strategies", "a": "Elaboration, chunking, mnemonics" },
+    { "q": "Types of LTM", "a": "Explicit (episodic, semantic) vs implicit (procedural)" },
+    { "q": "Piaget stages", "a": "Sensorimotor, preoperational, concrete, formal" },
+    { "q": "Attachment styles", "a": "Secure, avoidant, ambivalent, disorganized" },
+    { "q": "Big Five traits", "a": "O C E A N" },
+    { "q": "Schachter Singer theory", "a": "Emotion = arousal + cognitive label" },
+    { "q": "Drive reduction theory", "a": "Motivation to reduce physiological needs" },
+    { "q": "Intrinsic vs extrinsic motivation", "a": "Internal enjoyment vs external reward" },
+    { "q": "DSM purpose", "a": "Diagnostic criteria for mental disorders" },
+    { "q": "Anxiety disorders example", "a": "GAD, phobias, panic disorder" },
+    { "q": "Mood disorders example", "a": "Major depressive disorder, bipolar disorder" },
+    { "q": "Schizophrenia symptoms", "a": "Delusions, hallucinations, disorganized speech" },
+    { "q": "CBT stands for", "a": "Cognitive Behavioral Therapy" },
+    { "q": "Fundamental attribution error", "a": "Overcredit dispositional, undercredit situational" },
+    { "q": "Conformity classic study", "a": "Asch line experiments" },
+    { "q": "Obedience classic study", "a": "Milgram shock experiments" }
+  ]
+}

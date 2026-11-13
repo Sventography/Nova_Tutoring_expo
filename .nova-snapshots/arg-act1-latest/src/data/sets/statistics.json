@@ -1,0 +1,22 @@
+[
+  ["Population", "Entire group of interest."],
+  ["Sample", "Subset of the population."],
+  ["Parameter", "Numerical summary of a population."],
+  ["Statistic", "Numerical summary of a sample."],
+  ["Mean", "Average value."],
+  ["Median", "Middle value."],
+  ["Mode", "Most frequent value."],
+  ["Variance", "Average squared deviation from mean."],
+  ["Std Deviation", "Square root of variance."],
+  ["Z-Score", "(x−μ)/σ standardized value."],
+  ["Normal Distribution", "Symmetric, bell-shaped distribution."],
+  ["Central Limit Theorem", "Sampling means ~ normal as n grows."],
+  ["Confidence Interval", "Range likely to contain parameter."],
+  ["p-Value", "Prob of data if null is true."],
+  ["Type I Error", "False positive."],
+  ["Type II Error", "False negative."],
+  ["Correlation r", "Strength/direction of linear relation."],
+  ["Regression", "Predict y from x with a model."],
+  ["Chi-Square Test", "Categorical association test."],
+  ["ANOVA", "Compare means across 3+ groups."]
+]

@@ -1,0 +1,1 @@
+/Users/sventography/Desktop/Nova_Tutoring_expo 3/node_modules/expo-router/entry.js

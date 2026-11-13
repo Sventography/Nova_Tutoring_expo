@@ -1,0 +1,25 @@
+{
+  "topic": "Computer Science Fundamentals",
+  "cards": [
+    { "q": "What does CPU stand for?", "a": "Central Processing Unit" },
+    { "q": "Binary base", "a": "Base 2 (0 and 1)" },
+    { "q": "Algorithm definition", "a": "Step-by-step procedure to solve a problem" },
+    { "q": "Data structure examples", "a": "Array, linked list, stack, queue, tree, graph" },
+    { "q": "Big-O notation purpose", "a": "Measure algorithm efficiency with input size" },
+    { "q": "Time complexity of binary search", "a": "O(log n)" },
+    { "q": "Time complexity of linear search", "a": "O(n)" },
+    { "q": "Stack property", "a": "Last In, First Out (LIFO)" },
+    { "q": "Queue property", "a": "First In, First Out (FIFO)" },
+    { "q": "Compiler vs interpreter", "a": "Compiler translates to machine code; interpreter runs line by line" },
+    { "q": "Primary vs secondary memory", "a": "Primary: RAM, fast; Secondary: disk, permanent" },
+    { "q": "Database query language acronym", "a": "SQL (Structured Query Language)" },
+    { "q": "IP address purpose", "a": "Unique identifier for devices on a network" },
+    { "q": "DNS role", "a": "Translates domain names to IP addresses" },
+    { "q": "Operating system role", "a": "Manages hardware, software, resources" },
+    { "q": "Object-Oriented Programming key features", "a": "Encapsulation, inheritance, polymorphism, abstraction" },
+    { "q": "Loop types in programming", "a": "For, while, do-while" },
+    { "q": "Boolean logic operators", "a": "AND, OR, NOT" },
+    { "q": "Machine learning basic idea", "a": "Algorithms improve performance with data" },
+    { "q": "Cybersecurity CIA triad", "a": "Confidentiality, Integrity, Availability" }
+  ]
+}

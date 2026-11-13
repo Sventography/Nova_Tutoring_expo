@@ -1,0 +1,25 @@
+{
+  "topic": "Asian History Survey",
+  "cards": [
+    { "q": "Han dynasty legacy", "a": "Bureaucracy, Silk Road" },
+    { "q": "Tang/Song innovations", "a": "Printing, gunpowder, compass" },
+    { "q": "Mongol Empire impact", "a": "Trade networks, cultural exchange" },
+    { "q": "Tokugawa shogunate", "a": "Isolation; samurai order" },
+    { "q": "Meiji Restoration", "a": "Rapid modernization of Japan" },
+    { "q": "Mughal architecture", "a": "Taj Mahal; syncretic culture" },
+    { "q": "British Raj period", "a": "1858–1947 colonial rule" },
+    { "q": "Partition of India", "a": "1947; India & Pakistan" },
+    { "q": "Chinese Revolution 1911", "a": "End of Qing; Republic" },
+    { "q": "PRC founded", "a": "1949 by Mao Zedong" },
+    { "q": "Great Leap/Cultural Revolution", "a": "1958–66; upheavals" },
+    { "q": "ASEAN purpose", "a": "Regional cooperation" },
+    { "q": "Korean War", "a": "1950–53; armistice" },
+    { "q": "Vietnam War", "a": "Independence struggles; reunification 1975" },
+    { "q": "Asian Tigers", "a": "HK, Singapore, S. Korea, Taiwan growth" },
+    { "q": "Cambodian genocide", "a": "Khmer Rouge 1975–79" },
+    { "q": "Indonesia 1998 shift", "a": "Reformasi; end of Suharto" },
+    { "q": "Belt and Road", "a": "China infrastructure initiative" },
+    { "q": "South China Sea issue", "a": "Maritime disputes" },
+    { "q": "Demographic giants", "a": "China and India" }
+  ]
+}

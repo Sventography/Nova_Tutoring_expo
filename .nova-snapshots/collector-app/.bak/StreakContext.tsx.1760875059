@@ -1,0 +1,72 @@
+import React, { createContext, useContext, useEffect, useMemo, useState, useCallback } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { AppState } from "react-native";
+
+const TZ = "America/New_York";
+const pad = (n: number) => (n < 10 ? "0" + n : "" + n);
+const todayKey = () => {
+  const d = new Date(new Date().toLocaleString("en-US", { timeZone: TZ }));
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+const yesterdayKeyOf = (key: string) => {
+  const [y, m, d] = key.split("-").map(Number);
+  const utc = new Date(Date.UTC(y, m - 1, d));
+  utc.setUTCDate(utc.getUTCDate() - 1);
+  return `${utc.getUTCFullYear()}-${pad(utc.getUTCMonth() + 1)}-${pad(utc.getUTCDate())}`;
+};
+
+type StreakState = {
+  streak: number;
+  lastKey: string | null;
+  hydrated: boolean;
+  refresh: () => Promise<void>;
+  touch: () => Promise<void>;
+};
+const StreakCtx = createContext<StreakState | null>(null);
+
+export function StreakProvider({ children }: { children: React.ReactNode }) {
+  const [streak, setStreak] = useState(0);
+  const [lastKey, setLastKey] = useState<string | null>(null);
+  const [hydrated, setHydrated] = useState(false);
+
+  const apply = useCallback(async (kToday: string, kLast: string | null, sPrev: number) => {
+    if (!kLast) {
+      await AsyncStorage.multiSet([["streak.current","1"],["streak.lastKey",kToday]]);
+      setStreak(1); setLastKey(kToday); return;
+    }
+    if (kLast === kToday) { setStreak(Math.max(1, sPrev || 1)); setLastKey(kToday); return; }
+    if (kLast === yesterdayKeyOf(kToday)) {
+      const nxt = Math.max(1, (sPrev || 0) + 1);
+      await AsyncStorage.multiSet([["streak.current", String(nxt)], ["streak.lastKey", kToday]]);
+      setStreak(nxt); setLastKey(kToday); return;
+    }
+    await AsyncStorage.multiSet([["streak.current","1"],["streak.lastKey",kToday]]);
+    setStreak(1); setLastKey(kToday);
+  },[]);
+
+  const touch = useCallback(async () => {
+    const kToday = todayKey();
+    const [kLast, sRaw] = await AsyncStorage.multiGet(["streak.lastKey","streak.current"]).then(xs => xs.map(x => x[1]));
+    const sPrev = sRaw ? parseInt(sRaw,10) : 0;
+    await apply(kToday, kLast, sPrev);
+    setHydrated(true);
+  },[apply]);
+
+  const refresh = useCallback(async () => {
+    const [k, sRaw] = await AsyncStorage.multiGet(["streak.lastKey","streak.current"]).then(xs => xs.map(x => x[1]));
+    setLastKey(k);
+    setStreak(sRaw ? parseInt(sRaw,10) : 0);
+    setHydrated(true);
+  },[]);
+
+  useEffect(() => { void touch(); }, [touch]);
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", st => { if (st === "active") void touch(); });
+    return () => sub.remove();
+  }, [touch]);
+
+  const value = useMemo(() => ({ streak, lastKey, hydrated, refresh, touch }), [streak, lastKey, hydrated, refresh, touch]);
+  return <StreakCtx.Provider value={value}>{children}</StreakCtx.Provider>;
+}
+
+export function useStreak(){ return useContext(StreakCtx) as StreakState; }

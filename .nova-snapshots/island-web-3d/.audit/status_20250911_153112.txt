@@ -1,0 +1,227 @@
+=== TREE (tabs) ===
+app/(tabs)/_layout.tsx
+app/(tabs)/account.tsx
+app/(tabs)/achievements.tsx
+app/(tabs)/ask.tsx
+app/(tabs)/auth.tsx
+app/(tabs)/brain-teaser.tsx
+app/(tabs)/buy-coins.tsx
+app/(tabs)/certificates.tsx
+app/(tabs)/collection.tsx
+app/(tabs)/collections.tsx
+app/(tabs)/customize.tsx
+app/(tabs)/dev.tsx
+app/(tabs)/flashcards.tsx
+app/(tabs)/history.tsx
+app/(tabs)/home.tsx
+app/(tabs)/index.tsx
+app/(tabs)/missions.tsx
+app/(tabs)/orders.tsx
+app/(tabs)/progress.tsx
+app/(tabs)/purchases.tsx
+app/(tabs)/quiz.tsx
+app/(tabs)/quizzes.tsx
+app/(tabs)/relax.tsx
+app/(tabs)/shop.tsx
+app/(tabs)/stats.tsx
+=== FLASHCARD DATA CHECK ===
+topics_count: file_missing
+=== ROUTE CONFLICT SCAN ===
+=== PATH ALIAS QUICK CHECK ===
+{
+  "@/*": [
+    "app/*"
+  ],
+  "@lib/*": [
+    "app/_lib/*"
+  ],
+  "@components/*": [
+    "app/components/*"
+  ]
+}
+=== TYPECHECK ===
+app/(tabs)/(tabs)/_layout.tsx(9,8): error TS2786: 'AchievementToast' cannot be used as a JSX component.
+  Its type '() => { show: (opts: ToastOpts) => void; Toast: () => Element | null; }' is not a valid JSX element type.
+    Type '() => { show: (opts: ToastOpts) => void; Toast: () => Element | null; }' is not assignable to type '(props: any) => ReactNode | Promise<ReactNode>'.
+      Type '{ show: (opts: ToastOpts) => void; Toast: () => React.JSX.Element | null; }' is not assignable to type 'ReactNode | Promise<ReactNode>'.
+app/(tabs)/(tabs)/ask.tsx(2,10): error TS2614: Module '"@/providers/ThemeBridge"' has no exported member 'useThemeColors'. Did you mean to use 'import useThemeColors from "@/providers/ThemeBridge"' instead?
+app/(tabs)/(tabs)/ask.tsx(5,3): error TS2614: Module '"../../_lib/hooks/useNovaAchievements"' has no exported member 'awardAskQuestion'. Did you mean to use 'import awardAskQuestion from "../../_lib/hooks/useNovaAchievements"' instead?
+app/(tabs)/(tabs)/ask.tsx(6,3): error TS2614: Module '"../../_lib/hooks/useNovaAchievements"' has no exported member 'awardVoiceUsed'. Did you mean to use 'import awardVoiceUsed from "../../_lib/hooks/useNovaAchievements"' instead?
+app/(tabs)/(tabs)/history.tsx(2,10): error TS2614: Module '"@/providers/ThemeBridge"' has no exported member 'useThemeColors'. Did you mean to use 'import useThemeColors from "@/providers/ThemeBridge"' instead?
+app/(tabs)/(tabs)/history.tsx(4,10): error TS2614: Module '"../../_lib/hooks/useNovaAchievements"' has no exported member 'awardHistoryOpen'. Did you mean to use 'import awardHistoryOpen from "../../_lib/hooks/useNovaAchievements"' instead?
+app/(tabs)/(tabs)/quiz.tsx(2,10): error TS2614: Module '"@/providers/ThemeBridge"' has no exported member 'useThemeColors'. Did you mean to use 'import useThemeColors from "@/providers/ThemeBridge"' instead?
+app/(tabs)/(tabs)/quiz.tsx(4,10): error TS2614: Module '"../../_lib/hooks/useNovaAchievements"' has no exported member 'awardForQuizResult'. Did you mean to use 'import awardForQuizResult from "../../_lib/hooks/useNovaAchievements"' instead?
+app/(tabs)/(tabs)/relax.tsx(2,10): error TS2614: Module '"@/providers/ThemeBridge"' has no exported member 'useThemeColors'. Did you mean to use 'import useThemeColors from "@/providers/ThemeBridge"' instead?
+app/(tabs)/(tabs)/relax.tsx(5,3): error TS2614: Module '"../../_lib/hooks/useNovaAchievements"' has no exported member 'awardRelaxOpened'. Did you mean to use 'import awardRelaxOpened from "../../_lib/hooks/useNovaAchievements"' instead?
+app/(tabs)/(tabs)/relax.tsx(6,3): error TS2614: Module '"../../_lib/hooks/useNovaAchievements"' has no exported member 'awardBreathingSession'. Did you mean to use 'import awardBreathingSession from "../../_lib/hooks/useNovaAchievements"' instead?
+app/(tabs)/(tabs)/relax.tsx(7,3): error TS2614: Module '"../../_lib/hooks/useNovaAchievements"' has no exported member 'awardGroundingSession'. Did you mean to use 'import awardGroundingSession from "../../_lib/hooks/useNovaAchievements"' instead?
+app/(tabs)/(tabs)/shop.tsx(2,10): error TS2614: Module '"@/providers/ThemeBridge"' has no exported member 'useThemeColors'. Did you mean to use 'import useThemeColors from "@/providers/ThemeBridge"' instead?
+app/(tabs)/(tabs)/shop.tsx(5,3): error TS2614: Module '"../../_lib/hooks/useNovaAchievements"' has no exported member 'awardShopPurchase'. Did you mean to use 'import awardShopPurchase from "../../_lib/hooks/useNovaAchievements"' instead?
+app/(tabs)/(tabs)/shop.tsx(6,3): error TS2614: Module '"../../_lib/hooks/useNovaAchievements"' has no exported member 'awardThemeEquipped'. Did you mean to use 'import awardThemeEquipped from "../../_lib/hooks/useNovaAchievements"' instead?
+app/(tabs)/(tabs)/shop.tsx(7,3): error TS2614: Module '"../../_lib/hooks/useNovaAchievements"' has no exported member 'awardCoinsSpent'. Did you mean to use 'import awardCoinsSpent from "../../_lib/hooks/useNovaAchievements"' instead?
+app/(tabs)/account/register.tsx(5,22): error TS2304: Cannot find name 'useAuth'.
+app/(tabs)/buy-coins.tsx(10,10): error TS2614: Module '"../_lib/payments"' has no exported member 'isIAPAvailable'. Did you mean to use 'import isIAPAvailable from "../_lib/payments"' instead?
+app/(tabs)/buy-coins.tsx(10,26): error TS2614: Module '"../_lib/payments"' has no exported member 'getProducts'. Did you mean to use 'import getProducts from "../_lib/payments"' instead?
+app/(tabs)/buy-coins.tsx(10,39): error TS2614: Module '"../_lib/payments"' has no exported member 'buyProduct'. Did you mean to use 'import buyProduct from "../_lib/payments"' instead?
+app/(tabs)/buy-coins.tsx(11,10): error TS2305: Module '"../constants/payments"' has no exported member 'IAP_PRODUCT_IDS'.
+app/(tabs)/buy-coins.tsx(22,28): error TS7006: Parameter 'id' implicitly has an 'any' type.
+app/(tabs)/buy-coins.tsx(22,32): error TS7006: Parameter 'i' implicitly has an 'any' type.
+app/(tabs)/certificates.tsx(8,11): error TS2339: Property 'records' does not exist on type 'CertificatesContextValue'.
+app/(tabs)/certificates.tsx(8,20): error TS2339: Property 'clear' does not exist on type 'CertificatesContextValue'.
+app/(tabs)/collection.tsx(3,10): error TS2724: '"../context/CollectionContext"' has no exported member named 'useCollection'. Did you mean 'useCollections'?
+app/(tabs)/collection.tsx(5,3): error TS2305: Module '"@/components/ui"' has no exported member 'NeonScreen'.
+app/(tabs)/collection.tsx(6,3): error TS2305: Module '"@/components/ui"' has no exported member 'SectionTitle'.
+app/(tabs)/collection.tsx(7,3): error TS2305: Module '"@/components/ui"' has no exported member 'NeonCard'.
+app/(tabs)/collection.tsx(8,3): error TS2305: Module '"@/components/ui"' has no exported member 'NeonText'.
+app/(tabs)/collection.tsx(9,3): error TS2305: Module '"@/components/ui"' has no exported member 'NeonSub'.
+app/(tabs)/collection.tsx(10,3): error TS2305: Module '"@/components/ui"' has no exported member 'NeonButton'.
+app/(tabs)/collection.tsx(13,10): error TS2305: Module '"../_lib/storage"' has no exported member 'dedupeCollection'.
+app/(tabs)/collection.tsx(13,28): error TS2305: Module '"../_lib/storage"' has no exported member 'resetCollection'.
+app/(tabs)/components/AchievementBridge.tsx(3,10): error TS2614: Module '"../../_lib/achievements"' has no exported member 'recordEvent'. Did you mean to use 'import recordEvent from "../../_lib/achievements"' instead?
+app/(tabs)/components/AchievementToast.tsx(3,10): error TS2614: Module '"../../_lib/achievements"' has no exported member 'onUnlocked'. Did you mean to use 'import onUnlocked from "../../_lib/achievements"' instead?
+app/(tabs)/components/AchievementToast.tsx(9,29): error TS7006: Parameter 'a' implicitly has an 'any' type.
+app/(tabs)/customize.tsx(2,10): error TS2614: Module '"../providers/ThemeBridge"' has no exported member 'useThemeColors'. Did you mean to use 'import useThemeColors from "../providers/ThemeBridge"' instead?
+app/(tabs)/customize.tsx(5,10): error TS2614: Module '"@/components/FloatingDonateButton"' has no exported member 'FloatingDonateButton'. Did you mean to use 'import FloatingDonateButton from "@/components/FloatingDonateButton"' instead?
+app/(tabs)/customize.tsx(29,22): error TS2322: Type '{ title: string; type: string; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'title' does not exist on type 'IntrinsicAttributes'.
+app/(tabs)/customize.tsx(30,22): error TS2322: Type '{ title: string; type: string; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'title' does not exist on type 'IntrinsicAttributes'.
+app/(tabs)/customize.tsx(31,22): error TS2322: Type '{ title: string; type: string; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'title' does not exist on type 'IntrinsicAttributes'.
+app/(tabs)/dev.tsx(3,10): error TS2614: Module '"../state/coins"' has no exported member 'useCoins'. Did you mean to use 'import useCoins from "../state/coins"' instead?
+app/(tabs)/dev.tsx(4,10): error TS2724: '"../state/flags"' has no exported member named 'useFlags'. Did you mean 'setFlag'?
+app/(tabs)/flashcards/[slug].tsx(4,10): error TS2305: Module '"../../constants/flashcards"' has no exported member 'TOPIC_PACKS'.
+app/(tabs)/flashcards/[slug].tsx(6,3): error TS2305: Module '"@/components/ui"' has no exported member 'NeonScreen'.
+app/(tabs)/flashcards/[slug].tsx(7,3): error TS2305: Module '"@/components/ui"' has no exported member 'SectionTitle'.
+app/(tabs)/flashcards/[slug].tsx(8,3): error TS2305: Module '"@/components/ui"' has no exported member 'NeonCard'.
+app/(tabs)/flashcards/[slug].tsx(9,3): error TS2305: Module '"@/components/ui"' has no exported member 'NeonText'.
+app/(tabs)/flashcards/[slug].tsx(10,3): error TS2305: Module '"@/components/ui"' has no exported member 'NeonSub'.
+app/(tabs)/flashcards/[slug].tsx(11,3): error TS2305: Module '"@/components/ui"' has no exported member 'NeonButton'.
+app/(tabs)/flashcards/[slug].tsx(13,10): error TS2724: '"../../context/CollectionContext"' has no exported member named 'useCollection'. Did you mean 'useCollections'?
+app/(tabs)/flashcards/[slug].tsx(21,48): error TS7006: Parameter 'p' implicitly has an 'any' type.
+app/(tabs)/flashcards/[slug].tsx(48,31): error TS7006: Parameter 'c' implicitly has an 'any' type.
+app/(tabs)/history.tsx(207,31): error TS2339: Property 'cacheDirectory' does not exist on type 'typeof import("/Users/sventography/Desktop/Nova_Tutoring_expo 3/node_modules/expo-file-system/build/index")'.
+app/(tabs)/missions.tsx(13,10): error TS2614: Module '"@/components/Toast"' has no exported member 'useContextSafe'. Did you mean to use 'import useContextSafe from "@/components/Toast"' instead?
+app/(tabs)/missions.tsx(15,3): error TS2724: '"@lib/missions"' has no exported member named 'getMissions'. Did you mean 'useMissions'?
+app/(tabs)/missions.tsx(16,3): error TS2614: Module '"@lib/missions"' has no exported member 'claimMission'. Did you mean to use 'import claimMission from "@lib/missions"' instead?
+app/(tabs)/missions.tsx(38,32): error TS2339: Property 'target' does not exist on type 'Mission'.
+app/(tabs)/missions.tsx(39,31): error TS2339: Property 'claimed' does not exist on type 'Mission'.
+app/(tabs)/missions.tsx(47,16): error TS2339: Property 'desc' does not exist on type 'Mission'.
+app/(tabs)/missions.tsx(49,18): error TS2339: Property 'desc' does not exist on type 'Mission'.
+app/(tabs)/missions.tsx(54,38): error TS2339: Property 'rewardCoins' does not exist on type 'Mission'.
+app/(tabs)/missions.tsx(59,48): error TS2339: Property 'target' does not exist on type 'Mission'.
+app/(tabs)/missions.tsx(61,35): error TS2339: Property 'target' does not exist on type 'Mission'.
+app/(tabs)/missions.tsx(61,49): error TS2339: Property 'target' does not exist on type 'Mission'.
+app/(tabs)/missions.tsx(70,34): error TS2339: Property 'period' does not exist on type 'Mission'.
+app/(tabs)/missions.tsx(78,26): error TS2339: Property 'period' does not exist on type 'Mission'.
+app/(tabs)/missions.tsx(81,16): error TS2339: Property 'period' does not exist on type 'Mission'.
+app/(tabs)/missions.tsx(85,12): error TS2339: Property 'claimed' does not exist on type 'Mission'.
+app/(tabs)/missions.tsx(156,24): error TS2339: Property 'rewardCoins' does not exist on type 'Mission'.
+app/(tabs)/missions.tsx(167,42): error TS2339: Property 'period' does not exist on type 'Mission'.
+app/(tabs)/missions.tsx(168,43): error TS2339: Property 'period' does not exist on type 'Mission'.
+app/(tabs)/missions.tsx(170,28): error TS2339: Property 'target' does not exist on type 'Mission'.
+app/(tabs)/missions.tsx(170,41): error TS2339: Property 'claimed' does not exist on type 'Mission'.
+app/(tabs)/missions.tsx(182,22): error TS2339: Property 'rewardCoins' does not exist on type 'Mission'.
+app/(tabs)/missions.tsx(206,19): error TS2322: Type '{ onPress: () => void; }' is not assignable to type 'IntrinsicAttributes & { amount?: number | undefined; style?: ViewStyle | undefined; }'.
+  Property 'onPress' does not exist on type 'IntrinsicAttributes & { amount?: number | undefined; style?: ViewStyle | undefined; }'.
+app/(tabs)/purchases.tsx(4,10): error TS2305: Module '"../constants/payments"' has no exported member 'SHOP_ITEMS'.
+app/(tabs)/purchases.tsx(4,22): error TS2305: Module '"../constants/payments"' has no exported member 'ShopItem'.
+app/(tabs)/purchases.tsx(35,30): error TS7006: Parameter 'i' implicitly has an 'any' type.
+app/(tabs)/stats.tsx(2,10): error TS2305: Module '"../_lib/toast"' has no exported member 'showToast'.
+app/(tabs)/stats.tsx(3,10): error TS2614: Module '"../_lib/orders"' has no exported member 'listOrders'. Did you mean to use 'import listOrders from "../_lib/orders"' instead?
+app/(tabs)/stats.tsx(3,22): error TS2614: Module '"../_lib/orders"' has no exported member 'ordersToCSV'. Did you mean to use 'import ordersToCSV from "../_lib/orders"' instead?
+app/(tabs)/stats.tsx(14,10): error TS2614: Module '"../providers/ThemeBridge"' has no exported member 'useThemeColors'. Did you mean to use 'import useThemeColors from "../providers/ThemeBridge"' instead?
+app/(tabs)/stats.tsx(15,10): error TS2614: Module '"../_lib/analytics"' has no exported member 'getSalesSummary'. Did you mean to use 'import getSalesSummary from "../_lib/analytics"' instead?
+app/(tabs)/stats.tsx(15,27): error TS2614: Module '"../_lib/analytics"' has no exported member 'getLowStockReport'. Did you mean to use 'import getLowStockReport from "../_lib/analytics"' instead?
+app/(tabs)/stats.tsx(16,10): error TS2614: Module '"../_lib/inventory"' has no exported member 'adjustStock'. Did you mean to use 'import adjustStock from "../_lib/inventory"' instead?
+app/(tabs)/tabs/achievements.tsx(3,10): error TS2614: Module '"@/providers/ThemeBridge"' has no exported member 'useThemeColors'. Did you mean to use 'import useThemeColors from "@/providers/ThemeBridge"' instead?
+app/_ask.tsx(15,8): error TS1192: Module '"/Users/sventography/Desktop/Nova_Tutoring_expo 3/app/context/ThemeContext"' has no default export.
+app/_AuthContext.tsx(17,32): error TS2339: Property 'getItem' does not exist on type '{ get: (k: any, d: any) => any; set: () => undefined; remove: () => undefined; }'.
+app/_AuthContext.tsx(26,25): error TS2339: Property 'setItem' does not exist on type '{ get: (k: any, d: any) => any; set: () => undefined; remove: () => undefined; }'.
+app/_AuthContext.tsx(27,23): error TS2339: Property 'deleteItem' does not exist on type '{ get: (k: any, d: any) => any; set: () => undefined; remove: () => undefined; }'.
+app/_buy-coins.tsx(10,10): error TS2614: Module '"./_lib/payments"' has no exported member 'isIAPAvailable'. Did you mean to use 'import isIAPAvailable from "./_lib/payments"' instead?
+app/_buy-coins.tsx(10,26): error TS2614: Module '"./_lib/payments"' has no exported member 'getProducts'. Did you mean to use 'import getProducts from "./_lib/payments"' instead?
+app/_buy-coins.tsx(10,39): error TS2614: Module '"./_lib/payments"' has no exported member 'buyProduct'. Did you mean to use 'import buyProduct from "./_lib/payments"' instead?
+app/_buy-coins.tsx(11,10): error TS2305: Module '"./constants/payments"' has no exported member 'IAP_PRODUCT_IDS'.
+app/_buy-coins.tsx(22,28): error TS7006: Parameter 'id' implicitly has an 'any' type.
+app/_buy-coins.tsx(22,32): error TS7006: Parameter 'i' implicitly has an 'any' type.
+app/_create.tsx(3,10): error TS2614: Module '"./providers/ThemeBridge"' has no exported member 'useThemeColors'. Did you mean to use 'import useThemeColors from "./providers/ThemeBridge"' instead?
+app/_lib/avatar.ts(20,30): error TS2339: Property 'documentDirectory' does not exist on type 'typeof import("/Users/sventography/Desktop/Nova_Tutoring_expo 3/node_modules/expo-file-system/build/index")'.
+app/_lib/secure.ts(1,27): error TS7006: Parameter 'k' implicitly has an 'any' type.
+app/_lib/secure.ts(1,29): error TS7006: Parameter 'd' implicitly has an 'any' type.
+app/_lib/voice.ts(41,78): error TS2339: Property 'EncodingType' does not exist on type 'typeof import("/Users/sventography/Desktop/Nova_Tutoring_expo 3/node_modules/expo-file-system/build/index")'.
+app/_payments.tsx(62,34): error TS2322: Type '{ clientSecret: string; onSuccess: () => void; }' is not assignable to type 'IntrinsicAttributes & Props'.
+  Property 'clientSecret' does not exist on type 'IntrinsicAttributes & Props'.
+app/_quiz.tsx(3,10): error TS2614: Module '"./providers/ThemeBridge"' has no exported member 'useThemeColors'. Did you mean to use 'import useThemeColors from "./providers/ThemeBridge"' instead?
+app/components/Toast.tsx(22,13): error TS2345: Argument of type '() => () => boolean' is not assignable to parameter of type 'EffectCallback'.
+  Type '() => boolean' is not assignable to type 'void | Destructor'.
+    Type '() => boolean' is not assignable to type 'Destructor'.
+      Type 'boolean' is not assignable to type 'void | { [UNDEFINED_VOID_ONLY]: never; }'.
+app/components/ui.tsx(8,7): error TS2322: Type '({ pressed }: PressableStateCallbackType) => (StyleProp<ViewStyle> | ((state: PressableStateCallbackType) => StyleProp<...>))[]' is not assignable to type 'StyleProp<ViewStyle> | ((state: PressableStateCallbackType) => StyleProp<ViewStyle>)'.
+  Type '({ pressed }: PressableStateCallbackType) => (StyleProp<ViewStyle> | ((state: PressableStateCallbackType) => StyleProp<...>))[]' is not assignable to type '(state: PressableStateCallbackType) => StyleProp<ViewStyle>'.
+    Type '(StyleProp<ViewStyle> | ((state: PressableStateCallbackType) => StyleProp<ViewStyle>))[]' is not assignable to type 'StyleProp<ViewStyle>'.
+      Type '(StyleProp<ViewStyle> | ((state: PressableStateCallbackType) => StyleProp<ViewStyle>))[]' is not assignable to type 'RecursiveArray<Falsy | ViewStyle | RegisteredStyle<ViewStyle>>'.
+        The types returned by 'pop()' are incompatible between these types.
+          Type 'StyleProp<ViewStyle> | ((state: PressableStateCallbackType) => StyleProp<ViewStyle>)' is not assignable to type 'Falsy | ViewStyle | RegisteredStyle<ViewStyle> | RecursiveArray<Falsy | ViewStyle | RegisteredStyle<ViewStyle>> | readonly (Falsy | ... 1 more ... | RegisteredStyle<...>)[]'.
+            Type '(state: PressableStateCallbackType) => StyleProp<ViewStyle>' is not assignable to type 'Falsy | ViewStyle | RegisteredStyle<ViewStyle> | RecursiveArray<Falsy | ViewStyle | RegisteredStyle<ViewStyle>> | readonly (Falsy | ... 1 more ... | RegisteredStyle<...>)[]'.
+app/context/AuthContext.ts(2,10): error TS2305: Module '"../_AuthContext"' has no exported member 'default'.
+app/context/CertificatesContext.tsx(5,23): error TS2694: Namespace '"/Users/sventography/Desktop/Nova_Tutoring_expo 3/app/utils/cert_store"' has no exported member 'Certificate'.
+app/context/CertificatesContext.tsx(6,29): error TS2694: Namespace '"/Users/sventography/Desktop/Nova_Tutoring_expo 3/app/utils/cert_store"' has no exported member 'Certificate'.
+app/context/CertificatesContext.tsx(15,58): error TS2694: Namespace '"/Users/sventography/Desktop/Nova_Tutoring_expo 3/app/utils/cert_store"' has no exported member 'Certificate'.
+app/context/CertificatesContext.tsx(21,32): error TS2339: Property 'loadAll' does not exist on type 'typeof import("/Users/sventography/Desktop/Nova_Tutoring_expo 3/app/utils/cert_store")'.
+app/context/CertificatesContext.tsx(28,42): error TS2694: Namespace '"/Users/sventography/Desktop/Nova_Tutoring_expo 3/app/utils/cert_store"' has no exported member 'Certificate'.
+app/context/CertificatesContext.tsx(31,32): error TS2339: Property 'add' does not exist on type 'typeof import("/Users/sventography/Desktop/Nova_Tutoring_expo 3/app/utils/cert_store")'.
+app/context/CertificatesContext.tsx(41,32): error TS2339: Property 'remove' does not exist on type 'typeof import("/Users/sventography/Desktop/Nova_Tutoring_expo 3/app/utils/cert_store")'.
+app/context/CertificatesContext.tsx(68,15): error TS2305: Module '"../utils/cert_store"' has no exported member 'Certificate'.
+app/context/CollectionContext.tsx(25,32): error TS2339: Property 'loadAll' does not exist on type 'typeof import("/Users/sventography/Desktop/Nova_Tutoring_expo 3/app/utils/collections")'.
+app/context/CollectionContext.tsx(35,32): error TS2339: Property 'create' does not exist on type 'typeof import("/Users/sventography/Desktop/Nova_Tutoring_expo 3/app/utils/collections")'.
+app/context/CollectionContext.tsx(45,32): error TS2339: Property 'rename' does not exist on type 'typeof import("/Users/sventography/Desktop/Nova_Tutoring_expo 3/app/utils/collections")'.
+app/context/CollectionContext.tsx(55,32): error TS2339: Property 'remove' does not exist on type 'typeof import("/Users/sventography/Desktop/Nova_Tutoring_expo 3/app/utils/collections")'.
+app/context/CollectionContext.tsx(63,30): error TS2339: Property 'addItem' does not exist on type 'typeof import("/Users/sventography/Desktop/Nova_Tutoring_expo 3/app/utils/collections")'.
+app/context/CollectionContext.tsx(68,30): error TS2339: Property 'removeItem' does not exist on type 'typeof import("/Users/sventography/Desktop/Nova_Tutoring_expo 3/app/utils/collections")'.
+app/context/CollectionContext.tsx(73,30): error TS2339: Property 'toggleItem' does not exist on type 'typeof import("/Users/sventography/Desktop/Nova_Tutoring_expo 3/app/utils/collections")'.
+app/modals/CertificateModal.tsx(8,11): error TS2339: Property 'previewMeta' does not exist on type 'CertificatesContextValue'.
+app/modals/CertificateModal.tsx(8,24): error TS2339: Property 'closePreview' does not exist on type 'CertificatesContextValue'.
+app/modals/CertificateModal.tsx(8,38): error TS2339: Property 'setCapturedAndSave' does not exist on type 'CertificatesContextValue'.
+app/modals/CertificateModal.tsx(8,58): error TS2339: Property 'shareImageUri' does not exist on type 'CertificatesContextValue'.
+app/screens/Collection.tsx(18,11): error TS2339: Property 'collection' does not exist on type 'Value'.
+app/screens/Collection.tsx(18,23): error TS2339: Property 'remove' does not exist on type 'Value'.
+app/screens/Collection.tsx(18,31): error TS2339: Property 'setAll' does not exist on type 'Value'.
+app/screens/Collection.tsx(126,51): error TS7006: Parameter 'c' implicitly has an 'any' type.
+app/screens/Collection.tsx(224,52): error TS7006: Parameter 'c' implicitly has an 'any' type.
+app/screens/Settings.tsx(16,5): error TS2339: Property 'prefs' does not exist on type 'Value'.
+app/screens/Settings.tsx(17,5): error TS2339: Property 'setPrefs' does not exist on type 'Value'.
+app/screens/Settings.tsx(18,5): error TS2339: Property 'resetProgress' does not exist on type 'Value'.
+app/screens/Settings.tsx(19,5): error TS2339: Property 'resetCollection' does not exist on type 'Value'.
+app/screens/Settings.tsx(20,5): error TS2339: Property 'resetAchievements' does not exist on type 'Value'.
+app/screens/Settings.tsx(21,5): error TS2339: Property 'resetCoins' does not exist on type 'Value'.
+app/screens/Settings.tsx(22,5): error TS2339: Property 'resetAll' does not exist on type 'Value'.
+app/screens/Settings.tsx(34,11): error TS2559: Type '"Name saved"' has no properties in common with type 'Omit<Toast, "id">'.
+app/screens/Settings.tsx(145,21): error TS2559: Type '"Studied progress cleared"' has no properties in common with type 'Omit<Toast, "id">'.
+app/screens/Settings.tsx(161,21): error TS2559: Type '"Collection cleared"' has no properties in common with type 'Omit<Toast, "id">'.
+app/screens/Settings.tsx(177,21): error TS2559: Type '"Achievements reset"' has no properties in common with type 'Omit<Toast, "id">'.
+app/screens/Settings.tsx(193,21): error TS2559: Type '"Coins reset"' has no properties in common with type 'Omit<Toast, "id">'.
+app/screens/Settings.tsx(209,21): error TS2559: Type '"All data reset"' has no properties in common with type 'Omit<Toast, "id">'.
+app/topics/[id].tsx(5,10): error TS2305: Module '"../constants/flashcards"' has no exported member 'FLASHCARD_TOPICS'.
+app/topics/[id].tsx(40,11): error TS2339: Property 'notifyEvent' does not exist on type 'User'.
+app/topics/[id].tsx(41,54): error TS7006: Parameter 't' implicitly has an 'any' type.
+app/topics/[id].tsx(67,21): error TS2554: Expected 3 arguments, but got 1.
+app/topics/customize.tsx(12,3): error TS2305: Module '"@lib/cards"' has no exported member 'addCustomCard'.
+app/topics/customize.tsx(13,3): error TS2305: Module '"@lib/cards"' has no exported member 'getCustomCards'.
+app/topics/customize.tsx(14,3): error TS2305: Module '"@lib/cards"' has no exported member 'Card'.
+app/topics/customize.tsx(15,3): error TS2724: '"@lib/cards"' has no exported member named 'deleteSavedCard'. Did you mean 'getSavedCards'?
+app/topics/customize.tsx(51,11): error TS2339: Property 'notifyEvent' does not exist on type 'User'.
+app/topics/customize.tsx(110,16): error TS2322: Type '{ href: string; }' is not assignable to type 'IntrinsicAttributes & { label?: string | undefined; style?: ViewStyle | undefined; }'.
+  Property 'href' does not exist on type 'IntrinsicAttributes & { label?: string | undefined; style?: ViewStyle | undefined; }'.
+app/topics/index.tsx(5,10): error TS2305: Module '"../constants/flashcards"' has no exported member 'FLASHCARD_TOPICS'.
+app/utils/checkin.ts(1,10): error TS2305: Module '"../_lib/storage"' has no exported member 'getJSON'.
+app/utils/checkin.ts(1,19): error TS2305: Module '"../_lib/storage"' has no exported member 'setJSON'.
+app/utils/missions.ts(1,10): error TS2305: Module '"../_lib/storage"' has no exported member 'getJSON'.
+app/utils/missions.ts(1,19): error TS2305: Module '"../_lib/storage"' has no exported member 'setJSON'.
+=== EXPO DOCTOR ===
+env: load .env.development .env
+env: export EXPO_PUBLIC_NGROK_URL EXPO_PUBLIC_API_URL EXPO_PUBLIC_STRIPE_PK STRIPE_SECRET_KEY
+Running 17 checks on your project...
+17/17 checks passed. No issues detected!
+=== START EXPO (LOGGING) ===
+=== METRO STATUS ===

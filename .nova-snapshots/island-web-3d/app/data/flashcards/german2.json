@@ -1,0 +1,25 @@
+{
+  "topic": "German II",
+  "cards": [
+    { "q": "Simple past of sein", "a": "ich war, du warst, er war, wir waren, ihr wart, sie waren" },
+    { "q": "Simple past of haben", "a": "ich hatte, du hattest, er hatte..." },
+    { "q": "Modal verbs past tense example", "a": "Ich konnte, musste, wollte" },
+    { "q": "Present perfect with haben example", "a": "Ich habe gespielt" },
+    { "q": "Present perfect with sein example", "a": "Ich bin gegangen" },
+    { "q": "Word order with time-manner-place", "a": "Subject + verb + time + manner + place" },
+    { "q": "Subordinating conjunctions effect", "a": "Verb goes to end" },
+    { "q": "Conjunction examples", "a": "weil, dass, obwohl, wenn" },
+    { "q": "Relative pronouns nominative", "a": "der, die, das, die" },
+    { "q": "Relative pronouns accusative", "a": "den, die, das, die" },
+    { "q": "Relative pronouns dative", "a": "dem, der, dem, denen" },
+    { "q": "Future tense formation", "a": "werden + infinitive" },
+    { "q": "Passive voice formation", "a": "werden + past participle" },
+    { "q": "Konjunktiv II example", "a": "Ich würde gehen" },
+    { "q": "Genitive case articles", "a": "des, der, des, der" },
+    { "q": "Dative prepositions", "a": "aus, bei, mit, nach, seit, von, zu" },
+    { "q": "Accusative prepositions", "a": "durch, für, gegen, ohne, um" },
+    { "q": "Two-way prepositions", "a": "an, auf, hinter, in, neben, über, unter, vor, zwischen" },
+    { "q": "Ordinal numbers 1-10", "a": "erste, zweite, dritte... zehnte" },
+    { "q": "Numbers 1000, 10000", "a": "tausend, zehntausend" }
+  ]
+}

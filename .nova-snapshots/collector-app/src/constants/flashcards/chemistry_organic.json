@@ -1,0 +1,82 @@
+[
+  {
+    "question": "Alkanes general formula",
+    "answer": "C_nH_{2n+2}"
+  },
+  {
+    "question": "Alkenes contain",
+    "answer": "C=C double bond"
+  },
+  {
+    "question": "Alkynes contain",
+    "answer": "C≡C triple bond"
+  },
+  {
+    "question": "Functional group of alcohols",
+    "answer": "Hydroxyl (−OH)"
+  },
+  {
+    "question": "Aldehyde vs ketone",
+    "answer": "Aldehyde has −CHO at end; ketone has C=O internal"
+  },
+  {
+    "question": "Carboxylic acids functional group",
+    "answer": "−COOH"
+  },
+  {
+    "question": "Ester formation reaction",
+    "answer": "Carboxylic acid + alcohol → ester + water"
+  },
+  {
+    "question": "Amide formation",
+    "answer": "Carboxylic acid derivative + amine"
+  },
+  {
+    "question": "SN1 rate depends on",
+    "answer": "Substrate concentration only"
+  },
+  {
+    "question": "SN2 stereochemical result",
+    "answer": "Inversion at chiral center"
+  },
+  {
+    "question": "Markovnikov addition rule",
+    "answer": "H adds to carbon with more Hs"
+  },
+  {
+    "question": "E1 and E2 are",
+    "answer": "Elimination mechanisms forming alkenes"
+  },
+  {
+    "question": "Aromaticity satisfies",
+    "answer": "Planar, cyclic, conjugated, 4n+2 π electrons"
+  },
+  {
+    "question": "Hydrogenation of alkenes uses",
+    "answer": "H2 with metal catalyst"
+  },
+  {
+    "question": "Primary alcohol oxidation gives",
+    "answer": "Aldehyde then acid"
+  },
+  {
+    "question": "Secondary alcohol oxidation gives",
+    "answer": "Ketone"
+  },
+  {
+    "question": "Tertiary alcohol oxidation",
+    "answer": "No reaction under mild conditions"
+  },
+  {
+    "question": "Grignard reagent form",
+    "answer": "R–MgX"
+  },
+  {
+    "question": "Saponification produces",
+    "answer": "Soap from ester/base hydrolysis"
+  },
+  {
+    "question": "Enantiomers differ by",
+    "answer": "Mirror-image configuration at chiral center"
+  }
+]

@@ -1,0 +1,25 @@
+{
+  "topic": "Organic Chemistry I",
+  "cards": [
+    { "q": "Hybridization of alkane carbon", "a": "sp3 ~109.5° tetrahedral" },
+    { "q": "Alkene geometry", "a": "sp2 ~120° trigonal planar" },
+    { "q": "Alkyne geometry", "a": "sp ~180° linear" },
+    { "q": "SN1 vs SN2", "a": "SN1 tertiary; carbocation; racemization | SN2 methyl/primary; backside; inversion" },
+    { "q": "E1 vs E2", "a": "E1 via carbocation; E2 concerted anti-periplanar" },
+    { "q": "Markovnikov rule", "a": "H adds to carbon with more Hs" },
+    { "q": "Anti-Markovnikov addition", "a": "HBr with peroxides → radical pathway" },
+    { "q": "Hydroboration–oxidation", "a": "BH3 then H2O2/NaOH → anti-Markovnikov alcohol" },
+    { "q": "Oxymercuration–reduction", "a": "Hg(OAc)2/H2O then NaBH4 → Markovnikov alcohol" },
+    { "q": "Halogenation of alkenes", "a": "Br2/Cl2 adds anti via bromonium" },
+    { "q": "Epoxide opening", "a": "Base attacks less substituted carbon" },
+    { "q": "Alcohol to alkyl halide", "a": "SOCl2, PBr3, HX" },
+    { "q": "Oxidation of alcohols", "a": "PCC: 1°→aldehyde; Jones: 1°→acid" },
+    { "q": "Zaitsev rule", "a": "E2 favors more substituted alkene" },
+    { "q": "Stereoisomer types", "a": "Enantiomers vs diastereomers" },
+    { "q": "Chirality test", "a": "Non-superimposable mirror images; one chiral center → chiral" },
+    { "q": "Conformational analysis", "a": "Staggered more stable than eclipsed" },
+    { "q": "Aromaticity criteria", "a": "Planar, cyclic, conjugated, 4n+2 π e−" },
+    { "q": "Resonance", "a": "Delocalization of electrons; hybrids stabilize" },
+    { "q": "IR OH and C=O peaks", "a": "~3200–3600 (broad), ~1700 cm^-1" }
+  ]
+}

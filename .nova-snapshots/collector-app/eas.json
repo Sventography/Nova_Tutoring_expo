@@ -1,0 +1,28 @@
+{
+  "cli": {
+    "version": ">= 7.0.0"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "environment": "production",
+      "ios": {
+        "simulator": false
+      }
+    },
+    "preview": {
+      "distribution": "internal"
+    },
+    "production": {
+      "node": "20.19.4",
+      "environment": "production",
+      "env": {
+        "EXPO_PUBLIC_COLLECTOR_REDEMPTION_ENABLED": "false",
+        "EXPO_PUBLIC_COLLECTOR_STAGING_MODE": "false",
+        "EXPO_PUBLIC_COLLECTOR_STAGING_WEB_PREVIEW": "false",
+        "EXPO_PUBLIC_NORAS_LANTERN_PREVIEW": "false"
+      }
+    }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "topic": "Biology: Anatomy Lab",
+  "cards": [
+    { "q": "Skull bone categories", "a": "Cranial vs facial bones" },
+    { "q": "Vertebral column divisions", "a": "Cervical 7, thoracic 12, lumbar 5, sacrum, coccyx" },
+    { "q": "Largest bone in body", "a": "Femur" },
+    { "q": "Smallest bone in body", "a": "Stapes (ear)" },
+    { "q": "Number of rib pairs", "a": "12 pairs" },
+    { "q": "Long bone shaft name", "a": "Diaphysis" },
+    { "q": "Long bone ends name", "a": "Epiphysis" },
+    { "q": "Joint types", "a": "Fibrous, cartilaginous, synovial" },
+    { "q": "Synovial joint examples", "a": "Hinge, ball-and-socket, pivot" },
+    { "q": "Muscle tissue types", "a": "Skeletal, cardiac, smooth" },
+    { "q": "Largest organ", "a": "Skin" },
+    { "q": "Heart chambers", "a": "Right atrium, right ventricle, left atrium, left ventricle" },
+    { "q": "Arteries vs veins", "a": "Arteries carry away from heart; veins return to heart" },
+    { "q": "Blood cell types", "a": "Erythrocytes, leukocytes, platelets" },
+    { "q": "Respiratory tract order", "a": "Nasal cavity, pharynx, larynx, trachea, bronchi, lungs" },
+    { "q": "Alveoli function", "a": "Gas exchange" },
+    { "q": "Neuron parts", "a": "Dendrites, soma, axon" },
+    { "q": "CNS vs PNS", "a": "Central nervous system vs peripheral nervous system" },
+    { "q": "Largest brain region", "a": "Cerebrum" },
+    { "q": "Cerebellum function", "a": "Balance and coordination" }
+  ]
+}

@@ -1,0 +1,82 @@
+[
+  {
+    "question": "SI unit of force",
+    "answer": "Newton (kg·m/s^2)"
+  },
+  {
+    "question": "Newton’s First Law",
+    "answer": "Object in motion or at rest stays so unless net force acts"
+  },
+  {
+    "question": "Newton’s Second Law",
+    "answer": "ΣF = ma"
+  },
+  {
+    "question": "Kinematic eqn (constant a): v_f^2 =",
+    "answer": "v_i^2 + 2aΔx"
+  },
+  {
+    "question": "Free-fall acceleration near Earth",
+    "answer": "≈ 9.8 m/s^2 downward"
+  },
+  {
+    "question": "Projectile horizontal acceleration",
+    "answer": "0 (ignoring air resistance)"
+  },
+  {
+    "question": "Work by constant force F over displacement d, angle θ",
+    "answer": "W = F d cos θ"
+  },
+  {
+    "question": "Kinetic energy",
+    "answer": "(1/2)mv^2"
+  },
+  {
+    "question": "Potential energy near Earth",
+    "answer": "mgh"
+  },
+  {
+    "question": "Work–energy theorem",
+    "answer": "W_net = ΔK"
+  },
+  {
+    "question": "Impulse",
+    "answer": "J = Δp = FΔt"
+  },
+  {
+    "question": "Conservation of momentum applies when",
+    "answer": "Net external impulse ≈ 0"
+  },
+  {
+    "question": "Centripetal acceleration",
+    "answer": "a_c = v^2/r"
+  },
+  {
+    "question": "Uniform circular motion force toward center",
+    "answer": "Centripetal force"
+  },
+  {
+    "question": "Coefficient of kinetic friction symbol",
+    "answer": "μ_k"
+  },
+  {
+    "question": "Gravitational force between masses m1,m2 dist r",
+    "answer": "F = G m1 m2 / r^2"
+  },
+  {
+    "question": "Center of mass definition",
+    "answer": "Weighted average position of mass"
+  },
+  {
+    "question": "Torque τ for force F at lever arm r, angle θ",
+    "answer": "τ = rF sin θ"
+  },
+  {
+    "question": "Equilibrium conditions",
+    "answer": "ΣF = 0 and Στ = 0"
+  },
+  {
+    "question": "Power",
+    "answer": "P = W/t = Fv (for constant v parallel to F)"
+  }
+]

@@ -1,0 +1,25 @@
+{
+  "topic": "Linear Programming & Optimization",
+  "cards": [
+    { "q": "LP standard form", "a": "Max c^T x subject to Ax ≤ b, x ≥ 0" },
+    { "q": "Feasible region", "a": "Set satisfying constraints" },
+    { "q": "Extreme point optimality", "a": "Optimum occurs at a vertex" },
+    { "q": "Simplex method", "a": "Moves along vertices to improve objective" },
+    { "q": "Slack variable", "a": "Converts ≤ to equality" },
+    { "q": "Dual problem", "a": "Associated minimization with A^T" },
+    { "q": "Weak duality", "a": "Primal ≤ Dual (for max/min)" },
+    { "q": "Strong duality", "a": "Optima equal under conditions" },
+    { "q": "Shadow price", "a": "Dual variable value" },
+    { "q": "Degeneracy", "a": "Multiple constraints active; stalls" },
+    { "q": "Sensitivity analysis", "a": "Effect of parameter changes" },
+    { "q": "Integer programming", "a": "x constrained to integers" },
+    { "q": "NP-hard problem", "a": "General IP complexity" },
+    { "q": "Greedy optimality example", "a": "Huffman coding (not LP)" },
+    { "q": "KKT conditions", "a": "Optimality for constrained problems" },
+    { "q": "Convexity importance", "a": "No local vs global gap" },
+    { "q": "Ellipsoid/interior point", "a": "Polynomial-time LP algorithms" },
+    { "q": "Transportation problem", "a": "Min cost shipping plan" },
+    { "q": "Assignment problem", "a": "Hungarian algorithm" },
+    { "q": "Network flow", "a": "Max-flow min-cut theorem" }
+  ]
+}

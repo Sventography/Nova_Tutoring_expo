@@ -1,0 +1,82 @@
+[
+  {
+    "question": "Cell theory states",
+    "answer": "All living things are made of cells; cells arise from preexisting cells"
+  },
+  {
+    "question": "Prokaryotes lack",
+    "answer": "Membrane-bound organelles and nucleus"
+  },
+  {
+    "question": "Organelle for ATP production",
+    "answer": "Mitochondrion"
+  },
+  {
+    "question": "Ribosomes function",
+    "answer": "Protein synthesis"
+  },
+  {
+    "question": "Photosynthesis overall equation",
+    "answer": "6CO2 + 6H2O → C6H12O6 + 6O2"
+  },
+  {
+    "question": "Stages of cellular respiration",
+    "answer": "Glycolysis, Krebs cycle, ETC"
+  },
+  {
+    "question": "Osmosis definition",
+    "answer": "Diffusion of water across semipermeable membrane"
+  },
+  {
+    "question": "Active vs passive transport",
+    "answer": "Active needs energy; passive does not"
+  },
+  {
+    "question": "Enzymes do what to activation energy",
+    "answer": "Lower it"
+  },
+  {
+    "question": "DNA vs RNA sugars",
+    "answer": "Deoxyribose vs ribose"
+  },
+  {
+    "question": "Transcription occurs in",
+    "answer": "Nucleus (eukaryotes)"
+  },
+  {
+    "question": "Translation occurs on",
+    "answer": "Ribosomes"
+  },
+  {
+    "question": "Mitosis phases",
+    "answer": "Prophase, metaphase, anaphase, telophase"
+  },
+  {
+    "question": "Meiosis reduces",
+    "answer": "Chromosome number by half, produces gametes"
+  },
+  {
+    "question": "Autotroph vs heterotroph",
+    "answer": "Produces own food vs consumes"
+  },
+  {
+    "question": "Immune system’s first line of defense",
+    "answer": "Skin and mucous membranes"
+  },
+  {
+    "question": "Hormones travel via",
+    "answer": "Circulatory system"
+  },
+  {
+    "question": "Biodiversity importance",
+    "answer": "Ecosystem stability and resilience"
+  },
+  {
+    "question": "Natural selection requires",
+    "answer": "Variation, inheritance, differential survival/reproduction"
+  },
+  {
+    "question": "Gene flow is",
+    "answer": "Movement of alleles between populations"
+  }
+]

@@ -1,0 +1,25 @@
+{
+  "topic": "AP Microeconomics",
+  "cards": [
+    { "q": "Law of demand", "a": "Price falls -> demand rises" },
+    { "q": "Law of supply", "a": "Price rises -> supply rises" },
+    { "q": "Elastic vs inelastic", "a": "Elastic responsive; inelastic not responsive" },
+    { "q": "Price ceiling effect", "a": "Below equilibrium -> shortage" },
+    { "q": "Price floor effect", "a": "Above equilibrium -> surplus" },
+    { "q": "Consumer surplus", "a": "Value willing to pay minus price paid" },
+    { "q": "Producer surplus", "a": "Price received minus cost" },
+    { "q": "Deadweight loss", "a": "Efficiency lost from distortion" },
+    { "q": "Perfect competition", "a": "Many firms, identical products" },
+    { "q": "Monopoly", "a": "Single seller, price maker" },
+    { "q": "Monopolistic competition", "a": "Many firms, differentiated products" },
+    { "q": "Oligopoly", "a": "Few firms, interdependent" },
+    { "q": "Game theory", "a": "Study of strategic choices" },
+    { "q": "Marginal cost curve", "a": "U-shaped" },
+    { "q": "Diminishing returns", "a": "Extra input yields less output" },
+    { "q": "Externality", "a": "Cost/benefit on third parties" },
+    { "q": "Public good", "a": "Nonrival and nonexcludable" },
+    { "q": "Coase theorem", "a": "Private bargaining can solve externalities" },
+    { "q": "Gini coefficient", "a": "Income inequality measure" },
+    { "q": "Marginal revenue", "a": "Change in revenue from one more unit" }
+  ]
+}

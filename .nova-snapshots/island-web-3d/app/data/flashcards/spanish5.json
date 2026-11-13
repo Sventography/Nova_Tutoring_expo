@@ -1,0 +1,25 @@
+{
+  "topic": "Spanish V",
+  "cards": [
+    { "q": "Future perfect formation", "a": "habre, habras, habra, habremos, habreis, habran + participio" },
+    { "q": "Conditional perfect formation", "a": "habria, habrias, habria, habriamos, habriais, habrian + participio" },
+    { "q": "Si clause mixed type example", "a": "Si hubiera estudiado, ahora tendria mejor nota" },
+    { "q": "Subjunctive in adverbial clauses", "a": "A menos que, con tal de que, para que, antes de que" },
+    { "q": "Por vs para nuance", "a": "Para goal/recipient/deadline; por cause/exchange/route" },
+    { "q": "Passive voice with ser", "a": "El libro fue escrito por ella" },
+    { "q": "Se impersonal", "a": "Se vive bien aqui" },
+    { "q": "Reported speech tense shift", "a": "Dijo que iria manana" },
+    { "q": "Subjunctive after emotion", "a": "Me alegra que vengas" },
+    { "q": "Subjunctive after doubt/denial", "a": "Dudo que sea cierto" },
+    { "q": "Relative pronouns advanced", "a": "el cual, la cual, los cuales, cuyo" },
+    { "q": "Accent placement rule", "a": "Vowel n s stress next to last; else last" },
+    { "q": "Archaic future subjunctive note", "a": "Rare in modern Spanish; legal/formulaic" },
+    { "q": "Commands formal Ud", "a": "Hable, coman, escriba" },
+    { "q": "Commands nosotros", "a": "Hablemos, comamos, escribamos" },
+    { "q": "Periphrastic passive", "a": "Se vende casa" },
+    { "q": "Ser vs estar tricky", "a": "Ser essential traits; estar states/locations" },
+    { "q": "Y vs LL pronunciation", "a": "Yeismo common; both sound like y" },
+    { "q": "Regionalism example", "a": "Guagua bus (Caribbean); camion bus (Mexico)" },
+    { "q": "Register shift", "a": "Tuteo vs ustedeo depending on context" }
+  ]
+}

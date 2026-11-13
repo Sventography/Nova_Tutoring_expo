@@ -1,0 +1,25 @@
+{
+  "topic": "AP Physics C: Mechanics",
+  "cards": [
+    { "q": "Kinematics: constant acceleration x(t)", "a": "x = x0 + v0 t + 1/2 a t^2" },
+    { "q": "Kinematics: v^2 relation", "a": "v^2 = v0^2 + 2 a Δx" },
+    { "q": "Newton's Second Law", "a": "ΣF = m a" },
+    { "q": "Weight near Earth", "a": "W = m g" },
+    { "q": "Friction force", "a": "f_s ≤ μ_s N; f_k = μ_k N" },
+    { "q": "Work by constant force", "a": "W = F·d = F d cosθ" },
+    { "q": "Kinetic energy", "a": "K = 1/2 m v^2" },
+    { "q": "Work–energy theorem", "a": "W_net = ΔK" },
+    { "q": "Potential energy (gravity)", "a": "U_g = m g h" },
+    { "q": "Conservation of mechanical energy", "a": "ΔK + ΔU = 0 (no nonconservative work)" },
+    { "q": "Momentum definition", "a": "p = m v" },
+    { "q": "Impulse–momentum", "a": "J = Δp = ∫F dt" },
+    { "q": "Elastic vs inelastic collision", "a": "Elastic conserves K and p; inelastic conserves p only" },
+    { "q": "Center of mass position", "a": "r_cm = Σ m_i r_i / Σ m_i" },
+    { "q": "Torque", "a": "τ = r × F; magnitude r F sinθ" },
+    { "q": "Rotational dynamics", "a": "Στ = I α" },
+    { "q": "Rotational KE", "a": "K_rot = 1/2 I ω^2" },
+    { "q": "Simple harmonic motion", "a": "x = A cos(ωt+φ); ω = √(k/m)" },
+    { "q": "Uniform circular motion a_c", "a": "a_c = v^2 / r = ω^2 r" },
+    { "q": "Gravitational force", "a": "F = G m1 m2 / r^2" }
+  ]
+}

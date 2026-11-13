@@ -1,0 +1,25 @@
+{
+  "topic": "Sociology Basics",
+  "cards": [
+    { "q": "Sociological imagination", "a": "Link personal troubles to public issues" },
+    { "q": "Culture", "a": "Values, norms, symbols, language" },
+    { "q": "Socialization", "a": "Learning culture throughout life" },
+    { "q": "Statuses & roles", "a": "Positions & expected behaviors" },
+    { "q": "Groups vs networks", "a": "Primary/secondary; ties among people" },
+    { "q": "Deviance theory", "a": "Labeling, strain, differential association" },
+    { "q": "Social stratification", "a": "Structured inequality (class, status, power)" },
+    { "q": "Race & ethnicity", "a": "Social constructs with real effects" },
+    { "q": "Gender & sex", "a": "Social roles vs biological traits" },
+    { "q": "Intersectionality", "a": "Overlapping identities/inequalities" },
+    { "q": "Institutions", "a": "Family, education, religion, economy, state" },
+    { "q": "Urbanization", "a": "Growth of cities & effects" },
+    { "q": "Demography", "a": "Study of population changes" },
+    { "q": "Social mobility", "a": "Movement in class position" },
+    { "q": "Globalization", "a": "Worldwide interconnection" },
+    { "q": "Research methods", "a": "Survey, experiment, ethnography" },
+    { "q": "Quant vs qual", "a": "Numeric patterns vs meanings" },
+    { "q": "Sampling", "a": "Select participants to represent" },
+    { "q": "Causality vs correlation", "a": "Cause-effect vs association" },
+    { "q": "Social change", "a": "Shifts in norms/structures over time" }
+  ]
+}

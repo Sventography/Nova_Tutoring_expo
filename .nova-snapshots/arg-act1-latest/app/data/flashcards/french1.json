@@ -1,0 +1,25 @@
+{
+  "topic": "French I",
+  "cards": [
+    { "q": "Say hello and goodbye in French.", "a": "Bonjour; Au revoir." },
+    { "q": "Formal vs informal 'you' in French", "a": "Vous (formal/plural), Tu (informal singular)." },
+    { "q": "French articles (definite & indefinite)", "a": "le, la, les; un, une, des." },
+    { "q": "Make plural (general rule)", "a": "Usually add -s; articles change: le/la → les; un/une → des." },
+    { "q": "Colors: red, blue, green, yellow", "a": "rouge, bleu, vert, jaune." },
+    { "q": "Numbers 1–10", "a": "un, deux, trois, quatre, cinq, six, sept, huit, neuf, dix." },
+    { "q": "Days of the week (Mon→Sun)", "a": "lundi, mardi, mercredi, jeudi, vendredi, samedi, dimanche." },
+    { "q": "Months (Jan→Dec)", "a": "janvier, février, mars, avril, mai, juin, juillet, août, septembre, octobre, novembre, décembre." },
+    { "q": "Present tense of être (to be)", "a": "je suis, tu es, il/elle est, nous sommes, vous êtes, ils/elles sont." },
+    { "q": "Present tense of avoir (to have)", "a": "j’ai, tu as, il/elle a, nous avons, vous avez, ils/elles ont." },
+    { "q": "Present tense of aller (to go)", "a": "je vais, tu vas, il/elle va, nous allons, vous allez, ils/elles vont." },
+    { "q": "Present tense of faire (to do/make)", "a": "je fais, tu fais, il/elle fait, nous faisons, vous faites, ils/elles font." },
+    { "q": "Regular -ER verb endings (present)", "a": "-e, -es, -e, -ons, -ez, -ent." },
+    { "q": "Negation structure", "a": "ne … pas around the verb (e.g., je ne parle pas)." },
+    { "q": "Ask a yes/no question (basic)", "a": "Est-ce que + statement? (e.g., Est-ce que tu vas?)." },
+    { "q": "Common prepositions", "a": "à (to/at), de (of/from), dans (in), sur (on), sous (under), avec (with)." },
+    { "q": "Family words (mom, dad, brother, sister)", "a": "mère, père, frère, sœur." },
+    { "q": "Useful phrases", "a": "S’il vous plaît / S’il te plaît; Merci; Excusez-moi; Je ne comprends pas." },
+    { "q": "How to say 'What time is it?'", "a": "Quelle heure est-il ?" },
+    { "q": "Introduce yourself (example)", "a": "Bonjour, je m’appelle __. Enchanté(e) !" }
+  ]
+}

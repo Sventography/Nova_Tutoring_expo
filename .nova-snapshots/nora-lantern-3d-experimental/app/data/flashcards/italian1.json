@@ -1,0 +1,25 @@
+{
+  "topic": "Italian I",
+  "cards": [
+    { "q": "Greetings", "a": "Ciao, Buongiorno, Buonasera" },
+    { "q": "Please and thank you", "a": "Per favore, Grazie" },
+    { "q": "To be (essere) present", "a": "sono, sei, e, siamo, siete, sono" },
+    { "q": "To have (avere) present", "a": "ho, hai, ha, abbiamo, avete, hanno" },
+    { "q": "Articles definite", "a": "il, lo, l', la, i, gli, le" },
+    { "q": "Articles indefinite", "a": "un, uno, una, un'" },
+    { "q": "Negation", "a": "non + verb (non capisco)" },
+    { "q": "Numbers 1-10", "a": "uno, due, tre, quattro, cinque, sei, sette, otto, nove, dieci" },
+    { "q": "Days of week", "a": "lunedi... domenica" },
+    { "q": "Present tense regular -are", "a": "parlare: parlo, parli, parla, parliamo, parlate, parlano" },
+    { "q": "Present tense regular -ere", "a": "credere: credo, credi, crede, crediamo, credete, credono" },
+    { "q": "Present tense regular -ire", "a": "dormire: dormo, dormi, dorme, dormiamo, dormite, dormono" },
+    { "q": "Near future", "a": "stare per + inf or andare a + inf (informal)" },
+    { "q": "Polite form you", "a": "Lei" },
+    { "q": "Where is...?", "a": "Dov e ...?" },
+    { "q": "I would like ...", "a": "Vorrei ..." },
+    { "q": "How much is it?", "a": "Quanto costa?" },
+    { "q": "Because", "a": "perche" },
+    { "q": "This/that", "a": "questo/questa; quello/quella" },
+    { "q": "Goodbye", "a": "Arrivederci" }
+  ]
+}

@@ -1,0 +1,82 @@
+[
+  {
+    "question": "Ecosystem includes",
+    "answer": "All organisms plus the physical environment"
+  },
+  {
+    "question": "Trophic levels order",
+    "answer": "Producers → primary → secondary → tertiary"
+  },
+  {
+    "question": "Primary productivity measures",
+    "answer": "Rate of biomass production by producers"
+  },
+  {
+    "question": "Nitrogen fixation converts",
+    "answer": "N2 to ammonia/ammonium"
+  },
+  {
+    "question": "Nitrification converts",
+    "answer": "Ammonium to nitrite and nitrate"
+  },
+  {
+    "question": "Denitrification converts",
+    "answer": "Nitrate to N2 gas"
+  },
+  {
+    "question": "Carbon is returned to atmosphere by",
+    "answer": "Respiration and decomposition"
+  },
+  {
+    "question": "Biomagnification refers to",
+    "answer": "Increase of toxins at higher trophic levels"
+  },
+  {
+    "question": "Keystone species effect",
+    "answer": "Disproportionate impact on community structure"
+  },
+  {
+    "question": "Fundamental vs realized niche",
+    "answer": "Potential vs actual conditions occupied"
+  },
+  {
+    "question": "Competitive exclusion principle",
+    "answer": "No two species share identical niche indefinitely"
+  },
+  {
+    "question": "Mutualism definition",
+    "answer": "Both species benefit"
+  },
+  {
+    "question": "Commensalism definition",
+    "answer": "One benefits, other unaffected"
+  },
+  {
+    "question": "Parasitism definition",
+    "answer": "One benefits, host harmed"
+  },
+  {
+    "question": "Primary succession begins on",
+    "answer": "Bare substrate without soil"
+  },
+  {
+    "question": "Secondary succession begins after",
+    "answer": "Disturbance with soil intact"
+  },
+  {
+    "question": "r-selected traits",
+    "answer": "High reproduction, low parental care"
+  },
+  {
+    "question": "K-selected traits",
+    "answer": "Low reproduction, high parental care"
+  },
+  {
+    "question": "Carrying capacity K is",
+    "answer": "Maximum population size environment supports"
+  },
+  {
+    "question": "Edge effects increase",
+    "answer": "Species that thrive at habitat boundaries"
+  }
+]

@@ -1,0 +1,25 @@
+{
+  "topic": "Cognitive Psychology",
+  "cards": [
+    { "q": "Information processing model", "a": "Encode → store → retrieve" },
+    { "q": "Working memory", "a": "Limited capacity (phonological loop, visuospatial sketchpad, CE)" },
+    { "q": "Long-term memory types", "a": "Explicit (episodic/semantic) vs implicit" },
+    { "q": "Encoding strategies", "a": "Elaboration, chunking, mnemonics" },
+    { "q": "Levels of processing", "a": "Deeper semantic → better recall" },
+    { "q": "Forgetting curve", "a": "Ebbinghaus exponential decay" },
+    { "q": "Retrieval cues", "a": "Context/state-dependent effects" },
+    { "q": "Attention models", "a": "Broadbent filter; late selection" },
+    { "q": "Selective attention test", "a": "Dichotic listening; Stroop" },
+    { "q": "Problem solving", "a": "Algorithms vs heuristics" },
+    { "q": "Heuristics biases", "a": "Availability, representativeness, anchoring" },
+    { "q": "Decision theories", "a": "Expected utility, prospect theory" },
+    { "q": "Language components", "a": "Phonology, morphology, syntax, semantics, pragmatics" },
+    { "q": "Whorf hypothesis", "a": "Linguistic relativity" },
+    { "q": "Cognitive development", "a": "Piaget; Vygotsky social scaffolding" },
+    { "q": "Intelligence theories", "a": "g-factor; multiple intelligences" },
+    { "q": "Cognitive load", "a": "Intrinsic, extraneous, germane" },
+    { "q": "Metacognition", "a": "Thinking about one's thinking" },
+    { "q": "Eyewitness memory issues", "a": "Misinformation effect" },
+    { "q": "Neuroimaging tools", "a": "fMRI, EEG for cognition studies" }
+  ]
+}

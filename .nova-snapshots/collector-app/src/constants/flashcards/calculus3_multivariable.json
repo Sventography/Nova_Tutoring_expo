@@ -1,0 +1,82 @@
+[
+  {
+    "question": "Gradient ∇f points toward",
+    "answer": "Direction of greatest increase"
+  },
+  {
+    "question": "Directional derivative D_uf",
+    "answer": "∇f · u"
+  },
+  {
+    "question": "Critical point classification uses",
+    "answer": "Hessian matrix"
+  },
+  {
+    "question": "Double integral meaning",
+    "answer": "Area/volume accumulation over region"
+  },
+  {
+    "question": "Change of variables Jacobian",
+    "answer": "det(∂(x,y)/∂(u,v))"
+  },
+  {
+    "question": "Polar coordinates area element",
+    "answer": "r dr dθ"
+  },
+  {
+    "question": "Cylindrical volume element",
+    "answer": "r dr dθ dz"
+  },
+  {
+    "question": "Spherical volume element",
+    "answer": "ρ^2 sinφ dρ dφ dθ"
+  },
+  {
+    "question": "Line integral of vector field",
+    "answer": "∫ F · dr"
+  },
+  {
+    "question": "Conservative field condition",
+    "answer": "Curl F = 0 on simply connected domain"
+  },
+  {
+    "question": "Green’s theorem",
+    "answer": "∮_C P dx + Q dy = ∬(∂Q/∂x − ∂P/∂y) dA"
+  },
+  {
+    "question": "Stokes’ theorem",
+    "answer": "∮_C F·dr = ∬_S (∇×F)·n dS"
+  },
+  {
+    "question": "Divergence theorem",
+    "answer": "∯_∂V F·n dS = ∭_V ∇·F dV"
+  },
+  {
+    "question": "Lagrange multipliers solve",
+    "answer": "Constrained optimization"
+  },
+  {
+    "question": "Tangent plane equation",
+    "answer": "z − z0 = f_x(x0,y0)(x − x0) + f_y(x0,y0)(y − y0)"
+  },
+  {
+    "question": "Arc length of space curve r(t)",
+    "answer": "∫ ||r'(t)|| dt"
+  },
+  {
+    "question": "Curvature κ",
+    "answer": "||r'×r''||/||r'||^3"
+  },
+  {
+    "question": "Surface integral scalar field",
+    "answer": "∬ f dS"
+  },
+  {
+    "question": "Parametric surface area",
+    "answer": "∬ ||r_u × r_v|| du dv"
+  },
+  {
+    "question": "Jacobian sign meaning",
+    "answer": "Orientation and local scaling"
+  }
+]

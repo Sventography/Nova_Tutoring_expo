@@ -1,0 +1,25 @@
+{
+  "topic": "World History: Industrialization to WWII",
+  "cards": [
+    { "q": "Industrial Revolution origins", "a": "Britain: coal, iron, textiles, steam power" },
+    { "q": "Urbanization effect", "a": "Rapid city growth; factory labor; social challenges" },
+    { "q": "Labor responses", "a": "Unions, strikes, reforms (Factory Acts)" },
+    { "q": "Karl Marx & Friedrich Engels", "a": "Communist Manifesto (1848); class struggle" },
+    { "q": "Meiji Restoration (1868)", "a": "Japan modernized & industrialized" },
+    { "q": "New Imperialism motives", "a": "Markets, raw materials, strategic & national prestige" },
+    { "q": "Scramble for Africa", "a": "Partition shaped by Berlin Conference (1884–85)" },
+    { "q": "WWI underlying causes", "a": "MAIN: Militarism, Alliances, Imperialism, Nationalism" },
+    { "q": "WWI trigger (1914)", "a": "Assassination of Archduke Franz Ferdinand" },
+    { "q": "Total war concept", "a": "Mobilization of entire society for war effort" },
+    { "q": "Treaty of Versailles (1919)", "a": "War guilt on Germany; reparations; League of Nations" },
+    { "q": "Russian Revolutions (1917)", "a": "Tsar abdicates; Bolsheviks seize power" },
+    { "q": "Interwar instability", "a": "Hyperinflation, Great Depression, political extremism" },
+    { "q": "Rise of fascism", "a": "Mussolini in Italy; Hitler in Germany" },
+    { "q": "Appeasement example", "a": "Munich Agreement (1938) over Sudetenland" },
+    { "q": "WWII start in Europe", "a": "Germany invades Poland (1939)" },
+    { "q": "Blitzkrieg strategy", "a": "Fast combined-arms attacks" },
+    { "q": "Turning points", "a": "Stalingrad (Europe), Midway (Pacific)" },
+    { "q": "Holocaust", "a": "Genocide of Jews and other groups by Nazis" },
+    { "q": "WWII end in Asia (1945)", "a": "Atomic bombs on Hiroshima & Nagasaki" }
+  ]
+}

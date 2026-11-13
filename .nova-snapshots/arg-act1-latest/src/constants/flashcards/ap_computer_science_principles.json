@@ -1,0 +1,82 @@
+[
+  {
+    "question": "Abstraction in computing",
+    "answer": "Reducing complexity by hiding detail"
+  },
+  {
+    "question": "Algorithm definition",
+    "answer": "Finite step-by-step process to solve a problem"
+  },
+  {
+    "question": "Binary digits are",
+    "answer": "0 and 1"
+  },
+  {
+    "question": "Lossless compression",
+    "answer": "Perfectly reconstructs original data"
+  },
+  {
+    "question": "Lossy compression",
+    "answer": "Sacrifices data for smaller size"
+  },
+  {
+    "question": "IPv4 address length",
+    "answer": "32 bits"
+  },
+  {
+    "question": "IPv6 address length",
+    "answer": "128 bits"
+  },
+  {
+    "question": "DNS function",
+    "answer": "Maps domain names to IP addresses"
+  },
+  {
+    "question": "Packet switching",
+    "answer": "Data split into packets routed independently"
+  },
+  {
+    "question": "Fault tolerance",
+    "answer": "System continues despite failures"
+  },
+  {
+    "question": "Public key cryptography uses",
+    "answer": "Paired public/private keys"
+  },
+  {
+    "question": "Crowdsourcing leverages",
+    "answer": "Large groups to solve problems"
+  },
+  {
+    "question": "Citizen science involves",
+    "answer": "Public participation in data collection"
+  },
+  {
+    "question": "Big data characteristic",
+    "answer": "High volume, velocity, variety"
+  },
+  {
+    "question": "Overflow error occurs when",
+    "answer": "Value exceeds available bits"
+  },
+  {
+    "question": "Heuristic",
+    "answer": "Approach to find good-enough solutions fast"
+  },
+  {
+    "question": "Undecidable problem",
+    "answer": "No algorithm solves all instances"
+  },
+  {
+    "question": "Linear vs binary search",
+    "answer": "O(n) vs O(log n) on sorted data"
+  },
+  {
+    "question": "API stands for",
+    "answer": "Application Programming Interface"
+  },
+  {
+    "question": "Creative computing means",
+    "answer": "Using computing to create artifacts and expression"
+  }
+]

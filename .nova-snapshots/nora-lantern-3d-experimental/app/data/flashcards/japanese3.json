@@ -1,0 +1,25 @@
+{
+  "topic": "Japanese III",
+  "cards": [
+    { "q": "Causative form (make/let)", "a": "Group 1: u -> a + seru; Group 2: -ru -> -saseru" },
+    { "q": "Passive form", "a": "Group 1: u -> a + reru; Group 2: -ru -> -rareru" },
+    { "q": "Causative-passive", "a": "u -> a + serareru; -ru -> -saserareru (often shortened)" },
+    { "q": "When ... I do ... (toki)", "a": "Clause + toki, ..." },
+    { "q": "While doing ... (nagara)", "a": "Verb masu-stem + nagara" },
+    { "q": "Even if ... (temo)", "a": "V-te mo ..." },
+    { "q": "Because ... (kara / node)", "a": "Clause + kara/node" },
+    { "q": "In order to ... (tame ni)", "a": "V dictionary + tame ni" },
+    { "q": "I think that ... (to omoimasu)", "a": "Clause + to omoimasu" },
+    { "q": "Hearsay (so desu)", "a": "Clause + so desu (I hear that...)" },
+    { "q": "Too much (sugiru)", "a": "Verb/adj stem + sugiru" },
+    { "q": "Try doing (te miru)", "a": "V-te + miru" },
+    { "q": "Have done before (koto ga aru)", "a": "V past + koto ga aru" },
+    { "q": "Make something ... (ni suru)", "a": "Object + o + ni suru" },
+    { "q": "Transitive vs intransitive pair example", "a": "akeru (open something) vs aku (opens)" },
+    { "q": "Potential polite", "a": "V-rare/eru (taberareru, kakeru)" },
+    { "q": "Humble and honorific cues", "a": "itadaku (humble), irassharu (honorific)" },
+    { "q": "Nominalizer no / koto", "a": "Turning verbs/clauses into nouns" },
+    { "q": "Relative clause order", "a": "Modifier clause + noun (no relative pronoun)" },
+    { "q": "Rashii / souda difference", "a": "rashii hearsay/general; souda report/looks like" }
+  ]
+}

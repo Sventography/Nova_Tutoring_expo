@@ -1,0 +1,25 @@
+{
+  "topic": "American Literature Survey",
+  "cards": [
+    { "q": "Colonial sermons", "a": "Jonathan Edwards" },
+    { "q": "Transcendentalists", "a": "Emerson, Thoreau" },
+    { "q": "American Renaissance", "a": "Hawthorne, Melville, Whitman, Dickinson" },
+    { "q": "Realism authors", "a": "Twain, Howells" },
+    { "q": "Naturalism traits", "a": "Determinism; Crane, Dreiser" },
+    { "q": "Harlem Renaissance", "a": "Hughes, Hurston, Cullen" },
+    { "q": "Modernist innovators", "a": "Faulkner, Eliot, Hemingway" },
+    { "q": "Southern Gothic", "a": "O'Connor, Faulkner" },
+    { "q": "Beat Generation", "a": "Ginsberg, Kerouac" },
+    { "q": "Postmodern features", "a": "Metafiction, irony" },
+    { "q": "Regionalism", "a": "Local color writing" },
+    { "q": "Confessional poetry", "a": "Plath, Lowell" },
+    { "q": "Ethnic literatures", "a": "Asian-, Latinx-, Native American voices" },
+    { "q": "Puritan plain style", "a": "Simplicity, religious focus" },
+    { "q": "American drama", "a": "Miller, Williams, Wilson" },
+    { "q": "Slave narratives", "a": "Frederick Douglass, Harriet Jacobs" },
+    { "q": "American romanticism", "a": "Nature, emotions, individual" },
+    { "q": "Minimalism", "a": "Carver's sparse style" },
+    { "q": "Graphic literature", "a": "Spiegelman’s Maus" },
+    { "q": "Contemporary themes", "a": "Identity, migration, technology" }
+  ]
+}

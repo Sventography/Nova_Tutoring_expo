@@ -1,0 +1,25 @@
+{
+  "topic": "Geometry",
+  "cards": [
+    { "q": "Sum of interior angles of a triangle?", "a": "180°" },
+    { "q": "Pythagorean theorem for right triangles?", "a": "a² + b² = c²" },
+    { "q": "Area of a triangle with base b and height h?", "a": "A = ½bh" },
+    { "q": "Area of a circle with radius r?", "a": "A = πr²" },
+    { "q": "Circumference of a circle with radius r?", "a": "C = 2πr" },
+    { "q": "Volume of a rectangular prism (l,w,h)?", "a": "V = lwh" },
+    { "q": "Volume of a cylinder (r,h)?", "a": "V = πr²h" },
+    { "q": "Sum of interior angles of an n-gon?", "a": "(n − 2) × 180°" },
+    { "q": "Measure of each interior angle of a regular n-gon?", "a": "[(n − 2) × 180°] / n" },
+    { "q": "Parallel lines cut by a transversal: corresponding angles are…", "a": "Congruent (equal measure)" },
+    { "q": "Definition of similar triangles", "a": "Same shape (equal angles), proportional sides" },
+    { "q": "Definition of congruent triangles", "a": "Exactly equal in size and shape; all corresponding parts equal" },
+    { "q": "Right triangle special ratios: 45-45-90 legs to hypotenuse", "a": "Legs s, s; hypotenuse s√2" },
+    { "q": "Right triangle special ratios: 30-60-90 (short leg = s)", "a": "Long leg s√3; hypotenuse 2s" },
+    { "q": "Distance formula between (x₁,y₁) and (x₂,y₂)", "a": "√[(x₂−x₁)² + (y₂−y₁)²]" },
+    { "q": "Midpoint formula", "a": "((x₁+x₂)/2, (y₁+y₂)/2)" },
+    { "q": "Slope of a line perpendicular to slope m?", "a": "−1/m (negative reciprocal)" },
+    { "q": "Area of a trapezoid with bases b₁,b₂ and height h", "a": "A = (b₁ + b₂)/2 × h" },
+    { "q": "Surface area of a right cylinder (r,h)", "a": "SA = 2πr² + 2πrh" },
+    { "q": "Definition of a circle’s tangent", "a": "A line touching the circle at one point, perpendicular to the radius there" }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "topic": "Macroeconomics",
+  "cards": [
+    { "q": "GDP components", "a": "Y = C + I + G + NX" },
+    { "q": "Real vs nominal GDP", "a": "Adjusted for prices vs current prices" },
+    { "q": "Unemployment types", "a": "Frictional, structural, cyclical" },
+    { "q": "Inflation measures", "a": "CPI, GDP deflator, PCE" },
+    { "q": "Phillips curve (short-run)", "a": "Inflation–unemployment tradeoff" },
+    { "q": "Natural rate (NAIRU)", "a": "Unemployment with stable inflation" },
+    { "q": "Aggregate demand shifters", "a": "C, I, G, NX changes (confidence, rates, fx)" },
+    { "q": "Aggregate supply (SR/LR)", "a": "SR slopes up; LR vertical at potential" },
+    { "q": "Fiscal policy tools", "a": "Government spending & taxes" },
+    { "q": "Monetary policy tools", "a": "Open market ops, discount rate, reserves" },
+    { "q": "Money supply definitions", "a": "M1 narrow, M2 broader" },
+    { "q": "Multiplier effect", "a": "ΔY ≈ (1/(1−MPC))·ΔSpending" },
+    { "q": "Crowding out", "a": "G ↑ → r ↑ → I ↓ (partial offset)" },
+    { "q": "Exchange rate regimes", "a": "Fixed, floating, managed float" },
+    { "q": "Balance of payments", "a": "Current + capital/financial account" },
+    { "q": "Taylor rule (idea)", "a": "Set policy rate by inflation & gap" },
+    { "q": "Quantitative easing", "a": "Large-scale asset purchases" },
+    { "q": "Stagflation", "a": "High inflation + high unemployment" },
+    { "q": "Okun's law", "a": "Output gap relates to unemployment" },
+    { "q": "Automatic stabilizers", "a": "Taxes/benefits that move with cycle" }
+  ]
+}

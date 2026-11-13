@@ -1,0 +1,129 @@
+{
+  "topics": [
+    {
+      "name": "DevOps & CI/CD",
+      "questions": [
+        {"q": "What does DevOps stand for?", "a": "Development and Operations"},
+        {"q": "What is DevOps?", "a": "Practice combining development and IT operations"},
+        {"q": "What is CI?", "a": "Continuous Integration"},
+        {"q": "What is CD?", "a": "Continuous Delivery/Deployment"},
+        {"q": "What is a pipeline?", "a": "Automated steps for code from commit to deployment"},
+        {"q": "What is Jenkins?", "a": "Popular CI/CD automation tool"},
+        {"q": "What is GitLab CI/CD?", "a": "Integrated CI/CD in GitLab"},
+        {"q": "What is Docker used for?", "a": "Containerization of apps"},
+        {"q": "What is Kubernetes used for?", "a": "Orchestration of containers"},
+        {"q": "What is infrastructure as code?", "a": "Managing infrastructure with scripts/code"},
+        {"q": "What is monitoring in DevOps?", "a": "Tracking system health"},
+        {"q": "What is logging?", "a": "Recording system events"},
+        {"q": "What is rollback?", "a": "Returning to a previous version"},
+        {"q": "What is blue-green deployment?", "a": "Switching between two environments"},
+        {"q": "What is canary deployment?", "a": "Releasing to a small group before everyone"},
+        {"q": "What is automation?", "a": "Using scripts/tools to reduce manual work"},
+        {"q": "What is scalability?", "a": "Ability to handle increased load"},
+        {"q": "What is load balancing?", "a": "Distributing traffic across servers"},
+        {"q": "What is fault tolerance?", "a": "System continues working despite failures"},
+        {"q": "What is high availability?", "a": "System always accessible with minimal downtime"}
+      ]
+    },
+    {
+      "name": "Mobile App Development",
+      "questions": [
+        {"q": "What is Android’s main programming language?", "a": "Java/Kotlin"},
+        {"q": "What is iOS’s main programming language?", "a": "Swift"},
+        {"q": "What is cross-platform development?", "a": "Building apps for multiple platforms"},
+        {"q": "What is React Native?", "a": "Framework for building mobile apps with JavaScript"},
+        {"q": "What is Flutter?", "a": "Google’s UI toolkit for building mobile apps"},
+        {"q": "What is an APK?", "a": "Android application package"},
+        {"q": "What is an IPA?", "a": "iOS application archive"},
+        {"q": "What is a mobile emulator?", "a": "Software that simulates mobile devices"},
+        {"q": "What is the App Store?", "a": "Apple’s app marketplace"},
+        {"q": "What is Google Play?", "a": "Google’s app marketplace"},
+        {"q": "What is responsive design?", "a": "Design adapting to screen size"},
+        {"q": "What is a push notification?", "a": "Message sent from app to user’s device"},
+        {"q": "What is mobile UI/UX?", "a": "Designing user interface and experience"},
+        {"q": "What is an SDK?", "a": "Software Development Kit"},
+        {"q": "What is an API in mobile dev?", "a": "Interface to access system features"},
+        {"q": "What is mobile backend?", "a": "Server side supporting mobile apps"},
+        {"q": "What is offline storage in mobile apps?", "a": "Storing data locally"},
+        {"q": "What is AR in mobile apps?", "a": "Augmented Reality"},
+        {"q": "What is VR in mobile apps?", "a": "Virtual Reality"},
+        {"q": "What is app monetization?", "a": "Making money from apps"}
+      ]
+    },
+    {
+      "name": "Game Development",
+      "questions": [
+        {"q": "What is a game engine?", "a": "Framework for building games"},
+        {"q": "What is Unity?", "a": "Popular cross-platform game engine"},
+        {"q": "What is Unreal Engine?", "a": "High-end game engine"},
+        {"q": "What is 2D game development?", "a": "Creating flat, two-dimensional games"},
+        {"q": "What is 3D game development?", "a": "Creating three-dimensional games"},
+        {"q": "What is a sprite?", "a": "2D image in games"},
+        {"q": "What is physics engine?", "a": "Simulates real-world physics in games"},
+        {"q": "What is AI in games?", "a": "Controls non-player characters"},
+        {"q": "What is multiplayer gaming?", "a": "Multiple players over network"},
+        {"q": "What is cloud gaming?", "a": "Games streamed from servers"},
+        {"q": "What is VR gaming?", "a": "Virtual Reality gaming"},
+        {"q": "What is AR gaming?", "a": "Augmented Reality gaming"},
+        {"q": "What is level design?", "a": "Creating stages or maps in a game"},
+        {"q": "What is game loop?", "a": "Core cycle updating and rendering a game"},
+        {"q": "What is FPS?", "a": "Frames per second"},
+        {"q": "What is NPC?", "a": "Non-Playable Character"},
+        {"q": "What is RPG?", "a": "Role-Playing Game"},
+        {"q": "What is sandbox game?", "a": "Game with open-world exploration"},
+        {"q": "What is indie game?", "a": "Game made by independent developers"},
+        {"q": "What is modding?", "a": "Modifying games by players"}
+      ]
+    },
+    {
+      "name": "Programming Paradigms",
+      "questions": [
+        {"q": "What is a programming paradigm?", "a": "Style or way of programming"},
+        {"q": "What is procedural programming?", "a": "Programming with step-by-step instructions"},
+        {"q": "What is object-oriented programming?", "a": "Programming using classes and objects"},
+        {"q": "What is functional programming?", "a": "Programming using functions as building blocks"},
+        {"q": "What is logic programming?", "a": "Programming based on formal logic"},
+        {"q": "What is declarative programming?", "a": "Programming by describing what to do"},
+        {"q": "What is imperative programming?", "a": "Programming by describing how to do it"},
+        {"q": "What is encapsulation?", "a": "Hiding details inside classes"},
+        {"q": "What is inheritance?", "a": "Deriving new classes from existing ones"},
+        {"q": "What is polymorphism?", "a": "Methods or functions behaving differently"},
+        {"q": "What is recursion?", "a": "Function calling itself"},
+        {"q": "What is immutability?", "a": "Data that cannot be changed"},
+        {"q": "What is a pure function?", "a": "Function with no side effects"},
+        {"q": "What is higher-order function?", "a": "Function that takes or returns another function"},
+        {"q": "What is lazy evaluation?", "a": "Delaying computation until needed"},
+        {"q": "What is concurrency?", "a": "Multiple tasks running in overlapping time"},
+        {"q": "What is parallelism?", "a": "Multiple tasks running simultaneously"},
+        {"q": "What is aspect-oriented programming?", "a": "Programming separating cross-cutting concerns"},
+        {"q": "What is event-driven programming?", "a": "Code reacting to events"},
+        {"q": "What is reactive programming?", "a": "Programming with asynchronous data streams"}
+      ]
+    },
+    {
+      "name": "APIs & Microservices",
+      "questions": [
+        {"q": "What does API stand for?", "a": "Application Programming Interface"},
+        {"q": "What is an API?", "a": "Rules for software to interact"},
+        {"q": "What is REST API?", "a": "API following Representational State Transfer"},
+        {"q": "What is SOAP API?", "a": "Simple Object Access Protocol"},
+        {"q": "What is GraphQL?", "a": "API query language by Facebook"},
+        {"q": "What is a microservice?", "a": "Small independent service in an application"},
+        {"q": "What is monolithic architecture?", "a": "All-in-one application"},
+        {"q": "What is service-oriented architecture?", "a": "System of loosely coupled services"},
+        {"q": "What is an endpoint?", "a": "URL where API can be accessed"},
+        {"q": "What is JSON?", "a": "JavaScript Object Notation for data"},
+        {"q": "What is XML?", "a": "Extensible Markup Language"},
+        {"q": "What is API key?", "a": "Credential to access API"},
+        {"q": "What is OAuth?", "a": "Protocol for authorization"},
+        {"q": "What is rate limiting?", "a": "Restricting number of API requests"},
+        {"q": "What is load balancing in microservices?", "a": "Distributing requests across services"},
+        {"q": "What is containerization?", "a": "Running services in isolated containers"},
+        {"q": "What is service discovery?", "a": "Finding microservices dynamically"},
+        {"q": "What is API gateway?", "a": "Entry point for microservices"},
+        {"q": "What is gRPC?", "a": "High-performance RPC framework"},
+        {"q": "What is serverless API?", "a": "API running without managing servers"}
+      ]
+    }
+  ]
+}
