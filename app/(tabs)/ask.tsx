@@ -191,7 +191,10 @@ function normalizeArgPrompt(value: string): string {
     .replace(/[“”]/g, '"')
     .replace(/[’]/g, "'")
     .replace(/\s+/g, " ")
-    .trim();
+    .trim()
+    // Real players ask questions with punctuation. Keep exact follow-ups
+    // discoverable whether they type "why" or "why?".
+    .replace(/[?!,;:]+$/g, "");
 }
 
 function getCanonicalArgReply(
