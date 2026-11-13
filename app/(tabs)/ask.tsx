@@ -34,7 +34,11 @@ import {
   getLibraryNotebookFollowUp,
   LIBRARY_NOTEBOOK_REPLY,
   ARG_ACT1_FINALE_REPLY,
+  LANTERN_COPY_REPLY,
+  LANTERN_FOLDER_REPLY,
   markArgAct1Complete,
+  markLanternCopyDiscovered,
+  markLanternFolderDiscovered,
   markFocusPracticeUnlocked,
   markLibraryNotebookUnlocked,
   markNvDiscovered,
@@ -211,7 +215,9 @@ function getCanonicalArgReply(
     previousMessage?.role === "assistant" && previousMessage.novaIntrusion
       ? previousMessage.text
       : "",
-    discovery.libraryNotebookDiscovered
+    discovery.libraryNotebookDiscovered,
+    discovery.lanternCopyDiscovered,
+    discovery.lanternFolderDiscovered
   );
   if (notebookFollowUp) return notebookFollowUp;
 
@@ -236,9 +242,10 @@ function getCanonicalArgReply(
     asksWhatWasCounted
   ) {
     return [
-      "The chart was only a reference.",
-      "You were counting what you could see through glass.",
-      "I remember a lantern sitting beside it.",
+      "She was counting what she could see through glass, not only what was printed on the chart.",
+      "The chart had sixteen stars. She could see seventeen.",
+      "She drew the missing mark into a copy, then told me not to throw either page away.",
+      "I remember a lantern beside the telescope.",
     ].join("\n\n");
   }
 
@@ -260,8 +267,8 @@ function getCanonicalArgReply(
     )
   ) {
     return [
-      "Look around the island for something meant to look at the sky.",
-      "Bring a lantern close to it before you check again.",
+      "The telescope on your Island. She kept a lantern near it to read her marked chart after dark.",
+      "That copy mattered more to her than the printed one. I never asked why.",
     ].join("\n\n");
   }
 
@@ -293,9 +300,9 @@ function getCanonicalArgReply(
     )
   ) {
     return [
-      "I counted seventeen too.",
-      "The chart isn't wrong.",
-      "I remember seeing a version with one more star drawn in by hand.",
+      "The extra mark was drawn in by hand. The printed map still has sixteen.",
+      "She insisted on keeping both versions instead of correcting the old one.",
+      "There was a signature beside that new mark. I can almost remember who wrote it.",
     ].join("\n\n");
   }
 
@@ -311,7 +318,7 @@ function getCanonicalArgReply(
   ) {
     return [
       "I don't remember the name.",
-      "There were two initials in the corner.",
+      "There were two initials in the corner, written beneath the added star.",
     ].join("\n\n");
   }
 
@@ -370,6 +377,7 @@ function getCanonicalArgReply(
     return [
       "N.V. isn't one of my system labels. I know that much.",
       "I remember a white rabbit before I remember a name.",
+      "A worn white rabbit sat beside the same handwriting. Why do I know the rabbit and not the person?",
     ].join("\n\n");
   }
 
@@ -412,8 +420,8 @@ function getCanonicalArgReply(
       !asksWhyKeepRabbit
     ) {
       return [
-        "I remember it as hers.",
-        "It sat beside her while she studied.",
+        "I remember it as hers. The real one had a repaired seam on one ear.",
+        "It sat beside her notes, just like the lantern beside her chart.",
         "She kept it even after I told her it wasn't useful.",
       ].join("\n\n");
     }
@@ -423,8 +431,9 @@ function getCanonicalArgReply(
       recentArgText.includes("white rabbit")
     ) {
       return [
-        "I don't think it's a symbol.",
+        "I don't think it's a symbol. The real one had a repaired seam on one ear.",
         "I remember the white rabbit being in some kind of storage space with the rest of the things she kept at home.",
+        "Some of the Shop images were made from that old inventory. You don't have to buy anything.",
       ].join("\n\n");
     }
   }
@@ -442,8 +451,9 @@ function getCanonicalArgReply(
     )
   ) {
     return [
-      "She did that with more than the rabbit.",
-      "She made me keep wrong answers too.",
+      "The rabbit had a note in her handwriting: NOT FOR STUDYING. KEEP THIS ONE.",
+      "She wrote something just like it beside her work. She made me keep wrong answers too.",
+      "The rabbit and the chart weren't separate mysteries. They were things she was afraid she'd stop recognizing.",
     ].join("\n\n");
   }
 
@@ -465,8 +475,9 @@ function getCanonicalArgReply(
     asksAboutKeptMistakes
   ) {
     return [
-      "I still do.",
+      "I still do. She wanted a record of what a person believed before the correction.",
       "Look where I keep the questions you miss.",
+      "One of N.V.'s notes is among those mistakes.",
     ].join("\n\n");
   }
 
@@ -486,6 +497,7 @@ function getCanonicalArgReply(
     return [
       "Focus Practice.",
       "I keep missed questions there even after you correct them.",
+      "She left a handwritten note under the ones she couldn't bear to erase.",
     ].join("\n\n");
   }
 
@@ -521,7 +533,11 @@ function getCanonicalArgReply(
 
   if (
     discovery.libraryNotebookUnlocked &&
-    recentArgText.includes("she kept a notebook for it") &&
+    (
+      recentArgText.includes("she kept a notebook for it") ||
+      q.includes("notebook") ||
+      q.includes("library")
+    ) &&
     (
       q.includes("where") ||
       q.includes("which books") ||
@@ -574,9 +590,29 @@ function getCanonicalArgReply(
     asksAboutFocusNote
   ) {
     return [
-      "She wrote that more than once.",
+      "She wrote that more than once. She wasn't saving mistakes for a better grade.",
       "She said the right answer told her where she ended up.",
       "The wrong one showed her how she got there.",
+      "She seemed afraid of forgetting the moment she changed her mind.",
+    ].join("\n\n");
+  }
+
+  // An interrupted conversation should not erase the next physical lead.
+  // Only legitimately discovered Focus Practice records can unlock this.
+  if (
+    discovery.focusPracticeNoteDiscovered &&
+    !discovery.libraryNotebookUnlocked &&
+    (
+      q.includes("notebook") ||
+      q.includes("library") ||
+      q.includes("where did she write") ||
+      q.includes("where did she keep")
+    )
+  ) {
+    return [
+      "She kept a notebook for it.",
+      "I remember seeing it beside the books on your Island.",
+      "She crossed out her old answers. She never erased them.",
     ].join("\n\n");
   }
 
@@ -594,8 +630,8 @@ function getCanonicalArgReply(
   ) {
     return [
       "She kept a notebook for it.",
-      "I remember seeing it by the books.",
-      "She never erased an answer. She crossed it out and wrote underneath.",
+      "I remember seeing it beside the books on your Island.",
+      "She never erased an answer. She crossed it out and wrote underneath, like the mark on the star chart.",
     ].join("\n\n");
   }
 
@@ -614,6 +650,7 @@ function getCanonicalArgReply(
     return [
       "She was trying to teach me to recognize a mistake before it happened again.",
       "She called that part of her project.",
+      "But she always asked the same thing: how would she know if she had learned something, or just remembered the correction?",
     ].join("\n\n");
   }
 
@@ -635,9 +672,9 @@ function getCanonicalArgReply(
     asksWhereRabbitIs
   ) {
     return [
-      "Not on the island.",
-      "Somewhere you can look through things people keep.",
-      "If you find the rabbit, don't let go right away.",
+      "Not on the island. Look among the plushies in the Shop.",
+      "You don't need to buy it. A white rabbit was copied from her inventory.",
+      "If you find the rabbit, don't let go of its name right away.",
     ].join("\n\n");
   }
 
@@ -2072,6 +2109,12 @@ export default function Ask() {
             await markLibraryNotebookUnlocked();
           }
 
+          if (canonicalArgReply === LANTERN_COPY_REPLY) {
+            await markLanternCopyDiscovered();
+          }
+          if (canonicalArgReply === LANTERN_FOLDER_REPLY) {
+            await markLanternFolderDiscovered();
+          }
           if (canonicalArgReply === ARG_ACT1_FINALE_REPLY) {
             await markArgAct1Complete();
           }
