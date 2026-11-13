@@ -1258,6 +1258,7 @@ export default function IslandScreen() {
     showArgEntryNote,
     setShowArgEntryNote,
   ] = useState(false);
+  const [archiveAvailable, setArchiveAvailable] = useState(false);
   const [
     libraryNotebookUnlocked,
     setLibraryNotebookUnlocked,
@@ -1273,6 +1274,7 @@ export default function IslandScreen() {
       void getArgDiscoveryState().then((state) => {
         if (active) {
           setLibraryNotebookUnlocked(state.libraryNotebookUnlocked);
+          setArchiveAvailable(state.entryNoteDiscovered);
         }
       }).catch(() => {
         if (active) setLibraryNotebookUnlocked(false);
@@ -1999,6 +2001,33 @@ export default function IslandScreen() {
           </View>
         </View>
 
+        {archiveAvailable ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Review recovered notes"
+            onPress={() => router.push("/archive" as any)}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 10,
+              borderWidth: 1,
+              borderColor: "rgba(214,164,71,0.48)",
+              backgroundColor: "rgba(97,58,18,0.16)",
+              borderRadius: 13,
+              paddingHorizontal: 14,
+              paddingVertical: 12,
+              marginBottom: 10,
+            }}
+          >
+            <Ionicons name="document-text-outline" color="#d6a447" size={21} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: "#f2d28b", fontWeight: "900", fontSize: 12, letterSpacing: 0.8 }}>N.V. / RETAINED NOTES</Text>
+              <Text style={{ color: "#d9c5a0", fontSize: 12, marginTop: 3 }}>Pieces of the same story. Review what you've found.</Text>
+            </View>
+            <Ionicons name="chevron-forward" color="#d6a447" size={18}/>
+          </Pressable>
+        ) : null}
+
         <View style={styles.sceneCard}>
           <IslandSceneBoundary onError={() => setSceneInteracting(false)}>
           <NovaIsland3DScene
@@ -2043,7 +2072,7 @@ export default function IslandScreen() {
               openDailyQuests
             }
             onOpenArgEntryNote={() => {
-              void markEntryNoteDiscovered();
+              void markEntryNoteDiscovered().then(() => setArchiveAvailable(true));
               setShowArgEntryNote(true);
             }}
             libraryNotebookUnlocked={libraryNotebookUnlocked}
@@ -2971,11 +3000,11 @@ export default function IslandScreen() {
                 styles.argNoteBody
               }
             >
-              I checked it again before I left.
-              {"\n\n"}The number on the chart still doesn't match what I can see.
-              {"\n\n"}I'm writing this down because tomorrow I'll probably decide I counted wrong and throw this away.
-              {"\n\n"}Don't.
-              {"\n\n"}If I forget why this matters, ask Nova what I was counting.
+              The printed chart says sixteen. I counted seventeen.
+              {"\n\n"}I drew another star on a copy, but I'm leaving the original alone.
+              {"\n\n"}I keep checking because I don't trust what I'll remember tomorrow.
+              {"\n\n"}If I say I made it up, don't let me throw the old page away.
+              {"\n\n"}Ask Nova what I was counting. She was there.
             </Text>
           </View>
         </Pressable>
@@ -2994,10 +3023,11 @@ export default function IslandScreen() {
           <View pointerEvents="none" style={styles.argNoteCard}>
             <View style={styles.argNoteRule} />
             <Text style={styles.argNoteBody}>
-              Second attempt: correct.
-              {"\n\n"}I keep looking at the answer I crossed out.
-              {"\n\n"}I don't remember why it felt so familiar yesterday.
-              {"\n\n"}If I get it right tomorrow, how will I know whether I learned it or just remembered what I wrote?
+              First attempt: wrong.
+              {"\n\n"}Second attempt: correct.
+              {"\n\n"}I know the correction today. I don't remember changing my mind.
+              {"\n\n"}If I erase the first answer, tomorrow I'll think I was always right.
+              {"\n\n"}Please keep both. Not because both answers are right.
               {"\n\n"}Don't erase the first one.
               {"\n\n"}— N.V.
             </Text>
@@ -3045,15 +3075,16 @@ export default function IslandScreen() {
                 styles.seventeenthStarExpected
               }
             >
-              EXPECTED: 16
-              {"\n"}ONE STAR IS NOT ON THE CHART.
+              PRINTED CHART: 16
+              {"\n"}ONE MARK ADDED TO THE COPY BY HAND.
+              {"\n"}TWO INITIALS BENEATH IT.
             </Text>
             <Text
               style={
                 styles.seventeenthStarNova
               }
             >
-              I see it too. I don't remember it being there. - Nova
+              She asked me to leave the original untouched. I didn't understand why. — Nova
             </Text>
           </View>
         </Pressable>
