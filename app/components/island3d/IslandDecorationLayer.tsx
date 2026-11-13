@@ -1,7 +1,7 @@
 // app/components/island3d/IslandDecorationLayer.tsx
 import React, { useMemo, useRef } from "react";
 import { Platform } from "react-native";
-import { useFrame, useThree } from "@react-three/fiber/native";
+import { useFrame, useThree } from "../../../components/islandFiber";
 import * as THREE from "three";
 
 import { useIslandBuilder } from "../../context/IslandBuilderContext";

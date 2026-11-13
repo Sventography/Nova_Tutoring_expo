@@ -806,6 +806,43 @@ function IslandScene({
   );
 }
 
+class IslandSceneBoundary extends React.Component<
+  React.PropsWithChildren<{ onError: () => void }>,
+  { failed: boolean }
+> {
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  componentDidCatch() {
+    this.props.onError();
+  }
+
+  render() {
+    if (!this.state.failed) return this.props.children;
+
+    return (
+      <View style={styles.sceneUnavailable}>
+        <Text accessibilityRole="header" style={styles.sceneUnavailableTitle}>
+          Nova Island needs 3D graphics
+        </Text>
+        <Text style={styles.sceneUnavailableText}>
+          This browser couldn’t start WebGL. Enable hardware acceleration or open Nova Tutoring on your phone to explore the island in 3D.
+        </Text>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => this.setState({ failed: false })}
+          style={styles.refresh}
+        >
+          <Text style={styles.nextText}>Retry 3D</Text>
+        </Pressable>
+      </View>
+    );
+  }
+}
+
 export default function IslandScreen() {
   const { width } = useWindowDimensions();
   const router = useRouter();
@@ -1963,6 +2000,7 @@ export default function IslandScreen() {
         </View>
 
         <View style={styles.sceneCard}>
+          <IslandSceneBoundary onError={() => setSceneInteracting(false)}>
           <NovaIsland3DScene
             height={
               islandBuilder.isEditing
@@ -2162,6 +2200,7 @@ export default function IslandScreen() {
               selectedBuilderPlacementId
             }
           />
+          </IslandSceneBoundary>
 
           <Animated.View
             pointerEvents="none"
@@ -3341,6 +3380,25 @@ const styles = StyleSheet.create({
     backgroundColor: "#07152f",
     marginBottom: 12,
     position: "relative",
+  },
+  sceneUnavailable: {
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 240,
+    gap: 12,
+    padding: 24,
+  },
+  sceneUnavailableTitle: {
+    color: "#f8fafc",
+    fontSize: 20,
+    fontWeight: "800",
+    textAlign: "center",
+  },
+  sceneUnavailableText: {
+    color: "#bae6fd",
+    maxWidth: 380,
+    textAlign: "center",
+    lineHeight: 20,
   },
   scene: {
     width: "100%",
