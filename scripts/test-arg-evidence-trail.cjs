@@ -1,0 +1,25 @@
+"use strict";
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const ts = require(path.join(__dirname, "..", "node_modules", "typescript"));
+const source = fs.readFileSync(path.join(__dirname, "..", "app/_lib/argEvidenceTrail.ts"), "utf8");
+const js = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText;
+const mod = { exports: {} };
+new Function("exports", "module", js)(mod.exports, mod);
+const build = mod.exports.getArgEvidenceTrail;
+const base = { entryNoteDiscovered: false, seventeenthStarDiscovered: false, nvDiscovered: false, whiteRabbitDiscovered: false, focusPracticeNoteDiscovered: false, libraryNotebookDiscovered: false, lanternCopyDiscovered: false, lanternFolderDiscovered: false, argAct1Complete: false };
+assert.equal(build(base).found.length, 0, "ordinary tutoring gets no spoilers");
+const keys = ["entryNoteDiscovered", "seventeenthStarDiscovered", "nvDiscovered", "whiteRabbitDiscovered", "focusPracticeNoteDiscovered", "libraryNotebookDiscovered", "lanternCopyDiscovered", "lanternFolderDiscovered", "argAct1Complete"];
+let state = { ...base };
+keys.forEach((key, i) => {
+  state = { ...state, [key]: true };
+  const route = build(state);
+  assert.equal(route.found.length, i + 1);
+  assert.ok(route.nextQuestion.length > 10);
+  assert.ok(route.nextNudge);
+  if (i !== keys.length - 1) assert.equal(route.completed, false);
+});
+assert.equal(build(state).completed, true);
+assert.ok(build(base).found.every(x => !x.observation.includes("QUIET")));
+console.log("PASS: evidence records accumulate without spoiling future discoveries.");

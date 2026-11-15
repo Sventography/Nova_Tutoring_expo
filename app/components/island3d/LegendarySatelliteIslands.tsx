@@ -1,7 +1,7 @@
 // app/components/island3d/LegendarySatelliteIslands.tsx
 
 import React, { useMemo, useRef } from "react";
-import { useFrame } from "@react-three/fiber/native";
+import { useFrame } from "../../../components/islandFiber";
 import * as THREE from "three";
 
 export type Vec3 = [number, number, number];

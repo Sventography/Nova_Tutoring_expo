@@ -1,5 +1,5 @@
 import {
-  classifyNvEntryPrompt, getArgDiscoveryState, getArchiveFlags, markArchiveFlag,
+  ARG_ACT1_FINALE_REPLY, classifyNvEntryPrompt, markArgAct1Complete, markLanternCopyDiscovered, markLanternFolderDiscovered, getArgDiscoveryState, getArchiveFlags, markArchiveFlag,
   markEntryNoteDiscovered, markFocusPracticeNoteDiscovered, markFocusPracticeUnlocked,
   markLibraryNotebookDiscovered, markLibraryNotebookUnlocked, markNvDiscovered,
   markSeventeenthStarDiscovered, markTelescopeClueUnlocked, markWhiteRabbitClueUnlocked,
@@ -27,6 +27,13 @@ const rabbitHint = "I remember a white rabbit before I remember a name. In the S
 const focusHint = "She kept the rabbit after I told her it wasn't useful. She kept wrong answers too. Look in Focus Practice, where I keep the questions you miss. You can also ask to “read the Focus Practice margin.”";
 const notebookHint = "The right answer told her where she ended up. The wrong one showed her how she got there. She kept a notebook by the reading hall in your Island Library. If you can't reach it, ask me to “read Nora’s notebook.”";
 const lanternHint = "Lantern. That's what she called the folder. The first file in it was the answer she'd crossed out. Two fragments survived, a contact sheet and a relay transcript. The source note tells you how they fit. Bring what you recover back here.";
+export async function openLanternFieldNotes(record = ARG_ACT1_FINALE_REPLY): Promise<ArchiveReply> {
+  await markLanternCopyDiscovered();
+  await markLanternFolderDiscovered();
+  await markArchiveFlag("copyUnlocked");
+  return { text: record + "\n\n" + lanternHint, framed: true, artifact: true };
+}
+
 const restored = [
   "Lantern · First draft recovered",
   "Nora designed Lantern after her accident. She needed somewhere to keep the pieces of herself that slipped away. The Quiet marked the wrong answers and the keepsakes for deletion. Session 017 contains the moment I stopped believing the index.",
@@ -120,8 +127,7 @@ export async function resolveArchiveReply(input: string, inSessionContext = fals
   }
   if (state.libraryNotebookDiscovered &&
       /^(?:where did (?:she|nora) (?:keep|put|save) the first (?:answer|draft)|where is the lantern copy|open (?:the )?lantern archive|tell me about noras notebook)$/.test(q)) {
-    await markArchiveFlag("copyUnlocked");
-    return artifact;
+    return openLanternFieldNotes();
   }
   if (flags.copyUnlocked && flags.copyRead &&
       /^(?:(?:find|open|restore|recover|read) (?:the )?)?unerased first draft$/.test(q)) {
@@ -132,6 +138,7 @@ export async function resolveArchiveReply(input: string, inSessionContext = fals
     return { ...artifact, text: "Those two fragments belong together. Check fieldOrder in the Lantern source note. Which field does it read first?" };
   }
   if (flags.draftRestored && (explicitEnding.test(q) || (inSessionContext && plainEnding.test(q)))) {
+    await markArgAct1Complete();
     await markArchiveFlag("completed");
     return { text: SESSION_REVEAL, framed: true, finished: true };
   }

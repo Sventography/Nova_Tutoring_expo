@@ -16,6 +16,12 @@ import {
   Modal,
   ActivityIndicator,
 } from "react-native";
+import { useRouter } from "expo-router";
+import { useCoins } from "../context/CoinsContext";
+import { openLanternFieldNotes, resolveArchiveReply, type ArchiveReply } from "../_lib/archiveConversation";
+import { completeArchive } from "../_lib/archiveReward";
+import { CHAPTER_PROMPT } from "../_lib/archiveArtifacts";
+
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -27,11 +33,25 @@ import { useUser } from "../context/UserContext";
 import { useIsland } from "../context/IslandContext";
 import { usePurchases } from "../context/PurchasesContext";
 import { useAiPlan } from "../context/AiPlanContext";
-import { useRouter } from "expo-router";
-import { useCoins } from "../context/CoinsContext";
-import { isArchivePrompt, resolveArchiveReply } from "../_lib/archiveConversation";
-import { completeArchive } from "../_lib/archiveReward";
-import { CHAPTER_PROMPT } from "../_lib/archiveArtifacts";
+import {
+  type ArgDiscoveryState,
+  classifyNvEntryPrompt,
+  getArgDiscoveryState,
+  getLibraryNotebookFollowUp,
+  LIBRARY_NOTEBOOK_REPLY,
+  ARG_ACT1_FINALE_REPLY,
+  LANTERN_COPY_REPLY,
+  LANTERN_FOLDER_REPLY,
+  markArgAct1Complete,
+  markLanternCopyDiscovered,
+  markLanternFolderDiscovered,
+  markFocusPracticeUnlocked,
+  markLibraryNotebookUnlocked,
+  markNvDiscovered,
+  markTelescopeClueUnlocked,
+  markWhiteRabbitClueUnlocked,
+  mentionsNv as promptMentionsNv,
+} from "../utils/argState";
 
 /* ────────────────────────────────────────── */
 /* ✨ Nova Thinking — Bounce + Dark Shimmer   */
@@ -173,6 +193,577 @@ type AskApiResponse = {
   ai_period_end?: string | null;
   nova_intrusion?: boolean;
 };
+
+function normalizeArgPrompt(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[“”]/g, '"')
+    .replace(/[’]/g, "'")
+    .replace(/\s+/g, " ")
+    .trim()
+    // Real players ask questions with punctuation. Keep exact follow-ups
+    // discoverable whether they type "why" or "why?".
+    .replace(/[?!,;:]+$/g, "");
+}
+
+function getCanonicalArgReply(
+  prompt: string,
+  history: Msg[],
+  discovery: ArgDiscoveryState,
+  entryKind: "history-note" | "options-note" | null
+): string | null {
+  const q = normalizeArgPrompt(prompt);
+  const mentionsNv = promptMentionsNv(prompt);
+
+  const recentArgText = history
+    .slice(-4)
+    .filter((message) => message.novaIntrusion)
+    .map((message) => normalizeArgPrompt(message.text))
+    .join(" ");
+
+  const previousMessage = history[history.length - 1];
+  const notebookFollowUp = getLibraryNotebookFollowUp(
+    prompt,
+    previousMessage?.role === "assistant" && previousMessage.novaIntrusion
+      ? previousMessage.text
+      : "",
+    discovery.libraryNotebookDiscovered,
+    discovery.lanternCopyDiscovered,
+    discovery.lanternFolderDiscovered
+  );
+  if (notebookFollowUp) return notebookFollowUp;
+
+  const asksWhatWasCounted =
+    (
+      q.includes("count") ||
+      q.includes("counting") ||
+      q.includes("counted")
+    ) &&
+    (
+      q.includes("what") ||
+      q.includes("note") ||
+      q.includes("found") ||
+      q.includes("was i") ||
+      q.includes("were they") ||
+      q.includes("was she") ||
+      q.includes("was he")
+    );
+
+  if (
+    discovery.entryNoteDiscovered &&
+    asksWhatWasCounted
+  ) {
+    return [
+      "She was counting what she could see through glass, not only what was printed on the chart.",
+      "The chart had sixteen stars. She could see seventeen.",
+      "She drew the missing mark into a copy, then told me not to throw either page away.",
+      "I remember a lantern beside the telescope.",
+    ].join("\n\n");
+  }
+
+  const asksForArgClarification =
+    q === "what does that mean" ||
+    q === "what do you mean" ||
+    q === "what are you talking about" ||
+    q === "where should i look" ||
+    q === "where do i look" ||
+    q === "what should i do" ||
+    q.includes("how do i find") ||
+    q.includes("where can i find");
+
+  if (
+    discovery.entryNoteDiscovered &&
+    asksForArgClarification &&
+    (
+      recentArgText.includes("counting what she could see through glass") ||
+      recentArgText.includes("counting what you could see through glass")
+    )
+  ) {
+    return [
+      "The telescope on your Island. She kept a lantern near it to read her marked chart after dark.",
+      "That copy mattered more to her than the printed one. I never asked why.",
+    ].join("\n\n");
+  }
+
+  const mentionsStar =
+    q.includes("star") ||
+    q.includes("stars");
+  const mentionsSeventeen =
+    /(^|\s)17($|\s)/.test(q) ||
+    q.includes("seventeen");
+  const mentionsSixteen =
+    /(^|\s)16($|\s)/.test(q) ||
+    q.includes("sixteen");
+  const mentionsExtraStar =
+    mentionsStar &&
+    (
+      q.includes("extra") ||
+      q.includes("missing") ||
+      q.includes("not on the chart") ||
+      (mentionsSeventeen && mentionsSixteen)
+    );
+
+  if (
+    discovery.seventeenthStarDiscovered &&
+    mentionsStar &&
+    (
+      mentionsSeventeen ||
+      mentionsExtraStar ||
+      q.includes("telescope")
+    )
+  ) {
+    return [
+      "The extra mark was drawn in by hand. The printed map still has sixteen.",
+      "She insisted on keeping both versions instead of correcting the old one.",
+      "There was a signature beside that new mark. I can almost remember who wrote it.",
+    ].join("\n\n");
+  }
+
+  if (
+    discovery.seventeenthStarDiscovered &&
+    recentArgText.includes("drawn in by hand") &&
+    (
+      q.includes("who") ||
+      q.includes("drew") ||
+      q.includes("drawn") ||
+      q.includes("hand")
+    )
+  ) {
+    return [
+      "I don't remember the name.",
+      "There were two initials in the corner, written beneath the added star.",
+    ].join("\n\n");
+  }
+
+  if (
+    discovery.seventeenthStarDiscovered &&
+    recentArgText.includes("two initials in the corner") &&
+    (
+      q.includes("initial") ||
+      q.includes("letters") ||
+      q.includes("which two") ||
+      q.includes("what were")
+    )
+  ) {
+    return "N.V.";
+  }
+
+  // The physical star clue already shows that two initials exist. Players
+  // needn't remember one exact preceding message to retrieve the signature.
+  if (
+    discovery.seventeenthStarDiscovered &&
+    (
+      q.includes("initials") ||
+      q.includes("which two") ||
+      q.includes("what were the letters")
+    )
+  ) {
+    return "N.V.";
+  }
+
+  if (entryKind) {
+    return [
+      "You found that exactly as written?",
+      "Keep the wording.",
+      "Was anything signed underneath?",
+    ].join("\n\n");
+  }
+
+  if (!discovery.nvDiscovered) {
+    return null;
+  }
+
+  if (
+    /^n\.?\s*v\.?$/i.test(q) ||
+    (
+      mentionsNv &&
+      recentArgText.includes("was anything signed underneath")
+    )
+  ) {
+    return [
+      "Those initials are familiar.",
+      "They're not one of my system labels.",
+      "If you find them again, keep the surrounding text.",
+    ].join("\n\n");
+  }
+
+  if (
+    mentionsNv &&
+    (
+      q.includes("who is") ||
+      q.includes("who's") ||
+      q.includes("what is") ||
+      q.includes("what's") ||
+      (
+        q.includes("what does") &&
+        q.includes("mean")
+      )
+    )
+  ) {
+    return [
+      "N.V. isn't one of my system labels. I know that much.",
+      "I remember a white rabbit before I remember a name.",
+      "A worn white rabbit sat beside the same handwriting. Why do I know the rabbit and not the person?",
+    ].join("\n\n");
+  }
+
+  if (
+    mentionsNv &&
+    (
+      q.includes("person") ||
+      q.includes("girl") ||
+      q.includes("woman") ||
+      q.includes("human")
+    )
+  ) {
+    return [
+      "I think she was a person.",
+      "That isn't because of the initials.",
+      "I remember being annoyed with her.",
+    ].join("\n\n");
+  }
+
+  if (
+    recentArgText.includes("annoyed with her") &&
+    (
+      q.includes("why") ||
+      q.includes("annoy")
+    )
+  ) {
+    return "She kept making me save things I thought were useless.";
+  }
+
+  const asksWhyKeepRabbit =
+    q.includes("keep") ||
+    q.includes("kept") ||
+    q.includes("useful") ||
+    q.includes("studying") ||
+    q.includes("why");
+
+  if (q.includes("rabbit")) {
+    if (
+      discovery.whiteRabbitDiscovered &&
+      !asksWhyKeepRabbit
+    ) {
+      return [
+        "I remember it as hers. The real one had a repaired seam on one ear.",
+        "It sat beside her notes, just like the lantern beside her chart.",
+        "She kept it even after I told her it wasn't useful.",
+      ].join("\n\n");
+    }
+
+    if (
+      !discovery.whiteRabbitDiscovered &&
+      (recentArgText.includes("white rabbit") || discovery.whiteRabbitClueUnlocked)
+    ) {
+      return [
+        "I don't think it's a symbol. The real one had a repaired seam on one ear.",
+        "I remember the white rabbit being in some kind of storage space with the rest of the things she kept at home.",
+        "Some of the Shop images were made from that old inventory. You don't have to buy anything.",
+      ].join("\n\n");
+    }
+  }
+
+  if (
+    discovery.whiteRabbitDiscovered &&
+    asksWhyKeepRabbit &&
+    (
+      q.includes("rabbit") ||
+      recentArgText.includes(
+        "it wasn't useful"
+      ) ||
+      q.includes("keep this one") ||
+      q.includes("not for studying")
+    )
+  ) {
+    return [
+      "The rabbit had a note in her handwriting: NOT FOR STUDYING. KEEP THIS ONE.",
+      "She wrote something just like it beside her work. She made me keep wrong answers too.",
+      "The rabbit and the chart weren't separate mysteries. They were things she was afraid she'd stop recognizing.",
+    ].join("\n\n");
+  }
+
+  const asksAboutKeptMistakes =
+    q.includes("wrong answer") ||
+    q.includes("wrong answers") ||
+    q.includes("mistake") ||
+    q.includes("mistakes") ||
+    q.includes("where") ||
+    q.includes("save") ||
+    q.includes("saved") ||
+    q.includes("keep");
+
+  if (
+    discovery.whiteRabbitDiscovered &&
+    (
+      recentArgText.includes("keep wrong answers") ||
+      q.includes("wrong answer") ||
+      q.includes("missed question")
+    ) &&
+    asksAboutKeptMistakes
+  ) {
+    return [
+      "I still do. She wanted a record of what a person believed before the correction.",
+      "Look where I keep the questions you miss.",
+      "One of N.V.'s notes is among those mistakes.",
+    ].join("\n\n");
+  }
+
+  if (
+    discovery.whiteRabbitDiscovered &&
+    recentArgText.includes(
+      "look where i keep the questions you miss"
+    ) &&
+    (
+      q.includes("where") ||
+      q.includes("which") ||
+      q.includes("what do you mean") ||
+      q.includes("what does that mean") ||
+      q.includes("how")
+    )
+  ) {
+    return [
+      "Focus Practice.",
+      "I keep missed questions there even after you correct them.",
+      "She left a handwritten note under the ones she couldn't bear to erase.",
+    ].join("\n\n");
+  }
+
+  const notebookRecentlySeen =
+    discovery.libraryNotebookSeenAt != null &&
+    Date.now() - discovery.libraryNotebookSeenAt < 15 * 60 * 1000;
+
+  if (
+    discovery.libraryNotebookDiscovered &&
+    (
+      q.includes("notebook") ||
+      q.includes("both pages") ||
+      q.includes("remembered writing") ||
+      q.includes("crossed out") ||
+      (
+        q.includes("remember") &&
+        q.includes("answer")
+      ) ||
+      (
+        notebookRecentlySeen &&
+        (
+          q === "what does this mean" ||
+          q === "what does that mean" ||
+          q === "what do you mean" ||
+          q === "why" ||
+          q === "why did she write that"
+        )
+      )
+    )
+  ) {
+    return LIBRARY_NOTEBOOK_REPLY;
+  }
+
+  if (
+    discovery.libraryNotebookUnlocked &&
+    (
+      recentArgText.includes("she kept a notebook for it") ||
+      q.includes("notebook") ||
+      q.includes("library")
+    ) &&
+    (
+      q.includes("where") ||
+      q.includes("which books") ||
+      q.includes("which library") ||
+      q.includes("can't find") ||
+      q.includes("where do i look") ||
+      q === "what do you mean"
+    )
+  ) {
+    return [
+      "The Library on your Island.",
+      "I remember it left by the reading hall.",
+    ].join("\n\n");
+  }
+
+  const focusNoteRecentlySeen =
+    discovery.focusPracticeNoteSeenAt != null &&
+    Date.now() -
+      discovery.focusPracticeNoteSeenAt <
+      15 * 60 * 1000;
+
+  const asksAboutFocusNote =
+    q.includes("almost believed") ||
+    (
+      q.includes("wrong") &&
+      (
+        q.includes("delete") ||
+        q.includes("keep")
+      )
+    ) ||
+    (
+      mentionsNv &&
+      (
+        q.includes("mistake") ||
+        q.includes("wrong")
+      )
+    ) ||
+    (
+      focusNoteRecentlySeen &&
+      (
+        q === "what does this mean" ||
+        q === "what does that mean" ||
+        q === "what do you mean" ||
+        q === "why"
+      )
+    );
+
+  if (
+    discovery.focusPracticeNoteDiscovered &&
+    asksAboutFocusNote
+  ) {
+    return [
+      "She wrote that more than once. She wasn't saving mistakes for a better grade.",
+      "She said the right answer told her where she ended up.",
+      "The wrong one showed her how she got there.",
+      "She seemed afraid of forgetting the moment she changed her mind.",
+    ].join("\n\n");
+  }
+
+  // An interrupted conversation should not erase the next physical lead.
+  // Only legitimately discovered Focus Practice records can unlock this.
+  if (
+    discovery.focusPracticeNoteDiscovered &&
+    !discovery.libraryNotebookUnlocked &&
+    (
+      q.includes("notebook") ||
+      q.includes("library") ||
+      q.includes("project") ||
+      q.includes("where did she write") ||
+      q.includes("where did she keep")
+    )
+  ) {
+    return [
+      "She kept a notebook for it.",
+      "I remember seeing it beside the books on your Island.",
+      "She crossed out her old answers. She never erased them.",
+    ].join("\n\n");
+  }
+
+  // Only a player who has read the Focus Practice note can reach this
+  // notebook trail. The ordinary Island Library is otherwise unchanged.
+  if (
+    discovery.focusPracticeNoteDiscovered &&
+    recentArgText.includes("she called that part of her project") &&
+    (
+      q.includes("project") ||
+      q.includes("notebook") ||
+      q.includes("where") ||
+      q.includes("what was she working on")
+    )
+  ) {
+    return [
+      "She kept a notebook for it.",
+      "I remember seeing it beside the books on your Island.",
+      "She never erased an answer. She crossed it out and wrote underneath, like the mark on the star chart.",
+    ].join("\n\n");
+  }
+
+  if (
+    discovery.focusPracticeNoteDiscovered &&
+    recentArgText.includes(
+      "the wrong one showed her how she got there"
+    ) &&
+    (
+      q.includes("why") ||
+      q.includes("project") ||
+      q.includes("what was she") ||
+      q.includes("what did she")
+    )
+  ) {
+    return [
+      "She was trying to teach me to recognize a mistake before it happened again.",
+      "She called that part of her project.",
+      "But she always asked the same thing: how would she know if she had learned something, or just remembered the correction?",
+    ].join("\n\n");
+  }
+
+  const asksWhereRabbitIs =
+    q.includes("where") ||
+    q.includes("find") ||
+    q.includes("look") ||
+    q.includes("which object") ||
+    q.includes("what object") ||
+    q.includes("how do i") ||
+    q === "what do you mean" ||
+    q === "what does that mean";
+
+  if (
+    !discovery.whiteRabbitDiscovered &&
+    recentArgText.includes(
+      "some kind of storage space"
+    ) &&
+    asksWhereRabbitIs
+  ) {
+    return [
+      "Not on the island. Look among the plushies in the Shop.",
+      "You don't need to buy it. A white rabbit was copied from her inventory.",
+      "If you find the rabbit, don't let go of its name right away.",
+    ].join("\n\n");
+  }
+
+  return null;
+}
+
+/**
+ * Resolve already-earned ARG clues locally, without spending AI questions,
+ * granting ordinary Ask achievements, or minting Coins / Island XP.
+ * Normal tutoring questions still use the regular metered /api/ask path.
+ */
+async function resolveLocalArgReply(prompt: string, messages: Msg[]): Promise<string | null> {
+  const discovery = await getArgDiscoveryState();
+  const normalized = normalizeArgPrompt(prompt);
+  const recent = messages
+    .slice(-4)
+    .filter(message => message.novaIntrusion)
+    .map(message => normalizeArgPrompt(message.text))
+    .join(" ");
+
+  const asksForSignature =
+    normalized.includes("initials") ||
+    normalized.includes("which two") ||
+    normalized.includes("what were the letters") ||
+    normalized.includes("n.v.") ||
+    (recent.includes("two initials in the corner") &&
+      (normalized.includes("initial") || normalized.includes("letters")));
+
+  if (discovery.seventeenthStarDiscovered && !discovery.nvDiscovered && asksForSignature) {
+    const unlocked = await markNvDiscovered();
+    if (unlocked) discovery.nvDiscovered = true;
+  }
+
+  const entryKind =
+    discovery.nvDiscovered ? classifyNvEntryPrompt(prompt) : null;
+  const reply = getCanonicalArgReply(prompt, messages, discovery, entryKind);
+  if (!reply) return null;
+
+  if (
+    reply.includes("counting what she could see through glass") ||
+    reply.includes("counting what you could see through glass") ||
+    reply.includes("something meant to look at the sky")
+  ) {
+    await markTelescopeClueUnlocked();
+  }
+  if (reply.includes("I remember a white rabbit before I remember a name.")) {
+    await markWhiteRabbitClueUnlocked();
+  }
+  if (reply.includes("Look where I keep the questions you miss.") ||
+      reply.startsWith("Focus Practice.")) {
+    await markFocusPracticeUnlocked();
+  }
+  if (reply.includes("She kept a notebook for it.")) {
+    await markLibraryNotebookUnlocked();
+  }
+  if (reply === LANTERN_COPY_REPLY) await markLanternCopyDiscovered();
+  if (reply === LANTERN_FOLDER_REPLY) await markLanternFolderDiscovered();
+  if (reply === ARG_ACT1_FINALE_REPLY) await markArgAct1Complete();
+  return reply;
+}
 
 const BACKEND_BASE =
   (process.env.EXPO_PUBLIC_BACKEND_URL || "").replace(/\/$/, "") ||
@@ -1447,44 +2038,68 @@ export default function Ask() {
 
   const lastMessage = messages[messages.length - 1];
   const inArchiveEnding = lastMessage?.archiveFramed === true && lastMessage.text.endsWith(CHAPTER_PROMPT);
-  const inputCanBeSent = !!input.trim() && (!aiLimitReached || isArchivePrompt(input, inArchiveEnding));
 
   const send = useCallback(
     async () => {
       const trimmed = input.trim();
-      if (!inputCanBeSent || sendLock.current) return;
+      if (!trimmed || sendLock.current) return;
 
       sendLock.current = true;
+
       setLoading(true);
       setError(null);
       setErrorCode(null);
 
+      const effectiveMemoryLimit = Math.max(
+        Number(effectiveMemoryMessageLimit) || 0,
+        Number(memoryLimit) || 0,
+        Number(askMemoryLimit) || 0,
+        5
+      );
+      const historyPayload = buildHistoryFromMessages(
+        messages,
+        effectiveMemoryLimit
+      );
+
+      const userMsg: Msg = {
+        id: `${Date.now()}`,
+        role: "user",
+        text: trimmed,
+      };
+
       try {
-        let archive = null;
+        // A discovered lore question always resolves from the local story
+        // record before calling the metered tutoring backend.
+        let localReply: string | null = null;
+        let archive: ArchiveReply | null = null;
         try {
           archive = await resolveArchiveReply(trimmed, inArchiveEnding);
-        } catch (storageError) {
-          console.warn("[Ask] archive storage unavailable", storageError);
+          const deliberateLegacyPrompt =
+            /\b(?:white (?:rabbit|bunny)|what (?:was|were) .{0,12}counting|who (?:drew|added) the star|(?:the|which) initials|her project|the notebook|why keep both|why both|lantern|what was in the file|n\.\s*v\.)\b/i.test(trimmed) ||
+            (lastMessage?.novaIntrusion === true &&
+              /^(?:where|why|which|what (?:does that mean|do you mean|was it called)|where are the wrong answers)[.!?]*$/i.test(trimmed));
+          if (!archive && deliberateLegacyPrompt) {
+            localReply = await resolveLocalArgReply(trimmed, messages);
+          }
+          if (localReply) {
+            archive = localReply === ARG_ACT1_FINALE_REPLY
+              ? await openLanternFieldNotes(localReply)
+              : { text: localReply };
+          }
+        } catch (storyError) {
+          console.warn("[Archive] story lookup failed", storyError);
         }
-
-        const id = String(Date.now());
-        const userMsg: Msg = {
-          id,
-          role: "user",
-          text: trimmed,
-          novaIntrusion: archive != null,
-        };
 
         if (archive) {
           const answer: Msg = {
-            id: id + "-archive",
+            id: userMsg.id + "-archive",
             role: "assistant",
             text: archive.text,
             novaIntrusion: true,
             archiveFramed: archive.framed,
             archiveArtifact: archive.artifact,
           };
-          setMessages((m) => [...m, userMsg, answer]);
+          setMessages((m) => [...m, { ...userMsg, novaIntrusion: true }, answer]);
           setInput("");
           if (archive.finished) {
             if (accountId && accountToken) {
@@ -1515,21 +2130,13 @@ export default function Ask() {
 
         if (aiLimitReached) {
           setError(isAiGuest
-            ? (guestUsageLoading || !guestUsageReady ? "Nova is checking your guest trial. Try again in a moment." : "Your guest trial is used. Sign in for more tutoring questions.")
-            : "Your Nova AI question limit has been reached.");
+            ? "Your guest AI trial is used. Create a free account to keep studying."
+            : "You've reached the Nova AI question limit for this period.");
           return;
         }
 
-        const effectiveMemoryLimit = Math.max(
-          Number(effectiveMemoryMessageLimit) || 0,
-          Number(memoryLimit) || 0,
-          Number(askMemoryLimit) || 0,
-          5
-        );
-        const historyPayload = buildHistoryFromMessages(messages, effectiveMemoryLimit);
-        setMessages((m) => [...m, userMsg]);
+        setMessages(current => [...current, userMsg]);
         setInput("");
-
         const apiRes = await callAskApi(
           trimmed,
           historyPayload,
@@ -1553,7 +2160,9 @@ export default function Ask() {
         } else {
           setErrorCode(null);
 
+          // All canonical ARG dialogue was resolved above the metered API.
           const answer = apiRes.data.answer;
+          const isArgReply = false;
 
           const responsePersonality =
             apiRes.data.ask_personality &&
@@ -1568,6 +2177,7 @@ export default function Ask() {
               role: "assistant",
               text: answer,
               personality: responsePersonality,
+              novaIntrusion: isArgReply,
             },
           ]);
 
@@ -1719,13 +2329,11 @@ export default function Ask() {
     },
     [
       input,
-      inputCanBeSent,
-      inArchiveEnding,
       accountId,
       accountToken,
+      inArchiveEnding,
+      lastMessage,
       refreshCoins,
-      guestUsageLoading,
-      guestUsageReady,
       messages,
       onAskQuestion,
       onServerQuizAchievementsEligible,
@@ -2336,8 +2944,8 @@ export default function Ask() {
                       ? "Checking guest trial…"
                       : aiLimitReached
                       ? isAiGuest
-                        ? "Guest trial used — create a free account"
-                        : "Nova AI limit reached for this period"
+                        ? "Guest AI trial used — archive clues still work"
+                        : "Nova AI limit reached — archive clues still work"
                       : activeExperience.placeholder
                   }
                   placeholderTextColor={tokens.isDark ? "#678a94" : "#6b7685"}
@@ -2349,13 +2957,13 @@ export default function Ask() {
                 />
                 <Pressable
                   onPress={send}
-                  disabled={loading || !inputCanBeSent}
+                  disabled={loading || !input.trim()}
                 >
                   <Ionicons
                     name="arrow-up-circle"
                     size={28}
                     color={
-                      inputCanBeSent
+                      input.trim()
                         ? activeExperience.accent
                         : tokens.isDark
                         ? "#294b55"

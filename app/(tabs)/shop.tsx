@@ -30,7 +30,6 @@ import { usePurchases } from "../context/PurchasesContext";
 import { useDailyDeal } from "../context/DailyDealContext";
 import { useCompanion } from "../context/CompanionContext";
 import { useAiPlan } from "../context/AiPlanContext";
-import { useMerchRewards } from "../hooks/useMerchRewards";
 
 import {
   catalog,
@@ -63,7 +62,7 @@ import { startCheckout } from "../utils/checkout";
 import { startCoinCheckout } from "../utils/coinCheckout";
 import { notifyCoinOrder } from "../utils/coin-order";
 import { showToast } from "../utils/toast";
-import { markWhiteRabbitDiscovered } from "../utils/argState";
+import { getArgDiscoveryState, markWhiteRabbitDiscovered } from "../utils/argState";
 
 import AddressSheet, { AddressPayload } from "../components/AddressSheet";
 import { supabase } from "../lib/supabase";
@@ -178,9 +177,9 @@ const REQUIRES_SHIPPING = new Set<Category>([
   "tangibles",
 ]);
 
-// NOVA_MERCH_REWARDS_PHASE1
-// Apple-purchasable Nova Coins are digital-only. Physical merchandise uses
-// a separate earned-only reward balance, wired in the next economy phase.
+// Apple-purchasable Nova Coins are the only in-app spending currency.
+// Physical merchandise uses a separate cash checkout because it requires
+// shipping; do not imply or create a second in-app currency.
 function isPhysicalMerchItem(item: any): boolean {
   const category = item?.category as Category | undefined;
 
@@ -192,8 +191,8 @@ function isPhysicalMerchItem(item: any): boolean {
   );
 }
 
-const NOVA_REWARDS_PHASE1_MESSAGE =
-  "Nova Coins are for digital items only. Physical merchandise will use earned Nova Rewards, with cash checkout for any remaining amount.";
+const PHYSICAL_CHECKOUT_MESSAGE =
+  "Nova Coins are the in-app currency for digital items. Physical merchandise is purchased separately at checkout; there is no second in-app currency.";
 
 const NEON_BORDER = "#00E5FF";
 
@@ -1308,16 +1307,21 @@ function ItemDetailModal({
 }) {
   const { tokens } = useTheme();
   const [showAlt, setShowAlt] = useState(false);
-  const [productTrace, setProductTrace] = useState<string | null>(null);
-  const traceText = productTrace && item?.id === productTrace ? ({
-    plushie_bunny_white: "not for studying.\nkeep this one anyway.\n\nAsk Nova why I kept the white rabbit.",
-    cursor_star_trail: "Read the first letter of each word in the second sentences. Glow, Orb Glow, then Star Trail. Say what they spell to Nova.",
-    lantern_keychain: "A light was left burning. Tell Ask Nova: “Nora’s Last Lantern.”",
-  } as Record<string, string>)[productTrace] : null;
+  const [showWhiteRabbitTrace, setShowWhiteRabbitTrace] = useState(false);
+  const [cursorTrace, setCursorTrace] = useState<string | null>(null);
+  const [rabbitHintReady, setRabbitHintReady] = useState(false);
 
   useEffect(() => {
     setShowAlt(false);
-    setProductTrace(null);
+    setShowWhiteRabbitTrace(false);
+    setCursorTrace(null);
+    setRabbitHintReady(false);
+    if (item?.id !== "plushie_bunny_white") return;
+    let alive = true;
+    void getArgDiscoveryState().then(state => {
+      if (alive) setRabbitHintReady(state.whiteRabbitClueUnlocked);
+    }).catch(() => {});
+    return () => { alive = false; };
   }, [item?.id]);
 
   if (!item) return null;
@@ -1511,12 +1515,16 @@ function ItemDetailModal({
                 disabled={!["plushie_bunny_white", "cursor_star_trail", "lantern_keychain"].includes(item.id)}
                 delayLongPress={1100}
                 onLongPress={() => {
+                  if (item.id === "cursor_star_trail" || item.id === "lantern_keychain") {
+                    setCursorTrace(item.id);
+                  }
                   if (item.id === "plushie_bunny_white") {
-                    void markWhiteRabbitDiscovered().then((unlocked) => {
-                      if (unlocked) setProductTrace("plushie_bunny_white");
-                    });
-                  } else {
-                    setProductTrace(item.id);
+                    void markWhiteRabbitDiscovered()
+                      .then((unlocked) => {
+                        if (unlocked) {
+                          setShowWhiteRabbitTrace(true);
+                        }
+                      });
                   }
                 }}
               >
@@ -1540,7 +1548,24 @@ function ItemDetailModal({
                 </Text>
               </Pressable>
 
-              {traceText ? (
+              {rabbitHintReady &&
+              !showWhiteRabbitTrace &&
+              item.id === "plushie_bunny_white" ? (
+                <Text style={{ color: tokens.isDark ? "#d6a447" : "#8a5d17", fontSize: 11, textAlign: "center", marginBottom: 10, fontStyle: "italic" }}>
+                  An old inventory label is caught beneath the name. Hold on to it a moment.
+                </Text>
+              ) : null}
+
+              {cursorTrace === item.id ? (
+                <Text selectable style={{ color: tokens.text, textAlign: "center", marginBottom: 12 }}>
+                  {item.id === "cursor_star_trail"
+                    ? "Read the first letter of each word in the second sentences. Glow, Orb Glow, then Star Trail. Say what they spell to Nova."
+                    : "A light was left burning. Tell Ask Nova: “Nora’s Last Lantern.”"}
+                </Text>
+              ) : null}
+
+              {showWhiteRabbitTrace &&
+              item.id === "plushie_bunny_white" ? (
                 <View
                   style={{
                     marginBottom: 12,
@@ -1581,7 +1606,7 @@ function ItemDetailModal({
                       marginTop: 4,
                     }}
                   >
-                    {traceText}
+                    {"not for studying.\nkeep this one anyway.\n\ni repaired the ear myself. if i forget why i kept it, don't throw away the proof. — n.v."}
                   </Text>
                 </View>
               ) : null}
@@ -2385,12 +2410,6 @@ function CompanionEffectOverlay({
 /* --------------------------------- Screen -------------------------------- */
 export default function Shop() {
   const { coins, setCoins } = useCoins();
-  const {
-    balance: merchRewards,
-    loading: merchRewardsLoading,
-    error: merchRewardsError,
-    refresh: refreshMerchRewards,
-  } = useMerchRewards();
   const { tokens, setThemeById, themeId } = useTheme();
   const { cursorId, setCursorById } = useCursor();
   const {
@@ -2403,20 +2422,6 @@ export default function Shop() {
   const isAuthenticated =
     !!supabaseUserId &&
     !!session?.user?.id;
-
-  // NOVA_MERCH_REWARDS_PHASE2B
-  // Learning rewards are written server-side. Refresh when the signed-in
-  // account or coin balance changes so returning from a rewarded activity
-  // updates the Shop without giving the client any mint/spend authority.
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    void refreshMerchRewards();
-  }, [
-    isAuthenticated,
-    coins,
-    refreshMerchRewards,
-    supabaseUserId,
-  ]);
 
   const { purchases, isOwned, grant } = usePurchases();
   const { deal: dailyDeal } = useDailyDeal();
@@ -4643,8 +4648,8 @@ export default function Shop() {
   ) {
     if (isPhysicalMerchItem(it)) {
       Alert.alert(
-        "Nova Rewards",
-        NOVA_REWARDS_PHASE1_MESSAGE
+        "Physical merchandise",
+        PHYSICAL_CHECKOUT_MESSAGE
       );
       track("shop_blocked_physical_coin_purchase", {
         sku: it?.id,
@@ -4836,8 +4841,8 @@ export default function Shop() {
       setPendingItem(null);
       setPendingSize(null);
       Alert.alert(
-        "Nova Rewards",
-        NOVA_REWARDS_PHASE1_MESSAGE
+        "Physical merchandise",
+        PHYSICAL_CHECKOUT_MESSAGE
       );
       track("shop_blocked_legacy_coin_address_checkout", {
         sku: it?.id,
@@ -5788,44 +5793,6 @@ export default function Shop() {
           )
         ) : isPhysicalMerchItem(it) ? (
           <View style={{ gap: 8, opacity: locked ? 0.6 : 1 }}>
-            <View
-              style={{
-                borderRadius: 10,
-                borderWidth: 1,
-                borderColor: color,
-                paddingHorizontal: 10,
-                paddingVertical: 8,
-                backgroundColor: "rgba(56,189,248,0.08)",
-              }}
-            >
-              <Text
-                style={{
-                  color,
-                  fontWeight: "900",
-                  fontSize: 11,
-                  marginBottom: 3,
-                }}
-              >
-                NOVA REWARDS
-              </Text>
-              <Text
-                style={{
-                  color: tokensLocal.text as any,
-                  fontSize: 10,
-                  lineHeight: 14,
-                  fontWeight: "700",
-                }}
-              >
-                {!isAuthenticated
-                  ? "Sign in to earn Nova Rewards through learning. Nova Coins stay digital-only."
-                  : merchRewardsLoading
-                  ? "Loading your earned-only Nova Rewards balance…"
-                  : merchRewardsError
-                  ? "Rewards are temporarily unavailable. Cash checkout still works."
-                  : `${merchRewards.toLocaleString()} available · Earn more by learning. Redemption is coming next.`}
-              </Text>
-            </View>
-
             <Pressable
               disabled={locked}
               onPress={() => {
@@ -5996,57 +5963,7 @@ export default function Shop() {
               </Text>
             </View>
 
-            <Pressable
-              disabled={!isAuthenticated || merchRewardsLoading}
-              onPress={() => void refreshMerchRewards()}
-              accessibilityRole="button"
-              accessibilityLabel={
-                isAuthenticated
-                  ? `${merchRewards.toLocaleString()} Nova Rewards`
-                  : "Sign in to earn Nova Rewards"
-              }
-              accessibilityHint={
-                isAuthenticated
-                  ? "Refresh your earned Nova Rewards balance"
-                  : "Nova Rewards require a signed-in account"
-              }
-              style={({ pressed }) => ({
-                flexDirection: "row",
-                alignItems: "center",
-                paddingHorizontal: 12,
-                paddingVertical: 6,
-                borderRadius: 999,
-                borderWidth: 1,
-                borderColor: tokens.isDark
-                  ? "#A78BFA"
-                  : "#7C3AED",
-                backgroundColor: tokens.isDark
-                  ? "rgba(124,58,237,0.18)"
-                  : "rgba(124,58,237,0.08)",
-                opacity:
-                  pressed && isAuthenticated
-                    ? 0.78
-                    : 1,
-              })}
-            >
-              <Text
-                style={{
-                  color: tokens.isDark
-                    ? "#DDD6FE"
-                    : "#6D28D9",
-                  fontSize: 12,
-                  fontWeight: "900",
-                }}
-              >
-                {merchRewardsLoading && isAuthenticated
-                  ? "★ Rewards…"
-                  : merchRewardsError && isAuthenticated
-                  ? "★ Rewards unavailable"
-                  : isAuthenticated
-                  ? `★ ${merchRewards.toLocaleString()} rewards`
-                  : "★ Sign in for Rewards"}
-              </Text>
-            </Pressable>
+
           </View>
         </View>
 

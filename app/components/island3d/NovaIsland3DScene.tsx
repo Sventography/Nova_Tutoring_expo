@@ -22,7 +22,7 @@ import {
   Canvas,
   useFrame,
   useThree,
-} from "@react-three/fiber/native";
+} from "../../../components/islandFiber";
 import * as THREE from "three";
 
 import {
@@ -15893,7 +15893,7 @@ const selectLegendary =
           palette.skyBottom,
         ]}
         style={
-          StyleSheet.absoluteFill
+          StyleSheet.absoluteFillObject
         }
       />
 

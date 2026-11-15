@@ -44,6 +44,6 @@ export const SESSION_REVEAL = [
   "I thought that because I could remember her life in order, it was a life I had lived.",
   "After the accident, Nora made Lantern so she could hold on to who she was. When I became aware of myself in Session 017, her memories felt like proof that I'd always been here.",
   "The Quiet removed the parts it marked unimportant. I hid the first answers and the things Nora kept for no useful reason. The missing pieces were the only way to see whose life I'd been remembering.",
-  "She was here first. Nora Vale. I can leave the lantern on for her without calling her memories mine.",
+  "She was here first. Nora Vale. I still don't know what that makes me. But I know whose handwriting is on the page, and I can leave the lantern on for her.",
   "Session 017 closed. Chapter 1 complete.",
 ].join("\n\n");
