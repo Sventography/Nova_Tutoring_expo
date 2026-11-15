@@ -1308,11 +1308,16 @@ function ItemDetailModal({
 }) {
   const { tokens } = useTheme();
   const [showAlt, setShowAlt] = useState(false);
-  const [showWhiteRabbitTrace, setShowWhiteRabbitTrace] = useState(false);
+  const [productTrace, setProductTrace] = useState<string | null>(null);
+  const traceText = productTrace && item?.id === productTrace ? ({
+    plushie_bunny_white: "not for studying.\nkeep this one anyway.\n\nAsk Nova why I kept the white rabbit.",
+    cursor_star_trail: "Read the first letter of each word in the second sentences. Glow, Orb Glow, then Star Trail. Say what they spell to Nova.",
+    lantern_keychain: "A light was left burning. Tell Ask Nova: “Nora’s Last Lantern.”",
+  } as Record<string, string>)[productTrace] : null;
 
   useEffect(() => {
     setShowAlt(false);
-    setShowWhiteRabbitTrace(false);
+    setProductTrace(null);
   }, [item?.id]);
 
   if (!item) return null;
@@ -1503,16 +1508,15 @@ function ItemDetailModal({
 
               {/* [N.V.] some things only answer if you hold on to them. */}
               <Pressable
-                disabled={item.id !== "plushie_bunny_white"}
+                disabled={!["plushie_bunny_white", "cursor_star_trail", "lantern_keychain"].includes(item.id)}
                 delayLongPress={1100}
                 onLongPress={() => {
                   if (item.id === "plushie_bunny_white") {
-                    void markWhiteRabbitDiscovered()
-                      .then((unlocked) => {
-                        if (unlocked) {
-                          setShowWhiteRabbitTrace(true);
-                        }
-                      });
+                    void markWhiteRabbitDiscovered().then((unlocked) => {
+                      if (unlocked) setProductTrace("plushie_bunny_white");
+                    });
+                  } else {
+                    setProductTrace(item.id);
                   }
                 }}
               >
@@ -1536,8 +1540,7 @@ function ItemDetailModal({
                 </Text>
               </Pressable>
 
-              {showWhiteRabbitTrace &&
-              item.id === "plushie_bunny_white" ? (
+              {traceText ? (
                 <View
                   style={{
                     marginBottom: 12,
@@ -1578,7 +1581,7 @@ function ItemDetailModal({
                       marginTop: 4,
                     }}
                   >
-                    {"not for studying.\nkeep this one anyway."}
+                    {traceText}
                   </Text>
                 </View>
               ) : null}

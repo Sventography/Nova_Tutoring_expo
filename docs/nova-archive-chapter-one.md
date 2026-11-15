@@ -1,0 +1,63 @@
+# NOVA//ARCHIVE Chapter 1 release notes
+
+## Playtest the real app
+
+Start as a guest, with an empty installation. In the Shop, hold the Star Trail title for the acrostic hint. Read the second sentence of Glow, Orb Glow, and Star Trail. Ask Nova what the acrostic spells.
+
+| Surface | What the player finds | What they do next |
+| --- | --- | --- |
+| Starlight Garden on the Island | A note about a count that disagrees with a chart | Ask Nova what the writer was counting |
+| Telescope placed within reach of a lantern | 17 stars observed, 16 on the chart | Ask Nova who drew the seventeenth star |
+| Ask Nova | N.V. and a white rabbit | Open White Bunny in the Shop and hold its title |
+| White Bunny trace | N.V. kept things even when they had no use | Ask why she kept the white rabbit and find the Focus Practice margin |
+| Focus Practice margin | Nora wanted to preserve what she almost believed | Ask why and find the Island Library notebook |
+| Library notebook | A crossed-out answer that Nora preserved | Ask where Nora kept the first answer |
+| Lantern Field Notes | A contact sheet, relay transcript, and readable source note | Combine the unindexed stamp with the crossed-out label in source order and ask Nova to find the copy |
+| Ask Nova, framed reply | The recovered first draft and the original uppercase instruction | Enter the exact instruction or ask what Nova got wrong in Session 017 |
+| Session 017 | Nova distinguishes Nora's life from her own awareness | Look for “Session 017 closed. Chapter 1 complete.” Replay from Ask Nova on the same installation |
+
+The Garden note, telescope observation, Focus Practice margin, and Library notebook have readable copies through the commands Nova provides. A player can complete the story on iPhone without app package inspection, collectible purchases, a social login, or an AI question balance. If interrupted, ask “Where did I leave off in the Nova archive?” Keep both of the original physical discovery paths in device QA: the telescope click should still work in the 3D scene, and the rabbit interaction should require the previous clue.
+
+A valid-looking collector QR opens the existing hidden certificate and offers the story entry phrase. Authentication of the actual serial and granting the castle still use the existing collector API gates. A valid regular plushie, a signed-out visitor, repeat scans, and a second account must never gain the #017 castle. First Twenty is a separate reward. It does not grant the castle or consume a QR.
+
+To check the learner experience, open a fresh install and ask normal questions about stars, memory, wrong answers, and rabbits. Then repeat after playtesting the story. Only deliberate clue questions should yield archive replies. Look for absence of ARG alerts or tabs. Verify archive exchanges do not use the AI question allowance or appear in lesson context.
+
+## Social originals to publish on the dedicated Nova Tutoring channels
+
+The app contains the same complete clues, so the posts are optional for players. Publish these as standalone, read-only artifacts with text alternatives. Each should point back to Nova Tutoring and never ask for a QR, username, private message, or personal information.
+
+### Instagram contact sheet
+
+Graphic text, in order:
+
+- 14 · INDEXED · OBSERVED
+- 15 · INDEXED · RECOUNTED
+- 16 · INDEXED · APPROVED
+- 17 · KEPT IN PENCIL · UNERASED
+
+Use a cream or dark-purple observatory contact sheet with the last frame outlined in pencil. Include the four rows verbatim in alt text. Caption:
+
+> Observatory copy / NV-017. The chart listed sixteen. One frame survived in the margin. Put the unindexed stamp beside the crossed-out label from the Lantern relay, then bring what you find back to Ask Nova.
+
+Set `EXPO_PUBLIC_ARCHIVE_INSTAGRAM_POST` to the exact post permalink. The app intentionally accepts a post or reel permalink because a profile link would leave players hunting for the relevant entry.
+
+### Discord relay transcript
+
+Post and pin in a read-only Nova Tutoring relay channel:
+
+> **LANTERN RELAY / NV-017**
+> QUIET [00:16]: Keep the correct answer. Remove the discarded one.
+> N.V. [00:17]: The crossed-out answer stays. I labeled it FIRST DRAFT.
+> LANTERN [00:17]: Copied before the index updated.
+> Bring the recovered material back to Ask Nova. A copy is available in Lantern Field Notes.
+
+Set `EXPO_PUBLIC_ARCHIVE_DISCORD_MESSAGE` to the exact message link. Make the channel and its original message visible to players eligible to use Discord. Direct links appear only in the recovered document, once configured. Visitors unable to open the links can read the complete copies there.
+
+## Release verification
+
+1. Play the complete route on a fresh web profile, an iPhone build, and an Android build. On phones, verify return from field notes, large text, Shop long-press, the original 3D telescope interaction, and scanner-to-certificate routing.
+2. In an isolated database, apply the First Twenty migration. Enable `NOVA_ARCHIVE_REWARDS_ENABLED=true` on the matching test backend. Play through with signed-out and signed-in testers. Replaying Session 017 while signed in should claim once or show the previous receipt. Test accounts 20 and 21 and confirm the twenty-first completion still closes the story without a reward. Verify the balance updates in the app.
+3. Run the collector checks using the existing staging QR workflow, including invalid, already claimed, and non-017 cases. Keep real QR grant switches and archive reward switches independent. The story works with both switches closed.
+4. After these checks, ship the matching web and native release and the backend using the intended environments. The new reward database function is callable by the backend role only. Keep the production reward flag off until the corresponding migration and tests pass there.
+
+Run `node scripts/test-archive-conversation.cjs` for the in-app sequence. It uses the actual clue matcher and serial storage state with a mocked storage adapter.

@@ -65,6 +65,7 @@ import {
   markLibraryNotebookDiscovered,
   markSeventeenthStarDiscovered,
 } from "../utils/argState";
+import { GARDEN_NOTE, NORA_NOTEBOOK } from "../_lib/archiveArtifacts";
 
 const ISLAND_GUIDE_PREFIX =
   "@nova/islandGuide.v2:";
@@ -2932,11 +2933,7 @@ export default function IslandScreen() {
                 styles.argNoteBody
               }
             >
-              I checked it again before I left.
-              {"\n\n"}The number on the chart still doesn't match what I can see.
-              {"\n\n"}I'm writing this down because tomorrow I'll probably decide I counted wrong and throw this away.
-              {"\n\n"}Don't.
-              {"\n\n"}If I forget why this matters, ask Nova what I was counting.
+              {GARDEN_NOTE}
             </Text>
           </View>
         </Pressable>
@@ -2955,12 +2952,7 @@ export default function IslandScreen() {
           <View pointerEvents="none" style={styles.argNoteCard}>
             <View style={styles.argNoteRule} />
             <Text style={styles.argNoteBody}>
-              Second attempt: correct.
-              {"\n\n"}I keep looking at the answer I crossed out.
-              {"\n\n"}I don't remember why it felt so familiar yesterday.
-              {"\n\n"}If I get it right tomorrow, how will I know whether I learned it or just remembered what I wrote?
-              {"\n\n"}Don't erase the first one.
-              {"\n\n"}— N.V.
+              {NORA_NOTEBOOK}
             </Text>
           </View>
         </Pressable>
@@ -3014,7 +3006,8 @@ export default function IslandScreen() {
                 styles.seventeenthStarNova
               }
             >
-              I see it too. I don't remember it being there. - Nova
+              I see it too. I don't remember it being there.
+              {"\n\n"}Ask Nova who drew the seventeenth star.
             </Text>
           </View>
         </Pressable>

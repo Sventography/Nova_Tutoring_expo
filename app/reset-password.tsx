@@ -1,9 +1,8 @@
 // app/reset-password.tsx
 
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -18,19 +17,24 @@ import { useRouter } from "expo-router";
 
 import { useTheme } from "./context/ThemeContext";
 import { useUser } from "./context/UserContext";
+import { useAuthAlert } from "./_lib/useAuthAlert";
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
+  const { alert, feedback } = useAuthAlert();
   const { tokens } = useTheme();
   const { session, updatePassword } = useUser() as any;
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [saving, setSaving] = useState(false);
+  const inFlight = useRef(false);
 
   async function submit() {
+    if (inFlight.current) return;
+
     if (!session?.user?.id) {
-      Alert.alert(
+      alert(
         "Reset link required",
         "Open the newest password-reset email and tap its button again."
       );
@@ -38,7 +42,7 @@ export default function ResetPasswordScreen() {
     }
 
     if (password.length < 8) {
-      Alert.alert(
+      alert(
         "Password too short",
         "Use a password with at least 8 characters."
       );
@@ -46,19 +50,20 @@ export default function ResetPasswordScreen() {
     }
 
     if (password !== confirmPassword) {
-      Alert.alert(
+      alert(
         "Passwords do not match",
         "Enter the same new password in both fields."
       );
       return;
     }
 
+    inFlight.current = true;
     setSaving(true);
 
     try {
       await updatePassword(password);
 
-      Alert.alert(
+      alert(
         "Password updated!",
         "Your new password is ready. You are still signed in on this device.",
         [
@@ -67,14 +72,16 @@ export default function ResetPasswordScreen() {
             onPress: () =>
               (router as any).replace("/(tabs)/account"),
           },
-        ]
+        ],
+        { cancelable: false }
       );
     } catch (error: any) {
-      Alert.alert(
+      alert(
         "Could not update password",
         error?.message || "Please request a new reset email and try again."
       );
     } finally {
+      inFlight.current = false;
       setSaving(false);
     }
   }
@@ -154,6 +161,9 @@ export default function ResetPasswordScreen() {
             <Pressable
               onPress={submit}
               disabled={saving}
+              accessibilityRole="button"
+              accessibilityLabel={saving ? "Updating password" : "Update Password"}
+              accessibilityState={{ disabled: saving, busy: saving }}
               style={[
                 styles.primaryButton,
                 {
@@ -173,6 +183,7 @@ export default function ResetPasswordScreen() {
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
+      {feedback}
     </LinearGradient>
   );
 }

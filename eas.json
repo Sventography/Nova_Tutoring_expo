@@ -16,7 +16,13 @@
     },
     "production": {
       "node": "20.19.4",
-      "environment": "production"
+      "environment": "production",
+      "env": {
+        "EXPO_PUBLIC_COLLECTOR_REDEMPTION_ENABLED": "false",
+        "EXPO_PUBLIC_COLLECTOR_STAGING_MODE": "false",
+        "EXPO_PUBLIC_COLLECTOR_STAGING_WEB_PREVIEW": "false",
+        "EXPO_PUBLIC_NORAS_LANTERN_PREVIEW": "false"
+      }
     }
   }
 }

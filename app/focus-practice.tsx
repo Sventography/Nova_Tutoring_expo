@@ -20,6 +20,7 @@ import {
   getArgDiscoveryState,
   markFocusPracticeNoteDiscovered,
 } from "./utils/argState";
+import { FOCUS_MARGIN } from "./_lib/archiveArtifacts";
 
 const CYAN = "#67e8f9";
 const CARD = "rgba(15,23,42,0.84)";
@@ -298,7 +299,7 @@ export default function FocusPracticeScreen() {
                 fontWeight: "700",
               }}
             >
-              {"don't delete the wrong ones.\ni need to see what i almost believed."}
+              {FOCUS_MARGIN + "\n\nAsk Nova why Nora kept what she almost believed."}
             </Text>
           </View>
         ) : null}

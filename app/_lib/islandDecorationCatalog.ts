@@ -30,7 +30,8 @@ export type IslandDecorationModel =
   | "flower_bed"
   | "star_lantern"
   | "portal"
-  | "fountain";
+  | "fountain"
+  | "noras_last_lantern";
 
 export type IslandDecorationCategory =
   | "path"
@@ -92,6 +93,7 @@ export type IslandDecorationCatalogItem = {
   defaultScale: number;
   minScale: number;
   maxScale: number;
+  collectorOnly?: boolean;
 };
 
 export const ISLAND_DECORATION_CATALOG: IslandDecorationCatalogItem[] = [
@@ -159,6 +161,7 @@ export const ISLAND_DECORATION_CATALOG: IslandDecorationCatalogItem[] = [
   { id: "halloween_witchlight_arch", unlockLevel: 1, title: "Witchlight Arch", shortTitle: "Witchlight Arch", description: "A premium ceremonial arch lit by strange green, violet, and moon-blue magic.", price: 0, previewEmoji: "🧙", accent: "#a3e635", secondaryAccent: "#a855f7", model: "cosmic_arch", category: "fantasy", rarity: "rare", sourceType: "event_premium", sourceLabel: "Premium Event Track", collectionLabel: "Haunted Learning Collection", eventId: "nova-halloween-2026", eventName: "Nova Halloween 2026", exclusivity: "one_time", availableFrom: "2026-09-30", availableUntil: "2026-11-02", shopVisible: false, defaultScale: 1, minScale: 0.6, maxScale: 4 },
   { id: "halloween_phantom_fountain", unlockLevel: 1, title: "Phantom Fountain", shortTitle: "Phantom Fountain", description: "A premium Halloween fountain filled with luminous ghost-blue water.", price: 0, previewEmoji: "💀", accent: "#67e8f9", secondaryAccent: "#c084fc", model: "fountain", category: "water", rarity: "rare", sourceType: "event_premium", sourceLabel: "Premium Event Track", collectionLabel: "Haunted Learning Collection", eventId: "nova-halloween-2026", eventName: "Nova Halloween 2026", exclusivity: "one_time", availableFrom: "2026-09-30", availableUntil: "2026-11-02", shopVisible: false, defaultScale: 1, minScale: 0.7, maxScale: 3.5 },
 
+  { id: "noras_last_lantern_017", unlockLevel: 1, sourceType: "special", sourceLabel: "Collector QR", exclusivity: "one_time", shopVisible: false, title: "Nora's Last Lantern", shortTitle: "Last Lantern", description: "A light kept burning for the one who found the seventeenth star.", price: 0, previewEmoji: "🏰", accent: "#fbbf24", secondaryAccent: "#67e8f9", model: "noras_last_lantern", category: "fantasy", rarity: "rare", collectorOnly: true, defaultScale: 1, minScale: 1, maxScale: 1 },
 ];
 
 export const ISLAND_DECORATION_CATALOG_BY_ID =
@@ -170,6 +173,7 @@ export function isIslandDecorationCoinShopItem(
   item: IslandDecorationCatalogItem
 ): boolean {
   return (
+    item.collectorOnly !== true &&
     item.shopVisible !== false &&
     (item.sourceType ?? "coin_shop") === "coin_shop"
   );

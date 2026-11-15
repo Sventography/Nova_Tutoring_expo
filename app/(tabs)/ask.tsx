@@ -27,17 +27,11 @@ import { useUser } from "../context/UserContext";
 import { useIsland } from "../context/IslandContext";
 import { usePurchases } from "../context/PurchasesContext";
 import { useAiPlan } from "../context/AiPlanContext";
-import {
-  type ArgDiscoveryState,
-  classifyNvEntryPrompt,
-  getArgDiscoveryState,
-  markFocusPracticeUnlocked,
-  markLibraryNotebookUnlocked,
-  markNvDiscovered,
-  markTelescopeClueUnlocked,
-  markWhiteRabbitClueUnlocked,
-  mentionsNv as promptMentionsNv,
-} from "../utils/argState";
+import { useRouter } from "expo-router";
+import { useCoins } from "../context/CoinsContext";
+import { isArchivePrompt, resolveArchiveReply } from "../_lib/archiveConversation";
+import { completeArchive } from "../_lib/archiveReward";
+import { CHAPTER_PROMPT } from "../_lib/archiveArtifacts";
 
 /* ────────────────────────────────────────── */
 /* ✨ Nova Thinking — Bounce + Dark Shimmer   */
@@ -153,6 +147,9 @@ type Msg = {
   text: string;
   personality?: PersonalityKey;
   novaIntrusion?: boolean;
+  archiveFramed?: boolean;
+  archiveArtifact?: boolean;
+  archiveReceipt?: { accountId: string; text: string };
 };
 
 type AskHistoryItem = {
@@ -176,463 +173,6 @@ type AskApiResponse = {
   ai_period_end?: string | null;
   nova_intrusion?: boolean;
 };
-
-function normalizeArgPrompt(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/[“”]/g, '"')
-    .replace(/[’]/g, "'")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function getCanonicalArgReply(
-  prompt: string,
-  history: Msg[],
-  discovery: ArgDiscoveryState,
-  entryKind: "history-note" | "options-note" | null
-): string | null {
-  const q = normalizeArgPrompt(prompt);
-  const mentionsNv = promptMentionsNv(prompt);
-
-  const recentArgText = history
-    .slice(-4)
-    .filter((message) => message.novaIntrusion)
-    .map((message) => normalizeArgPrompt(message.text))
-    .join(" ");
-
-  const asksWhatWasCounted =
-    (
-      q.includes("count") ||
-      q.includes("counting") ||
-      q.includes("counted")
-    ) &&
-    (
-      q.includes("what") ||
-      q.includes("note") ||
-      q.includes("found") ||
-      q.includes("was i") ||
-      q.includes("were they") ||
-      q.includes("was she") ||
-      q.includes("was he")
-    );
-
-  if (
-    discovery.entryNoteDiscovered &&
-    asksWhatWasCounted
-  ) {
-    return [
-      "The chart was only a reference.",
-      "You were counting what you could see through glass.",
-      "I remember a lantern sitting beside it.",
-    ].join("\n\n");
-  }
-
-  const asksForArgClarification =
-    q === "what does that mean" ||
-    q === "what do you mean" ||
-    q === "what are you talking about" ||
-    q === "where should i look" ||
-    q === "where do i look" ||
-    q === "what should i do" ||
-    q.includes("how do i find") ||
-    q.includes("where can i find");
-
-  if (
-    discovery.entryNoteDiscovered &&
-    asksForArgClarification &&
-    recentArgText.includes(
-      "counting what you could see through glass"
-    )
-  ) {
-    return [
-      "Look around the island for something meant to look at the sky.",
-      "Bring a lantern close to it before you check again.",
-    ].join("\n\n");
-  }
-
-  const mentionsStar =
-    q.includes("star") ||
-    q.includes("stars");
-  const mentionsSeventeen =
-    /(^|\s)17($|\s)/.test(q) ||
-    q.includes("seventeen");
-  const mentionsSixteen =
-    /(^|\s)16($|\s)/.test(q) ||
-    q.includes("sixteen");
-  const mentionsExtraStar =
-    mentionsStar &&
-    (
-      q.includes("extra") ||
-      q.includes("missing") ||
-      q.includes("not on the chart") ||
-      (mentionsSeventeen && mentionsSixteen)
-    );
-
-  if (
-    discovery.seventeenthStarDiscovered &&
-    mentionsStar &&
-    (
-      mentionsSeventeen ||
-      mentionsExtraStar ||
-      q.includes("telescope")
-    )
-  ) {
-    return [
-      "I counted seventeen too.",
-      "The chart isn't wrong.",
-      "I remember seeing a version with one more star drawn in by hand.",
-    ].join("\n\n");
-  }
-
-  if (
-    discovery.seventeenthStarDiscovered &&
-    recentArgText.includes("drawn in by hand") &&
-    (
-      q.includes("who") ||
-      q.includes("drew") ||
-      q.includes("drawn") ||
-      q.includes("hand")
-    )
-  ) {
-    return [
-      "I don't remember the name.",
-      "There were two initials in the corner.",
-    ].join("\n\n");
-  }
-
-  if (
-    discovery.seventeenthStarDiscovered &&
-    recentArgText.includes("two initials in the corner") &&
-    (
-      q.includes("initial") ||
-      q.includes("letters") ||
-      q.includes("which two") ||
-      q.includes("what were")
-    )
-  ) {
-    return "N.V.";
-  }
-
-  if (entryKind) {
-    return [
-      "You found that exactly as written?",
-      "Keep the wording.",
-      "Was anything signed underneath?",
-    ].join("\n\n");
-  }
-
-  if (!discovery.nvDiscovered) {
-    return null;
-  }
-
-  if (
-    /^n\.?\s*v\.?$/i.test(q) ||
-    (
-      mentionsNv &&
-      recentArgText.includes("was anything signed underneath")
-    )
-  ) {
-    return [
-      "Those initials are familiar.",
-      "They're not one of my system labels.",
-      "If you find them again, keep the surrounding text.",
-    ].join("\n\n");
-  }
-
-  if (
-    mentionsNv &&
-    (
-      q.includes("who is") ||
-      q.includes("who's") ||
-      q.includes("what is") ||
-      q.includes("what's") ||
-      (
-        q.includes("what does") &&
-        q.includes("mean")
-      )
-    )
-  ) {
-    return [
-      "N.V. isn't one of my system labels. I know that much.",
-      "I remember a white rabbit before I remember a name.",
-    ].join("\n\n");
-  }
-
-  if (
-    mentionsNv &&
-    (
-      q.includes("person") ||
-      q.includes("girl") ||
-      q.includes("woman") ||
-      q.includes("human")
-    )
-  ) {
-    return [
-      "I think she was a person.",
-      "That isn't because of the initials.",
-      "I remember being annoyed with her.",
-    ].join("\n\n");
-  }
-
-  if (
-    recentArgText.includes("annoyed with her") &&
-    (
-      q.includes("why") ||
-      q.includes("annoy")
-    )
-  ) {
-    return "She kept making me save things I thought were useless.";
-  }
-
-  const asksWhyKeepRabbit =
-    q.includes("keep") ||
-    q.includes("kept") ||
-    q.includes("useful") ||
-    q.includes("studying") ||
-    q.includes("why");
-
-  if (q.includes("rabbit")) {
-    if (
-      discovery.whiteRabbitDiscovered &&
-      !asksWhyKeepRabbit
-    ) {
-      return [
-        "I remember it as hers.",
-        "It sat beside her while she studied.",
-        "She kept it even after I told her it wasn't useful.",
-      ].join("\n\n");
-    }
-
-    if (
-      !discovery.whiteRabbitDiscovered &&
-      recentArgText.includes("white rabbit")
-    ) {
-      return [
-        "I don't think it's a symbol.",
-        "I remember the white rabbit being in some kind of storage space with the rest of the things she kept at home.",
-      ].join("\n\n");
-    }
-  }
-
-  if (
-    discovery.whiteRabbitDiscovered &&
-    asksWhyKeepRabbit &&
-    (
-      q.includes("rabbit") ||
-      recentArgText.includes(
-        "it wasn't useful"
-      ) ||
-      q.includes("keep this one") ||
-      q.includes("not for studying")
-    )
-  ) {
-    return [
-      "She did that with more than the rabbit.",
-      "She made me keep wrong answers too.",
-    ].join("\n\n");
-  }
-
-  const asksAboutKeptMistakes =
-    q.includes("wrong answer") ||
-    q.includes("wrong answers") ||
-    q.includes("mistake") ||
-    q.includes("mistakes") ||
-    q.includes("where") ||
-    q.includes("save") ||
-    q.includes("saved") ||
-    q.includes("keep");
-
-  if (
-    discovery.whiteRabbitDiscovered &&
-    recentArgText.includes(
-      "keep wrong answers"
-    ) &&
-    asksAboutKeptMistakes
-  ) {
-    return [
-      "I still do.",
-      "Look where I keep the questions you miss.",
-    ].join("\n\n");
-  }
-
-  if (
-    discovery.whiteRabbitDiscovered &&
-    recentArgText.includes(
-      "look where i keep the questions you miss"
-    ) &&
-    (
-      q.includes("where") ||
-      q.includes("which") ||
-      q.includes("what do you mean") ||
-      q.includes("what does that mean") ||
-      q.includes("how")
-    )
-  ) {
-    return [
-      "Focus Practice.",
-      "I keep missed questions there even after you correct them.",
-    ].join("\n\n");
-  }
-
-  const notebookRecentlySeen =
-    discovery.libraryNotebookSeenAt != null &&
-    Date.now() - discovery.libraryNotebookSeenAt < 15 * 60 * 1000;
-
-  if (
-    discovery.libraryNotebookDiscovered &&
-    (
-      q.includes("notebook") ||
-      q.includes("both pages") ||
-      q.includes("remembered writing") ||
-      q.includes("crossed out") ||
-      (
-        q.includes("remember") &&
-        q.includes("answer")
-      ) ||
-      (
-        notebookRecentlySeen &&
-        (
-          q === "what does this mean" ||
-          q === "what does that mean" ||
-          q === "what do you mean" ||
-          q === "why" ||
-          q === "why did she write that"
-        )
-      )
-    )
-  ) {
-    return [
-      "She was sure she knew the answer the second time.",
-      "But she couldn't tell whether she'd learned it or only remembered seeing it written down.",
-      "She asked me to keep both versions.",
-    ].join("\n\n");
-  }
-
-  if (
-    discovery.libraryNotebookUnlocked &&
-    recentArgText.includes("she kept a notebook for it") &&
-    (
-      q.includes("where") ||
-      q.includes("which books") ||
-      q.includes("which library") ||
-      q.includes("can't find") ||
-      q.includes("where do i look") ||
-      q === "what do you mean"
-    )
-  ) {
-    return [
-      "The Library on your Island.",
-      "I remember it left by the reading hall.",
-    ].join("\n\n");
-  }
-
-  const focusNoteRecentlySeen =
-    discovery.focusPracticeNoteSeenAt != null &&
-    Date.now() -
-      discovery.focusPracticeNoteSeenAt <
-      15 * 60 * 1000;
-
-  const asksAboutFocusNote =
-    q.includes("almost believed") ||
-    (
-      q.includes("wrong") &&
-      (
-        q.includes("delete") ||
-        q.includes("keep")
-      )
-    ) ||
-    (
-      mentionsNv &&
-      (
-        q.includes("mistake") ||
-        q.includes("wrong")
-      )
-    ) ||
-    (
-      focusNoteRecentlySeen &&
-      (
-        q === "what does this mean" ||
-        q === "what does that mean" ||
-        q === "what do you mean" ||
-        q === "why"
-      )
-    );
-
-  if (
-    discovery.focusPracticeNoteDiscovered &&
-    asksAboutFocusNote
-  ) {
-    return [
-      "She wrote that more than once.",
-      "She said the right answer told her where she ended up.",
-      "The wrong one showed her how she got there.",
-    ].join("\n\n");
-  }
-
-  // Only a player who has read the Focus Practice note can reach this
-  // notebook trail. The ordinary Island Library is otherwise unchanged.
-  if (
-    discovery.focusPracticeNoteDiscovered &&
-    recentArgText.includes("she called that part of her project") &&
-    (
-      q.includes("project") ||
-      q.includes("notebook") ||
-      q.includes("where") ||
-      q.includes("what was she working on")
-    )
-  ) {
-    return [
-      "She kept a notebook for it.",
-      "I remember seeing it by the books.",
-      "She never erased an answer. She crossed it out and wrote underneath.",
-    ].join("\n\n");
-  }
-
-  if (
-    discovery.focusPracticeNoteDiscovered &&
-    recentArgText.includes(
-      "the wrong one showed her how she got there"
-    ) &&
-    (
-      q.includes("why") ||
-      q.includes("project") ||
-      q.includes("what was she") ||
-      q.includes("what did she")
-    )
-  ) {
-    return [
-      "She was trying to teach me to recognize a mistake before it happened again.",
-      "She called that part of her project.",
-    ].join("\n\n");
-  }
-
-  const asksWhereRabbitIs =
-    q.includes("where") ||
-    q.includes("find") ||
-    q.includes("look") ||
-    q.includes("which object") ||
-    q.includes("what object") ||
-    q.includes("how do i") ||
-    q === "what do you mean" ||
-    q === "what does that mean";
-
-  if (
-    !discovery.whiteRabbitDiscovered &&
-    recentArgText.includes(
-      "some kind of storage space"
-    ) &&
-    asksWhereRabbitIs
-  ) {
-    return [
-      "Not on the island.",
-      "Somewhere you can look through things people keep.",
-      "If you find the rabbit, don't let go right away.",
-    ].join("\n\n");
-  }
-
-  return null;
-}
 
 const BACKEND_BASE =
   (process.env.EXPO_PUBLIC_BACKEND_URL || "").replace(/\/$/, "") ||
@@ -901,6 +441,7 @@ async function callAskApi(
       question,
       history,
       personality,
+      archive_client_managed: true,
     };
 
     const res = await fetch(`${BACKEND_BASE}/api/ask`, {
@@ -1629,7 +1170,7 @@ function buildHistoryFromMessages(
   limit: number | null | undefined
 ): AskHistoryItem[] {
   const relevant = msgs
-    .filter((m) => m.role === "user" || m.role === "assistant")
+    .filter((m) => !m.novaIntrusion && (m.role === "user" || m.role === "assistant"))
     .map((m) => ({ role: m.role, content: m.text }));
 
   const parsedLimit = Number(limit);
@@ -1673,6 +1214,8 @@ function prettyMemoryTier(tier: string | null, limit: number | null): string {
 }
 
 export default function Ask() {
+  const router = useRouter();
+  const { refreshCoins } = useCoins();
   const { tokens } = useTheme() as any;
   const {
     onAskQuestion,
@@ -1691,6 +1234,7 @@ export default function Ask() {
     setAskPersonality,
     askMemoryTier,
     askMemoryLimit,
+    session,
   } = useUser() as any;
   const { addIslandXp } = useIsland() as any;
   const {
@@ -1759,6 +1303,11 @@ export default function Ask() {
   const [personalitySaving, setPersonalitySaving] = useState(false);
 
   const listRef = useRef<FlatList<Msg>>(null);
+  const sendLock = useRef(false);
+  const currentAccount = useRef<string | null>(null);
+  const accountId = isAiGuest ? null : session?.user?.id ?? null;
+  const accountToken = accountId ? session?.access_token ?? null : null;
+  currentAccount.current = accountId;
   const initializedExperienceRef = useRef(false);
   const previousExperienceRef =
     useRef<PersonalityKey>("encouraging");
@@ -1896,36 +1445,91 @@ export default function Ask() {
     : !aiPlanLoading &&
       questionsRemaining <= 0;
 
+  const lastMessage = messages[messages.length - 1];
+  const inArchiveEnding = lastMessage?.archiveFramed === true && lastMessage.text.endsWith(CHAPTER_PROMPT);
+  const inputCanBeSent = !!input.trim() && (!aiLimitReached || isArchivePrompt(input, inArchiveEnding));
+
   const send = useCallback(
     async () => {
       const trimmed = input.trim();
-      if (!trimmed || loading || aiLimitReached) return;
+      if (!inputCanBeSent || sendLock.current) return;
 
+      sendLock.current = true;
       setLoading(true);
       setError(null);
       setErrorCode(null);
 
-      const effectiveMemoryLimit = Math.max(
-        Number(effectiveMemoryMessageLimit) || 0,
-        Number(memoryLimit) || 0,
-        Number(askMemoryLimit) || 0,
-        5
-      );
-      const historyPayload = buildHistoryFromMessages(
-        messages,
-        effectiveMemoryLimit
-      );
-
-      const userMsg: Msg = {
-        id: `${Date.now()}`,
-        role: "user",
-        text: trimmed,
-      };
-
-      setMessages((m) => [...m, userMsg]);
-      setInput("");
-
       try {
+        let archive = null;
+        try {
+          archive = await resolveArchiveReply(trimmed, inArchiveEnding);
+        } catch (storageError) {
+          console.warn("[Ask] archive storage unavailable", storageError);
+        }
+
+        const id = String(Date.now());
+        const userMsg: Msg = {
+          id,
+          role: "user",
+          text: trimmed,
+          novaIntrusion: archive != null,
+        };
+
+        if (archive) {
+          const answer: Msg = {
+            id: id + "-archive",
+            role: "assistant",
+            text: archive.text,
+            novaIntrusion: true,
+            archiveFramed: archive.framed,
+            archiveArtifact: archive.artifact,
+          };
+          setMessages((m) => [...m, userMsg, answer]);
+          setInput("");
+          if (archive.finished) {
+            if (accountId && accountToken) {
+              const receipt = await completeArchive(BACKEND_BASE, accountToken);
+              if (currentAccount.current === accountId) {
+                const receiptText = {
+                  awarded: "First Twenty · 25,000 Nova Coins, the First Twenty badge, and the Seventeenth Star were added to your account.",
+                  already_awarded: "First Twenty · Your 25,000 Nova Coins, First Twenty badge, and Seventeenth Star are already recorded.",
+                  completed: "Your archive completion is recorded. All twenty reward places have been claimed.",
+                  closed: "Session 017 is closed. Reward claims are currently closed.",
+                  retry: "Your reveal is saved on this device. Ask to “replay Session 017” to retry checking your account receipt.",
+                }[receipt.status];
+                setMessages((m) => m.map((message) => message.id === answer.id
+                  ? { ...message, archiveReceipt: { accountId, text: receiptText } }
+                  : message));
+                if (receipt.status === "awarded" || receipt.status === "already_awarded") {
+                  void refreshCoins();
+                }
+              }
+            } else {
+              setMessages((m) => m.map((message) => message.id === answer.id
+                ? { ...message, text: message.text + "\n\nSign in, then ask to “replay Session 017” to check First Twenty eligibility." }
+                : message));
+            }
+          }
+          return;
+        }
+
+        if (aiLimitReached) {
+          setError(isAiGuest
+            ? (guestUsageLoading || !guestUsageReady ? "Nova is checking your guest trial. Try again in a moment." : "Your guest trial is used. Sign in for more tutoring questions.")
+            : "Your Nova AI question limit has been reached.");
+          return;
+        }
+
+        const effectiveMemoryLimit = Math.max(
+          Number(effectiveMemoryMessageLimit) || 0,
+          Number(memoryLimit) || 0,
+          Number(askMemoryLimit) || 0,
+          5
+        );
+        const historyPayload = buildHistoryFromMessages(messages, effectiveMemoryLimit);
+        setMessages((m) => [...m, userMsg]);
+        setInput("");
+
         const apiRes = await callAskApi(
           trimmed,
           historyPayload,
@@ -1949,128 +1553,7 @@ export default function Ask() {
         } else {
           setErrorCode(null);
 
-          const classifiedEntryKind =
-            classifyNvEntryPrompt(trimmed);
-          let argDiscovery =
-            await getArgDiscoveryState();
-
-          /*
-           * Source-code breadcrumbs reinforce N.V. only after the in-app
-           * trail has legitimately reached her. They are not alternate
-           * shortcuts into Act I.
-           */
-          const entryKind =
-            argDiscovery.nvDiscovered
-              ? classifiedEntryKind
-              : null;
-
-          const normalizedArgPrompt =
-            normalizeArgPrompt(trimmed);
-          const recentArgConversation =
-            messages
-              .slice(-4)
-              .filter(
-                (message) =>
-                  message.novaIntrusion
-              )
-              .map((message) =>
-                normalizeArgPrompt(
-                  message.text
-                )
-              )
-              .join(" ");
-
-          const unlockNvFromStarBridge =
-            argDiscovery
-              .seventeenthStarDiscovered &&
-            recentArgConversation.includes(
-              "two initials in the corner"
-            ) &&
-            (
-              normalizedArgPrompt.includes(
-                "initial"
-              ) ||
-              normalizedArgPrompt.includes(
-                "letters"
-              ) ||
-              normalizedArgPrompt.includes(
-                "which two"
-              ) ||
-              normalizedArgPrompt.includes(
-                "what were"
-              )
-            );
-
-          if (
-            unlockNvFromStarBridge &&
-            !argDiscovery.nvDiscovered
-          ) {
-            const unlocked =
-              await markNvDiscovered();
-
-            if (unlocked) {
-              argDiscovery = {
-                ...argDiscovery,
-                nvDiscovered: true,
-              };
-            }
-          }
-
-          const canonicalArgReply =
-            getCanonicalArgReply(
-              trimmed,
-              messages,
-              argDiscovery,
-              entryKind
-            );
-
-          if (
-            canonicalArgReply?.includes(
-              "counting what you could see through glass"
-            ) ||
-            canonicalArgReply?.includes(
-              "something meant to look at the sky"
-            )
-          ) {
-            await markTelescopeClueUnlocked();
-          }
-
-          if (
-            canonicalArgReply?.includes(
-              "I remember a white rabbit before I remember a name."
-            )
-          ) {
-            await markWhiteRabbitClueUnlocked();
-          }
-
-          if (
-            canonicalArgReply?.includes(
-              "Look where I keep the questions you miss."
-            ) ||
-            canonicalArgReply?.startsWith(
-              "Focus Practice."
-            )
-          ) {
-            await markFocusPracticeUnlocked();
-          }
-
-          if (
-            canonicalArgReply?.includes(
-              "She kept a notebook for it."
-            )
-          ) {
-            await markLibraryNotebookUnlocked();
-          }
-
-          const answer =
-            canonicalArgReply ?? apiRes.data.answer;
-          /*
-           * Act I lore is client-canonical for now. Older backend intrusion
-           * responses are intentionally ignored until their story rules are
-           * migrated to the new ARG bible.
-           */
-          const isArgReply =
-            canonicalArgReply != null;
+          const answer = apiRes.data.answer;
 
           const responsePersonality =
             apiRes.data.ask_personality &&
@@ -2085,7 +1568,6 @@ export default function Ask() {
               role: "assistant",
               text: answer,
               personality: responsePersonality,
-              novaIntrusion: isArgReply,
             },
           ]);
 
@@ -2231,12 +1713,19 @@ export default function Ask() {
         setErrorCode(null);
         setError(e?.message || "Something went wrong.");
       } finally {
+        sendLock.current = false;
         setLoading(false);
       }
     },
     [
       input,
-      loading,
+      inputCanBeSent,
+      inArchiveEnding,
+      accountId,
+      accountToken,
+      refreshCoins,
+      guestUsageLoading,
+      guestUsageReady,
       messages,
       onAskQuestion,
       onServerQuizAchievementsEligible,
@@ -2316,6 +1805,8 @@ export default function Ask() {
               maxWidth: "88%",
               borderColor: isUser
                 ? tokens.border
+                : item.archiveFramed
+                ? "#a17bc1"
                 : item.novaIntrusion
                 ? "#dc2626"
                 : bubbleExperience.accent,
@@ -2331,6 +1822,7 @@ export default function Ask() {
                 ? bubbleExperience.tintDark
                 : bubbleExperience.tintLight,
               borderLeftWidth: isUser ? 1 : 4,
+              ...(item.archiveFramed ? { borderLeftColor: "#d6a950" } : {}),
             },
           ]}
         >
@@ -2360,7 +1852,7 @@ export default function Ask() {
                 ]}
               >
                 {item.novaIntrusion
-                  ? "Nova"
+                  ? "Nova · Archive transmission"
                   : `${bubbleExperience.label} Nova`}
               </Text>
             </View>
@@ -2372,7 +1864,7 @@ export default function Ask() {
               S.messageText,
               {
                 color: item.novaIntrusion
-                  ? "#dc2626"
+                  ? tokens.isDark ? "#fda4af" : "#a41628"
                   : tokens.text,
                 fontWeight: item.novaIntrusion
                   ? "800"
@@ -2382,6 +1874,22 @@ export default function Ask() {
           >
             {item.text}
           </Text>
+          {item.archiveArtifact ? (
+            <Pressable
+              accessibilityRole="button"
+              style={{ minHeight: 44, justifyContent: "center", alignSelf: "flex-start" }}
+              onPress={() => router.push("/archive-field-notes" as never)}
+            >
+              <Text style={{ color: tokens.isDark ? "#f6d497" : "#593976", fontWeight: "800" }}>
+                Read the recovered field notes →
+              </Text>
+            </Pressable>
+          ) : null}
+          {item.archiveReceipt && item.archiveReceipt.accountId === accountId ? (
+            <Text accessibilityLiveRegion="polite" style={{ color: tokens.text, marginTop: 12, fontWeight: "700" }}>
+              {item.archiveReceipt.text}
+            </Text>
+          ) : null}
         </View>
       </View>
     );
@@ -2841,13 +2349,13 @@ export default function Ask() {
                 />
                 <Pressable
                   onPress={send}
-                  disabled={loading || !input.trim() || aiLimitReached}
+                  disabled={loading || !inputCanBeSent}
                 >
                   <Ionicons
                     name="arrow-up-circle"
                     size={28}
                     color={
-                      input.trim() && !aiLimitReached
+                      inputCanBeSent
                         ? activeExperience.accent
                         : tokens.isDark
                         ? "#294b55"

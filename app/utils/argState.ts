@@ -169,6 +169,59 @@ export function mentionsNv(value: string): boolean {
   return normalizedMentionsNv(normalize(value));
 }
 
+export const LIBRARY_NOTEBOOK_REPLY = [
+  "She was sure she knew the answer the second time.",
+  "But she couldn't tell whether she'd learned it or only remembered seeing it written down.",
+  "She asked me to keep both versions.",
+].join("\n\n");
+
+const LANTERN_COPY_REPLY = [
+  "The second answer was easy to keep. It was already in the book.",
+  "She wanted somewhere to put the first one, where it wouldn't get replaced the next time she opened the page.",
+  "She made a copy somewhere else.",
+].join("\n\n");
+
+export function getLibraryNotebookFollowUp(
+  prompt: string,
+  previousReply: string,
+  notebookDiscovered: boolean
+): string | null {
+  if (!notebookDiscovered) return null;
+
+  const question = normalize(prompt);
+  const tokens = question.split(" ");
+  const aboutKeeping = hasConcept(tokens, ["keep", "kept", "save", "saved", "preserve", "retain"]);
+  const aboutBoth = hasConcept(tokens, ["both", "first", "original", "crossed"]);
+  const aboutAnswers = hasConcept(tokens, ["answer", "version", "page", "notebook"]);
+  const asksWhy = tokens.includes("why");
+  const asksWhere = tokens.includes("where");
+  const asksAboutCopy = hasConcept(tokens, ["copy", "copied", "backup", "file"]);
+
+  if (
+    previousReply === LANTERN_COPY_REPLY &&
+    (question === "where" || question === "where else" || question === "what was it called" ||
+      (asksWhere && (asksAboutCopy || aboutKeeping || tokens.includes("put"))) ||
+      (asksAboutCopy && hasConcept(tokens, ["called", "name", "found", "went"])))
+  ) {
+    return [
+      "Lantern. That's what she called the folder.",
+      "The first file in it was the answer she'd crossed out.",
+      "I remember her writing it. I couldn't tell you what the question was.",
+    ].join("\n\n");
+  }
+
+  if (
+    (asksWhy && aboutKeeping && aboutBoth &&
+      (aboutAnswers || previousReply === LIBRARY_NOTEBOOK_REPLY)) ||
+    (previousReply === LIBRARY_NOTEBOOK_REPLY &&
+      (question === "why" || question === "why both" || question === "what happened to them"))
+  ) {
+    return LANTERN_COPY_REPLY;
+  }
+
+  return null;
+}
+
 export async function getArgDiscoveryState(): Promise<ArgDiscoveryState> {
   const pairs = await AsyncStorage.multiGet([
     ARG_NV_DISCOVERED_KEY,
@@ -404,4 +457,28 @@ export async function markLibraryNotebookDiscovered(): Promise<boolean> {
     String(Date.now())
   );
   return true;
+}
+
+const ARCHIVE_KEYS = {
+  introduced: "@nova/arg/intro.v1",
+  copyUnlocked: "@nova/arg/lantern-copy.v1",
+  copyRead: "@nova/arg/lantern-copy-read.v1",
+  draftRestored: "@nova/arg/first-draft.v1",
+  completed: "@nova/arg/session-017-closed.v1",
+} as const;
+type ArchiveFlag = keyof typeof ARCHIVE_KEYS;
+
+export async function getArchiveFlags() {
+  const pairs = new Map(await AsyncStorage.multiGet(Object.values(ARCHIVE_KEYS)));
+  return {
+    introduced: pairs.get(ARCHIVE_KEYS.introduced) === "1",
+    copyUnlocked: pairs.get(ARCHIVE_KEYS.copyUnlocked) === "1",
+    copyRead: pairs.get(ARCHIVE_KEYS.copyRead) === "1",
+    draftRestored: pairs.get(ARCHIVE_KEYS.draftRestored) === "1",
+    completed: pairs.get(ARCHIVE_KEYS.completed) === "1",
+  };
+}
+
+export async function markArchiveFlag(flag: ArchiveFlag): Promise<void> {
+  await AsyncStorage.setItem(ARCHIVE_KEYS[flag], "1");
 }
