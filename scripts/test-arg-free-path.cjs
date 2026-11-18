@@ -7,7 +7,7 @@ const sendBody = source.split("  const send = useCallback(")[1].split("  const r
 assert.ok(sendBody.includes("localReply = await resolveLocalArgReply(trimmed, messages);"));
 assert.ok(sendBody.indexOf("if (localReply)") < sendBody.indexOf("if (aiLimitReached)"));
 assert.ok(sendBody.indexOf("if (aiLimitReached)") < sendBody.indexOf("const apiRes = await callAskApi("));
-const local = sendBody.slice(sendBody.indexOf("if (localReply)"), sendBody.indexOf("if (aiLimitReached)"));
+const local = sendBody.slice(sendBody.indexOf("if (archive)"), sendBody.indexOf("if (aiLimitReached)"));
 assert.ok(local.includes("novaIntrusion: true"));
 assert.equal(local.includes("addIslandXp"), false, "ARG clues may not farm Island XP");
 assert.equal(local.includes("onAskQuestion"), false, "ARG clues may not farm Ask achievements");

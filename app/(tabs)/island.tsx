@@ -25,6 +25,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+import { GARDEN_NOTE, NORA_NOTEBOOK, TELESCOPE } from "../_lib/archiveArtifacts";
 import NovaIsland3DScene, {
   type Island3DDiscovery,
 } from "../components/island3d/NovaIsland3DScene";
@@ -3000,11 +3001,7 @@ export default function IslandScreen() {
                 styles.argNoteBody
               }
             >
-              The printed chart says sixteen. I counted seventeen.
-              {"\n\n"}I drew another star on a copy, but I'm leaving the original alone.
-              {"\n\n"}I keep checking because I don't trust what I'll remember tomorrow.
-              {"\n\n"}If I say I made it up, don't let me throw the old page away.
-              {"\n\n"}Ask Nova what I was counting. She was there.
+              {GARDEN_NOTE}
             </Text>
           </View>
         </Pressable>
@@ -3023,13 +3020,7 @@ export default function IslandScreen() {
           <View pointerEvents="none" style={styles.argNoteCard}>
             <View style={styles.argNoteRule} />
             <Text style={styles.argNoteBody}>
-              First attempt: wrong.
-              {"\n\n"}Second attempt: correct.
-              {"\n\n"}I know the correction today. I don't remember changing my mind.
-              {"\n\n"}If I erase the first answer, tomorrow I'll think I was always right.
-              {"\n\n"}Please keep both. Not because both answers are right.
-              {"\n\n"}Don't erase the first one.
-              {"\n\n"}— N.V.
+              {NORA_NOTEBOOK}
             </Text>
           </View>
         </Pressable>
@@ -3068,23 +3059,21 @@ export default function IslandScreen() {
                 styles.seventeenthStarText
               }
             >
-              STAR COUNT: 17
+              {TELESCOPE.count}
             </Text>
             <Text
               style={
                 styles.seventeenthStarExpected
               }
             >
-              PRINTED CHART: 16
-              {"\n"}ONE MARK ADDED TO THE COPY BY HAND.
-              {"\n"}TWO INITIALS BENEATH IT.
+              {TELESCOPE.chart}
             </Text>
             <Text
               style={
                 styles.seventeenthStarNova
               }
             >
-              She asked me to leave the original untouched. I didn't understand why. — Nova
+              {TELESCOPE.note}
             </Text>
           </View>
         </Pressable>

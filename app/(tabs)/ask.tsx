@@ -16,6 +16,13 @@ import {
   Modal,
   ActivityIndicator,
 } from "react-native";
+import { useRouter } from "expo-router";
+import { useIslandDecorations } from "../context/IslandDecorationContext";
+import { useCoins } from "../context/CoinsContext";
+import { isLegacyArchiveQuestion, openLanternFieldNotes, resolveArchiveReply, type ArchiveReply } from "../_lib/archiveConversation";
+import { completeArchive } from "../_lib/archiveReward";
+import { CHAPTER_PROMPT } from "../_lib/archiveArtifacts";
+
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -36,7 +43,6 @@ import {
   ARG_ACT1_FINALE_REPLY,
   LANTERN_COPY_REPLY,
   LANTERN_FOLDER_REPLY,
-  markArgAct1Complete,
   markLanternCopyDiscovered,
   markLanternFolderDiscovered,
   markFocusPracticeUnlocked,
@@ -161,6 +167,9 @@ type Msg = {
   text: string;
   personality?: PersonalityKey;
   novaIntrusion?: boolean;
+  archiveFramed?: boolean;
+  archiveArtifact?: boolean;
+  archiveReceipt?: { accountId: string; text: string };
 };
 
 type AskHistoryItem = {
@@ -752,7 +761,6 @@ async function resolveLocalArgReply(prompt: string, messages: Msg[]): Promise<st
   }
   if (reply === LANTERN_COPY_REPLY) await markLanternCopyDiscovered();
   if (reply === LANTERN_FOLDER_REPLY) await markLanternFolderDiscovered();
-  if (reply === ARG_ACT1_FINALE_REPLY) await markArgAct1Complete();
   return reply;
 }
 
@@ -1023,6 +1031,7 @@ async function callAskApi(
       question,
       history,
       personality,
+      archive_client_managed: true,
     };
 
     const res = await fetch(`${BACKEND_BASE}/api/ask`, {
@@ -1751,7 +1760,7 @@ function buildHistoryFromMessages(
   limit: number | null | undefined
 ): AskHistoryItem[] {
   const relevant = msgs
-    .filter((m) => m.role === "user" || m.role === "assistant")
+    .filter((m) => !m.novaIntrusion && (m.role === "user" || m.role === "assistant"))
     .map((m) => ({ role: m.role, content: m.text }));
 
   const parsedLimit = Number(limit);
@@ -1795,6 +1804,9 @@ function prettyMemoryTier(tier: string | null, limit: number | null): string {
 }
 
 export default function Ask() {
+  const router = useRouter();
+  const { refreshCoins } = useCoins();
+  const { refreshArchiveOwnership } = useIslandDecorations();
   const { tokens } = useTheme() as any;
   const {
     onAskQuestion,
@@ -1813,6 +1825,7 @@ export default function Ask() {
     setAskPersonality,
     askMemoryTier,
     askMemoryLimit,
+    session,
   } = useUser() as any;
   const { addIslandXp } = useIsland() as any;
   const {
@@ -1881,6 +1894,11 @@ export default function Ask() {
   const [personalitySaving, setPersonalitySaving] = useState(false);
 
   const listRef = useRef<FlatList<Msg>>(null);
+  const sendLock = useRef(false);
+  const currentAccount = useRef<string | null>(null);
+  const accountId = isAiGuest ? null : session?.user?.id ?? null;
+  const accountToken = accountId ? session?.access_token ?? null : null;
+  currentAccount.current = accountId;
   const initializedExperienceRef = useRef(false);
   const previousExperienceRef =
     useRef<PersonalityKey>("encouraging");
@@ -2018,10 +2036,15 @@ export default function Ask() {
     : !aiPlanLoading &&
       questionsRemaining <= 0;
 
+  const lastMessage = messages[messages.length - 1];
+  const inArchiveEnding = lastMessage?.archiveFramed === true && lastMessage.text.endsWith(CHAPTER_PROMPT);
+
   const send = useCallback(
     async () => {
       const trimmed = input.trim();
-      if (!trimmed || loading) return;
+      if (!trimmed || sendLock.current) return;
+
+      sendLock.current = true;
 
       setLoading(true);
       setError(null);
@@ -2048,33 +2071,65 @@ export default function Ask() {
         // A discovered lore question always resolves from the local story
         // record before calling the metered tutoring backend.
         let localReply: string | null = null;
+        let archive: ArchiveReply | null = null;
         try {
-          localReply = await resolveLocalArgReply(trimmed, messages);
+          const followingArchive = lastMessage?.role === "assistant" && lastMessage.novaIntrusion === true;
+          archive = await resolveArchiveReply(trimmed, inArchiveEnding, followingArchive);
+          if (!archive && isLegacyArchiveQuestion(trimmed, followingArchive)) {
+            localReply = await resolveLocalArgReply(trimmed, messages);
+          }
+          if (localReply) {
+            archive = localReply === ARG_ACT1_FINALE_REPLY
+              ? await openLanternFieldNotes()
+              : { text: localReply };
+          }
         } catch (storyError) {
           console.warn("[Archive] story lookup failed", storyError);
         }
 
-        if (localReply) {
-          const loreText = localReply;
-          setMessages(current => [
-            ...current,
-            userMsg,
-            {
-              id: String(Date.now() + 1),
-              role: "assistant",
-              text: loreText,
-              personality: activePersonality,
-              novaIntrusion: true,
-            },
-          ]);
+        if (archive) {
+          const answer: Msg = {
+            id: userMsg.id + "-archive",
+            role: "assistant",
+            text: archive.text,
+            novaIntrusion: true,
+            archiveFramed: archive.framed,
+            archiveArtifact: archive.artifact,
+          };
+          setMessages((m) => [...m, { ...userMsg, novaIntrusion: true }, answer]);
           setInput("");
+          if (archive.finished) {
+            if (accountId && accountToken) {
+              const receipt = await completeArchive(BACKEND_BASE, accountToken);
+              if (currentAccount.current === accountId) {
+                const receiptText = {
+                  awarded: "First Twenty · 25,000 Nova Coins, the First Twenty badge, and the Seventeenth Star were added to your account.",
+                  already_awarded: "First Twenty · Your 25,000 Nova Coins, First Twenty badge, and Seventeenth Star are already recorded.",
+                  completed: "Your archive completion is recorded. All twenty reward places have been claimed.",
+                  closed: "Session 017 is closed. Reward claims are currently closed.",
+                  retry: "Your reveal is saved on this device. Ask to “replay Session 017” to retry checking your account receipt.",
+                }[receipt.status];
+                setMessages((m) => m.map((message) => message.id === answer.id
+                  ? { ...message, archiveReceipt: { accountId, text: receiptText } }
+                  : message));
+                if (receipt.status === "awarded" || receipt.status === "already_awarded") {
+                  void refreshCoins();
+                  void refreshArchiveOwnership();
+                }
+              }
+            } else {
+              setMessages((m) => m.map((message) => message.id === answer.id
+                ? { ...message, text: message.text + "\n\nSign in, then ask to “replay Session 017” to check First Twenty eligibility." }
+                : message));
+            }
+          }
           return;
         }
 
         if (aiLimitReached) {
           setError(isAiGuest
-            ? "Your guest AI trial is used. Discovered archive clues still work here, or create a free account to keep studying."
-            : "You've reached the Nova AI question limit for this period. Discovered archive clues still work here.");
+            ? "Your guest AI trial is used. Create a free account to keep studying."
+            : "You've reached the Nova AI question limit for this period.");
           return;
         }
 
@@ -2266,12 +2321,18 @@ export default function Ask() {
         setErrorCode(null);
         setError(e?.message || "Something went wrong.");
       } finally {
+        sendLock.current = false;
         setLoading(false);
       }
     },
     [
       input,
-      loading,
+      accountId,
+      accountToken,
+      inArchiveEnding,
+      lastMessage,
+      refreshCoins,
+      refreshArchiveOwnership,
       messages,
       onAskQuestion,
       onServerQuizAchievementsEligible,
@@ -2351,6 +2412,8 @@ export default function Ask() {
               maxWidth: "88%",
               borderColor: isUser
                 ? tokens.border
+                : item.archiveFramed
+                ? "#a17bc1"
                 : item.novaIntrusion
                 ? "#dc2626"
                 : bubbleExperience.accent,
@@ -2366,6 +2429,7 @@ export default function Ask() {
                 ? bubbleExperience.tintDark
                 : bubbleExperience.tintLight,
               borderLeftWidth: isUser ? 1 : 4,
+              ...(item.archiveFramed ? { borderLeftColor: "#d6a950" } : {}),
             },
           ]}
         >
@@ -2395,7 +2459,7 @@ export default function Ask() {
                 ]}
               >
                 {item.novaIntrusion
-                  ? "Nova"
+                  ? "Nova · Archive transmission"
                   : `${bubbleExperience.label} Nova`}
               </Text>
             </View>
@@ -2407,7 +2471,7 @@ export default function Ask() {
               S.messageText,
               {
                 color: item.novaIntrusion
-                  ? "#dc2626"
+                  ? tokens.isDark ? "#fda4af" : "#a41628"
                   : tokens.text,
                 fontWeight: item.novaIntrusion
                   ? "800"
@@ -2417,6 +2481,22 @@ export default function Ask() {
           >
             {item.text}
           </Text>
+          {item.archiveArtifact ? (
+            <Pressable
+              accessibilityRole="button"
+              style={{ minHeight: 44, justifyContent: "center", alignSelf: "flex-start" }}
+              onPress={() => router.push("/archive-field-notes" as never)}
+            >
+              <Text style={{ color: tokens.isDark ? "#f6d497" : "#593976", fontWeight: "800" }}>
+                Read the recovered field notes →
+              </Text>
+            </Pressable>
+          ) : null}
+          {item.archiveReceipt && item.archiveReceipt.accountId === accountId ? (
+            <Text accessibilityLiveRegion="polite" style={{ color: tokens.text, marginTop: 12, fontWeight: "700" }}>
+              {item.archiveReceipt.text}
+            </Text>
+          ) : null}
         </View>
       </View>
     );

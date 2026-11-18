@@ -36,6 +36,8 @@ from apple_subscriptions import (
   apple_subscription_configuration_status,
   register_apple_subscription_routes,
 )
+from archive_completion import register_archive_routes
+from collector_redemption import register_collector_routes
 from merch_checkout import (
   merch_checkout_configuration_status,
   register_merch_checkout_routes,
@@ -648,6 +650,20 @@ def _verify_supabase_access_token(access_token: str):
 
   return user if isinstance(user, dict) else None
 
+
+register_archive_routes(
+  app,
+  extract_bearer_token=_extract_bearer_token,
+  verify_access_token=_verify_supabase_access_token,
+  headers_for_service=supabase_headers,
+  rpc_url=supabase_rest_url("rpc/nova_complete_archive"),
+)
+
+register_collector_routes(
+  app,
+  extract_bearer_token=_extract_bearer_token,
+  verify_access_token=_verify_supabase_access_token,
+)
 
 register_apple_subscription_routes(
   app,
@@ -3576,7 +3592,7 @@ def _ask_logic():
       ), 429
 
   try:
-    nova_archive_reply = _nova_archive_response(
+    nova_archive_reply = {} if body.get("archive_client_managed") is True else _nova_archive_response(
       question,
       history,
     )

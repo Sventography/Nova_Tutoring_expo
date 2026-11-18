@@ -1,38 +1,47 @@
 // app/(auth)/forgot.tsx
 
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   View,
   Text,
   TextInput,
   StyleSheet,
   TouchableOpacity,
-  Alert,
   Platform,
 } from "react-native";
 
 import { LinearGradient } from "expo-linear-gradient";
 import { useUser } from "../context/UserContext";
+import { useAuthAlert } from "../_lib/useAuthAlert";
 
 export default function ForgotPassword() {
   const { resetPassword } = useUser();
+  const { alert, feedback } = useAuthAlert();
 
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
+  const inFlight = useRef(false);
 
   async function sendToken() {
+    if (inFlight.current) return;
+
     try {
       if (!email.trim()) {
         throw new Error("Enter your email");
       }
 
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+        throw new Error("Enter a valid email address.");
+      }
+
+      inFlight.current = true;
       setBusy(true);
 
       await resetPassword(email.trim());
 
       // Web fallback
       if (Platform.OS === "web") {
-        Alert.alert(
+        alert(
           "Reset Email Sent",
           "If an account exists for this email, a password reset email has been sent."
         );
@@ -56,17 +65,18 @@ export default function ForgotPassword() {
         });
       }
 
-      Alert.alert(
+      alert(
         "Reset Email Sent",
         "If an account exists for this email, a password reset email has been sent."
       );
     } catch (e: any) {
-      Alert.alert(
+      alert(
         "Error",
         e?.message ||
           "Could not send password reset email"
       );
     } finally {
+      inFlight.current = false;
       setBusy(false);
     }
   }
@@ -90,6 +100,7 @@ export default function ForgotPassword() {
           keyboardType="email-address"
           value={email}
           onChangeText={setEmail}
+          editable={!busy}
         />
 
         <TouchableOpacity
@@ -111,6 +122,7 @@ export default function ForgotPassword() {
           </Text>
         </TouchableOpacity>
       </View>
+      {feedback}
     </LinearGradient>
   );
 }

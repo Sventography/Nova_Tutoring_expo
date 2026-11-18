@@ -18,8 +18,19 @@ import {
   type IslandDecorationCatalogItem,
 } from "../_lib/islandDecorationCatalog";
 import { clampIslandBuildPosition } from "../_lib/islandBuilderBounds";
+import { ARCHIVE_STAR_ID, getArchiveAwardDate } from "../_lib/archiveReward";
+import { COLLECTOR_REWARD_ID, fetchCollectorEntitlements } from "../_lib/collectorClient";
+import {
+  COLLECTOR_CASTLE_PREFERRED_GROUND,
+  NOVA_PEDESTAL_GROUND_OBSTACLE,
+  decorationGroundRadius,
+  findNearestFreeGround,
+  landmarkGroundRadius,
+  type GroundObstacle,
+} from "../_lib/islandAutoPlacement";
 import { useCoins } from "./CoinsContext";
 import { useIsland } from "./IslandContext";
+import { useIslandBuilder } from "./IslandBuilderContext";
 import { useUser } from "./UserContext";
 
 export type IslandDecorationTransform = {
@@ -98,6 +109,9 @@ type ContextValue = {
   getOwnershipInfo: (
     itemId: string
   ) => IslandDecorationOwnershipInfo;
+  refreshCollectorOwnership: () => Promise<boolean>;
+  refreshArchiveOwnership: () => Promise<boolean>;
+  archiveAwardedAt: number | null;
   armDecorationDrag: (placementId: string) => void;
   getArmedDecorationDrag: () => IslandDecorationPlacement | null;
   clearDecorationDrag: () => void;
@@ -287,6 +301,9 @@ function normalizeState(raw: unknown): DecorationState {
 }
 
 function spawnTransform(itemId: string): IslandDecorationTransform {
+  if (itemId === COLLECTOR_REWARD_ID) {
+    return normalizeTransform(itemId, { ...COLLECTOR_CASTLE_PREFERRED_GROUND, rotationY: 0 });
+  }
   const angle = Math.random() * Math.PI * 2;
   const radius = 1.2 + Math.random() * 4.2;
 
@@ -297,16 +314,81 @@ function spawnTransform(itemId: string): IslandDecorationTransform {
   });
 }
 
+// Local snapshots remember a layout, never the right to own this unique reward.
+// Apply to the latest committed and draft snapshots independently so an ownership
+// refresh cannot roll back an in-progress island edit.
+type AwardId = typeof COLLECTOR_REWARD_ID | typeof ARCHIVE_STAR_ID;
+type AwardSession = { userId: string; accessToken: string; acquiredAt: number | null };
+
+function reconcileUniqueReward(state: DecorationState, itemId: AwardId, owned: boolean, acquiredAt: number | null): DecorationState {
+  const placements = state.placements.filter((p) => p.itemId === itemId);
+  const count = owned ? 1 : 0;
+  if ((state.ownedCounts[itemId] || 0) === count && placements.length <= count &&
+      (!acquiredAt || state.firstAcquiredAt[itemId] === acquiredAt)) return state;
+  const next = cloneState(state);
+  if (owned) {
+    next.ownedCounts[itemId] = 1;
+    if (acquiredAt) {
+      next.firstAcquiredAt[itemId] = acquiredAt;
+      next.firstAcquiredAtEstimated[itemId] = false;
+    }
+  } else {
+    delete next.ownedCounts[itemId];
+    delete next.firstAcquiredAt[itemId];
+    delete next.firstAcquiredAtEstimated[itemId];
+  }
+  const keep = owned ? placements[0]?.placementId : null;
+  next.placements = next.placements.filter((p) => p.itemId !== itemId || p.placementId === keep);
+  next.updatedAt = Date.now();
+  return next;
+}
+
 export function IslandDecorationProvider({ children }: { children: ReactNode }) {
   const {
     supabaseUserId,
     ready: userReady,
+    session,
   } = (useUser() || {}) as any;
   const userId = supabaseUserId ? String(supabaseUserId) : null;
   const { coins, ready: coinsReady, addCoins } = useCoins();
   const { islandLevel } = useIsland();
+  const islandBuilder = useIslandBuilder();
+  const landmarkObstaclesRef = useRef<GroundObstacle[]>([]);
+  landmarkObstaclesRef.current = [
+    NOVA_PEDESTAL_GROUND_OBSTACLE,
+    ...islandBuilder.placements.map((p) => ({
+      x: p.transform.x,
+      z: p.transform.z,
+      radius: landmarkGroundRadius(p.itemId, p.transform.scale),
+    })),
+  ];
 
-  const [ready, setReady] = useState(false);
+  const [stateReady, setReady] = useState(false);
+  const loadedAccountRef = useRef<string | null | undefined>(undefined);
+  const accessToken = userId && session?.user?.id === userId
+    ? session.access_token || null
+    : null;
+  const authRef = useRef({ userId, accessToken, userReady });
+  authRef.current = { userId, accessToken, userReady };
+  const [confirmed, setConfirmed] = useState<Partial<Record<AwardId, AwardSession>>>({});
+  const ownershipRequestRef = useRef({ [COLLECTOR_REWARD_ID]: 0, [ARCHIVE_STAR_ID]: 0 });
+  const persistTailRef = useRef<Promise<void>>(Promise.resolve());
+  const ready = stateReady && userReady && loadedAccountRef.current === userId;
+  const currentAward = (id: AwardId) => {
+    const receipt = confirmed[id];
+    return ready && receipt?.userId === userId && receipt?.accessToken === accessToken ? receipt : undefined;
+  };
+  const collectorIsVerified = !!currentAward(COLLECTOR_REWARD_ID);
+  const archiveAwardedAt = currentAward(ARCHIVE_STAR_ID)?.acquiredAt ?? null;
+  const collectorVerifiedRef = useRef(collectorIsVerified);
+  collectorVerifiedRef.current = collectorIsVerified;
+  const archiveVerifiedRef = useRef(false);
+  archiveVerifiedRef.current = archiveAwardedAt !== null;
+  const canUseItem = useCallback((itemId: string) => {
+    if (itemId === COLLECTOR_REWARD_ID) return collectorVerifiedRef.current;
+    if (itemId === ARCHIVE_STAR_ID) return archiveVerifiedRef.current;
+    return true;
+  }, []);
   const [committed, setCommitted] = useState<DecorationState>(emptyState);
   const [draft, setDraft] = useState<DecorationState | null>(null);
   const [selectedPlacementId, setSelectedPlacementId] = useState<string | null>(null);
@@ -324,13 +406,24 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
   useEffect(() => { selectedRef.current = selectedPlacementId; }, [selectedPlacementId]);
 
   const persist = useCallback(
-    async (state: DecorationState) => {
-      await AsyncStorage.setItem(keyFor(userId), JSON.stringify(state));
+    (state: DecorationState) => {
+      const serialized = JSON.stringify(state);
+      // Serialize writes so an ownership response cannot overwrite a later SAVE.
+      // The key is captured before queuing; an account switch cannot redirect it.
+      const write = persistTailRef.current.catch(() => {}).then(() =>
+        AsyncStorage.setItem(keyFor(userId), serialized)
+      );
+      persistTailRef.current = write;
+      return write;
     },
     [userId]
   );
 
   useEffect(() => {
+    ownershipRequestRef.current[COLLECTOR_REWARD_ID] += 1;
+    ownershipRequestRef.current[ARCHIVE_STAR_ID] += 1;
+    loadedAccountRef.current = undefined;
+    setConfirmed({});
     if (!userReady) {
       setReady(false);
       return;
@@ -349,12 +442,14 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
         const next = raw ? normalizeState(JSON.parse(raw)) : emptyState();
         if (cancelled) return;
         committedRef.current = next;
+        loadedAccountRef.current = userId;
         setCommitted(next);
       } catch (error) {
         console.warn("[IslandDecorationContext] load error", error);
         if (!cancelled) {
           const fallback = emptyState();
           committedRef.current = fallback;
+          loadedAccountRef.current = userId;
           setCommitted(fallback);
         }
       } finally {
@@ -365,8 +460,89 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
     return () => { cancelled = true; };
   }, [userId, userReady]);
 
+  const refreshReward = useCallback(async (id: AwardId): Promise<boolean> => {
+    const request = ++ownershipRequestRef.current[id];
+    const verified = id === COLLECTOR_REWARD_ID ? collectorVerifiedRef : archiveVerifiedRef;
+    const stillCurrent = () => request === ownershipRequestRef.current[id] &&
+      authRef.current.userReady && authRef.current.userId === userId &&
+      authRef.current.accessToken === accessToken && loadedAccountRef.current === userId;
+    if (!ready || !userId || !accessToken || !stillCurrent()) return false;
+    try {
+      let acquiredAt: number | null = null;
+      let owned: boolean;
+      if (id === COLLECTOR_REWARD_ID) {
+        const entitlements = await fetchCollectorEntitlements(accessToken);
+        owned = entitlements.some(item => item.reward_id === id);
+      } else {
+        acquiredAt = await getArchiveAwardDate(userId);
+        owned = acquiredAt !== null;
+      }
+      if (!stillCurrent()) return false;
+      const previous = committedRef.current;
+      const next = reconcileUniqueReward(previous, id, owned, acquiredAt);
+      const nextDraft = draftRef.current ? reconcileUniqueReward(draftRef.current, id, owned, acquiredAt) : null;
+      // Publish without awaiting storage: edits made while the request was in
+      // flight are already in these refs, and later edits remain independent.
+      committedRef.current = next;
+      setCommitted(next);
+      if (nextDraft) {
+        draftRef.current = nextDraft;
+        setDraft(nextDraft);
+      }
+      verified.current = owned;
+      setConfirmed(current => ({ ...current, [id]: owned ? { userId, accessToken, acquiredAt } : undefined }));
+      if (!owned && armedDragRef.current?.itemId === id) armedDragRef.current = null;
+      if (next !== previous) {
+        void persist(next).catch((error) =>
+          console.warn("[IslandDecorationContext] award layout save error", error)
+        );
+      }
+      return owned;
+    } catch (error) {
+      if (!stillCurrent()) return false;
+      // Preserve the owner's cached placement during an outage, but hide it
+      // until this same signed-in session receives server confirmation again.
+      verified.current = false;
+      setConfirmed(current => ({ ...current, [id]: undefined }));
+      if (armedDragRef.current?.itemId === id) armedDragRef.current = null;
+      console.warn("[IslandDecorationContext] award ownership unavailable", error);
+      return false;
+    }
+  }, [accessToken, persist, ready, userId]);
+
+  const refreshCollectorOwnership = useCallback(() => refreshReward(COLLECTOR_REWARD_ID), [refreshReward]);
+  const refreshArchiveOwnership = useCallback(() => refreshReward(ARCHIVE_STAR_ID), [refreshReward]);
+
+  useEffect(() => {
+    if (ready) {
+      void refreshCollectorOwnership();
+      void refreshArchiveOwnership();
+    }
+  }, [ready, refreshCollectorOwnership, refreshArchiveOwnership]);
+
   const active = draft ?? committed;
-  const isEditing = draft !== null;
+  const isEditing = ready && draft !== null;
+  const visiblePlacements = useMemo(() => ready
+    ? active.placements.filter((p) => canUseItem(p.itemId))
+    : [], [active.placements, canUseItem, collectorIsVerified, archiveAwardedAt, ready]);
+  const visibleCommittedPlacements = useMemo(() => ready
+    ? committed.placements.filter((p) => canUseItem(p.itemId))
+    : [], [committed.placements, canUseItem, collectorIsVerified, archiveAwardedAt, ready]);
+  const collectorCastle = collectorIsVerified
+    ? active.placements.find((p) => p.itemId === COLLECTOR_REWARD_ID)
+    : undefined;
+  const castleX = collectorCastle?.transform.x;
+  const castleZ = collectorCastle?.transform.z;
+  const castleScale = collectorCastle?.transform.scale;
+  const setCollectorCastleObstacle = islandBuilder.setCollectorCastleObstacle;
+  useEffect(() => {
+    setCollectorCastleObstacle(
+      castleX !== undefined && castleZ !== undefined && castleScale !== undefined
+        ? { x: castleX, z: castleZ, radius: decorationGroundRadius(COLLECTOR_REWARD_ID, castleScale) }
+        : null
+    );
+    return () => setCollectorCastleObstacle(null);
+  }, [castleX, castleZ, castleScale, setCollectorCastleObstacle]);
 
   const selectPlacement = useCallback((id: string | null) => {
     armedDragRef.current = null;
@@ -389,12 +565,18 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
   }, [selectPlacement]);
 
   const saveEditing = useCallback(async () => {
-    if (!draftRef.current) return false;
+    if (!ready || !draftRef.current) return false;
+    const savingAccount = userId;
+    const savingDraft = draftRef.current;
     const saved = cloneState(draftRef.current);
     saved.updatedAt = Date.now();
 
     try {
       await persist(saved);
+      if (authRef.current.userId !== savingAccount || loadedAccountRef.current !== savingAccount) return false;
+      // A refresh or a newer edit may have reconciled the draft while storage
+      // was busy. Keep that draft open instead of replacing it with this copy.
+      if (draftRef.current !== savingDraft) return false;
       committedRef.current = saved;
       draftRef.current = null;
       setCommitted(saved);
@@ -405,11 +587,12 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
       console.warn("[IslandDecorationContext] save error", error);
       return false;
     }
-  }, [persist, selectPlacement]);
+  }, [persist, ready, selectPlacement, userId]);
 
   const mutateDraft = useCallback(
     (updater: (state: DecorationState) => boolean): boolean => {
-      if (!draftRef.current) return false;
+      if (!draftRef.current || !authRef.current.userReady ||
+          loadedAccountRef.current !== authRef.current.userId) return false;
       const next = cloneState(draftRef.current);
       if (!updater(next)) return false;
       next.updatedAt = Date.now();
@@ -421,16 +604,18 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
   );
 
   const getInventoryCount = useCallback((itemId: string) => {
+    if (!ready || !canUseItem(itemId)) return 0;
     const source = draftRef.current ?? committedRef.current;
     const owned = source.ownedCounts[itemId] || 0;
     const placed = source.placements.filter((p) => p.itemId === itemId).length;
     return Math.max(0, owned - placed);
-  }, []);
+  }, [ready, canUseItem, collectorIsVerified, archiveAwardedAt]);
 
   const getOwnershipInfo = useCallback(
     (
       itemId: string
     ): IslandDecorationOwnershipInfo => {
+      if (!ready || !canUseItem(itemId)) return { ownedCount: 0, firstAcquiredAt: null, estimated: false };
       const ownedCount =
         Math.max(
           0,
@@ -463,6 +648,7 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
       active.firstAcquiredAt,
       active.firstAcquiredAtEstimated,
       active.ownedCounts,
+      ready, canUseItem, archiveAwardedAt, collectorIsVerified,
     ]
   );
 
@@ -473,10 +659,27 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
 
       const id = newPlacementId(itemId);
       const ok = mutateDraft((state) => {
+        const preferred = spawnTransform(itemId);
+        const castle = state.placements.find((p) => p.itemId === COLLECTOR_REWARD_ID);
+        let transform = preferred;
+        if (itemId === COLLECTOR_REWARD_ID || (castle && collectorVerifiedRef.current)) {
+          const obstacles = itemId === COLLECTOR_REWARD_ID
+            ? [
+                ...landmarkObstaclesRef.current,
+                ...state.placements.map((p) => ({
+                  x: p.transform.x, z: p.transform.z,
+                  radius: decorationGroundRadius(p.itemId, p.transform.scale),
+                })),
+              ]
+            : [{ ...castle!.transform, radius: decorationGroundRadius(castle!.itemId, castle!.transform.scale) }];
+          const free = findNearestFreeGround(preferred, decorationGroundRadius(itemId, preferred.scale), obstacles);
+          if (!free) return false;
+          transform = { ...preferred, ...free };
+        }
         state.placements.push({
           placementId: id,
           itemId,
-          transform: spawnTransform(itemId),
+          transform,
           placedAt: Date.now(),
           updatedAt: Date.now(),
         });
@@ -576,7 +779,7 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
       const item =
         ISLAND_DECORATION_CATALOG_BY_ID[itemId];
 
-      if (!item) {
+      if (!item || item.collectorOnly || item.id === ARCHIVE_STAR_ID) {
         return { ok: false, reason: "unknown_item" };
       }
 
@@ -664,7 +867,25 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
       mutateDraft((state) => {
         const p = state.placements.find((item) => item.placementId === id);
         if (!p) return false;
-        p.transform = normalizeTransform(p.itemId, { ...p.transform, ...transform });
+        if (!canUseItem(p.itemId)) return false;
+        const next = normalizeTransform(p.itemId, { ...p.transform, ...transform });
+        const castle = state.placements.find((item) => item.itemId === COLLECTOR_REWARD_ID && item.placementId !== id);
+        if (p.itemId === COLLECTOR_REWARD_ID || (castle && collectorVerifiedRef.current)) {
+          const obstacles = p.itemId === COLLECTOR_REWARD_ID
+            ? [
+                ...landmarkObstaclesRef.current,
+                ...state.placements.filter((item) => item.placementId !== id).map((item) => ({
+                  x: item.transform.x, z: item.transform.z,
+                  radius: decorationGroundRadius(item.itemId, item.transform.scale),
+                })),
+              ]
+            : [{ ...castle!.transform, radius: decorationGroundRadius(castle!.itemId, castle!.transform.scale) }];
+          const free = findNearestFreeGround(next, decorationGroundRadius(p.itemId, next.scale), obstacles);
+          if (!free) return false;
+          next.x = free.x;
+          next.z = free.z;
+        }
+        p.transform = next;
         p.updatedAt = Date.now();
         return true;
       }),
@@ -685,7 +906,7 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
     (id: string) => {
       const ok = mutateDraft((state) => {
         const index = state.placements.findIndex((p) => p.placementId === id);
-        if (index < 0) return false;
+        if (index < 0 || !canUseItem(state.placements[index].itemId)) return false;
         state.placements.splice(index, 1);
         return true;
       });
@@ -699,10 +920,10 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
     let moved = 0;
 
     const ok = mutateDraft((state) => {
-      moved = state.placements.length;
+      const hidden = state.placements.filter(p => !canUseItem(p.itemId));
+      moved = state.placements.length - hidden.length;
       if (moved <= 0) return false;
-
-      state.placements = [];
+      state.placements = hidden;
       return true;
     });
 
@@ -728,7 +949,7 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
           item.placementId === id
       );
 
-    if (!placement) {
+    if (!placement || !canUseItem(placement.itemId)) {
       return;
     }
 
@@ -745,6 +966,8 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
       (): IslandDecorationPlacement | null => {
         const snapshot =
           armedDragRef.current;
+
+        if (snapshot && !canUseItem(snapshot.itemId)) return null;
 
         return snapshot
           ? {
@@ -766,8 +989,8 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
     ready,
     isEditing,
     catalog: ISLAND_DECORATION_CATALOG,
-    placements: active.placements,
-    committedPlacements: committed.placements,
+    placements: visiblePlacements,
+    committedPlacements: visibleCommittedPlacements,
     selectedPlacementId,
     selectPlacement,
     startEditing,
@@ -783,20 +1006,26 @@ export function IslandDecorationProvider({ children }: { children: ReactNode }) 
     moveAllToInventory,
     getInventoryCount,
     getOwnershipInfo,
+    refreshCollectorOwnership,
+    refreshArchiveOwnership,
+    archiveAwardedAt,
     armDecorationDrag,
     getArmedDecorationDrag,
     clearDecorationDrag,
   }), [
-    active.placements,
+    visiblePlacements,
     armDecorationDrag,
     buyDecoration,
     cancelEditing,
     clearDecorationDrag,
-    committed.placements,
+    visibleCommittedPlacements,
     getArmedDecorationDrag,
     getOwnershipInfo,
     getInventoryCount,
     grantDecoration,
+    refreshCollectorOwnership,
+    refreshArchiveOwnership,
+    archiveAwardedAt,
     isEditing,
     moveAllToInventory,
     movePlacement,

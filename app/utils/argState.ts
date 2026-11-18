@@ -198,7 +198,9 @@ export const LANTERN_FOLDER_REPLY = [
 
 export const ARG_ACT1_FINALE_REPLY = [
   "LANTERN / SESSION 017 / RECOVERED COPY",
-  "FIRST ATTEMPT: INCORRECT",
+  "Question: How many stars are on the printed chart?",
+  "First attempt, crossed out: Seventeen.",
+  "Second attempt: Sixteen. I put the two pages against the lantern. The extra star only shows through from the sheet I drew on. Yesterday I thought it had been there all along.",
   "Handwritten in the margin, N.V.:",
   "\"If tomorrow I say I never wrote this, leave the page where I can find it.\"",
   "RETENTION REVIEW — QUIET",
@@ -542,4 +544,28 @@ export async function markArgAct1Complete(): Promise<boolean> {
   if (!state.lanternFolderDiscovered || state.argAct1Complete) return false;
   await AsyncStorage.setItem(ARG_ACT1_COMPLETE_KEY, String(Date.now()));
   return true;
+}
+const ARCHIVE_KEYS = {
+  introduced: "@nova/arg/intro.v1",
+  copyUnlocked: "@nova/arg/lantern-copy.v1",
+  copyRead: "@nova/arg/lantern-copy-read.v1",
+  draftRestored: "@nova/arg/first-draft.v1",
+  completed: "@nova/arg/session-017-closed.v1",
+} as const;
+type ArchiveFlag = keyof typeof ARCHIVE_KEYS;
+export type ArchiveFlags = Record<ArchiveFlag, boolean>;
+
+export async function getArchiveFlags(): Promise<ArchiveFlags> {
+  const pairs = new Map(await AsyncStorage.multiGet(Object.values(ARCHIVE_KEYS)));
+  return {
+    introduced: pairs.get(ARCHIVE_KEYS.introduced) === "1",
+    copyUnlocked: pairs.get(ARCHIVE_KEYS.copyUnlocked) === "1",
+    copyRead: pairs.get(ARCHIVE_KEYS.copyRead) === "1",
+    draftRestored: pairs.get(ARCHIVE_KEYS.draftRestored) === "1",
+    completed: pairs.get(ARCHIVE_KEYS.completed) === "1",
+  };
+}
+
+export async function markArchiveFlag(flag: ArchiveFlag): Promise<void> {
+  await AsyncStorage.setItem(ARCHIVE_KEYS[flag], "1");
 }

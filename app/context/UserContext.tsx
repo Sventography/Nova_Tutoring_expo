@@ -8,12 +8,14 @@ import React, {
   useState,
   ReactNode,
 } from "react";
-import { AppState } from "react-native";
+import { AppState, Platform } from "react-native";
+import Constants from "expo-constants";
 
 import type { Session, User as SupabaseUser } from "@supabase/supabase-js";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "../lib/supabase";
+import { passwordRecoveryRedirect } from "../_lib/passwordRecovery";
 
 type LocalUserProfile = {
   id: string;
@@ -1574,6 +1576,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   const resetPassword = async (email: string) => {
     try {
+      const browserWindow = (globalThis as typeof globalThis & {
+        window?: { location: { origin: string } };
+      }).window;
       const trimmed = cleanEmail(email);
 
       if (!trimmed) {
@@ -1583,7 +1588,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
       const { error } = await supabase.auth.resetPasswordForEmail(
         trimmed,
         {
-          redirectTo: PASSWORD_RECOVERY_PAGE_URL,
+          redirectTo: passwordRecoveryRedirect({
+            platform: Platform.OS,
+            browserOrigin: browserWindow?.location.origin,
+            webRedirect: process.env.EXPO_PUBLIC_WEB_PASSWORD_RECOVERY_URL ||
+              Constants.expoConfig?.extra?.EXPO_PUBLIC_WEB_PASSWORD_RECOVERY_URL,
+            nativeRedirect: PASSWORD_RECOVERY_PAGE_URL,
+          }),
         }
       );
 

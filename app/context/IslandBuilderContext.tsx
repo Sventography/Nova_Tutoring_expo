@@ -19,6 +19,12 @@ import {
   type IslandLandmassId,
   type IslandTransform,
 } from "../_lib/islandBuilderCatalog";
+import {
+  findNearestFreeGround,
+  landmarkGroundRadius,
+  overlapsGround,
+  type GroundObstacle,
+} from "../_lib/islandAutoPlacement";
 import { useIsland } from "./IslandContext";
 import { useUser } from "./UserContext";
 
@@ -70,6 +76,8 @@ type IslandBuilderContextValue = {
   returnToInventory: (placementId: string) => boolean;
   resetDraftToDefaultLayout: () => boolean;
   getInventoryCount: (itemId: string) => number;
+  // Registered by the decoration child only after account-bound ownership is verified.
+  setCollectorCastleObstacle: (obstacle: GroundObstacle | null) => void;
 };
 
 const IslandBuilderContext =
@@ -311,6 +319,18 @@ export function IslandBuilderProvider({
   } = (useUser() || {}) as any;
   const userId = supabaseUserId ? String(supabaseUserId) : null;
 
+  const collectorCastleRef = useRef<{
+    userId: string | null;
+    obstacle: GroundObstacle | null;
+  }>({ userId, obstacle: null });
+  const setCollectorCastleObstacle = useCallback((obstacle: GroundObstacle | null) => {
+    collectorCastleRef.current = { userId, obstacle };
+  }, [userId]);
+  const currentCastle = useCallback(() =>
+    collectorCastleRef.current.userId === userId
+      ? collectorCastleRef.current.obstacle : null,
+  [userId]);
+
   const [ready, setReady] = useState(false);
   const [committed, setCommitted] = useState<BuilderState>(
     () => defaultStateForLevel(islandLevel)
@@ -485,6 +505,15 @@ export function IslandBuilderProvider({
           return null;
         }
 
+        let nextTransform = normalizedTransform(transform, item.defaultTransform);
+        const castle = currentCastle();
+        if (castle) {
+          const radius = landmarkGroundRadius(item.id, nextTransform.scale);
+          const free = findNearestFreeGround(nextTransform, radius, [castle]);
+          if (!free) return null;
+          nextTransform = { ...nextTransform, ...free };
+        }
+
         state.inventory[item.id] = count - 1;
         if (state.inventory[item.id] <= 0) {
           delete state.inventory[item.id];
@@ -495,10 +524,7 @@ export function IslandBuilderProvider({
           placementId,
           itemId: item.id,
           landmassId: item.landmassId,
-          transform: normalizedTransform(
-            transform,
-            item.defaultTransform
-          ),
+          transform: nextTransform,
           placedAt: now,
           updatedAt: now,
         });
@@ -507,7 +533,7 @@ export function IslandBuilderProvider({
 
       return next ? placementId : null;
     },
-    [islandLevel, mutateDraft]
+    [currentCastle, islandLevel, mutateDraft]
   );
 
   const movePlacement = useCallback(
@@ -526,15 +552,20 @@ export function IslandBuilderProvider({
             ISLAND_BUILDER_CATALOG_BY_ID[placement.itemId];
           if (!item) return null;
 
-          placement.transform = normalizedTransform(
+          const nextTransform = normalizedTransform(
             { ...placement.transform, ...transform },
             item.defaultTransform
           );
+          const castle = currentCastle();
+          if (castle && overlapsGround(
+            nextTransform, landmarkGroundRadius(item.id, nextTransform.scale), [castle]
+          )) return null;
+          placement.transform = nextTransform;
           placement.updatedAt = Date.now();
           return state;
         })
       ),
-    [mutateDraft]
+    [currentCastle, mutateDraft]
   );
 
   const rotatePlacement = useCallback(
@@ -570,11 +601,23 @@ export function IslandBuilderProvider({
   const resetDraftToDefaultLayout = useCallback(
     (): boolean =>
       Boolean(
-        mutateDraft((state) =>
-          defaultDraftFrom(state, islandLevel)
-        )
+        mutateDraft((state) => {
+          const next = defaultDraftFrom(state, islandLevel);
+          const castle = currentCastle();
+          if (!castle) return next;
+          // Reset landmarks without moving the player's unique castle or
+          // silently placing a default landmark through its footprint.
+          for (const placement of next.placements) {
+            const radius = landmarkGroundRadius(placement.itemId, placement.transform.scale);
+            if (!overlapsGround(placement.transform, radius, [castle])) continue;
+            const free = findNearestFreeGround(placement.transform, radius, [castle]);
+            if (!free) return null;
+            placement.transform = { ...placement.transform, ...free };
+          }
+          return next;
+        })
       ),
-    [islandLevel, mutateDraft]
+    [currentCastle, islandLevel, mutateDraft]
   );
 
   const getInventoryCount = useCallback(
@@ -601,6 +644,7 @@ export function IslandBuilderProvider({
       returnToInventory,
       resetDraftToDefaultLayout,
       getInventoryCount,
+      setCollectorCastleObstacle,
     }),
     [
       ready,
@@ -618,6 +662,7 @@ export function IslandBuilderProvider({
       returnToInventory,
       resetDraftToDefaultLayout,
       getInventoryCount,
+      setCollectorCastleObstacle,
     ]
   );
 

@@ -1,4 +1,4 @@
-import type { ArgDiscoveryState } from "../utils/argState";
+import type { ArchiveFlags, ArgDiscoveryState } from "../utils/argState";
 
 export type ArgEvidence = {
   id: string;
@@ -13,7 +13,7 @@ export type ArgEvidence = {
  * An earned evidence record, not a walkthrough. No future titles are shown.
  * Each recovered item answers one question and points to the next.
  */
-export function getArgEvidenceTrail(state: ArgDiscoveryState): {
+export function getArgEvidenceTrail(state: ArgDiscoveryState, flags: ArchiveFlags): {
   found: ArgEvidence[];
   total: number;
   nextQuestion: string | null;
@@ -40,17 +40,17 @@ export function getArgEvidenceTrail(state: ArgDiscoveryState): {
     {
       id: "initials",
       title: "03 / Two initials",
-      observation: "N.V. isn't a system label. Nova can recall a battered white rabbit more easily than the person who owned it.",
-      unresolved: "Why does an ordinary possession survive when the name doesn't?",
-      nudge: "Look for the white rabbit in the Shop. It isn't necessary to buy anything. Hold on to its name.",
+      observation: "N.V. signed the chart. Nova remembers pressing the pencil into the page.",
+      unresolved: "Why does Nova remember drawing a mark that someone else signed?",
+      nudge: "Ask Nova who N.V. was.",
       discovered: state.nvDiscovered,
     },
     {
       id: "rabbit",
       title: "04 / Not for studying",
-      observation: "The rabbit's old label uses the same initials as the chart. Both were kept even though someone considered them useless.",
-      unresolved: "What else did she insist on keeping?",
-      nudge: "Ask Nova why she kept the rabbit and what happened to her wrong answers.",
+      observation: "N.V. signed the rabbit’s label and wrote that she mended its ear. Nova remembers feeling the knot against her own cheek.",
+      unresolved: "Whose memory of the rabbit is Nova describing?",
+      nudge: "Ask Nova who really mended the rabbit’s ear.",
       discovered: state.whiteRabbitDiscovered,
     },
     {
@@ -58,7 +58,7 @@ export function getArgEvidenceTrail(state: ArgDiscoveryState): {
       title: "05 / The first answer",
       observation: "The crossed-out answers weren't distractions. They showed what she believed before she changed her mind.",
       unresolved: "Where did she leave the original record?",
-      nudge: "Ask Nova about N.V.'s project and notebook, then look in the Island Library.",
+      nudge: "Ask Nova why Nora saved her wrong answers.",
       discovered: state.focusPracticeNoteDiscovered,
     },
     {
@@ -66,7 +66,7 @@ export function getArgEvidenceTrail(state: ArgDiscoveryState): {
       title: "06 / Two versions",
       observation: "She knew the corrected answer, but couldn't remember the moment she changed her mind. She asked Nova to keep both.",
       unresolved: "Why wasn't the corrected page enough?",
-      nudge: "Ask Nova why she kept both answers. Don't stop at the correction.",
+      nudge: "Ask Nova where Nora saved her first answer.",
       discovered: state.libraryNotebookDiscovered,
     },
     {
@@ -80,18 +80,34 @@ export function getArgEvidenceTrail(state: ArgDiscoveryState): {
     {
       id: "folder",
       title: "08 / Lantern",
-      observation: "Lantern was the name of the light near the telescope—and a folder containing SESSION_017.",
+      observation: "The folder shares its name with the lamp Nora used to compare the charts.",
       unresolved: "What did the file contain that someone wanted discarded?",
-      nudge: "Ask Nova what was in the first file.",
+      nudge: "Ask Nova to open the Lantern Archive.",
       discovered: !!state.lanternFolderDiscovered,
     },
     {
+      id: "field-notes",
+      title: "09 / Lantern Field Notes",
+      observation: "The original index skipped a page. A contact sheet and a relay message both refer to the missing copy.",
+      unresolved: "Which stamp and label belong to the same page?",
+      nudge: "Open Lantern Field Notes from Ask Nova. The source note gives the order for the contact sheet and relay.",
+      discovered: flags.copyRead,
+    },
+    {
       id: "preserved",
-      title: "09 / FILE 01: PRESERVED",
-      observation: "QUIET marked a personal record unimportant. Nova was told to discard the crossed-out answer. She kept it.",
-      unresolved: "Who gave QUIET authority over what counted as important?",
-      nudge: "The file is preserved. The origin of the instruction belongs to another chapter.",
-      discovered: !!state.argAct1Complete,
+      title: "10 / The first draft",
+      observation: "Nora originally counted her own pencil mark as part of the printed chart. QUIET discarded the first attempt. Nova kept the page.",
+      unresolved: "Which part of Nora’s story did Nova misunderstand?",
+      nudge: "Tell Nova whose memories you think she has, or ask what she got wrong in Session 017.",
+      discovered: flags.draftRestored,
+    },
+    {
+      id: "session",
+      title: "11 / Session 017",
+      observation: "The knot against her cheek and the pencil in her hand were Nora Vale’s memories. Nova remembered them as her own. She put Nora’s page back.",
+      unresolved: "Nova knows whose memories she carries. What does that make her?",
+      nudge: "Ask Nova to replay Session 017.",
+      discovered: flags.completed,
     },
   ];
   // Sequential states are enforced by getArgDiscoveryState; this filter never
@@ -102,7 +118,9 @@ export function getArgEvidenceTrail(state: ArgDiscoveryState): {
     found,
     total: steps.length,
     nextQuestion: latest?.unresolved || null,
-    nextNudge: latest?.nudge || null,
-    completed: !!state.argAct1Complete,
+    nextNudge: flags.copyUnlocked && !flags.copyRead
+      ? "Open Lantern Field Notes from the framed message in Ask Nova."
+      : latest?.nudge || null,
+    completed: flags.completed,
   };
 }
