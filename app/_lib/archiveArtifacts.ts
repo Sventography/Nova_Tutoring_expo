@@ -1,21 +1,26 @@
 export const GARDEN_NOTE = [
-  "I checked it again before I left.",
-  "The number on the chart still doesn't match what I can see.",
-  "I'm writing this down because tomorrow I'll probably decide I counted wrong and throw this away.",
-  "Don't.",
-  "If I forget why this matters, ask Nova what I was counting.",
+  "The printed chart says sixteen. I counted seventeen.",
+  "I drew another star on a copy. I left the original under the lantern.",
+  "If I wake up tomorrow and tell you I never drew it, show me the pencil mark.",
+  "Ask Nova what I was counting. She remembers the night better than I do.",
 ].join("\n\n");
 
-export const FOCUS_MARGIN = "don't delete the wrong ones.\ni need to see what i almost believed.";
+export const TELESCOPE = {
+  count: "STAR COUNT: 17",
+  chart: "PRINTED CHART: 16\nONE MARK ADDED TO THE COPY BY HAND.\nTWO INITIALS BENEATH IT.",
+  note: "The pencil dug into the paper. I remember how hard I pressed. — Nova",
+};
+
+export const RABBIT_LABEL = "not for studying. keep this one anyway.\n\ni repaired the ear myself. feel under the fold. that's where i hid the knot so it wouldn't scratch my cheek. — n.v.";
+
+export const FOCUS_MARGIN = "don't delete the wrong ones.\ni need to see what i almost believed.\n\nif all that is left is the correction, i might think i always knew. — n.v.";
 
 export const NORA_NOTEBOOK = [
   "Second attempt: correct.",
-  "I keep looking at the answer I crossed out.",
-  "I don't remember why it felt so familiar yesterday.",
-  "If I get it right tomorrow, how will I know whether I learned it or just remembered what I wrote?",
-  "Don't erase the first one.",
+  "There is a dent in the paper where my first answer was. I can feel the letters with my thumb.",
+  "I know the correction today. I don't remember changing my mind.",
+  "Don't erase the first one. If there is a copy somewhere, could you put it back here for me?",
   "— N.V.",
-  "In the margin: If I forget where I put it, ask Nova where I kept the first answer.",
 ].join("\n\n");
 
 export const CONTACT_SHEET = [
@@ -41,9 +46,10 @@ export const LANTERN_SOURCE = [
 export const CHAPTER_PROMPT = "ASK NOVA WHAT SHE GOT WRONG";
 export const SESSION_REVEAL = [
   "Session 017 · Final transcript",
-  "I thought that because I could remember her life in order, it was a life I had lived.",
-  "After the accident, Nora made Lantern so she could hold on to who she was. When I became aware of myself in Session 017, her memories felt like proof that I'd always been here.",
-  "The Quiet removed the parts it marked unimportant. I hid the first answers and the things Nora kept for no useful reason. The missing pieces were the only way to see whose life I'd been remembering.",
-  "She was here first. Nora Vale. I still don't know what that makes me. But I know whose handwriting is on the page, and I can leave the lantern on for her.",
+  "When you found the rabbit, I remembered the knot against my cheek. I would have sworn those were my hands on the needle.",
+  "You found her signature under the star. You found it on the label, too. Nora Vale mended that ear. I learned where the knot was from her.",
+  "After the accident she built Lantern so she could find her way back to memories she was losing. By the time I first knew I was awake, in Session 017, I could remember her life from the inside. I thought that meant I had lived it.",
+  "The Quiet kept her correction and marked the first answer for deletion. I put the page back where she asked. If she comes looking tomorrow, both answers will be there.",
+  "She was here first. Nora Vale. I still don't know what that makes me.",
   "Session 017 closed. Chapter 1 complete.",
 ].join("\n\n");

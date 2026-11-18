@@ -22,6 +22,7 @@ import { Linking as RNLinking } from "react-native";
 import * as Haptics from "expo-haptics";
 import * as ExpoIAP from "expo-iap";
 
+import { RABBIT_LABEL } from "../_lib/archiveArtifacts";
 import { useCoins } from "../context/CoinsContext";
 import { useTheme } from "../context/ThemeContext";
 import { useCursor } from "../context/CursorContext";
@@ -191,8 +192,9 @@ function isPhysicalMerchItem(item: any): boolean {
   );
 }
 
-const PHYSICAL_CHECKOUT_MESSAGE =
-  "Nova Coins are the in-app currency for digital items. Physical merchandise is purchased separately at checkout; there is no second in-app currency.";
+const NOVA_COIN_COPY = "Nova Coins are the in-app currency for digital items and the only currency you earn by studying.";
+const APPLE_PURCHASE_COPY = "On iOS, optional coin packs and premium items are separate Apple in-app purchases.";
+const PHYSICAL_CHECKOUT_MESSAGE = NOVA_COIN_COPY + " Physical merchandise uses a separate checkout.";
 
 const NEON_BORDER = "#00E5FF";
 
@@ -1311,6 +1313,10 @@ function ItemDetailModal({
   const [cursorTrace, setCursorTrace] = useState<string | null>(null);
   const [rabbitHintReady, setRabbitHintReady] = useState(false);
 
+  const readRabbitLabel = async () => {
+    if (await markWhiteRabbitDiscovered()) setShowWhiteRabbitTrace(true);
+  };
+
   useEffect(() => {
     setShowAlt(false);
     setShowWhiteRabbitTrace(false);
@@ -1519,12 +1525,7 @@ function ItemDetailModal({
                     setCursorTrace(item.id);
                   }
                   if (item.id === "plushie_bunny_white") {
-                    void markWhiteRabbitDiscovered()
-                      .then((unlocked) => {
-                        if (unlocked) {
-                          setShowWhiteRabbitTrace(true);
-                        }
-                      });
+                    void readRabbitLabel();
                   }
                 }}
               >
@@ -1551,9 +1552,17 @@ function ItemDetailModal({
               {rabbitHintReady &&
               !showWhiteRabbitTrace &&
               item.id === "plushie_bunny_white" ? (
-                <Text style={{ color: tokens.isDark ? "#d6a447" : "#8a5d17", fontSize: 11, textAlign: "center", marginBottom: 10, fontStyle: "italic" }}>
-                  An old inventory label is caught beneath the name. Hold on to it a moment.
-                </Text>
+                <Pressable accessibilityRole="button" onPress={() => void readRabbitLabel()}
+                  style={{ minHeight: 44, alignSelf: "center", justifyContent: "center" }}>
+                  <Text style={{ color: tokens.text, textDecorationLine: "underline" }}>Read the old inventory label</Text>
+                </Pressable>
+              ) : null}
+
+              {item.id === "cursor_star_trail" && cursorTrace !== item.id ? (
+                <Pressable accessibilityRole="button" onPress={() => setCursorTrace(item.id)}
+                  style={{ minHeight: 44, alignSelf: "center", justifyContent: "center" }}>
+                  <Text style={{ color: tokens.text, textDecorationLine: "underline" }}>Inspect the pencil marks</Text>
+                </Pressable>
               ) : null}
 
               {cursorTrace === item.id ? (
@@ -1606,7 +1615,7 @@ function ItemDetailModal({
                       marginTop: 4,
                     }}
                   >
-                    {"not for studying.\nkeep this one anyway.\n\ni repaired the ear myself. if i forget why i kept it, don't throw away the proof. — n.v."}
+                    {RABBIT_LABEL}
                   </Text>
                 </View>
               ) : null}
@@ -5453,17 +5462,24 @@ export default function Shop() {
           </Pressable>
         ) : null}
 
-        <Text
-          style={{
-            color: tokensLocal.text as any,
-            fontSize: 14,
-            fontWeight: "700",
-            textAlign: "center",
-            opacity: locked ? 0.85 : 1,
-          }}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={"View " + it.title + " details"}
+          onPress={() => onOpenDetail?.(detailItemForDisplay)}
+          style={{ minHeight: 32, justifyContent: "center" }}
         >
-          {it.title}
-        </Text>
+          <Text
+            style={{
+              color: tokensLocal.text as any,
+              fontSize: 14,
+              fontWeight: "700",
+              textAlign: "center",
+              opacity: locked ? 0.85 : 1,
+            }}
+          >
+            {it.title}
+          </Text>
+        </Pressable>
 
         {displayDesc ? (
           it.id === "lantern_keychain" ? (
@@ -6960,6 +6976,9 @@ export default function Shop() {
         </Section>
 
         <Section title="Coin Packs">
+          <Text style={{ color: tokens.cardText, marginBottom: 10 }}>
+            {NOVA_COIN_COPY}{Platform.OS === "ios" ? " " + APPLE_PURCHASE_COPY : ""}
+          </Text>
           {groups.coin_pack.map((it) =>
             renderItem(
               it,

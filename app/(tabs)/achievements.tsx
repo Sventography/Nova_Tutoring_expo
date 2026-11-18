@@ -19,6 +19,7 @@ import { Ionicons } from "@expo/vector-icons";
 import ConfettiCannon from "react-native-confetti-cannon";
 import * as Haptics from "expo-haptics";
 import { useTheme } from "../context/ThemeContext";
+import { useIslandDecorations } from "../context/IslandDecorationContext";
 import { useStudyProgress } from "../context/StudyProgressContext";
 
 type Item = {
@@ -32,6 +33,7 @@ type Section = { title: string; data: Item[] };
 
 export default function AchievementsScreen() {
   const { unlocked } = useAchievements();
+  const { archiveAwardedAt } = useIslandDecorations();
   const { tokens } = useTheme();
   const {
     ready: studyReady,
@@ -80,6 +82,13 @@ export default function AchievementsScreen() {
       if (ts) unlockedList.push({ ...base, unlockedAt: ts });
       else lockedList.push(base);
     }
+    if (archiveAwardedAt) {
+      unlockedList.push({
+        id: "nova_archive_first_twenty", title: "First Twenty", coins: 25000,
+        desc: "One of the first twenty to recover Nora’s first draft and close Session 017.",
+        unlockedAt: archiveAwardedAt,
+      });
+    }
     unlockedList.sort(
       (a, b) => (b.unlockedAt ?? 0) - (a.unlockedAt ?? 0)
     );
@@ -92,7 +101,7 @@ export default function AchievementsScreen() {
         data: lockedList,
       },
     ];
-  }, [unlocked]);
+  }, [unlocked, archiveAwardedAt]);
 
   return (
     <LinearGradient colors={tokens.gradient} style={{ flex: 1 }}>

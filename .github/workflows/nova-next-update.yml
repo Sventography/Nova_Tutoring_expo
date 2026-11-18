@@ -6,6 +6,7 @@ on:
   pull_request:
     branches:
       - release/web-ios-working-20260115
+      - work/nova-next-update-20261113
 jobs:
   learning-and-archive:
     runs-on: ubuntu-latest
@@ -31,6 +32,13 @@ jobs:
         run: node scripts/test-arg-free-path.cjs
       - name: Validate complete Chapter One dialogue journey
         run: node scripts/test-arg-dialogue-journey.cjs
+      - name: Play the saved Chapter One conversation through Session 017
+        run: node scripts/test-archive-conversation.cjs
+      - name: Verify account awards in disposable Postgres
+        run: |
+          npm install --prefix "$RUNNER_TEMP/archive-db" --no-save --ignore-scripts @electric-sql/pglite@0.5.16
+          NODE_PATH="$RUNNER_TEMP/archive-db/node_modules" node scripts/test-archive-awards.cjs
+          node scripts/test-collector-ownership.cjs
       - name: Validate one-currency shop wording
         run: node scripts/test-shop-currency-copy.cjs
       - name: Validate browser auth storage

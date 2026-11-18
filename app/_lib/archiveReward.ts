@@ -1,3 +1,17 @@
+import { supabase } from "../lib/supabase";
+
+export const ARCHIVE_STAR_ID = "seventeenth_star" as const;
+
+export async function getArchiveAwardDate(userId: string): Promise<number | null> {
+  const { data, error } = await supabase.from("nova_archive_completions")
+    .select("completed_at").eq("user_id", userId).lte("finish_number", 20).maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  const timestamp = Date.parse(data.completed_at);
+  if (!Number.isFinite(timestamp)) throw new Error("Invalid archive award date");
+  return timestamp;
+}
+
 type ArchiveReward = {
   status: "awarded" | "already_awarded" | "completed" | "closed" | "retry";
 };

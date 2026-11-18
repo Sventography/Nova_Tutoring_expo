@@ -51,8 +51,8 @@ function DecorationPointLight(
 }
 
 
-function StarFlowerModel() {
-  const starShape = useMemo(() => {
+function useStarShape() {
+  return useMemo(() => {
     const shape = new THREE.Shape();
     const outer = 0.34;
     const inner = 0.145;
@@ -69,6 +69,30 @@ function StarFlowerModel() {
     shape.closePath();
     return shape;
   }, []);
+}
+
+function SeventeenthStarModel() {
+  const star = useStarShape();
+  return (
+    <group>
+      <mesh position={[0, 0.07, 0]}>
+        <boxGeometry args={[0.98, 0.12, 0.7]} />
+        <meshStandardMaterial color="#514454" roughness={0.9} />
+      </mesh>
+      <mesh position={[0, 0.15, 0]} rotation={[0, 0.11, 0]}>
+        <boxGeometry args={[0.88, 0.035, 0.62]} />
+        <meshStandardMaterial color="#eadab7" roughness={0.9} />
+      </mesh>
+      <mesh position={[0, 0.6, 0]} rotation={[0, 0, Math.PI]}>
+        <extrudeGeometry args={[star, { depth: 0.07, bevelEnabled: false }]} />
+        <meshStandardMaterial color="#ffdf86" emissive="#f3ad41" emissiveIntensity={0.65} />
+      </mesh>
+    </group>
+  );
+}
+
+function StarFlowerModel() {
+  const starShape = useStarShape();
 
   return (
     <group>
@@ -814,6 +838,7 @@ function Model({ item, fireworksTrigger }: { item: IslandDecorationCatalogItem; 
   if (item.model === "pond") return <PondModel item={item} />;
   if (item.model === "floating_rock") return <FloatingRockModel item={item} />;
   if (item.model === "flower_bed") return <FlowerBedModel item={item} />;
+  if (item.model === "seventeenth_star") return <SeventeenthStarModel />;
   if (item.model === "star_lantern") return <StarLanternModel item={item} />;
   if (item.model === "portal") return <PortalModel item={item} />;
 

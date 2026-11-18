@@ -1,16 +1,16 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { useTheme } from "./context/ThemeContext";
-import { getArgDiscoveryState, type ArgDiscoveryState } from "./utils/argState";
+import { getArchiveFlags, getArgDiscoveryState } from "./utils/argState";
 import { getArgEvidenceTrail } from "./_lib/argEvidenceTrail";
 
 export default function ArchiveEvidenceScreen() {
   const router = useRouter();
   const { tokens } = useTheme();
-  const [state, setState] = useState<ArgDiscoveryState | null>(null);
+  const [trail, setTrail] = useState<ReturnType<typeof getArgEvidenceTrail> | null>(null);
   const [loading, setLoading] = useState(true);
   const [hintVisible, setHintVisible] = useState(false);
   const [error, setError] = useState(false);
@@ -20,17 +20,15 @@ export default function ArchiveEvidenceScreen() {
     setLoading(true);
     setHintVisible(false);
     setError(false);
-    getArgDiscoveryState()
-      .then(result => { if (alive) setState(result); })
+    Promise.all([getArgDiscoveryState(), getArchiveFlags()])
+      .then(([state, flags]) => { if (alive) setTrail(getArgEvidenceTrail(state, flags)); })
       .catch(cause => {
         console.warn("[Archive] Unable to load evidence", cause);
-        if (alive) { setState(null); setError(true); }
+        if (alive) { setTrail(null); setError(true); }
       })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
   }, []));
-
-  const trail = useMemo(() => state ? getArgEvidenceTrail(state) : null, [state]);
 
   return (
     <LinearGradient colors={tokens.gradient} style={S.page}>
@@ -42,7 +40,7 @@ export default function ArchiveEvidenceScreen() {
         <Text style={[S.eyebrow, { color: tokens.accent }]}>RETAINED NOTES / N.V.</Text>
         <Text style={[S.title, { color: tokens.text }]}>Things left behind</Text>
         <Text style={[S.intro, { color: tokens.cardText }]}>
-          These scraps were found in different places. Read them together; each answers something the previous one couldn't.
+          A chart, a pencil mark and a familiar hand. Here’s what you’ve found so far.
         </Text>
         {loading ? <ActivityIndicator color={tokens.accent} /> : error ? (
           <Text accessibilityRole="alert" style={[S.message, { color: tokens.text }]}>
@@ -58,7 +56,7 @@ export default function ArchiveEvidenceScreen() {
         ) : (
           <>
             <Text style={[S.count, { color: tokens.cardText }]}>
-              {trail.found.length} retained · {trail.completed ? "FILE 01 PRESERVED" : "INCOMPLETE"}
+              {trail.found.length} retained · {trail.completed ? "SESSION 017 CLOSED" : "INCOMPLETE"}
             </Text>
             {trail.found.map((item, index) => (
               <View key={item.id} style={[S.panel, { backgroundColor: tokens.card, borderColor: index === trail.found.length - 1 ? tokens.accent : tokens.border }]}>

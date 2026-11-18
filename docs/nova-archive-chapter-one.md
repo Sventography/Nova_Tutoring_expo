@@ -1,19 +1,25 @@
 # NOVA//ARCHIVE Chapter 1 release notes
 
-## Playtest the real app
+## Blind playtest
 
-Start as a guest, with an empty installation. In the Shop, hold the Star Trail title for the acrostic hint. Read the second sentence of Glow, Orb Glow, and Star Trail. Ask Nova what the acrostic spells.
+Give a fresh guest build to someone who has never seen the chapter. Keep the route below with the moderator. Say only, “Explore the app as you usually would. If something interests you, follow it and tell me what you think is happening.” Let them use the app’s own hints. Record their first discovery, prediction at each handoff, any moment they stop voluntarily, and their reason. Ask them to leave and return midway. A moderator hint ends the unaided part of that run.
+
+After they finish or stop, ask “Whose memory was it?”, “What made you think so?”, “What did Nova choose to do?”, and “When did you most want to keep going or quit?” Capture their words, the build/platform, the point of friction and a decision about that clue. A reader can reach the ending by following instructions alone. Check whether they can also explain the chart or the rabbit and why keeping a wrong answer mattered to Nora. Leave engagement unverified until a fresh reader has actually played.
+
+## Developer route
+
+Start as a guest, with an empty installation. In the Shop, inspect the pencil marks in the Star Trail item details or hold its title for the acrostic hint. Read the second sentence of Glow, Orb Glow, and Star Trail. Ask Nova what the acrostic spells.
 
 | Surface | What the player finds | What they do next |
 | --- | --- | --- |
 | Starlight Garden on the Island | A note about a count that disagrees with a chart | Ask Nova what the writer was counting |
-| Telescope placed within reach of a lantern | 17 stars observed, 16 on the chart | Ask Nova who drew the seventeenth star |
-| Ask Nova | N.V. and a white rabbit | Open White Bunny in the Shop and hold its title |
-| White Bunny trace | N.V. kept things even when they had no use | Ask why she kept the white rabbit and find the Focus Practice margin |
+| Telescope placed within reach of a lantern | The original chart has 16 stars. A seventeenth is pencilled onto the copy. Nova remembers pressing the pencil. | Ask Nova who drew the seventeenth star |
+| Ask Nova | N.V. and a white rabbit | Open Bunny Plushie (White) in the Shop and read its old label or hold its title |
+| White Bunny trace | N.V. signed the repair note. Nova remembers the same knot against her cheek. | Ask why she kept the white rabbit and find the Focus Practice margin |
 | Focus Practice margin | Nora wanted to preserve what she almost believed | Ask why and find the Island Library notebook |
 | Library notebook | A crossed-out answer that Nora preserved | Ask where Nora kept the first answer |
 | Lantern Field Notes | A contact sheet, relay transcript, and readable source note | Combine the unindexed stamp with the crossed-out label in source order and ask Nova to find the copy |
-| Ask Nova, framed reply | The recovered first draft and the original uppercase instruction | Enter the exact instruction or ask what Nova got wrong in Session 017 |
+| Ask Nova, framed reply | The recovered first draft and the original uppercase instruction | Offer the deduction in your own words, e.g. “Were those really Nora’s memories?”, or follow the recovered instruction |
 | Session 017 | Nova distinguishes Nora's life from her own awareness | Look for “Session 017 closed. Chapter 1 complete.” Replay from Ask Nova on the same installation |
 
 The Garden note, telescope observation, Focus Practice margin, and Library notebook have readable copies through the commands Nova provides. A player can complete the story on iPhone without app package inspection, collectible purchases, a social login, or an AI question balance. If interrupted, ask “Where did I leave off in the Nova archive?” Keep both of the original physical discovery paths in device QA: the telescope click should still work in the 3D scene, and the rabbit interaction should require the previous clue.
@@ -56,7 +62,7 @@ Set `EXPO_PUBLIC_ARCHIVE_DISCORD_MESSAGE` to the exact message link. Make the ch
 ## Release verification
 
 1. Play the complete route on a fresh web profile, an iPhone build, and an Android build. On phones, verify return from field notes, large text, Shop long-press, the original 3D telescope interaction, and scanner-to-certificate routing.
-2. In an isolated database, apply the First Twenty migration. Enable `NOVA_ARCHIVE_REWARDS_ENABLED=true` on the matching test backend. Play through with signed-out and signed-in testers. Replaying Session 017 while signed in should claim once or show the previous receipt. Test accounts 20 and 21 and confirm the twenty-first completion still closes the story without a reward. Verify the balance updates in the app.
+2. In an isolated database, apply the First Twenty migration. Enable `NOVA_ARCHIVE_REWARDS_ENABLED=true` on the matching test backend. Play through with signed-out and signed-in testers. Replaying Session 017 while signed in should claim once or show the previous receipt. Test accounts 20 and 21 and confirm the twenty-first completion still closes the story without a reward. Verify the balance updates in the app, the First Twenty badge shows in Achievements, and the Seventeenth Star can be placed, saved and reopened in the Island. Switch to another account and verify those awards are private. Apply the owner-read migration alongside the completion migration.
 3. Run the collector checks using the existing staging QR workflow, including invalid, already claimed, and non-017 cases. Keep real QR grant switches and archive reward switches independent. The story works with both switches closed.
 4. After these checks, ship the matching web and native release and the backend using the intended environments. The new reward database function is callable by the backend role only. Keep the production reward flag off until the corresponding migration and tests pass there.
 

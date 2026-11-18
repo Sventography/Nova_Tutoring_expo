@@ -17,8 +17,9 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { useIslandDecorations } from "../context/IslandDecorationContext";
 import { useCoins } from "../context/CoinsContext";
-import { openLanternFieldNotes, resolveArchiveReply, type ArchiveReply } from "../_lib/archiveConversation";
+import { isLegacyArchiveQuestion, openLanternFieldNotes, resolveArchiveReply, type ArchiveReply } from "../_lib/archiveConversation";
 import { completeArchive } from "../_lib/archiveReward";
 import { CHAPTER_PROMPT } from "../_lib/archiveArtifacts";
 
@@ -42,7 +43,6 @@ import {
   ARG_ACT1_FINALE_REPLY,
   LANTERN_COPY_REPLY,
   LANTERN_FOLDER_REPLY,
-  markArgAct1Complete,
   markLanternCopyDiscovered,
   markLanternFolderDiscovered,
   markFocusPracticeUnlocked,
@@ -761,7 +761,6 @@ async function resolveLocalArgReply(prompt: string, messages: Msg[]): Promise<st
   }
   if (reply === LANTERN_COPY_REPLY) await markLanternCopyDiscovered();
   if (reply === LANTERN_FOLDER_REPLY) await markLanternFolderDiscovered();
-  if (reply === ARG_ACT1_FINALE_REPLY) await markArgAct1Complete();
   return reply;
 }
 
@@ -1807,6 +1806,7 @@ function prettyMemoryTier(tier: string | null, limit: number | null): string {
 export default function Ask() {
   const router = useRouter();
   const { refreshCoins } = useCoins();
+  const { refreshArchiveOwnership } = useIslandDecorations();
   const { tokens } = useTheme() as any;
   const {
     onAskQuestion,
@@ -2073,17 +2073,14 @@ export default function Ask() {
         let localReply: string | null = null;
         let archive: ArchiveReply | null = null;
         try {
-          archive = await resolveArchiveReply(trimmed, inArchiveEnding);
-          const deliberateLegacyPrompt =
-            /\b(?:white (?:rabbit|bunny)|what (?:was|were) .{0,12}counting|who (?:drew|added) the star|(?:the|which) initials|her project|the notebook|why keep both|why both|lantern|what was in the file|n\.\s*v\.)\b/i.test(trimmed) ||
-            (lastMessage?.novaIntrusion === true &&
-              /^(?:where|why|which|what (?:does that mean|do you mean|was it called)|where are the wrong answers)[.!?]*$/i.test(trimmed));
-          if (!archive && deliberateLegacyPrompt) {
+          const followingArchive = lastMessage?.role === "assistant" && lastMessage.novaIntrusion === true;
+          archive = await resolveArchiveReply(trimmed, inArchiveEnding, followingArchive);
+          if (!archive && isLegacyArchiveQuestion(trimmed, followingArchive)) {
             localReply = await resolveLocalArgReply(trimmed, messages);
           }
           if (localReply) {
             archive = localReply === ARG_ACT1_FINALE_REPLY
-              ? await openLanternFieldNotes(localReply)
+              ? await openLanternFieldNotes()
               : { text: localReply };
           }
         } catch (storyError) {
@@ -2117,6 +2114,7 @@ export default function Ask() {
                   : message));
                 if (receipt.status === "awarded" || receipt.status === "already_awarded") {
                   void refreshCoins();
+                  void refreshArchiveOwnership();
                 }
               }
             } else {
@@ -2334,6 +2332,7 @@ export default function Ask() {
       inArchiveEnding,
       lastMessage,
       refreshCoins,
+      refreshArchiveOwnership,
       messages,
       onAskQuestion,
       onServerQuizAchievementsEligible,

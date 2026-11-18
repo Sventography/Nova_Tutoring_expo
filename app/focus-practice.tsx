@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
+import { FOCUS_MARGIN } from "./_lib/archiveArtifacts";
 import { LinearGradient } from "expo-linear-gradient";
 
 import {
@@ -298,7 +299,7 @@ export default function FocusPracticeScreen() {
                 fontWeight: "700",
               }}
             >
-              {"don't delete the wrong ones.\ni need to see what i almost believed.\n\nif all that is left is the correction, i might think i always knew. — n.v."}
+              {FOCUS_MARGIN}
             </Text>
           </View>
         ) : null}

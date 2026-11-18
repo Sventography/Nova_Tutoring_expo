@@ -9,6 +9,7 @@ const vm = require('node:vm');
 const root = process.env.NOVA_TEST_ROOT || path.resolve(__dirname, '..');
 const ts = require(path.join(root, 'node_modules/typescript'));
 const reward = 'noras_last_lantern_017';
+const star = 'seventeenth_star';
 const storageKey = id => `@island/decorations/state.v1:${id || 'guest'}`;
 const placement = (itemId, id, x = 10) => ({
   placementId: id, itemId, transform: {x, z: -10, rotationY: 0, scale: 1},
@@ -30,6 +31,7 @@ function providerHarness(account = 'owner', initial = snapshot()) {
   const hooks = [];
   const effects = [];
   const requests = [];
+  const archiveRequests = [];
   const values = new Map([[storageKey(account), JSON.stringify(initial)]]);
   const writes = [];
   const coinCalls = [];
@@ -78,6 +80,7 @@ function providerHarness(account = 'owner', initial = snapshot()) {
   };
   const catalog = [
     {id: 'bench', title: 'Bench', price: 10, model: 'bench'},
+    {id: star, title: 'Seventeenth Star', price: 0, shopVisible: false},
     {id: reward, title: 'Castle', price: 0, model: 'noras_last_lantern', collectorOnly: true},
   ];
   const exports = {};
@@ -97,7 +100,7 @@ function providerHarness(account = 'owner', initial = snapshot()) {
     if (name === '../_lib/islandDecorationCatalog') return {
       ISLAND_DECORATION_CATALOG: catalog,
       ISLAND_DECORATION_CATALOG_BY_ID: Object.fromEntries(catalog.map(item => [item.id, item])),
-      isIslandDecorationCoinShopItem: item => !item.collectorOnly,
+      isIslandDecorationCoinShopItem: item => !item.collectorOnly && item.shopVisible !== false,
     };
     if (name === '../_lib/islandBuilderBounds') return {clampIslandBuildPosition: (x, z) => ({x, z})};
     if (name === '../_lib/islandAutoPlacement') return {
@@ -105,6 +108,12 @@ function providerHarness(account = 'owner', initial = snapshot()) {
       NOVA_PEDESTAL_GROUND_OBSTACLE: {x: -3, z: 1.6, radius: 2.75},
       decorationGroundRadius: () => 1, landmarkGroundRadius: () => 1,
       findNearestFreeGround: preferred => ({x: preferred.x, z: preferred.z}),
+    };
+    if (name === '../_lib/archiveReward') return {
+      ARCHIVE_STAR_ID: star,
+      getArchiveAwardDate: userId => {
+        const response = deferred(); archiveRequests.push({userId, ...response}); return response.promise;
+      },
     };
     if (name === '../_lib/collectorClient') return {
       COLLECTOR_REWARD_ID: reward,
@@ -125,7 +134,7 @@ function providerHarness(account = 'owner', initial = snapshot()) {
   }
   render();
   return {
-    get value() {return value;}, requests, values, writes, coinCalls,
+    get value() {return value;}, requests, archiveRequests, values, writes, coinCalls,
     get castleObstacle() {return castleObstacle;},
     async settle() {for (let i = 0; i < 16; i++) await Promise.resolve();},
     switchAccount(id, nextToken = id ? `${id}-token` : null) {currentAccount = id; token = nextToken; render();},
@@ -211,9 +220,41 @@ function providerHarness(account = 'owner', initial = snapshot()) {
   assert.equal((await fresh.value.buyDecoration('bench')).ok, true, 'Existing coin shop still works'); await fresh.settle();
   assert.equal(fresh.coinCalls[0][0], -10);
 
+  const winner = providerHarness('reader', snapshot(false));
+  await winner.settle();
+  winner.requests[0].resolve([]);
+  winner.archiveRequests[0].resolve(1700000000000);
+  await winner.settle();
+  assert.equal(winner.value.archiveAwardedAt, 1700000000000);
+  assert.equal(winner.value.getInventoryCount(star), 1);
+  assert.equal(winner.value.getInventoryCount(reward), 0, 'Archive award never grants the QR castle');
+  assert.equal((await winner.value.grantDecoration(star)).ok, false);
+  winner.value.startEditing(); await winner.settle();
+  assert.equal((await winner.value.buyDecoration(star)).reason, 'not_for_sale');
+  const starPlacement = winner.value.placeFromInventory(star);
+  assert.ok(starPlacement);
+  await winner.settle();
+  assert.equal(winner.value.placeFromInventory(star), null);
+  assert.equal(await winner.value.saveEditing(), true);
+  await winner.settle();
+  const restarted = providerHarness('reader', JSON.parse(winner.values.get(storageKey('reader'))));
+  await restarted.settle();
+  assert.equal(restarted.value.archiveAwardedAt, null);
+  assert.equal(restarted.value.committedPlacements.some(p => p.itemId === star), false);
+  restarted.archiveRequests[0].resolve(1700000000000); await restarted.settle();
+  assert.equal(restarted.value.committedPlacements.find(p => p.itemId === star).placementId, starPlacement);
+  const previous = restarted.value.refreshArchiveOwnership();
+  const pending = restarted.archiveRequests.at(-1);
+  restarted.switchAccount('other'); await restarted.settle();
+  restarted.requests.at(-1).resolve(owned); restarted.archiveRequests.at(-1).resolve(null);
+  pending.resolve(1700000000000); await previous; await restarted.settle();
+  assert.equal(restarted.value.archiveAwardedAt, null);
+  assert.equal(restarted.value.getOwnershipInfo(star).ownedCount, 0);
+  assert.equal(restarted.value.getInventoryCount(reward), 1, 'Physical award works without a story award');
   const guest = providerHarness(null); await guest.settle();
+  assert.equal(guest.archiveRequests.length, 0);
   assert.equal(guest.requests.length, 0, 'Guest does not call authenticated ownership API');
   assert.equal(guest.value.getInventoryCount(reward), 0);
   assert.equal(guest.value.placements.some(p => p.itemId === reward), false);
-  console.log('PASS: server-only ownership; cached/offline layouts; account and token isolation; stale response rejection; draft/SAVE races; unique inventory; existing coin purchases.');
+  console.log('PASS: server-only ownership; cached/offline layouts; account and token isolation; stale response rejection; draft/SAVE races; unique First Twenty and #017 inventories, restored star placements and existing coin purchases.');
 })().catch(error => {console.error(error); process.exitCode = 1;});
