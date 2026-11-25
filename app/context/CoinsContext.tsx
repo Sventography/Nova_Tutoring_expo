@@ -129,49 +129,6 @@ function normalizeCoinValue(
   return Math.trunc(value);
 }
 
-function getSafeUsername(
-  profile: any,
-  authUser: any,
-  userId: string | null
-): string | null {
-  const fromProfile =
-    (profile?.username &&
-      String(
-        profile.username
-      ).trim()) ||
-    (profile?.name &&
-      String(profile.name).trim()) ||
-    (profile?.displayName &&
-      String(
-        profile.displayName
-      ).trim());
-
-  const fromMetadata =
-    (authUser?.user_metadata?.username &&
-      String(
-        authUser.user_metadata.username
-      ).trim()) ||
-    (authUser?.email &&
-      String(authUser.email)
-        .split("@")[0]
-        ?.trim());
-
-  const fallback = userId
-    ? `student_${String(
-        userId
-      ).slice(0, 8)}`
-    : null;
-
-  const raw =
-    fromProfile ||
-    fromMetadata ||
-    fallback;
-
-  if (!raw) return null;
-
-  return String(raw).trim() || fallback;
-}
-
 async function readLocalCoins(
   userId: string | null
 ): Promise<LocalCoinSnapshot> {
@@ -261,12 +218,9 @@ export function CoinsProvider({
   const {
     supabaseUserId,
     ready: userReady,
-    user: profile,
-    session,
   } = useUser() as any;
-
-  const authUser =
-    session?.user ?? null;
+  const ownerRef = useRef<string | null>(supabaseUserId ?? null);
+  const loadEpochRef = useRef(0);
 
   const [coins, setCoinsState] =
     useState<number>(0);
@@ -299,180 +253,17 @@ export function CoinsProvider({
     setCoinsState(normalized);
   };
 
-  const persistRemoteCoins =
-    async (
-      ownerId: string,
-      value: number
-    ): Promise<boolean> => {
-      const normalized =
-        normalizeCoinValue(value);
-
-      try {
-        /**
-         * Prefer UPDATE so ordinary coin saves cannot accidentally replace
-         * unrelated profile columns.
-         */
-        const {
-          data: updated,
-          error: updateError,
-        } = await supabase
-          .from("profiles")
-          .update({
-            coins: normalized,
-            updated_at:
-              new Date().toISOString(),
-          })
-          .eq("id", ownerId)
-          .select("id, coins")
-          .maybeSingle();
-
-        if (updateError) {
-          console.warn(
-            "[CoinsContext] profile update error:",
-            updateError
-          );
-        }
-
-        if (
-          !updateError &&
-          updated?.id
-        ) {
-          return true;
-        }
-
-        /**
-         * If the profile row does not exist yet, create it safely.
-         */
-        const safeUsername =
-          getSafeUsername(
-            profile,
-            authUser,
-            ownerId
-          );
-
-        const payload: any = {
-          id: ownerId,
-          coins: normalized,
-          updated_at:
-            new Date().toISOString(),
-        };
-
-        if (safeUsername) {
-          payload.username =
-            safeUsername;
-        }
-
-        const {
-          error: upsertError,
-        } = await supabase
-          .from("profiles")
-          .upsert(payload, {
-            onConflict: "id",
-          });
-
-        if (upsertError) {
-          console.warn(
-            "[CoinsContext] profile upsert error:",
-            upsertError
-          );
-          return false;
-        }
-
-        return true;
-      } catch (error) {
-        console.warn(
-          "[CoinsContext] remote persistence threw:",
-          error
-        );
-        return false;
-      }
-    };
-
-  const persistCoinsForOwner =
-    async (
-      ownerId: string | null,
-      value: number
-    ): Promise<void> => {
-      const normalized =
-        normalizeCoinValue(value);
-
-      /**
-       * Save locally first and mark the logged-in cache as dirty until the
-       * Supabase write succeeds. A restart can then retry instead of losing
-       * the newest balance.
-       */
-      await writeLocalCoins(
-        ownerId,
-        normalized,
-        !!ownerId
-      );
-
-      if (!ownerId) return;
-
-      const remoteSaved =
-        await persistRemoteCoins(
-          ownerId,
-          normalized
-        );
-
-      if (remoteSaved) {
-        await writeLocalCoins(
-          ownerId,
-          normalized,
-          false
-        );
-      } else {
-        console.warn(
-          "[CoinsContext] balance remains safely cached locally and will retry on the next load."
-        );
-      }
-    };
-
-  const logTransaction =
-    async (
-      ownerId: string | null,
-      delta: number,
-      reason?: string,
-      _meta?: Record<
-        string,
-        any
-      >
-    ) => {
-      if (!ownerId || !delta) {
-        return;
-      }
-
-      try {
-        const {
-          error,
-        } = await supabase
-          .from("transactions")
-          .insert({
-            user_id: ownerId,
-            amount: delta,
-            kind:
-              reason ||
-              "coins_change",
-          });
-
-        if (error) {
-          console.warn(
-            "[CoinsContext] transaction log error:",
-            error
-          );
-        }
-      } catch (error) {
-        console.warn(
-          "[CoinsContext] transaction log threw:",
-          error
-        );
-      }
-    };
-
   const loadCoinsForOwner =
     async (
       ownerId: string | null
     ): Promise<number> => {
+      // Never accept or upload device balances for registered accounts.
+      // Keep old cache keys untouched for later reconciliation.
+      if (ownerId) {
+        const { data, error } = await supabase.from("profiles").select("id, coins").eq("id", ownerId).maybeSingle();
+        if (error || !data?.id) throw error ?? new Error("Wallet profile not ready");
+        return normalizeCoinValue(data.coins);
+      }
       if (!ownerId) {
         /*
          * Guest wallet v4 intentionally starts clean.
@@ -520,173 +311,34 @@ export function CoinsProvider({
         return local.value;
       }
 
-      try {
-        const {
-          data,
-          error,
-        } = await supabase
-          .from("profiles")
-          .select("id, coins")
-          .eq("id", ownerId)
-          .maybeSingle();
-
-        if (
-          error &&
-          (error as any).code !==
-            "PGRST116"
-        ) {
-          console.warn(
-            "[CoinsContext] profile load error:",
-            error
-          );
-
-          return local.value;
-        }
-
-        const remoteExists =
-          !!data?.id;
-
-        const remoteValue =
-          remoteExists
-            ? normalizeCoinValue(
-                data?.coins
-              )
-            : 0;
-
-        /**
-         * A dirty cache means the prior local write completed but Supabase
-         * did not. Push that exact balance before accepting the remote value.
-         */
-        if (
-          local.exists &&
-          local.dirty
-        ) {
-          const synced =
-            await persistRemoteCoins(
-              ownerId,
-              local.value
-            );
-
-          if (synced) {
-            await writeLocalCoins(
-              ownerId,
-              local.value,
-              false
-            );
-          }
-
-          return local.value;
-        }
-
-        /**
-         * One-time migration from the old string-only cache:
-         * if the device contains a larger positive balance but no v2 metadata,
-         * preserve it instead of allowing a stale remote zero to erase it.
-         */
-        const shouldRecoverLegacyLocal =
-          local.exists &&
-          !local.hasMetadata &&
-          local.value > remoteValue;
-
-        if (
-          shouldRecoverLegacyLocal
-        ) {
-          const synced =
-            await persistRemoteCoins(
-              ownerId,
-              local.value
-            );
-
-          await writeLocalCoins(
-            ownerId,
-            local.value,
-            !synced
-          );
-
-          return local.value;
-        }
-
-        if (remoteExists) {
-          /**
-           * Supabase numeric/bigint columns may arrive as either numbers or
-           * strings. normalizeCoinValue handles both instead of mistaking a
-           * string such as "100000" for a missing balance.
-           */
-          await writeLocalCoins(
-            ownerId,
-            remoteValue,
-            false
-          );
-
-          return remoteValue;
-        }
-
-        const seed =
-          local.exists
-            ? local.value
-            : 0;
-
-        const seeded =
-          await persistRemoteCoins(
-            ownerId,
-            seed
-          );
-
-        await writeLocalCoins(
-          ownerId,
-          seed,
-          !seeded
-        );
-
-        return seed;
-      } catch (error) {
-        console.warn(
-          "[CoinsContext] load failed; using local cache:",
-          error
-        );
-
-        return local.value;
-      }
+      return 0;
     };
 
-  const refreshCoins =
-    async () => {
-      if (!userReady) return;
-
-      setLoading(true);
-
-      try {
-        /**
-         * Finish any queued write before reloading so a refresh can never
-         * race backward over a newly awarded or spent balance.
-         */
-        await mutationQueueRef.current;
-
-        const ownerId =
-          supabaseUserId ?? null;
-
-        const value =
-          await loadCoinsForOwner(
-            ownerId
-          );
-
-        applyCoins(value);
-        setReady(true);
-      } catch (error) {
-        console.warn(
-          "[CoinsContext] refresh error:",
-          error
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
+  const refreshCoins = async () => {
+    if (!userReady) return;
+    const ownerId = supabaseUserId ?? null;
+    if (ownerRef.current !== ownerId) return;
+    const epoch = ++loadEpochRef.current;
+    const current = () => ownerRef.current === ownerId && loadEpochRef.current === epoch;
+    setLoading(true);
+    try {
+      await mutationQueueRef.current;
+      if (!current()) return;
+      const value = await loadCoinsForOwner(ownerId);
+      if (current()) { applyCoins(value); setReady(true); }
+    } catch (error) {
+      if (current()) { applyCoins(0); setReady(false); }
+      console.warn("[CoinsContext] refresh error:", error);
+    } finally { if (current()) setLoading(false); }
+  };
 
   useLayoutEffect(() => {
     let cancelled = false;
 
-    const ownerId =
-      supabaseUserId ?? null;
+    const ownerId = supabaseUserId ?? null;
+    ownerRef.current = ownerId;
+    const epoch = ++loadEpochRef.current;
+    const current = () => !cancelled && ownerRef.current === ownerId && loadEpochRef.current === epoch;
 
     // Reset before the next frame so a signed-out guest never sees or spends
     // the previous account's balance while the new owner is hydrating.
@@ -709,7 +361,7 @@ export function CoinsProvider({
             ownerId
           );
 
-        if (!cancelled) {
+        if (current()) {
           applyCoins(value);
           setReady(true);
         }
@@ -719,7 +371,7 @@ export function CoinsProvider({
           error
         );
       } finally {
-        if (!cancelled) {
+        if (current()) {
           setLoading(false);
         }
       }
@@ -729,6 +381,7 @@ export function CoinsProvider({
 
     return () => {
       cancelled = true;
+      ++loadEpochRef.current;
     };
   }, [
     supabaseUserId,
@@ -751,12 +404,13 @@ export function CoinsProvider({
        * changes while the queue is working, this write still goes to the
        * correct account.
        */
-      const ownerId =
-        supabaseUserId ?? null;
+      const ownerId = supabaseUserId ?? null;
+      if (ownerId) throw new Error("Registered wallet requires a verified server operation");
 
       const run =
         mutationQueueRef.current.then(
           async () => {
+            if (ownerRef.current !== ownerId) return;
             if (!ownerId) {
               const rawGuardUntil =
                 await AsyncStorage.getItem(
@@ -766,6 +420,7 @@ export function CoinsProvider({
               const guardUntil =
                 Number(rawGuardUntil || 0);
 
+              if (ownerRef.current !== ownerId) return;
               if (
                 Number.isFinite(
                   guardUntil
@@ -790,6 +445,7 @@ export function CoinsProvider({
               }
             }
 
+            if (ownerRef.current !== ownerId) return;
             const previous =
               coinsRef.current;
 
@@ -816,23 +472,7 @@ export function CoinsProvider({
 
             applyCoins(next);
 
-            /**
-             * This promise does not resolve until the local cache has been
-             * saved and the remote sync has been attempted.
-             */
-            await persistCoinsForOwner(
-              ownerId,
-              next
-            );
-
-            if (delta) {
-              await logTransaction(
-                ownerId,
-                delta,
-                reason,
-                meta
-              );
-            }
+            await writeLocalCoins(null, next, false);
 
             try {
               (
@@ -934,6 +574,7 @@ export function CoinsProvider({
         // Queued mutation errors are already logged elsewhere.
       }
 
+      if (ownerRef.current !== null) return;
       applyCoins(0);
 
       await AsyncStorage.multiRemove([
@@ -942,6 +583,7 @@ export function CoinsProvider({
         ...LEGACY_GUEST_COIN_KEYS,
       ]);
 
+      if (ownerRef.current !== null) return;
       setLoading(false);
       setReady(true);
 
