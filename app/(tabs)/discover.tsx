@@ -7,6 +7,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { useTheme } from "../context/ThemeContext";
 import { useUser } from "../context/UserContext";
 import LearningAdventure from "../components/LearningAdventure";
+import DiscoveryPractice from "../components/DiscoveryPractice";
 import { orderedAdventures, type Adventure } from "../_lib/adventureModel";
 import { emptyJourney, journeyKey, normalizeJourney, toggleSaved, markCompleted, relatedDiscoveries, type Journey } from "../_lib/journeyModel";
 import { INTERESTS, DISCOVERIES, dailyDiscovery, localDay, normalizeInterests, discoveryStorageKey, jumpModel, type Interest, type Discovery } from "../_lib/discoveryModel";
@@ -137,6 +138,7 @@ function DiscoverBody({ owner }: { owner: string | null }) {
       <Text style={[s.body, ink]}>{current.activity}</Text>
       {current.id === "space-gravity" && <GravityLab />}
       {current.id === "art-color" && <ColorLab />}
+      <DiscoveryPractice key={`practice-${current.id}`} discoveryId={current.id} />
       <DiscoveryReflection key={current.id} discoveryId={current.id} onOpenJournal={() => go("/journal")} />
       {button(journey.saved.includes(current.id) ? "Remove from my saved discoveries" : "Save to my discoveries", () => updateJourney(old => toggleSaved(old,current.id)), !journeyReady || journeyBusy)}
       {button("Explore further with Ask Nova", () => router.push({ pathname: "/ask", params: { discovery: current.id } } as any))}
