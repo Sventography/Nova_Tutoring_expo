@@ -167,6 +167,7 @@ function DiscoverBody({ owner }: { owner: string | null }) {
       <DiscoveryPractice key={`practice-${current.id}`} discoveryId={current.id} />
       <DiscoveryReflection key={current.id} discoveryId={current.id} onOpenJournal={() => go("/journal")} />
       {button(journey.saved.includes(current.id) ? "Remove from my saved discoveries" : "Save to my discoveries", () => updateJourney(old => toggleSaved(old,current.id)), !journeyReady || journeyBusy)}
+      {button("Visit my Island interest garden", () => router.push({ pathname: "/interest-garden", params: { lesson: current.id } } as never))}
       {button("Explore further with Ask Nova", () => router.push({ pathname: "/ask", params: { discovery: current.id } } as any))}
       <Text style={[s.small, ink]}>This discovery is free to explore. Follow-up AI questions use your existing Ask plan.</Text>
       {chosen && button("Back to today's discovery", () => setChosen(null))}
