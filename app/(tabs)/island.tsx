@@ -845,6 +845,12 @@ class IslandSceneBoundary extends React.Component<
 }
 
 export default function IslandScreen() {
+  const { ready, session } = useUser();
+  if (!ready) return null;
+  const owner = session?.user?.id ?? null;
+  return <IslandScreenBody key={owner ?? "guest"} owner={owner} />;
+}
+function IslandScreenBody({ owner }: { owner: string | null }) {
   const { width } = useWindowDimensions();
   const router = useRouter();
   const dailyQuests =
@@ -1272,7 +1278,7 @@ export default function IslandScreen() {
   useFocusEffect(
     React.useCallback(() => {
       let active = true;
-      void getArgDiscoveryState().then((state) => {
+      void getArgDiscoveryState(owner).then((state) => {
         if (active) {
           setLibraryNotebookUnlocked(state.libraryNotebookUnlocked);
           setArchiveAvailable(state.entryNoteDiscovered);
@@ -2073,12 +2079,12 @@ export default function IslandScreen() {
               openDailyQuests
             }
             onOpenArgEntryNote={() => {
-              void markEntryNoteDiscovered().then(() => setArchiveAvailable(true));
+              void markEntryNoteDiscovered(owner).then(() => setArchiveAvailable(true));
               setShowArgEntryNote(true);
             }}
             libraryNotebookUnlocked={libraryNotebookUnlocked}
             onOpenLibraryNotebook={() => {
-              void markLibraryNotebookDiscovered().then((unlocked) => {
+              void markLibraryNotebookDiscovered(owner).then((unlocked) => {
                 if (unlocked) setShowLibraryNotebook(true);
               });
             }}
@@ -2213,7 +2219,7 @@ export default function IslandScreen() {
                   placementId
                 )
               ) {
-                void markSeventeenthStarDiscovered()
+                void markSeventeenthStarDiscovered(owner)
                   .then((unlocked) => {
                     if (unlocked) {
                       setShowSeventeenthStarModal(
