@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, AppState, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Clipboard from "expo-clipboard";
-import { reflectionFor, discoveryNote } from "../_lib/discoveryReflection";
+import { discoveryNote } from "../_lib/discoveryReflection";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useTheme } from "../context/ThemeContext";
 import { useUser } from "../context/UserContext";
@@ -192,10 +192,8 @@ function DiscoverBody({ owner }: { owner: string | null }) {
 
 function DiscoveryReflection({ discoveryId, onOpenJournal }: { discoveryId: string; onOpenJournal: () => void }) {
   const { tokens } = useTheme();
-  const [revealed,setRevealed] = useState(false);
   const [copyStatus,setCopyStatus] = useState("");
   const [showNote,setShowNote] = useState(false);
-  const reflection = reflectionFor(discoveryId);
   const note = discoveryNote(discoveryId);
   const ink = { color: tokens.text };
   const action = (title: string, run: () => void) => <Pressable accessibilityRole="button"
@@ -213,13 +211,6 @@ function DiscoveryReflection({ discoveryId, onOpenJournal }: { discoveryId: stri
     setShowNote(true); setCopyStatus("Clipboard unavailable. Select and copy the template manually.");
   }
   return <View style={{gap:10,borderTopWidth:1,borderColor:tokens.border,paddingTop:12}}>
-    {reflection && <>
-      <Text style={[s.heading,ink]}>Think it through</Text>
-      <Text style={[s.body,ink]}>{reflection.question}</Text>
-      {action(revealed ? "Hide explanation" : "Reveal explanation",()=>setRevealed(x=>!x))}
-      {revealed && <Text accessibilityLiveRegion="polite" style={[s.body,ink]}>{reflection.explanation}</Text>}
-      <Text style={[s.small,ink]}>Optional reflection. No grade or reward.</Text>
-    </>}
     <Text style={[s.heading,ink]}>Make it your own</Text>
     <Text style={[s.body,ink]}>Keep the discovery in your Journal, add your own thoughts, or write a question for later.</Text>
     {action("Copy discovery note template",()=>void copy())}
