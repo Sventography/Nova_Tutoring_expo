@@ -1,3 +1,4 @@
+import { useUser } from "./context/UserContext";
 // app/focus-practice.tsx
 import React, { useCallback, useMemo, useState } from "react";
 import {
@@ -42,6 +43,12 @@ function scoreCopy(score: number) {
 }
 
 export default function FocusPracticeScreen() {
+  const { ready, session } = useUser();
+  if (!ready) return null;
+  const owner = session?.user?.id ?? null;
+  return <FocusPracticeScreenBody key={owner ?? "guest"} owner={owner} />;
+}
+function FocusPracticeScreenBody({ owner }: { owner: string | null }) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [topics, setTopics] = useState<FocusTopicInsight[]>([]);
@@ -52,7 +59,7 @@ export default function FocusPracticeScreen() {
     try {
       const [nextTopics, discovery] = await Promise.all([
         getFocusTopicInsights(),
-        getArgDiscoveryState(),
+        getArgDiscoveryState(owner),
       ]);
 
       setTopics(nextTopics);
@@ -63,7 +70,7 @@ export default function FocusPracticeScreen() {
       setShowArgNote(revealArgNote);
 
       if (revealArgNote) {
-        void markFocusPracticeNoteDiscovered();
+        void markFocusPracticeNoteDiscovered(owner);
       }
     } finally {
       setLoading(false);
