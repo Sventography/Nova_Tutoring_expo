@@ -22,6 +22,9 @@ import { useCoins } from "../context/CoinsContext";
 import { isLegacyArchiveQuestion, openLanternFieldNotes, resolveArchiveReply, type ArchiveReply } from "../_lib/archiveConversation";
 import { completeArchive } from "../_lib/archiveReward";
 import { CHAPTER_PROMPT } from "../_lib/archiveArtifacts";
+import { makeJournalNote } from "../_lib/journalModel";
+import { saveJournalNote, syncJournal } from "../_lib/journalStorage";
+import { showToast } from "../utils/toast";
 
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -2481,6 +2484,19 @@ export default function Ask() {
           >
             {item.text}
           </Text>
+          {!isUser && !item.novaIntrusion && item.text.trim() ? (
+            <Pressable accessibilityRole="button" style={{ minHeight: 44, justifyContent: "center", alignSelf: "flex-start" }}
+              onPress={() => {
+                const owner = session?.user?.id ?? null;
+                const note = makeJournalNote("Ask Nova response", item.text.slice(0, 60000), "Ask Nova");
+                void saveJournalNote(owner, note).then(() => {
+                  showToast("Saved to Journal");
+                  if (owner) void syncJournal(owner).catch(() => undefined);
+                }).catch(() => showToast("Could not save to Journal"));
+              }}>
+              <Text style={{ color: tokens.text, textDecorationLine: "underline" }}>Save to Journal</Text>
+            </Pressable>
+          ) : null}
           {item.archiveArtifact ? (
             <Pressable
               accessibilityRole="button"
