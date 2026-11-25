@@ -1,3 +1,4 @@
+import { useUser } from "./context/UserContext";
 import React, { useCallback, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -8,6 +9,12 @@ import { getArchiveFlags, getArgDiscoveryState } from "./utils/argState";
 import { getArgEvidenceTrail } from "./_lib/argEvidenceTrail";
 
 export default function ArchiveEvidenceScreen() {
+  const { ready, session } = useUser();
+  if (!ready) return null;
+  const owner = session?.user?.id ?? null;
+  return <ArchiveEvidenceScreenBody key={owner ?? "guest"} owner={owner} />;
+}
+function ArchiveEvidenceScreenBody({ owner }: { owner: string | null }) {
   const router = useRouter();
   const { tokens } = useTheme();
   const [trail, setTrail] = useState<ReturnType<typeof getArgEvidenceTrail> | null>(null);
@@ -20,7 +27,7 @@ export default function ArchiveEvidenceScreen() {
     setLoading(true);
     setHintVisible(false);
     setError(false);
-    Promise.all([getArgDiscoveryState(), getArchiveFlags()])
+    Promise.all([getArgDiscoveryState(owner), getArchiveFlags(owner)])
       .then(([state, flags]) => { if (alive) setTrail(getArgEvidenceTrail(state, flags)); })
       .catch(cause => {
         console.warn("[Archive] Unable to load evidence", cause);
