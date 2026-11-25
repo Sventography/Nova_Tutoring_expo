@@ -19,7 +19,7 @@ export default function JournalScreen() {
 }
 function JournalBody({ owner }: { owner: JournalScope }) {
   const { tokens } = useTheme();
-  const [fontLoaded] = useFonts({ NoraHand: require("../../assets/fonts/GochiHand-Regular.ttf") });
+  const [fontLoaded] = useFonts({ NoraHand: require("../../assets/fonts/ReenieBeanie.ttf") });
   const [notes, setNotes] = useState<JournalNote[]>([]);
   const [recovered, setRecovered] = useState<RecoveredNote[]>([]);
   const [draft, setDraft] = useState<JournalNote | null>(null);
@@ -223,8 +223,8 @@ function JournalBody({ owner }: { owner: JournalScope }) {
       {recovered.length ? <View style={s.retained}>
         <Text accessibilityRole="header" style={[s.title, { color: tokens.isDark ? "#f4a4ad" : ink, fontFamily: fontLoaded ? "NoraHand" : undefined }]}>{recoveredHeading(recovered)}</Text>
         {recovered.map(note => <View key={note.id} style={s.paper}>
-          <Text style={{ color: ink, fontSize: 23, fontFamily: fontLoaded ? "NoraHand" : undefined }}>{note.title}</Text>
-          <Text selectable style={{ color: ink, fontSize: 21, lineHeight: 30, fontFamily: fontLoaded ? "NoraHand" : undefined }}>{note.body}</Text>
+          <Text style={{ color: ink, fontSize: 29, fontFamily: fontLoaded ? "NoraHand" : undefined }}>{note.title}</Text>
+          <Text selectable style={{ color: ink, fontSize: 27, lineHeight: 35, fontFamily: fontLoaded ? "NoraHand" : undefined }}>{note.body}</Text>
           <Text style={{ color: "#754e51", fontSize: 12 }}>Retained · Read-only</Text>
           {tools(note)}
           {action("Write a note", () => change(makeJournalNote("Thoughts on " + note.title)), !!draft)}
