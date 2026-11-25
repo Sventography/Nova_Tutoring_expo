@@ -718,8 +718,8 @@ function getCanonicalArgReply(
  * granting ordinary Ask achievements, or minting Coins / Island XP.
  * Normal tutoring questions still use the regular metered /api/ask path.
  */
-async function resolveLocalArgReply(prompt: string, messages: Msg[]): Promise<string | null> {
-  const discovery = await getArgDiscoveryState();
+async function resolveLocalArgReply(prompt: string, messages: Msg[], owner: string | null): Promise<string | null> {
+  const discovery = await getArgDiscoveryState(owner);
   const normalized = normalizeArgPrompt(prompt);
   const recent = messages
     .slice(-4)
@@ -736,7 +736,7 @@ async function resolveLocalArgReply(prompt: string, messages: Msg[]): Promise<st
       (normalized.includes("initial") || normalized.includes("letters")));
 
   if (discovery.seventeenthStarDiscovered && !discovery.nvDiscovered && asksForSignature) {
-    const unlocked = await markNvDiscovered();
+    const unlocked = await markNvDiscovered(owner);
     if (unlocked) discovery.nvDiscovered = true;
   }
 
@@ -750,20 +750,20 @@ async function resolveLocalArgReply(prompt: string, messages: Msg[]): Promise<st
     reply.includes("counting what you could see through glass") ||
     reply.includes("something meant to look at the sky")
   ) {
-    await markTelescopeClueUnlocked();
+    await markTelescopeClueUnlocked(owner);
   }
   if (reply.includes("I remember a white rabbit before I remember a name.")) {
-    await markWhiteRabbitClueUnlocked();
+    await markWhiteRabbitClueUnlocked(owner);
   }
   if (reply.includes("Look where I keep the questions you miss.") ||
       reply.startsWith("Focus Practice.")) {
-    await markFocusPracticeUnlocked();
+    await markFocusPracticeUnlocked(owner);
   }
   if (reply.includes("She kept a notebook for it.")) {
-    await markLibraryNotebookUnlocked();
+    await markLibraryNotebookUnlocked(owner);
   }
-  if (reply === LANTERN_COPY_REPLY) await markLanternCopyDiscovered();
-  if (reply === LANTERN_FOLDER_REPLY) await markLanternFolderDiscovered();
+  if (reply === LANTERN_COPY_REPLY) await markLanternCopyDiscovered(owner);
+  if (reply === LANTERN_FOLDER_REPLY) await markLanternFolderDiscovered(owner);
   return reply;
 }
 
@@ -1807,6 +1807,11 @@ function prettyMemoryTier(tier: string | null, limit: number | null): string {
 }
 
 export default function Ask() {
+  const { ready, session } = useUser();
+  if (!ready) return null;
+  return <AskBody key={session?.user?.id ?? "guest"} />;
+}
+function AskBody() {
   const router = useRouter();
   const { refreshCoins } = useCoins();
   const { refreshArchiveOwnership } = useIslandDecorations();
@@ -2077,13 +2082,13 @@ export default function Ask() {
         let archive: ArchiveReply | null = null;
         try {
           const followingArchive = lastMessage?.role === "assistant" && lastMessage.novaIntrusion === true;
-          archive = await resolveArchiveReply(trimmed, inArchiveEnding, followingArchive);
+          archive = await resolveArchiveReply(trimmed, inArchiveEnding, followingArchive, session?.user?.id ?? null);
           if (!archive && isLegacyArchiveQuestion(trimmed, followingArchive)) {
-            localReply = await resolveLocalArgReply(trimmed, messages);
+            localReply = await resolveLocalArgReply(trimmed, messages, session?.user?.id ?? null);
           }
           if (localReply) {
             archive = localReply === ARG_ACT1_FINALE_REPLY
-              ? await openLanternFieldNotes()
+              ? await openLanternFieldNotes(session?.user?.id ?? null)
               : { text: localReply };
           }
         } catch (storyError) {
@@ -2122,7 +2127,7 @@ export default function Ask() {
               }
             } else {
               setMessages((m) => m.map((message) => message.id === answer.id
-                ? { ...message, text: message.text + "\n\nSign in, then ask to “replay Session 017” to check First Twenty eligibility." }
+                ? { ...message, text: message.text + "\n\nSign in and complete the Archive on your account to check First Twenty eligibility." }
                 : message));
             }
           }
