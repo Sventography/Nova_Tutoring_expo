@@ -1809,9 +1809,10 @@ function prettyMemoryTier(tier: string | null, limit: number | null): string {
 export default function Ask() {
   const { ready, session } = useUser();
   if (!ready) return null;
-  return <AskBody key={session?.user?.id ?? "guest"} />;
+  const archiveOwner = session?.user?.id ?? null;
+  return <AskBody key={archiveOwner ?? "guest"} archiveOwner={archiveOwner} />;
 }
-function AskBody() {
+function AskBody({ archiveOwner }: { archiveOwner: string | null }) {
   const router = useRouter();
   const { refreshCoins } = useCoins();
   const { refreshArchiveOwnership } = useIslandDecorations();
@@ -2082,13 +2083,13 @@ function AskBody() {
         let archive: ArchiveReply | null = null;
         try {
           const followingArchive = lastMessage?.role === "assistant" && lastMessage.novaIntrusion === true;
-          archive = await resolveArchiveReply(trimmed, inArchiveEnding, followingArchive, session?.user?.id ?? null);
+          archive = await resolveArchiveReply(trimmed, inArchiveEnding, followingArchive, archiveOwner);
           if (!archive && isLegacyArchiveQuestion(trimmed, followingArchive)) {
-            localReply = await resolveLocalArgReply(trimmed, messages, session?.user?.id ?? null);
+            localReply = await resolveLocalArgReply(trimmed, messages, archiveOwner);
           }
           if (localReply) {
             archive = localReply === ARG_ACT1_FINALE_REPLY
-              ? await openLanternFieldNotes(session?.user?.id ?? null)
+              ? await openLanternFieldNotes(archiveOwner)
               : { text: localReply };
           }
         } catch (storyError) {
@@ -2337,6 +2338,7 @@ function AskBody() {
       input,
       accountId,
       accountToken,
+      archiveOwner,
       inArchiveEnding,
       lastMessage,
       refreshCoins,
