@@ -120,6 +120,24 @@ async function run() {
   await reply('What was I counting?', /Bring a lantern close/);
   assert.equal(await state.markSeventeenthStarDiscovered(), true, 'Island discovery also reaches the conversation');
   await reply('Why are there 17 stars?', /^N\.V\./);
+  // A second complete route uses a player's observation rather than a copied command.
+  await reply('Who was N.V.?', /different memory/);
+  await state.markWhiteRabbitDiscovered();
+  await reply('Who really repaired the rabbit’s ear?', /Focus Practice/);
+  await reply('Read the Focus Practice margin', /what i almost believed/);
+  await reply('Why would Nora save a wrong answer?', /very charts/);
+  await reply('Read Nora’s notebook', /filed with the marked chart/);
+  await reply('Where did Nora save her first answer?', /one missing record/);
+  const observation = 'The unindexed frame 17 is UNERASED and the relay says FIRST DRAFT';
+  assert.equal(await resolveArchiveReply(observation, false, true), null, 'Observation cannot bypass the field notes');
+  await state.markArchiveFlag('copyRead');
+  assert.equal(await resolveArchiveReply(observation, false, false), null, 'Outside archive context an observation is not a command');
+  assert.match((await resolveArchiveReply(observation, false, true))?.text ?? '', /First attempt, crossed out: Seventeen/);
+  assert.equal((await state.getArchiveFlags()).completed, false);
+  const deduction = await reply('You confused Nora’s memories with your own.', /Nora was the one who lived them/);
+  assert.equal(deduction.finished, true);
+  assert.match(deduction.text, /without her wrong answer[\\s\\S]+extra star/);
+
   console.log('PASS: guest clue chain, original Island/Shop gates, social recovery order, Session 017 closure, replay, and tutoring isolation.');
 }
 
