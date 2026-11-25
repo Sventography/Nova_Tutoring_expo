@@ -1326,13 +1326,16 @@ function ItemDetailModal({
     setShowWhiteRabbitTrace(false);
     setCursorTrace(null);
     setRabbitHintReady(false);
-    if (item?.id !== "plushie_bunny_white") return;
+    if (visible && item?.id === "cursor_glow") void markArchiveFlag("glowDescriptionRead").catch(() => undefined);
+    if (visible && item?.id === "cursor_orb") void markArchiveFlag("orbDescriptionRead").catch(() => undefined);
+    if (visible && item?.id === "cursor_star_trail") void markArchiveFlag("starDescriptionRead").catch(() => undefined);
+    if (!visible || item?.id !== "plushie_bunny_white") return;
     let alive = true;
     void getArgDiscoveryState().then(state => {
       if (alive) setRabbitHintReady(state.whiteRabbitClueUnlocked);
     }).catch(() => {});
     return () => { alive = false; };
-  }, [item?.id]);
+  }, [visible, item?.id]);
 
   if (!item) return null;
 
