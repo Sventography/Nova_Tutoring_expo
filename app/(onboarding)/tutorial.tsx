@@ -120,7 +120,7 @@ export default function Tutorial() {
         key: "shipping",
         title: "Checkout & Shipping",
         body:
-          "Nova Coins are digital-only. Physical merchandise will use separate earned-only Nova Rewards and a shipping checkout.",
+          "Nova Coins are the only currency you earn by learning. Physical merchandise has a separate checkout for payment and shipping.",
         image: require("../assets/tutorial/nova_shipping_screen.png"),
         slot: "bottom",
         stageH: 0.68,

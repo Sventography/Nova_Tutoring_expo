@@ -15022,25 +15022,23 @@ export default function NovaIsland3DScene({
           NOVA_SPRITE_BASE_HEIGHT *
           projection.scale;
 
-        novaOverlayRef.current?.setNativeProps(
-          {
-            style: {
-              left:
-                projection.x -
-                width / 2,
-              top:
-                projection.y -
-                height +
-                4,
-              width,
-              height,
-              opacity:
-                projection.visible
-                  ? 1
-                  : 0,
-            },
-          }
-        );
+        const overlay = novaOverlayRef.current;
+        if (!overlay) return;
+        const left = projection.x - width / 2;
+        const top = projection.y - height + 4;
+        const opacity = projection.visible ? 1 : 0;
+
+        if (Platform.OS === "web") {
+          // React Native Web forwards its View ref to the backing DOM node.
+          const element = overlay as unknown as HTMLElement;
+          element.style.left = left + "px";
+          element.style.top = top + "px";
+          element.style.width = width + "px";
+          element.style.height = height + "px";
+          element.style.opacity = String(opacity);
+        } else {
+          overlay.setNativeProps({ style: { left, top, width, height, opacity } });
+        }
       },
       []
     );
