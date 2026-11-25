@@ -2,6 +2,7 @@ import React,{useState} from "react";
 import {Pressable,StyleSheet,Text,View} from "react-native";
 import Svg,{Rect,Polygon,Line,Circle,Path} from "react-native-svg";
 import {useTheme} from "../context/ThemeContext";
+import HarmonyPlayback from "./HarmonyPlayback";
 import {SCALE_FACTORS,DEPTH_LEVELS,squareScale,mountainPalette,EDIT_CONTEXTS,editContext,COIN_BATCHES,simulateCoins,PIXEL_RESOLUTIONS,PIXEL_SHAPES,PIXEL_COLORS,pixelMask,KEY_NOTES,CHORD_ROOTS,triad,noteFrequency,STORY_SHOTS,shotReading,moveShot,VIEWPOINTS,viewpoint,SETUPS,storyPayoff} from "../_lib/discoveryLabs";
 
 function Choices({values,selected,onChange,labels}:{values:readonly number[];selected:number;onChange:(n:number)=>void;labels:readonly string[]}){
@@ -151,7 +152,8 @@ function HarmonyLab(){
    <Text accessibilityLiveRegion="polite" style={[s.title,{color:tokens.text}]}>{KEY_NOTES[root].slice(0,-1)} {minor?"minor":"major"}: {notes.map(n=>KEY_NOTES[n]).join(" · ")}</Text>
    <Text style={{color:tokens.text}}>Root to third: {minor?3:4} semitones · Root to fifth: 7 semitones.</Text>
    <Text style={{color:tokens.text}}>Frequencies (A4 = 440 Hz): {notes.map(n=>noteFrequency(n).toFixed(1)+" Hz").join(" · ")}</Text>
-   <Text style={{color:tokens.text}}>Major and minor harmony can suggest different moods, but tempo, context and culture matter too. This keyboard is visual; try the notes on an instrument if you have one.</Text>
+   <Text style={{color:tokens.text}}>Major and minor harmony can suggest different moods, but tempo, context and culture matter too.</Text>
+   <HarmonyPlayback notes={notes}/>
  </View>;
 }
 
