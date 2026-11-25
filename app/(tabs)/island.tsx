@@ -2008,6 +2008,10 @@ function IslandScreenBody({ owner }: { owner: string | null }) {
           </View>
         </View>
 
+        <Pressable accessibilityRole="button" onPress={() => router.push("/interest-garden" as never)} style={styles.nextRow}>
+          <Text style={styles.nextText}>Visit my Island interest garden</Text>
+        </Pressable>
+
         {archiveAvailable ? (
           <Pressable
             accessibilityRole="button"
