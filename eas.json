@@ -24,5 +24,10 @@
         "EXPO_PUBLIC_NORAS_LANTERN_PREVIEW": "false"
       }
     }
+  },
+  "submit": {
+    "production": {
+      "ios": {}
+    }
   }
 }
