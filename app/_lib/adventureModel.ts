@@ -41,6 +41,44 @@ export const ADVENTURES: readonly Adventure[] = [
       ]},
       finish:{title:"Mission debrief",story:"You used physics to predict motion, estimated signal travel time and evaluated evidence. These are real scientific skills, applied to an imagined mission.",choices:[]}
     }
+  },
+  {
+    id:"music-studio",interest:"music",title:"The soundtrack without a picture",
+    description:"Compose a musical cue for a scene and discover how tempo, harmony and arrangement change its meaning.",
+    start:"brief",scenes:{
+      brief:{title:"The commission",story:"A filmmaker asks you to score a scene of someone returning to a familiar room. The director wants both comfort and uncertainty. Which musical starting point would you try?",choices:[
+        {label:"A slow, sparse major chord",feedback:"Major harmony can feel reassuring, but a slow tempo and sparse texture can leave room for uncertainty. Context matters more than a simple major-equals-happy rule.",next:"texture"},
+        {label:"A gentle minor chord with a repeating rhythm",feedback:"Minor harmony and repetition can suggest reflection or unease, but they need not sound frightening. The performance and surrounding scene shape the effect.",next:"texture"}
+      ]},
+      texture:{title:"Change the arrangement",story:"The melody is working. You want to make the room feel a little unfamiliar without changing the notes. Try one production decision.",choices:[
+        {label:"Reduce the instruments until only one remains",feedback:"A sparse arrangement can make small changes more noticeable. Removing instruments may create intimacy or expose uncertainty.",next:"tempo"},
+        {label:"Keep the melody but add a distant echo",feedback:"An echo suggests space and distance. It can change how a listener interprets an otherwise identical melody.",next:"tempo"}
+      ]},
+      tempo:{title:"The final frame",story:"The person sits down, and the room is quiet. What would you do with the cue?",choices:[
+        {label:"Let the rhythm slow and disappear",feedback:"Changing the pulse can suggest the scene is settling. Silence after music also directs attention to ordinary sounds.",next:"finish"},
+        {label:"Keep a steady pulse through the final frame",feedback:"A continuing pulse can imply that something remains unresolved. Neither choice is automatically correct; each supports a different interpretation.",next:"finish"}
+      ]},
+      finish:{title:"Your cue is ready",story:"You explored harmony, texture, echo, rhythm and the role of silence. Try another arrangement, or make your own short recording using instruments or sounds available to you.",choices:[]}
+    }
+  },
+  {
+    id:"art-exhibition",interest:"art",title:"The painting that feels bigger than its canvas",
+    description:"Design a tiny exhibition piece and experiment with perspective, contrast and composition.",
+    start:"canvas",scenes:{
+      canvas:{title:"A world on a flat surface",story:"Your imaginary painting shows a mountain trail. You want viewers to feel they could step inside. Choose a way to create depth.",choices:[
+        {label:"Make nearby details larger and more defined",feedback:"Relative size and visible detail are depth cues. Nearby objects often appear larger and clearer, especially when you use a consistent perspective.",next:"color"},
+        {label:"Use overlapping shapes to hide parts of distant objects",feedback:"Occlusion is a strong depth cue: we usually interpret a shape that blocks another as being closer. This works even without realistic shading.",next:"color"}
+      ]},
+      color:{title:"The distant mountains",story:"The foreground is vibrant. You want mountains in the background to feel far away. Try a color strategy.",choices:[
+        {label:"Use softer contrast and less saturated colors",feedback:"Atmospheric scattering often makes distant landscapes appear hazier and lower in contrast. Painters can use that cue to suggest distance.",next:"focus"},
+        {label:"Use equally sharp detail in every layer",feedback:"This can create an intentional flat or graphic style, but it weakens the atmospheric depth cue. It is a useful alternative if realism is not your goal.",next:"focus"}
+      ]},
+      focus:{title:"Guide the viewer",story:"The piece is nearly complete. Where should the viewer's eye go first? Choose a compositional technique.",choices:[
+        {label:"Use a strong contrast near the trail entrance",feedback:"Local contrast often attracts attention. You can use it to establish a focal point before the eye travels into the painting.",next:"finish"},
+        {label:"Use the trail's shape to lead toward the mountains",feedback:"Leading lines can guide attention through a composition. They can suggest movement and give viewers a route to follow.",next:"finish"}
+      ]},
+      finish:{title:"Your exhibition piece",story:"You explored relative size, overlapping shapes, atmospheric perspective and composition. Try sketching a variation using the other choices. Your artistic intention matters more than a single correct answer.",choices:[]}
+    }
   }
 ];
 export function orderedAdventures(interests: readonly Interest[]) {
