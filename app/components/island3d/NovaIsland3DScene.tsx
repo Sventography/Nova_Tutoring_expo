@@ -77,6 +77,7 @@ export type Island3DDiscovery = {
 };
 
 type Props = {
+  focusedDistrict?:Interest|null;
   onDistrictPress?:(id:Interest)=>void;
   districtIds?: Interest[]; visitingShore?:boolean; residentMotion?:boolean; construction?:boolean;
   level: number;
@@ -14865,7 +14866,7 @@ function IslandWorld({
 
 // NOVA_ISLAND_EXPANSION_PACK_1
 export default function NovaIsland3DScene({
-  onDistrictPress, districtIds=[], visitingShore=false,residentMotion=false,construction=false,
+  focusedDistrict=null,onDistrictPress, districtIds=[], visitingShore=false,residentMotion=false,construction=false,
   level,
   height = 450,
   learningPulseToken = 0,
@@ -15190,11 +15191,18 @@ export default function NovaIsland3DScene({
 
   const [shoreClear,setShoreClear]=useState(false);
   const wasAtShore=useRef(false);
+  const focusIndex=focusedDistrict?districtIds.indexOf(focusedDistrict):-1;
+  const shoreTarget=DISTRICT_SHORE_X+(focusIndex<0?(districtIds.length-1)/2-1:focusIndex-1)*4;
+  const [viewportWidth, setViewportWidth] = useState(0);
+  const overviewDistance = districtIds.length === 3 ? 16 : districtIds.length === 2 ? 12 : 7.8;
+  // Perspective cameras keep vertical FOV fixed. Leave room for the outer parcels in portrait.
+  const portraitFit = viewportWidth > 0 ? Math.max(1, height / viewportWidth) : 1;
+  const shoreDistance = focusIndex < 0 ? Math.min(28, overviewDistance * portraitFit) : 7.8;
   useEffect(()=>{
-    if(visitingShore && shoreClear){focusPosition([DISTRICT_SHORE_X,0,0],18);}
+    if(visitingShore && shoreClear){focusPosition([shoreTarget,0,0],shoreDistance);}
     else if(wasAtShore.current){resetView();}
     wasAtShore.current=visitingShore && shoreClear;
-  },[visitingShore,shoreClear,focusPosition,resetView]);
+  },[visitingShore,shoreClear,shoreTarget,shoreDistance,focusPosition,resetView]);
 
   const selectMilestone =
     useCallback(
@@ -15702,14 +15710,14 @@ const selectLegendary =
               controlsRef.current.desiredTarget = [
                 clamp(
                   gestureStartRef.current.targetX - deltaX,
-                  -21,
-                  21
+                  visitingShore ? DISTRICT_SHORE_X-6 : -21,
+                  visitingShore ? DISTRICT_SHORE_X+6 : 21
                 ),
                 gestureStartRef.current.targetY,
                 clamp(
                   gestureStartRef.current.targetZ - deltaZ,
-                  -21,
-                  21
+                  visitingShore ? -2 : -21,
+                  visitingShore ? 2 : 21
                 ),
               ];
 
@@ -15757,7 +15765,7 @@ const selectLegendary =
           onShouldBlockNativeResponder:
             () => true,
         }),
-      [builderEditing, clearDecorationDrag, clearKeepsakeDrag, getArmedDecorationDrag, getArmedKeepsakeDrag, moveDecorationPlacement, moveKeepsake, queueBuilderMove, setInteractionActive]
+      [visitingShore, builderEditing, clearDecorationDrag, clearKeepsakeDrag, getArmedDecorationDrag, getArmedKeepsakeDrag, moveDecorationPlacement, moveKeepsake, queueBuilderMove, setInteractionActive]
     );
 
   const selectedMilestone =
@@ -15865,6 +15873,7 @@ const selectLegendary =
 
   return (
     <View
+      onLayout={event => setViewportWidth(event.nativeEvent.layout.width)}
       style={[
         styles.container,
         {
@@ -16120,7 +16129,7 @@ const selectLegendary =
         </View>
 
         <Pressable
-          onPress={visitingShore&&shoreClear?()=>focusPosition([DISTRICT_SHORE_X,0,0],18):resetView}
+          onPress={visitingShore&&shoreClear?()=>focusPosition([shoreTarget,0,0],shoreDistance):resetView}
           style={({ pressed }) => [
             styles.resetButton,
             {
@@ -16144,6 +16153,16 @@ const selectLegendary =
           </Text>
         </Pressable>
 
+        {visitingShore && shoreClear && <View style={{position:"absolute",top:90,right:8,gap:3}}>
+          {(["Turn view","Zoom closer","Zoom out"] as const).map(label=><Pressable key={label}
+            accessibilityRole="button" onPress={()=>{
+              const camera=controlsRef.current;
+              if(label==="Turn view")camera.desiredAzimuth+=Math.PI/6;
+              else camera.desiredDistance=clamp(camera.desiredDistance*(label==="Zoom closer"?.8:1.25),5,28);
+            }} style={{minHeight:44,justifyContent:"center",paddingHorizontal:9,borderRadius:8,backgroundColor:"#172844"}}>
+            <Text style={{color:"#f2e8d3",fontWeight:"600"}}>{label}</Text>
+          </Pressable>)}
+        </View>}
         <View
           pointerEvents="none"
           style={
@@ -16161,7 +16180,7 @@ const selectLegendary =
                 styles.selectedTitle
               }
             >
-              {visitingShore?(shoreClear?"District shore":"District growth deferred"):selectedTitle}
+              {visitingShore?(shoreClear?(focusedDistrict?districts[focusedDistrict].name:"District shore"):"District growth deferred"):selectedTitle}
             </Text>
 
             <View
@@ -16213,8 +16232,7 @@ const selectLegendary =
               styles.hintText
             }
           >
-            Drag to rotate · Pinch to
-            zoom · Tap to explore
+            {visitingShore?"Drag to pan · Two fingers to rotate or zoom · Tap to focus":"Drag to pan · Pinch to zoom · Tap to explore"}
           </Text>
         </View>
       </View>

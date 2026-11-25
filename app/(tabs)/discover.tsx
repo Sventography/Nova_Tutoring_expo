@@ -23,7 +23,7 @@ export default function DiscoverScreen() {
 }
 
 function DiscoverBody({ owner }: { owner: string | null }) {
-  const {districtLesson,districtAdventure}=useLocalSearchParams<{districtLesson?:string;districtAdventure?:string}>();
+  const {districtLesson,districtAdventure,fromShore}=useLocalSearchParams<{districtLesson?:string;districtAdventure?:string;fromShore?:string}>();
   const arrival=useRef(false);
   useEffect(()=>{
     arrival.current=false;
@@ -123,6 +123,7 @@ function DiscoverBody({ owner }: { owner: string | null }) {
   const go = (pathname: string) => router.push(pathname as any);
   if (!loaded) return <ActivityIndicator color={tokens.accent} />;
   return <ScrollView ref={scroll} style={{ flex: 1, backgroundColor: tokens.bg }} contentContainerStyle={s.page} keyboardShouldPersistTaps="handled">
+    {fromShore==="1" && button("Return to my district view",()=>router.navigate("/island" as never))}
     <Text style={[s.eyebrow, ink]}>NOVA DISCOVER</Text>
     <Text accessibilityRole="header" style={[s.title, ink]}>What are you curious about?</Text>
     <Text style={[s.body, ink]}>Explore something unexpected, follow your interests, or get straight to your schoolwork.</Text>

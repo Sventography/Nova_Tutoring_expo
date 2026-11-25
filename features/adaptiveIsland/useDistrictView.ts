@@ -11,8 +11,8 @@ export function useDistrictView(owner:string|null,level:number){
  const [celebrating,setCelebrate]=useState(false);
  const prior=useRef(stageAt(level));
  useFocusEffect(useCallback(()=>{
-  let live=true;setVisit(false);setIds([]);setMotion(false);setCelebrate(false);
-  AsyncStorage.getItem(profileKey(owner)).then(raw=>{if(live)setIds(themes(parse(raw)));}).catch(()=>{});
+  let live=true;setMotion(false);setCelebrate(false);
+  AsyncStorage.getItem(profileKey(owner)).then(raw=>{if(live){const next=themes(parse(raw));setIds(next);if(!next.length)setVisit(false);}}).catch(()=>{if(live){setIds([]);setVisit(false);}});
   return ()=>{live=false;};
  },[owner]));
  useEffect(()=>{

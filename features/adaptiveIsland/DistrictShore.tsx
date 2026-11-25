@@ -1,5 +1,5 @@
-import React,{useEffect,useRef} from "react";
-import type { Group } from "three";
+import React,{useEffect,useLayoutEffect,useMemo,useRef} from "react";
+import {Group,InstancedMesh,Color,Object3D} from "three";
 import { useFrame,useThree } from "../../components/islandFiber";
 import type { Interest } from "../../app/_lib/discoveryModel";
 import { districts,stageAt } from "./districts";
@@ -11,14 +11,14 @@ type Part=[Shape,Vec,Vec,string?,number?];
 const seed:Record<Interest,Part[]>={
  music:[["ball",[0,.46,0],[.46,.53,.15]],["box",[.21,.85,0],[.13,.8,.1],"#7d513a",-.45],["box",[0,.32,.45],[1,.12,.3]]],
  art:[["box",[0,.59,0],[.1,1.2,.1],"#815538",.14],["box",[0,.88,.09],[.92,.72,.1],"#ffe3b5"],["ball",[-.15,.97,.17],[.28,.25,.05]],["drum",[.52,.03,.42],[.46,.04,.35],"#67b1cd"]],
- film:[["box",[0,.58,0],[.86,.52,.18],"#424351"],["box",[-.04,.94,0],[.9,.14,.18],"#eee6da",.22],["ball",[.57,1.06,0],[.26,.26,.15]],["box",[.6,.65,0],[.13,.62,.12]]],
- space:[["box",[0,.38,0],[.16,.74,.16]],["drum",[.04,.82,0],[.32,1.05,.32],"#9db4ff",-.82],["ball",[-.57,.88,0],[.2,.2,.2],"#f6d575"]],
+ film:[["box",[0,.24,0],[.14,.48,.16],"#786555"],["box",[0,.58,0],[.86,.52,.18],"#424351"],["box",[-.04,.94,0],[.9,.14,.18],"#eee6da",.22],["ball",[.57,1.06,0],[.26,.26,.15]],["box",[.6,.65,0],[.13,.62,.12]]],
+ space:[["box",[0,.38,0],[.16,.74,.16]],["drum",[.04,.82,0],[.32,1.05,.32],"#9db4ff",-.82],["box",[-.57,.44,0],[.035,.86,.035],"#8e846c"],["ball",[-.57,.88,0],[.2,.2,.2],"#f6d575"]],
  astrology:[["drum",[0,.2,0],[1.05,.22,1.05]],["cone",[0,.52,0],[.25,.65,.24],"#e2bb7d",-.3],["ring",[.6,.84,0],[.28,.28,.28]]],
  science:[["box",[0,.29,0],[1,.45,.6]],["cone",[0,.69,0],[1,.52,.7],"#b2dec0"],["ball",[.65,.36,0],[.24,.38,.24],"#538c5d"]],
  math:[["box",[0,.16,0],[.46,.25,.46],"#e9c764",.0],["cone",[.5,.31,0],[.47,.6,.47]],["ball",[-.53,.28,0],[.41,.41,.41]]],
  history:[["box",[0,.54,0],[1,.1,.57],"#945d3c"],["box",[0,.32,0],[.14,.57,.18]],["box",[.1,.62,0],[.63,.04,.42],"#ffedbe"],["drum",[-.47,.77,0],[.19,.43,.19]]],
  technology:[["box",[0,.4,0],[.54,.57,.36]],["box",[0,.84,0],[.61,.33,.4],"#8fb2c2"],["ball",[-.15,.86,.21],[.1,.1,.07],"#25364b"],["ball",[.15,.86,.21],[.1,.1,.07],"#25364b"]],
- writing:[["box",[-.22,.48,0],[.46,.1,.55],"#ead8a6",-.14],["box",[.22,.48,0],[.46,.1,.55],"#fff0c5",.14],["box",[-.55,.5,-.4],[.14,1,.14],"#906e4f"],["ball",[-.55,1.1,-.4],[.75,.67,.75],"#629c78"]]
+ writing:[["box",[0,.39,0],[1.0,.10,.62],"#967352"],["box",[0,.20,0],[.20,.4,.20],"#89684b"],["box",[-.22,.48,0],[.46,.1,.55],"#ead8a6",-.14],["box",[.22,.48,0],[.46,.1,.55],"#fff0c5",.14],["box",[-.55,.5,-.4],[.14,1,.14],"#906e4f"],["ball",[-.55,1.1,-.4],[.75,.67,.75],"#629c78"]]
 };
 const marks: Record<Interest,[Shape,Shape,Shape]>={music:["cone","drum","ring"],art:["ball","box","cone"],film:["box","box","ring"],space:["ball","ring","ball"],astrology:["ring","box","ring"],science:["ring","cone","ball"],math:["drum","cone","box"],history:["box","drum","cone"],technology:["box","ring","drum"],writing:["ball","box","cone"]};
 // Distinct silhouettes across the three additions. Coordinates are local to each building.
@@ -34,40 +34,101 @@ const trim:Record<Interest,[Part[],Part[],Part[]]>={
  technology:[ [ ["box",[-.16,.56,.28],[.26,.22,.13],"#92c6b3"],["box",[.16,.6,.28],[.26,.22,.13],"#57828b"] ], [ ["box",[-.18,.77,.33],[.13,.48,.13],undefined,-.6],["ball",[0,.94,.33],[.23,.23,.23]] ], [ ["box",[0,1,.38],[.71,.46,.07],"#42576c"],["box",[0,.99,.43],[.42,.12,.04],"#93d6bd"] ] ],
  writing:[ [ ["box",[0,.47,.32],[.68,.12,.35],"#ad8f68"] ], [ ["box",[-.36,.67,.35],[.18,.74,.1],"#ae666e"],["box",[.36,.67,.35],[.18,.74,.1],"#ae666e"] ], [ ["box",[-.21,1.24,.38],[.42,.1,.47],"#f0dfbb",-.18],["box",[.21,1.24,.38],[.42,.1,.47],"#f0dfbb",.18] ] ]
 };
+function Geometry({shape}:{shape:Shape}){
+ return shape==="box"?<boxGeometry/>:shape==="ring"?<torusGeometry args={[.36,.075,6,14]}/>:shape==="ball"?<sphereGeometry args={[.5,10,7]}/>:shape==="cone"?<coneGeometry args={[.5,1,6]}/>:<cylinderGeometry args={[.5,.5,1,12]}/>;
+}
 function Model({part,tint}:{part:Part;tint:string}){
  const [shape,pos,size,color,roll=0]=part;
- return <mesh position={pos} scale={size} rotation={[0,0,roll]}>
-  {shape==="box"?<boxGeometry/>:shape==="ring"?<torusGeometry args={[.36,.075,6,14]}/>:shape==="ball"?<sphereGeometry args={[.5,10,7]}/>:shape==="cone"?<coneGeometry args={[.5,1,6]}/>:<cylinderGeometry args={[.5,.5,1,12]}/>}
-  <meshStandardMaterial color={color||tint}/>
+ return <mesh position={pos} scale={size} rotation={[0,0,roll]}><Geometry shape={shape}/>
+  <meshStandardMaterial color={color||tint} roughness={.88} emissive={color||tint} emissiveIntensity={.08}/>
  </mesh>;
+}
+function Instances({parts,shape,tint}:{parts:Part[];shape:Shape;tint:string}){
+ const ref=useRef<InstancedMesh>(null);
+ useLayoutEffect(()=>{
+  const mesh=ref.current;if(!mesh)return;
+  const transform=new Object3D(),color=new Color();
+  parts.forEach(([,pos,size,paint,roll=0],i)=>{
+   transform.position.set(...pos);transform.scale.set(...size);transform.rotation.set(0,0,roll);
+   transform.updateMatrix();mesh.setMatrixAt(i,transform.matrix);mesh.setColorAt(i,color.set(paint||tint));
+  });
+  mesh.instanceMatrix.needsUpdate=true;if(mesh.instanceColor)mesh.instanceColor.needsUpdate=true;
+  mesh.computeBoundingSphere();
+ },[parts,tint]);
+ return <instancedMesh ref={ref} args={[undefined,undefined,parts.length]}><Geometry shape={shape}/><meshStandardMaterial roughness={.88}/></instancedMesh>;
+}
+function ModelSet({parts,tint}:{parts:Part[];tint:string}){
+ const groups=useMemo(()=>{const by=new Map<Shape,Part[]>();for(const p of parts){const group=by.get(p[0]);if(group)group.push(p);else by.set(p[0],[p]);}return [...by];},[parts]);
+ return <>{groups.map(([shape,models])=><Instances key={shape} shape={shape} parts={models} tint={tint}/>)}</>;
+}
+function Porch({width,tall}:{width:number;tall:number}){
+ return <group>
+  <Model tint="#73513e" part={["box",[0,tall*.36,width*.48],[width*.29,tall*.72,.06]]}/>
+  <Model tint="#ffd188" part={["box",[-width*.29,tall*.57,width*.48],[width*.17,tall*.23,.065]]}/>
+  <Model tint="#dcb898" part={["box",[0,.055,width*.58],[width*.51,.1,.22]]}/>
+ </group>;
+}
+function Resident({id,arm}:{id:Interest;arm:React.RefObject<Group|null>}){
+ const observing=id==="space"||id==="film";
+ const painting=id==="art"||id==="writing";
+ const y=observing?.69:.5;
+ const skin="#c98f65",coat=districts[id].color;
+ return <group position={[-.32,0,.30]} rotation={[0,1.95,0]}>
+  {[-.09,.09].map(x=><group key={x}>
+   <Model part={["box",[x,.095,.035],[.135,.13,.22]]} tint="#53433e"/>
+   <Model part={["box",[x,.23,0],[.118,.25,.13]]} tint="#566372"/>
+  </group>)}
+  <Model part={["drum",[0,.43,0],[.31,.26,.23]]} tint={coat}/>
+  <Model part={["ball",[0,.66,observing?.06:0],[.27,.29,.26]]} tint={skin}/>
+  <Model part={["ball",[0,.756,observing?.045:-.015],[.28,.16,.265]]} tint="#55413e"/>
+  <group ref={arm} position={[-.14,.52,.025]}>
+   <Model tint={coat} part={["box",[0,(y-.52)*.45,.091],[.085,.10,.22]]}/>
+   <Model tint={skin} part={["ball",[0,y-.52,.21],[.094,.1,.11]]}/>
+   {painting && <Model tint="#855942" part={["box",[0,y-.49,.26],[.026,.15,.027],undefined,-.3]}/>}
+  </group>
+  <Model tint={coat} part={["box",[.14,.47,.084],[.09,.12,.19]]}/>
+  <Model tint={skin} part={["ball",[.14,.47,.188],[.09,.1,.095]]}/>
+ </group>;
+}
+function Landscape({id}:{id:Interest}){
+ const tint=districts[id].color;
+ const parts=useMemo<Part[]>(()=>[
+  ["drum",[0,-.20,0],[3.45,.43,3.45],"#8e7866"],["drum",[0,.01,0],[3.54,.055,3.54],"#a1b783"],
+  ["drum",[0,.04,.04],[1.52,.012,.97],"#829671"],["box",[0,.055,.42],[3.4,.028,.35],"#dfc9a3"],
+  ["box",[.47,.061,-.10],[.31,.025,1],"#dfc9a3"],["drum",[-1.14,.37,-.32],[.16,.68,.16],"#937756"],
+  ["ball",[-1.24,.86,-.32],[.73,.86,.63],"#759376"],["ball",[-.98,.96,-.27],[.49,.56,.46],"#9cb582"],
+  ...[-.29,0,.29].flatMap((x,i):Part[]=>[["ball",[x+.6,.15,.92],[.3,.18,.23],"#79916d"],["ball",[x+.645,.24,.96],[.095,.1,.1],i===1?"#f4d78e":tint]])
+ ],[tint]);
+ return <ModelSet parts={parts} tint={tint}/>;
 }
 function District({id,stage,activity,celebrate}:{id:Interest;stage:number;activity:boolean;celebrate:boolean}){
  const arm=useRef<Group>(null),building=useRef<Group>(null),wheel=useRef<Group>(null);
+ // If levels change again during a celebration, finish the departing tier.
+ useLayoutEffect(()=>{const added=building.current;return ()=>{if(added)added.scale.y=1;};},[stage]);
  const elapsed=useRef(0);const invalidate=useThree(s=>s.invalidate);
  useEffect(()=>{elapsed.current=0;invalidate();},[activity,celebrate,stage,invalidate]);
  useFrame((_,delta)=>{
    elapsed.current=Math.min(3,elapsed.current+Math.min(delta,.08));
    const t=elapsed.current;
-   if(arm.current)arm.current.rotation.z=activity&&t<3?Math.sin(t*5)*.45:0;
-   if(wheel.current)wheel.current.rotation.y=activity&&t<3?Math.sin(t*2)*.25:0;
+   if(arm.current){
+     const stroke=activity&&t<3?Math.sin(t*(id==="music"?9:id==="art"?3:2)):0;
+     arm.current.rotation.x=(id==="space"||id==="film"?-.45:0)+stroke*(id==="music"?.22:id==="art"?.32:.10);
+   }
+   if(wheel.current)wheel.current.rotation.z=id==="science"&&activity&&t<3?Math.sin(t*2)*.25:0;
    if(building.current)building.current.scale.y=celebrate?Math.min(1,.2+t):1;
    if((activity||celebrate)&&t<3)invalidate();
  });
  const tint=districts[id].color, styles=marks[id];
  return <group>
-  <Model tint="#7a997a" part={["drum",[0,-.18,0],[3.5,.4,3.5]]}/>
-  <Model tint="#c0ab83" part={["box",[0,.042,.92],[.48,.045,1.28]]}/>
-  {seed[id].map((p,i)=><Model key={i} part={p} tint={tint}/>)}
-  <group position={[-.78,0,.25]}><Model tint={tint} part={["cone",[0,.28,0],[.29,.5,.29]]}/><Model tint="#d2a178" part={["ball",[0,.59,0],[.25,.25,.25]]}/>
-   <group ref={arm} position={[.12,.39,0]}><Model tint={tint} part={["box",[.12,.02,0],[.28,.08,.09]]}/></group></group>
-  <group ref={building}>
-  {stage>=2 && <group position={[.85,0,-.52]}><Model tint="#907356" part={["box",[0,.27,0],[.75,.48,.5]]}/><group ref={wheel}><Model tint={tint} part={[styles[0],[0,.72,0],[.86,.62,.7]]}/></group>{trim[id][0].map((part,k)=><Model key={k} part={part} tint={tint}/>)}</group>}
-  {stage>=3 && <group position={[-.76,0,-.73]}><Model tint="#c0ab95" part={["box",[0,.42,0],[.85,.8,.56]]}/><Model tint={tint} part={[styles[1],[0,1.02,0],[1,.63,.76]]}/>{trim[id][1].map((part,k)=><Model key={k} part={part} tint={tint}/>)}</group>}
-  {stage>=4 && <group position={[0,0,-1.05]}><Model tint="#e1cfad" part={["drum",[0,.8,0],[.66,1.58,.64]]}/><Model tint={tint} part={[styles[2],[0,1.75,0],[.88,.72,.85]]}/>{trim[id][2].map((part,k)=><Model key={k} part={part} tint={tint}/>)}</group>}
-  </group>
+  <Landscape id={id}/>
+  <ModelSet parts={seed[id]} tint={tint}/>
+  <Resident id={id} arm={arm}/>
+  {stage>=2 && <group key={"tier-2"} ref={stage===2?building:undefined} position={[.85,0,-.52]}><Model tint="#907356" part={["box",[0,.27,0],[.75,.48,.5]]}/><group ref={wheel}><Model tint={tint} part={[styles[0],[0,.72,0],[.86,.62,.7]]}/></group><Porch width={0.65} tall={0.48}/>{trim[id][0].map((part,k)=><Model key={k} part={part} tint={tint}/>)}</group>}
+  {stage>=3 && <group key={"tier-3"} ref={stage===3?building:undefined} position={[-.76,0,-.73]}><Model tint="#c0ab95" part={["box",[0,.42,0],[.85,.8,.56]]}/><Model tint={tint} part={[styles[1],[0,1.02,0],[1,.63,.76]]}/><Porch width={0.74} tall={0.84}/>{trim[id][1].map((part,k)=><Model key={k} part={part} tint={tint}/>)}</group>}
+  {stage>=4 && <group key={"tier-4"} ref={stage===4?building:undefined} position={[0,0,-1.05]}><Model tint="#e1cfad" part={["drum",[0,.8,0],[.66,1.58,.64]]}/><Model tint={tint} part={[styles[2],[0,1.75,0],[.88,.72,.85]]}/><Porch width={0.66} tall={1.05}/>{trim[id][2].map((part,k)=><Model key={k} part={part} tint={tint}/>)}</group>}
  </group>;
 }
 export default function DistrictShore({ids,level,activity=false,celebrate=false,onExplore}:{ids:Interest[];level:number;activity?:boolean;celebrate?:boolean;onExplore?:(id:Interest)=>void}){
- return <group>{ids.map((id,i)=><group key={id} position={[(i-1)*4,0,0]} onClick={e=>{if(onExplore){e.stopPropagation();onExplore(id);}}}><District id={id} stage={stageAt(level)} activity={activity} celebrate={celebrate}/></group>)}
- {ids.slice(1).map((id,i)=><Model key={id} tint="#b19873" part={["box",[(i-.5)*4,.0,.64],[1.1,.13,.44]]}/>)}</group>;
+ return <group>{ids.map((id,i)=><group key={id} position={[(i-1)*4,0,0]} onClick={e=>{if(onExplore && e.delta<=5){e.stopPropagation();onExplore(id);}}}><District id={id} stage={stageAt(level)} activity={activity} celebrate={celebrate}/></group>)}
+ {ids.slice(1).map((id,i)=><Model key={id} tint="#b19873" part={["box",[(i-.5)*4,.014,.42],[1.14,.11,.38]]}/>)}</group>;
 }

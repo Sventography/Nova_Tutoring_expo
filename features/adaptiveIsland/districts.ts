@@ -10,7 +10,7 @@ export const districts:Record<Interest,District> = {
  science:{name:"Discovery Gardens",color:"#7eb895",exhibits:["Seedling greenhouse","Waterwheel","Laboratory pavilion","Ecology center"],lessons:["science-shadow","science-ice","science-variables"]},
  math:{name:"Pattern Plaza",color:"#66bdb9",exhibits:["Counting stones","Symmetry fountain","Triangle bridge","Mathematics tower"],lessons:["math-scale","math-chance","math-symmetry"]},
  history:{name:"Memory Harbor",color:"#c09e71",exhibits:["Map table","Trade stall","Print workshop","History museum"],lessons:["history-sources","history-map","history-artifacts"]},
- technology:{name:"Circuit Commons",color:"#79bdcb",exhibits:["Tinkerer's robot","Pixel mosaic","Robotics workshop","Invention center"],lessons:["tech-search","tech-pixels","tech-accessibility"]},
+ technology:{name:"Circuit Commons",color:"#79bdcb",exhibits:["Tinkerer's robot","Pixel mosaic","Robotics workshop","Invention center"],lessons:["tech-algorithm","tech-search","tech-pixels","tech-accessibility"]},
  writing:{name:"Storybook Wood",color:"#ae98bc",exhibits:["Writer's notebook","Reading nook","Tiny theater","Story academy"],lessons:["writing-pov","writing-payoff","writing-theme"]},
 };
 export const stageNames=["Seed","Growing","Thriving","Landmark"] as const;

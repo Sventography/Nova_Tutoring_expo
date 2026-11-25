@@ -5,7 +5,8 @@ export type Item={id:string;provider:string;x:number;z:number;scale:number;angle
 export type Land={surface:string;bounds:Box};
 export type Move={id:string;provider:string;from:[number,number];to:[number,number]};
 const EPS=1e-7;
-function axes(a:number){return [[Math.cos(a),Math.sin(a)],[-Math.sin(a),Math.cos(a)]];}
+// Angles are the rotationY radians passed to Three by both placement providers.
+function axes(yaw:number){return [[Math.cos(yaw),-Math.sin(yaw)],[Math.sin(yaw),Math.cos(yaw)]];}
 function corners(b:Box){
  const [u,v]=axes(b.angle);
  return [-1,1].flatMap(i=>[-1,1].map(j=>[b.x+i*b.w*u[0]/2+j*b.d*v[0]/2,b.z+i*b.w*u[1]/2+j*b.d*v[1]/2]));

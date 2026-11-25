@@ -6,7 +6,7 @@ function load(file){
 }
 const root='features/adaptiveIsland/';
 const {districts,stageAt}=load(root+'districts.ts'),{plan,footprint,overlap}=load(root+'placement.ts');
-const {applyMoves,restore}=load(root+'layoutJournal.ts'),{measurePlacement}=load(root+'measure.ts');
+const {applyMoves,restore}=load(root+'layoutJournal.ts'),{measurePlacement,measuredItem}=load(root+'measure.ts');
 const {DISCOVERIES}=load('app/_lib/discoveryModel.ts');
 const {ADVENTURES}=load('app/_lib/adventureModel.ts');
 const box=(x,z,w,d,angle=0)=>({x,z,w,d,angle});
@@ -45,7 +45,34 @@ async function test(){
  const measured=measurePlacement(shape,.1);
  assert.ok(Math.abs(measured[0].w-4.2)<1e-6);
  const transformed=footprint({...item('offset',0,0),parts:measured,scale:2,angle:Math.PI/2})[0];
- assert.ok(Math.abs(transformed.z-3)<1e-8);assert.ok(overlap(transformed,box(0,6,.5,.5)));assert.equal(overlap(transformed,box(5,0,.5,.5)),false);
+ assert.ok(Math.abs(transformed.z+3)<1e-8);assert.ok(overlap(transformed,box(0,-6,.5,.5)));assert.equal(overlap(transformed,box(5,0,.5,.5)),false);
+ // Compare against the actual Three world matrix, including a transformed child group.
+ const nested=new three.Group();shape.remove(mesh);shape.add(nested);nested.add(mesh);
+ nested.rotation.set(.13,.47,-.21);nested.position.set(.8,.4,-.6);nested.scale.set(.8,1.3,1.5);
+ for(const yaw of [-Math.PI/2,Math.PI/4,Math.PI/2,-.362])for(const scale of [.5,1,4]){
+   shape.position.set(3,0,-7);shape.rotation.y=yaw;shape.scale.setScalar(scale);shape.updateMatrixWorld(true);
+   const parts=measurePlacement(shape);
+   const [bounds]=footprint({...item('nested',3,-7),angle:yaw,scale,parts});
+   const pos=mesh.geometry.attributes.position;
+   for(let i=0;i<pos.count;i++){
+    const vertex=new three.Vector3().fromBufferAttribute(pos,i).applyMatrix4(mesh.matrixWorld);
+    assert.ok(overlap(bounds,box(vertex.x,vertex.z,.00001,.00001)));
+   }
+   const center=new three.Vector3().setFromMatrixPosition(mesh.matrixWorld);
+   assert.ok(Math.hypot(bounds.x-center.x,bounds.z-center.z)<1e-6);
+ }
+ const world=new three.Group();world.rotation.y=-.08;world.position.x=-3;world.add(shape);
+ for(const provider of ['builder','decor']){
+   const placed=measuredItem(shape,{id:'original',provider,surface:'grass',movable:true});
+   const [bounds]=footprint(placed);
+   const center=new three.Vector3().setFromMatrixPosition(mesh.matrixWorld);
+   assert.ok(Math.hypot(bounds.x-center.x,bounds.z-center.z)<1e-6);
+ }
+ const inst=new three.InstancedMesh(new three.BoxGeometry(1,1,2),new three.MeshBasicMaterial(),2);
+ inst.setMatrixAt(0,new three.Matrix4().makeTranslation(-2,0,0));
+ inst.setMatrixAt(1,new three.Matrix4().makeTranslation(3,0,1));
+ assert.deepEqual(measurePlacement(inst).map(p=>[p.x,p.z]),[[-2,0],[3,1]]);
+ shape.rotation.x=.35;assert.equal(measuredItem(shape,{id:'tilt',provider:'decor',surface:'grass',movable:true}),null);
  const records=new Map([['A',{items,revision:1,prior:null}],['B',{items:[],revision:7,prior:null}]]);
  let fail=true;
  const store={read:async owner=>structuredClone(records.get(owner)),swap:async(o,r,n)=>{
