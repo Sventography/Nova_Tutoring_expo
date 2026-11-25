@@ -1,8 +1,8 @@
 import React,{useState} from "react";
 import {Pressable,StyleSheet,Text,View} from "react-native";
-import Svg,{Rect,Polygon,Line} from "react-native-svg";
+import Svg,{Rect,Polygon,Line,Circle,Path} from "react-native-svg";
 import {useTheme} from "../context/ThemeContext";
-import {SCALE_FACTORS,DEPTH_LEVELS,squareScale,mountainPalette} from "../_lib/discoveryLabs";
+import {SCALE_FACTORS,DEPTH_LEVELS,squareScale,mountainPalette,EDIT_CONTEXTS,editContext} from "../_lib/discoveryLabs";
 
 function Choices({values,selected,onChange,labels}:{values:readonly number[];selected:number;onChange:(n:number)=>void;labels:readonly string[]}){
  const {tokens}=useTheme();
@@ -46,7 +46,44 @@ function PerspectiveLab(){
    <Text style={{color:tokens.text}}>This is an artistic approximation. Real atmospheric perspective also depends on lighting, distance and weather.</Text>
  </View>;
 }
+function EditingLab(){
+ const {tokens}=useTheme();
+ const [index,setIndex]=useState(0);
+ const context=editContext(EDIT_CONTEXTS[index].id)!;
+ return <View style={s.panel}>
+   <Text style={[s.title,{color:tokens.text}]}>Change the story with a cut</Text>
+   <Text style={{color:tokens.text}}>Keep the first shot unchanged. Choose the next shot and imagine what the person might be thinking.</Text>
+   <Svg width="100%" height={145} viewBox="0 0 320 145" accessibilityLabel={"Neutral face followed by "+context.label}>
+     <Rect x={3} y={5} width={151} height={135} rx={8} fill="#dbe3ed"/>
+     <Circle cx={78} cy={57} r={32} fill="#c7926b"/>
+     <Circle cx={67} cy={53} r={3} fill="#29313b"/><Circle cx={89} cy={53} r={3} fill="#29313b"/>
+     <Line x1={69} y1={70} x2={87} y2={70} stroke="#29313b" strokeWidth={2}/>
+     <Path d="M25 140 Q25 93 78 93 Q131 93 131 140" fill="#52677e"/>
+     <Rect x={166} y={5} width={151} height={135} rx={8} fill="#dce5d8"/>
+     {context.symbol==="gift"?<>
+       <Rect x={202} y={50} width={79} height={67} fill="#ad455d" rx={3}/>
+       <Rect x={198} y={44} width={87} height={18} fill="#c65c75"/>
+       <Rect x={237} y={44} width={10} height={73} fill="#f4cb71"/>
+       <Path d="M242 44 Q213 12 217 34 Q221 46 242 44 Q272 12 269 34 Q264 46 242 44" fill="none" stroke="#aa7838" strokeWidth={4}/>
+     </>:context.symbol==="bench"?<>
+       <Rect x={185} y={99} width={114} height={9} fill="#876344"/>
+       <Rect x={185} y={74} width={114} height={14} rx={2} fill="#876344"/>
+       <Line x1={197} y1={87} x2={197} y2={124} stroke="#4c5154" strokeWidth={6}/>
+       <Line x1={287} y1={87} x2={287} y2={124} stroke="#4c5154" strokeWidth={6}/>
+     </>:<>
+       <Rect x={209} y={25} width={69} height={110} fill="#44505d"/>
+       <Polygon points="211,26 257,42 257,122 211,134" fill="#a47c54"/>
+       <Circle cx={249} cy={84} r={3} fill="#f4cb71"/>
+     </>}
+   </Svg>
+   <Choices values={[0,1,2]} selected={index} onChange={setIndex} labels={EDIT_CONTEXTS.map(item=>item.label)}/>
+   <Text accessibilityLiveRegion="polite" style={[s.title,{color:tokens.text}]}>{context.interpretation}</Text>
+   <Text style={{color:tokens.text}}>{context.explanation}</Text>
+   <Text style={{color:tokens.text}}>The expression never changes. Context can influence interpretation, but different viewers may read it differently. Try inventing your own next shot.</Text>
+ </View>;
+}
 export default function DiscoveryLabs({discoveryId}:{discoveryId:string}){
+ if(discoveryId==="film-cut")return <EditingLab/>;
  if(discoveryId==="math-scale")return <ScaleLab/>;
  if(discoveryId==="art-depth")return <PerspectiveLab/>;
  return null;
