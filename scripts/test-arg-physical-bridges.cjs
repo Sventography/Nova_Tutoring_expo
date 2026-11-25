@@ -13,9 +13,9 @@ assert.ok(island.includes("{TELESCOPE.chart}") && artifacts.includes("TWO INITIA
 assert.ok(island.includes("onPress={() => router.push(\"/archive\""));
 assert.ok(island.includes("{NORA_NOTEBOOK}") && artifacts.includes("feel the letters with my thumb"));
 assert.ok(shop.includes("rabbitHintReady"), "Only players who followed N.V. get an interaction nudge");
-assert.ok(shop.includes("getArgDiscoveryState().then"));
+assert.ok(shop.includes("getArgDiscoveryState(owner).then"));
 assert.ok(shop.includes("Read the old inventory label") && shop.includes("onLongPress="));
-assert.ok(shop.includes("{RABBIT_LABEL}") && shop.includes("await markWhiteRabbitDiscovered()") && artifacts.includes("i repaired the ear myself"));
+assert.ok(shop.includes("{RABBIT_LABEL}") && shop.includes("await markWhiteRabbitDiscovered(owner)") && artifacts.includes("i repaired the ear myself"));
 assert.ok(focus.includes("{FOCUS_MARGIN}") && artifacts.includes("i might think i always knew"));
 assert.ok(ask.includes("The rabbit and the chart weren't separate mysteries."));
 assert.ok(ask.includes("Look where I keep the questions you miss."));
