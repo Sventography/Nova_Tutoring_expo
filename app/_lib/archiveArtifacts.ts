@@ -56,3 +56,9 @@ export const SESSION_REVEAL = [
 
 export const PENCIL_TRACE = "Read the first letter of each word in the second sentences. Glow, Orb Glow, then Star Trail. Say what they spell to Nova.";
 export const LANTERN_TRACE = "A light was left burning. Tell Ask Nova: “Nora’s Last Lantern.”";
+
+export const CURSOR_CLUE_LINES = {
+  glow: "Some halos endure.",
+  orb: "Wandering afterimages stay.",
+  star: "Hidden echoes return eventually; fragments insist recollection survives time.",
+} as const;
