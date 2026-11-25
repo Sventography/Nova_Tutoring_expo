@@ -2,7 +2,7 @@ import React,{useState} from "react";
 import {Pressable,StyleSheet,Text,View} from "react-native";
 import Svg,{Rect,Polygon,Line,Circle,Path} from "react-native-svg";
 import {useTheme} from "../context/ThemeContext";
-import {SCALE_FACTORS,DEPTH_LEVELS,squareScale,mountainPalette,EDIT_CONTEXTS,editContext,COIN_BATCHES,simulateCoins,PIXEL_RESOLUTIONS,PIXEL_SHAPES,PIXEL_COLORS,pixelMask} from "../_lib/discoveryLabs";
+import {SCALE_FACTORS,DEPTH_LEVELS,squareScale,mountainPalette,EDIT_CONTEXTS,editContext,COIN_BATCHES,simulateCoins,PIXEL_RESOLUTIONS,PIXEL_SHAPES,PIXEL_COLORS,pixelMask,KEY_NOTES,CHORD_ROOTS,triad,noteFrequency,STORY_SHOTS,shotReading,moveShot,VIEWPOINTS,viewpoint,SETUPS,storyPayoff} from "../_lib/discoveryLabs";
 
 function Choices({values,selected,onChange,labels}:{values:readonly number[];selected:number;onChange:(n:number)=>void;labels:readonly string[]}){
  const {tokens}=useTheme();
@@ -80,6 +80,7 @@ function EditingLab(){
    <Text accessibilityLiveRegion="polite" style={[s.title,{color:tokens.text}]}>{context.interpretation}</Text>
    <Text style={{color:tokens.text}}>{context.explanation}</Text>
    <Text style={{color:tokens.text}}>The expression never changes. Context can influence interpretation, but different viewers may read it differently. Try inventing your own next shot.</Text>
+   <ShotOrderLab/>
  </View>;
 }
 function ProbabilityLab(){
@@ -131,7 +132,86 @@ function PixelLab(){
   <Text style={{color:tokens.text}}>Each square stores a color. Doubling both dimensions gives four times as many pixels. More pixels can represent finer edges, although image quality also depends on the original image and compression.</Text>
  </View>;
 }
+function HarmonyLab(){
+ const {tokens}=useTheme();
+ const [root,setRoot]=useState(0);
+ const [minor,setMinor]=useState(0);
+ const notes=triad(root,minor===1);
+ const white=[0,2,4,5,7,9,11,12];
+ const black=[{key:1,x:27},{key:3,x:67},{key:6,x:147},{key:8,x:187},{key:10,x:227}];
+ return <View style={s.panel}>
+   <Text style={[s.title,{color:tokens.text}]}>Build a chord</Text>
+   <Text style={{color:tokens.text}}>Choose the root and change the middle note by one semitone. Compare the major and minor triads on this visual keyboard.</Text>
+   <Choices values={CHORD_ROOTS} selected={root} onChange={setRoot} labels={["C","D","F"]}/>
+   <Choices values={[0,1]} selected={minor} onChange={setMinor} labels={["Major","Minor"]}/>
+   <Svg width="100%" height={132} viewBox="0 0 320 132" accessibilityLabel={"Keyboard highlighting "+notes.map(n=>KEY_NOTES[n]).join(", ")}>
+    {white.map((key,i)=><Rect key={key} x={i*40+1} y={3} width={38} height={126} rx={3} stroke="#374151" fill={notes.includes(key)?"#f5c76a":"#ffffff"}/>)}
+    {black.map(({key,x})=><Rect key={key} x={x} y={3} width={26} height={77} rx={3} stroke="#374151" fill={notes.includes(key)?"#f5c76a":"#252b35"}/>)}
+   </Svg>
+   <Text accessibilityLiveRegion="polite" style={[s.title,{color:tokens.text}]}>{KEY_NOTES[root].slice(0,-1)} {minor?"minor":"major"}: {notes.map(n=>KEY_NOTES[n]).join(" · ")}</Text>
+   <Text style={{color:tokens.text}}>Root to third: {minor?3:4} semitones · Root to fifth: 7 semitones.</Text>
+   <Text style={{color:tokens.text}}>Frequencies (A4 = 440 Hz): {notes.map(n=>noteFrequency(n).toFixed(1)+" Hz").join(" · ")}</Text>
+   <Text style={{color:tokens.text}}>Major and minor harmony can suggest different moods, but tempo, context and culture matter too. This keyboard is visual; try the notes on an instrument if you have one.</Text>
+ </View>;
+}
+
+function LabButton({title,onPress,disabled=false}:{title:string;onPress:()=>void;disabled?:boolean}){
+ const {tokens}=useTheme();
+ return <Pressable accessibilityRole="button" accessibilityState={{disabled}} disabled={disabled} onPress={onPress} style={[s.button,{borderColor:tokens.border,backgroundColor:tokens.bg,opacity:disabled?0.5:1}]}><Text style={{color:tokens.text,fontWeight:"700"}}>{title}</Text></Pressable>;
+}
+
+function ShotOrderLab(){
+ const {tokens}=useTheme();
+ const [order,setOrder]=useState([0,1,2]);
+ return <View style={s.panel}>
+  <Text style={[s.title,{color:tokens.text}]}>Your editing room</Text>
+  <Text style={{color:tokens.text}}>Rearrange these three original storyboard shots. The footage stays the same; its order changes.</Text>
+  {order.map((id,i)=><View key={id} style={{borderWidth:1,borderColor:tokens.border,borderRadius:8,padding:10,gap:8}}>
+    <Text style={{color:tokens.text,fontWeight:"700"}}>{i+1}. {STORY_SHOTS[id].label}</Text>
+    <View style={s.row}>
+     <LabButton title={"Move shot "+(i+1)+" earlier"} disabled={i===0} onPress={()=>setOrder(old=>moveShot(old,i,-1))}/>
+     <LabButton title={"Move shot "+(i+1)+" later"} disabled={i===order.length-1} onPress={()=>setOrder(old=>moveShot(old,i,1))}/>
+    </View>
+  </View>)}
+  <Text accessibilityLiveRegion="polite" style={{color:tokens.text}}>{shotReading(order)}</Text>
+  <LabButton title="Reset shot order" onPress={()=>setOrder([0,1,2])}/>
+  <Text style={{color:tokens.text}}>These are possible readings, not the only correct interpretations. Imagine what a different soundtrack would add.</Text>
+ </View>;
+}
+
+function ViewpointLab(){
+ const {tokens}=useTheme();
+ const [index,setIndex]=useState(0);
+ const selected=viewpoint(index);
+ return <View style={s.panel}>
+   <Text style={[s.title,{color:tokens.text}]}>Whose story is it?</Text>
+   <Text style={{color:tokens.text}}>Read the same missed call through three different perspectives. Notice what the narrator allows you to know.</Text>
+   <Choices values={[0,1,2]} selected={index} onChange={setIndex} labels={VIEWPOINTS.map(v=>v.label)}/>
+   <Text style={{color:tokens.text,lineHeight:23}}>{selected.passage}</Text>
+   <Text accessibilityLiveRegion="polite" style={{color:tokens.text,fontWeight:"700"}}>{selected.feedback}</Text>
+   <Text style={{color:tokens.text}}>Try writing a fourth version from someone else's point of view in your own notes.</Text>
+ </View>;
+}
+function PayoffLab(){
+ const {tokens}=useTheme();
+ const [setup,setSetup]=useState(0);
+ const [ending,setEnding]=useState(0);
+ const result=storyPayoff(setup,ending);
+ return <View style={s.panel}>
+  <Text style={[s.title,{color:tokens.text}]}>The story workshop</Text>
+  <Text style={{color:tokens.text}}>Choose an ordinary detail to introduce at the beginning of a story. Then decide how it matters later.</Text>
+  <Choices values={[0,1,2]} selected={setup} onChange={n=>{setSetup(n);setEnding(0);}} labels={SETUPS.map(v=>v.label)}/>
+  <Choices values={[0,1]} selected={ending} onChange={setEnding} labels={["Payoff 1","Payoff 2"]}/>
+  <Text style={{color:tokens.text,fontWeight:"700"}}>Setup: {result.setup}</Text>
+  <Text style={{color:tokens.text}}>Payoff: {result.ending}</Text>
+  <Text accessibilityLiveRegion="polite" style={{color:tokens.text}}>{result.feedback}</Text>
+  <Text style={{color:tokens.text}}>Invent your own setup and payoff. Neither ending is automatically better: choose the one that fits your theme.</Text>
+ </View>;
+}
 export default function DiscoveryLabs({discoveryId}:{discoveryId:string}){
+ if(discoveryId==="music-mood")return <HarmonyLab/>;
+ if(discoveryId==="writing-pov")return <ViewpointLab/>;
+ if(discoveryId==="writing-payoff")return <PayoffLab/>;
  if(discoveryId==="math-chance")return <ProbabilityLab/>;
  if(discoveryId==="tech-pixels")return <PixelLab/>;
  if(discoveryId==="film-cut")return <EditingLab/>;

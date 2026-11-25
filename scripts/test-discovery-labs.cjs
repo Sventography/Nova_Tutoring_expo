@@ -8,7 +8,7 @@ const {outputText,diagnostics}=ts.transpileModule(source,{compilerOptions:{modul
 assert.equal(diagnostics.filter(d=>d.category===ts.DiagnosticCategory.Error).length,0);
 const mod={exports:{}};
 new Function('module','exports',outputText)(mod,mod.exports);
-const {squareScale,mountainPalette,SCALE_FACTORS,DEPTH_LEVELS,EDIT_CONTEXTS,editContext,COIN_BATCHES,simulateCoins,PIXEL_RESOLUTIONS,PIXEL_SHAPES,PIXEL_COLORS,pixelMask}=mod.exports;
+const {squareScale,mountainPalette,SCALE_FACTORS,DEPTH_LEVELS,EDIT_CONTEXTS,editContext,COIN_BATCHES,simulateCoins,PIXEL_RESOLUTIONS,PIXEL_SHAPES,PIXEL_COLORS,pixelMask,KEY_NOTES,CHORD_ROOTS,noteFrequency,triad,STORY_SHOTS,shotReading,moveShot,VIEWPOINTS,viewpoint,SETUPS,storyPayoff}=mod.exports;
 for(const n of SCALE_FACTORS)assert.deepEqual(squareScale(n),{length:2*n,area:4*n*n,areaFactor:n*n,volumeFactor:n*n*n});
 for(const x of [0,-1,1.5,5,NaN,Infinity])assert.throws(()=>squareScale(x));
 for(const x of [0,-1,NaN,Infinity])assert.throws(()=>squareScale(1,x));
@@ -50,4 +50,38 @@ for(const n of PIXEL_RESOLUTIONS)for(const shape of PIXEL_SHAPES){
 }
 for(const n of [0,1,7,64,NaN,Infinity])assert.throws(()=>pixelMask(n,'circle'));
 assert.throws(()=>pixelMask(8,'unknown'));
+for(const root of CHORD_ROOTS)for(const minor of [true,false]){
+ const notes=triad(root,minor);
+ assert.deepEqual(notes,[root,root+(minor?3:4),root+7]);
+ assert.ok(notes.every(n=>n>=0&&n<KEY_NOTES.length));
+}
+assert.equal(noteFrequency(9),440);
+assert.ok(Math.abs(noteFrequency(12)/noteFrequency(0)-2)<1e-10);
+for(const n of [-1,13,0.5,NaN,Infinity])assert.throws(()=>noteFrequency(n));
+assert.throws(()=>triad(1,false));assert.throws(()=>triad(0,'minor'));
+const orders=[[0,1,2],[0,2,1],[1,0,2],[1,2,0],[2,0,1],[2,1,0]];
+assert.equal(new Set(orders.map(shotReading)).size,6);
+assert.equal(STORY_SHOTS.length,3);
+for(const order of orders){
+ const before=[...order];
+ for(let i=0;i<3;i++)for(const dir of [-1,1]){
+  const next=moveShot(order,i,dir);
+  assert.ok(shotReading(next));
+  assert.deepEqual([...next].sort(),[0,1,2]);
+  const to=i+dir;
+  if(to>=0&&to<3)assert.deepEqual(moveShot(next,to,-dir),order);
+  else assert.deepEqual(next,order);
+ }
+ assert.deepEqual(order,before);
+}
+for(const invalid of [[0,0,1],[0,1,3],[0,1],[],[0,1,1.5]])assert.throws(()=>shotReading(invalid));
+assert.throws(()=>moveShot([0,1,2],0,0));
+assert.throws(()=>moveShot([0,1,2],3,1));
+for(let i=0;i<VIEWPOINTS.length;i++)assert.deepEqual(viewpoint(i),VIEWPOINTS[i]);
+assert.throws(()=>viewpoint(-1));assert.throws(()=>viewpoint(1.5));
+for(let i=0;i<SETUPS.length;i++)for(let j=0;j<2;j++){
+ const p=storyPayoff(i,j);assert.equal(p.setup,SETUPS[i].label);
+ assert.equal(p.ending,SETUPS[i].payoffs[j]);assert.ok(p.feedback);
+}
+assert.throws(()=>storyPayoff(-1,0));assert.throws(()=>storyPayoff(0,2));
 console.log('Discovery lab model checks passed');
