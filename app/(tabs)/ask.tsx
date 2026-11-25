@@ -20,7 +20,7 @@ import { useRouter } from "expo-router";
 import { useIslandDecorations } from "../context/IslandDecorationContext";
 import { useCoins } from "../context/CoinsContext";
 import { isLegacyArchiveQuestion, openLanternFieldNotes, resolveArchiveReply, type ArchiveReply } from "../_lib/archiveConversation";
-import { completeArchive } from "../_lib/archiveReward";
+import { completeArchive, archiveReceiptText } from "../_lib/archiveReward";
 import { CHAPTER_PROMPT } from "../_lib/archiveArtifacts";
 import { makeJournalNote } from "../_lib/journalModel";
 import { saveJournalNote, syncJournal } from "../_lib/journalStorage";
@@ -1904,6 +1904,7 @@ function AskBody({ archiveOwner }: { archiveOwner: string | null }) {
 
   const listRef = useRef<FlatList<Msg>>(null);
   const sendLock = useRef(false);
+  const archiveChallenge = useRef<string | null>(null);
   const currentAccount = useRef<string | null>(null);
   const accountId = isAiGuest ? null : session?.user?.id ?? null;
   const accountToken = accountId ? session?.access_token ?? null : null;
@@ -2077,6 +2078,29 @@ function AskBody({ archiveOwner }: { archiveOwner: string | null }) {
       };
 
       try {
+        // Explicit, free archive replies never enter the tutoring API or earn repeatable XP.
+        if (/^archive\s*:/i.test(trimmed)) {
+          const evidence = trimmed.replace(/^archive\s*:/i, "").trim();
+          if (!accountId || !accountToken || !archiveChallenge.current || !evidence) {
+            setMessages(m => [...m, { ...userMsg, novaIntrusion: true }, {
+              id: userMsg.id + "-proof", role: "assistant", novaIntrusion: true,
+              text: "Replay Session 017 to resume your account verification, then reply with Archive: followed by your answer.",
+            }]);
+            setInput("");
+            return;
+          }
+          const receipt = await completeArchive(BACKEND_BASE, accountToken, { challenge: archiveChallenge.current, answer: evidence });
+          archiveChallenge.current = receipt.challenge ?? null;
+          setMessages(m => [...m, { ...userMsg, novaIntrusion: true }, {
+            id: userMsg.id + "-proof", role: "assistant", novaIntrusion: true, archiveFramed: true,
+            text: archiveReceiptText(receipt),
+          }]);
+          setInput("");
+          if (receipt.status === "awarded" || receipt.status === "already_awarded") {
+            void refreshCoins(); void refreshArchiveOwnership();
+          }
+          return;
+        }
         // A discovered lore question always resolves from the local story
         // record before calling the metered tutoring backend.
         let localReply: string | null = null;
@@ -2111,13 +2135,8 @@ function AskBody({ archiveOwner }: { archiveOwner: string | null }) {
             if (accountId && accountToken) {
               const receipt = await completeArchive(BACKEND_BASE, accountToken);
               if (currentAccount.current === accountId) {
-                const receiptText = {
-                  awarded: "First Twenty · 25,000 Nova Coins, the First Twenty badge, and the Seventeenth Star were added to your account.",
-                  already_awarded: "First Twenty · Your 25,000 Nova Coins, First Twenty badge, and Seventeenth Star are already recorded.",
-                  completed: "Your archive completion is recorded. All twenty reward places have been claimed.",
-                  closed: "Session 017 is closed. Reward claims are currently closed.",
-                  retry: "Your reveal is saved on this device. Ask to “replay Session 017” to retry checking your account receipt.",
-                }[receipt.status];
+                archiveChallenge.current = receipt.challenge ?? null;
+                const receiptText = archiveReceiptText(receipt);
                 setMessages((m) => m.map((message) => message.id === answer.id
                   ? { ...message, archiveReceipt: { accountId, text: receiptText } }
                   : message));

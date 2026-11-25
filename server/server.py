@@ -657,6 +657,7 @@ register_archive_routes(
   verify_access_token=_verify_supabase_access_token,
   headers_for_service=supabase_headers,
   rpc_url=supabase_rest_url("rpc/nova_complete_archive"),
+  verification_rpc_url=supabase_rest_url("rpc/nova_verify_archive"),
 )
 
 register_collector_routes(
