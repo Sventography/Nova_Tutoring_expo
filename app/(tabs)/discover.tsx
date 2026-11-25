@@ -6,6 +6,7 @@ import { useTheme } from "../context/ThemeContext";
 import { useUser } from "../context/UserContext";
 import LearningAdventure from "../components/LearningAdventure";
 import { orderedAdventures, type Adventure } from "../_lib/adventureModel";
+import { emptyJourney, journeyKey, normalizeJourney, toggleSaved, markCompleted, relatedDiscoveries, type Journey } from "../_lib/journeyModel";
 import { INTERESTS, DISCOVERIES, dailyDiscovery, localDay, normalizeInterests, discoveryStorageKey, jumpModel, type Interest, type Discovery } from "../_lib/discoveryModel";
 
 export default function DiscoverScreen() {
@@ -30,6 +31,14 @@ function DiscoverBody({ owner }: { owner: string | null }) {
   const [chosen, setChosen] = useState<Discovery | null>(null);
   const [adventure, setAdventure] = useState<Adventure | null>(null);
   const adventureY = useRef(0);
+  const [journey,setJourney] = useState<Journey>(emptyJourney);
+  const [journeyReady,setJourneyReady] = useState(false);
+  const [journeyStatus,setJourneyStatus] = useState("");
+  const [journeyBusy,setJourneyBusy] = useState(false);
+  const journeyRef = useRef<Journey>(emptyJourney());
+  const journeyQueue = useRef<Promise<void>>(Promise.resolve());
+  const personalKey = journeyKey(owner);
+  const [savedOnly,setSavedOnly] = useState(false);
   const key = discoveryStorageKey(owner);
   useEffect(() => {
     let live = true;
@@ -43,6 +52,27 @@ function DiscoverBody({ owner }: { owner: string | null }) {
       .finally(() => { if (live) setLoaded(true); });
     return () => { live = false; };
   }, [key]);
+  useEffect(() => {
+    let live = true;
+    AsyncStorage.getItem(personalKey).then(raw => {
+      if (!live) return;
+      const next = normalizeJourney(raw ? JSON.parse(raw) : null);
+      journeyRef.current = next; setJourney(next); setJourneyReady(true);
+    }).catch(() => { if (live) setJourneyStatus("Your saved journey could not be loaded. Reopen the app to retry; existing data has not been overwritten."); });
+    return () => { live = false; };
+  }, [personalKey]);
+  function updateJourney(change: (old: Journey) => Journey) {
+    if (!journeyReady) return;
+    setJourneyBusy(true);
+    const task = journeyQueue.current.then(async () => {
+      const next = change(journeyRef.current);
+      if (next === journeyRef.current) return;
+      await AsyncStorage.setItem(personalKey, JSON.stringify(next));
+      journeyRef.current = next; setJourney(next); setJourneyStatus("");
+    }).catch(() => setJourneyStatus("Could not save your journey. Please try again."));
+    journeyQueue.current = task;
+    void task.then(() => { if (journeyQueue.current === task) setJourneyBusy(false); });
+  }
   useFocusEffect(useCallback(() => { setDay(localDay()); }, []));
   useEffect(() => {
     const sub = AppState.addEventListener("change", state => { if (state === "active") setDay(localDay()); });
@@ -60,6 +90,7 @@ function DiscoverBody({ owner }: { owner: string | null }) {
   const daily = dailyDiscovery(interests, day);
   const current = chosen ?? daily;
   const ordered = [...DISCOVERIES.filter(d => interests.includes(d.interest)), ...DISCOVERIES.filter(d => !interests.includes(d.interest))];
+  const openDiscovery = (d: Discovery) => { setChosen(d); scroll.current?.scrollTo({ y: discoveryY.current, animated: true }); };
   const label = (interest: Interest) => INTERESTS.find(([id]) => id === interest)?.[1] ?? interest;
   const card = { backgroundColor: tokens.card, borderColor: tokens.border };
   const ink = { color: tokens.text };
@@ -104,19 +135,30 @@ function DiscoverBody({ owner }: { owner: string | null }) {
       <Text style={[s.body, ink]}>{current.activity}</Text>
       {current.id === "space-gravity" && <GravityLab />}
       {current.id === "art-color" && <ColorLab />}
+      {button(journey.saved.includes(current.id) ? "Remove from my saved discoveries" : "Save to my discoveries", () => updateJourney(old => toggleSaved(old,current.id)), !journeyReady || journeyBusy)}
       {button("Explore further with Ask Nova", () => router.push({ pathname: "/ask", params: { discovery: current.id } } as any))}
       <Text style={[s.small, ink]}>This discovery is free to explore. Follow-up AI questions use your existing Ask plan.</Text>
       {chosen && button("Back to today's discovery", () => setChosen(null))}
+      <Text style={[s.heading,ink]}>Connect the dots</Text>
+      {relatedDiscoveries(current.id).map(d => <Pressable key={d.id} accessibilityRole="button" onPress={() => openDiscovery(d)} style={[s.button,card]}><Text style={[s.eyebrow,ink]}>{label(d.interest)}</Text><Text style={[s.buttonText,ink]}>{d.title}</Text></Pressable>)}
+    </View>
+    <View style={[s.card,card]}>
+      <Text accessibilityRole="header" style={[s.heading,ink]}>My learning journey</Text>
+      <Text style={[s.body,ink]}>{journey.saved.length} saved discoveries · {journey.completed.length} adventures explored</Text>
+      <Text style={[s.small,ink]}>A private collection of things you chose to explore, stored on this device. No streaks or rankings.</Text>
+      {!!journeyStatus && <Text accessibilityLiveRegion="polite" style={ink}>{journeyStatus}</Text>}
+      {journey.saved.map(id => DISCOVERIES.find(d=>d.id===id)).filter((d):d is Discovery=>!!d).map(d => <Pressable key={d.id} accessibilityRole="button" onPress={()=>openDiscovery(d)} style={[s.button,card]}><Text style={[s.buttonText,ink]}>{d.title}</Text></Pressable>)}
+      {journey.completed.length > 0 && <Text style={[s.small,ink]}>Completed adventures are available to replay below.</Text>}
     </View>
     <View onLayout={e => { adventureY.current = e.nativeEvent.layout.y; }} style={{ gap: 10 }}>
       <Text accessibilityRole="header" style={[s.heading, ink]}>Choose your own learning adventure</Text>
       <Text style={[s.body, ink]}>Step into a story, make decisions, and see what your choices teach you.</Text>
-      {adventure ? <LearningAdventure key={adventure.id} adventure={adventure} onExit={() => setAdventure(null)} /> : orderedAdventures(interests).map(item => (
+      {adventure ? <LearningAdventure key={adventure.id} adventure={adventure} onExit={() => setAdventure(null)} onComplete={() => updateJourney(old => markCompleted(old,adventure.id))} /> : orderedAdventures(interests).map(item => (
         <Pressable key={item.id} accessibilityRole="button" onPress={() => { setAdventure(item); scroll.current?.scrollTo({ y: adventureY.current, animated: true }); }} style={[s.card,card]}>
           <Text style={[s.eyebrow,ink]}>{label(item.interest)}</Text>
           <Text style={[s.heading,ink]}>{item.title}</Text>
           <Text style={[s.body,ink]}>{item.description}</Text>
-          <Text style={[s.small,ink]}>Begin adventure · free</Text>
+          <Text style={[s.small,ink]}>{journey.completed.includes(item.id) ? "Explored · replay anytime" : "Begin adventure · free"}</Text>
         </Pressable>
       ))}
     </View>
@@ -131,7 +173,9 @@ function DiscoverBody({ owner }: { owner: string | null }) {
     </View>
     <Text accessibilityRole="header" style={[s.heading, ink]}>Follow another rabbit hole</Text>
     <Text style={[s.small, ink]}>All discoveries remain available. No missed-day penalties or extra rewards required.</Text>
-    {ordered.map(d => <Pressable key={d.id} accessibilityRole="button" onPress={() => { setChosen(d); scroll.current?.scrollTo({ y: discoveryY.current, animated: true }); }}
+    {button(savedOnly ? "Show all discoveries" : "Show saved only",()=>setSavedOnly(x=>!x))}
+    {savedOnly && !journey.saved.length && <Text style={[s.body,ink]}>No saved discoveries yet. Save something you want to revisit.</Text>}
+    {ordered.filter(d=>!savedOnly || journey.saved.includes(d.id)).map(d => <Pressable key={d.id} accessibilityRole="button" onPress={() => openDiscovery(d)}
       style={[s.card, card, { gap: 4 }, current.id === d.id && { borderColor: tokens.accent }]}>
       <Text style={[s.eyebrow, ink]}>{label(d.interest)}</Text>
       <Text style={[s.heading, ink]}>{d.title}</Text>
