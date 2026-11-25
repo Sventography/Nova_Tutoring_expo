@@ -8,7 +8,8 @@ export function argScopeKey(key: string, owner: ArgOwner = null): string {
 }
 async function readScoped(keys: string[], owner: ArgOwner): Promise<[string, string | null][]> {
   const pairs = await AsyncStorage.multiGet(keys.map(key => argScopeKey(key, owner)));
-  return pairs.map(([key, value], i) => [keys[i], value]);
+  const byKey = new Map(pairs);
+  return keys.map(key => [key, byKey.get(argScopeKey(key, owner)) ?? null]);
 }
 const writeScoped = (owner: ArgOwner, key: string, value: string) => AsyncStorage.setItem(argScopeKey(key, owner), value);
 
@@ -591,4 +592,26 @@ export async function getArchiveFlags(owner: ArgOwner = null): Promise<ArchiveFl
 
 export async function markArchiveFlag(flag: ArchiveFlag, owner: ArgOwner = null): Promise<void> {
   await writeScoped(owner, ARCHIVE_KEYS[flag], "1");
+}
+
+/** Remove only the deleted account’s local discoveries, never another account’s. */
+export async function clearArgOwner(owner: string): Promise<void> {
+  if (!owner) return;
+  const keys = [
+    ARG_NV_DISCOVERED_KEY,
+    ARG_WHITE_RABBIT_DISCOVERED_KEY,
+    ARG_SEVENTEENTH_STAR_DISCOVERED_KEY,
+    ARG_ENTRY_NOTE_DISCOVERED_KEY,
+    ARG_FOCUS_NOTE_DISCOVERED_KEY,
+    ARG_TELESCOPE_CLUE_UNLOCKED_KEY,
+    ARG_WHITE_RABBIT_CLUE_UNLOCKED_KEY,
+    ARG_FOCUS_PRACTICE_UNLOCKED_KEY,
+    ARG_LIBRARY_NOTEBOOK_UNLOCKED_KEY,
+    ARG_LIBRARY_NOTEBOOK_DISCOVERED_KEY,
+    ARG_ACT1_COMPLETE_KEY,
+    ARG_LANTERN_COPY_KEY,
+    ARG_LANTERN_FOLDER_KEY,
+    ...Object.values(ARCHIVE_KEYS),
+  ];
+  await AsyncStorage.multiRemove(keys.map(key => argScopeKey(key, owner)));
 }
