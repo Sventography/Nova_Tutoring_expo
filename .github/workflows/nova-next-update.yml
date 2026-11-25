@@ -9,6 +9,9 @@ on:
       - release/web-ios-working-20260115
       - work/nova-next-update-20261113
       - fix/archive-chapter-one-coherence
+concurrency:
+  group: nova-next-update-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   learning-and-archive:
     runs-on: ubuntu-latest
@@ -20,6 +23,10 @@ jobs:
           cache: npm
       - name: Install packages
         run: npm ci --ignore-scripts
+      - name: Validate Journal storage, clue recovery and note exports
+        run: |
+          node scripts/test-journal-model.cjs
+          node scripts/test-journal.cjs
       - name: Validate Study Expeditions
         run: node scripts/test-study-expeditions.cjs
       - name: Validate Smart Review
@@ -43,7 +50,5 @@ jobs:
           node scripts/test-collector-ownership.cjs
       - name: Validate one-currency shop wording
         run: node scripts/test-shop-currency-copy.cjs
-      - name: Validate Journal storage, clue recovery and note exports
-        run: node scripts/test-journal.cjs
       - name: Validate browser auth storage
         run: node scripts/test-supabase-storage.cjs
