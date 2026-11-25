@@ -61,3 +61,8 @@ export function noteHtml(note: Pick<JournalNote, "title" | "body">): string {
   return '<!doctype html><html><head><meta charset="UTF-8"><style>body{font:16px system-ui,sans-serif;color:#222;margin:42px}h1{font-size:25px}article{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.55}</style></head><body><h1>' +
     escapeHtml(note.title) + '</h1><article>' + escapeHtml(note.body) + '</article></body></html>';
 }
+
+export function makeJournalNote(title = "", body = "", subject = ""): JournalNote {
+  const now = new Date().toISOString();
+  return { id: Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 13), title, body, subject, pinned: false, createdAt: now, updatedAt: now };
+}
