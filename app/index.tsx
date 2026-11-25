@@ -487,7 +487,7 @@ export default function HomeScreen() {
       }
 
       (router as any).push(
-        "/ask"
+        "/discover"
       );
     };
 
