@@ -3,6 +3,7 @@ import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, Share, Style
 import { useFocusEffect } from "expo-router";
 import { useFonts } from "expo-font";
 import * as Print from "expo-print";
+import * as Clipboard from "expo-clipboard";
 import * as Sharing from "expo-sharing";
 import { useTheme } from "../context/ThemeContext";
 import { useUser } from "../context/UserContext";
@@ -63,7 +64,7 @@ function JournalBody({ owner }: { owner: JournalScope }) {
   const palette = { color: tokens.text, borderColor: tokens.border, backgroundColor: tokens.card };
   const action = (title: string, onPress: () => void, disabled = false) => (
     <Pressable accessibilityRole="button" accessibilityState={{ disabled }} disabled={disabled}
-      onPress={onPress} style={[s.button, { borderColor: tokens.border, opacity: disabled ? .5 : 1 }]}>
+      onPress={onPress} style={[s.button, { borderColor: tokens.border, backgroundColor: tokens.card, opacity: disabled ? .5 : 1 }]}>
       <Text style={{ color: tokens.text, fontWeight: "700" }}>{title}</Text>
     </Pressable>
   );
@@ -115,8 +116,7 @@ function JournalBody({ owner }: { owner: JournalScope }) {
   async function copy(note: Pick<JournalNote,"title"|"body">) {
     const value = noteText(note);
     try {
-      if (Platform.OS === "web" && typeof navigator !== "undefined" && navigator.clipboard) {
-        await navigator.clipboard.writeText(value);
+      if (await Clipboard.setStringAsync(value)) {
         if (active.current) setStatus("Copied.");
         return;
       }
@@ -184,6 +184,17 @@ function JournalBody({ owner }: { owner: JournalScope }) {
         <TextInput accessibilityLabel="Note subject" placeholder="Subject (optional)" placeholderTextColor={tokens.text} value={draft.subject} onChangeText={subject => patch({ subject })} maxLength={80} style={[s.input, palette]} editable={!saving} />
         <TextInput accessibilityLabel="Note body" placeholder="Write or paste your notes…" placeholderTextColor={tokens.text} value={draft.body} onChangeText={body => patch({ body })} multiline maxLength={60000} textAlignVertical="top" style={[s.input, palette, { minHeight: 180 }]} editable={!saving} />
         <View style={s.actions}>
+          {action("Paste", () => void Clipboard.getStringAsync().then(value => {
+            if (active.current && value) {
+              // Use current editor state, not a stale closure from the permission prompt.
+              setDraft(current => {
+                if (!current || current.id !== draft.id) return current;
+                const next = { ...current, body: (current.body + (current.body ? "\n" : "") + value).slice(0,60000), updatedAt: new Date().toISOString() };
+                void writeJournalDraft(owner,next).catch(() => { if (active.current) setStatus("Could not save the pasted draft."); });
+                return next;
+              });
+            }
+          }).catch(() => { if (active.current) setStatus("Paste is unavailable; use the system edit menu."); }), saving)}
           {action("Heading", () => patch({ body: (draft.body + "\n## ").slice(0,60000) }), saving)}
           {action("Checklist", () => patch({ body: (draft.body + "\n☐ ").slice(0,60000) }), saving)}
           {action("Bullet", () => patch({ body: (draft.body + "\n• ").slice(0,60000) }), saving)}
