@@ -3,10 +3,12 @@ on:
   push:
     branches:
       - work/nova-next-update-20261113
+      - feature/journal-retained-notes
   pull_request:
     branches:
       - release/web-ios-working-20260115
       - work/nova-next-update-20261113
+      - fix/archive-chapter-one-coherence
 jobs:
   learning-and-archive:
     runs-on: ubuntu-latest
@@ -41,5 +43,7 @@ jobs:
           node scripts/test-collector-ownership.cjs
       - name: Validate one-currency shop wording
         run: node scripts/test-shop-currency-copy.cjs
+      - name: Validate Journal storage, clue recovery and note exports
+        run: node scripts/test-journal.cjs
       - name: Validate browser auth storage
         run: node scripts/test-supabase-storage.cjs
