@@ -1834,6 +1834,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
     await Promise.allSettled([
       clearSupabaseAuthStorage("permanent account deletion"),
+      AsyncStorage.multiRemove([
+        "@nova/journal/v1/user/" + encodeURIComponent(currentUser.id),
+        "@nova/journal/v1/user/" + encodeURIComponent(currentUser.id) + "/draft",
+      ]),
       AsyncStorage.removeItem(PROFILE_KEY),
       AsyncStorage.removeItem(
         "nova.auth.pending-confirmation-email.v1"
