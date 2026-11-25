@@ -53,7 +53,7 @@ function JournalBody({ owner }: { owner: JournalScope }) {
       if (live && version === refreshVersion.current) showResult(r);
     }).catch(() => { if (live) setStatus("Could not load your saved notes."); })
       .finally(() => { if (live) setLoading(false); });
-    void Promise.all([getArgDiscoveryState(), getArchiveFlags()]).then(([state, flags]) => {
+    void Promise.all([getArgDiscoveryState(owner), getArchiveFlags(owner)]).then(([state, flags]) => {
       if (live) setRecovered(recoveredNotes(state, flags));
     }).catch(() => { /* Leave ordinary notes usable; retry on next focus. */ });
     if (owner) void syncJournal(owner).then(r => {
