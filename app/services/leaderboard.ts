@@ -1,4 +1,5 @@
-import { supabase } from "./supabase";
+// Use the application-wide authenticated client, including its persisted native session.
+import { supabase } from "../lib/supabase";
 export async function lbUpsert(p:{user_id:string;display_name:string;avatar_url?:string;coins:number}) {
   return await supabase.from("coins_leaderboard").upsert(p, { onConflict: "user_id" });
 }
