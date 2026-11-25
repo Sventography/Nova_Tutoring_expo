@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, AppState, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, AppState, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Clipboard from "expo-clipboard";
 import { discoveryNote } from "../_lib/discoveryReflection";
@@ -9,6 +9,7 @@ import { useUser } from "../context/UserContext";
 import LearningAdventure from "../components/LearningAdventure";
 import DiscoveryPractice from "../components/DiscoveryPractice";
 import DiscoveryLabs from "../components/DiscoveryLabs";
+import { browseDiscoveries } from "../_lib/discoveryBrowse";
 import { orderedAdventures, type Adventure } from "../_lib/adventureModel";
 import { emptyJourney, journeyKey, normalizeJourney, toggleSaved, markCompleted, relatedDiscoveries, type Journey } from "../_lib/journeyModel";
 import { INTERESTS, DISCOVERIES, dailyDiscovery, localDay, normalizeInterests, discoveryStorageKey, jumpModel, type Interest, type Discovery } from "../_lib/discoveryModel";
@@ -17,7 +18,7 @@ export default function DiscoverScreen() {
   const { ready, session } = useUser();
   if (!ready) return <ActivityIndicator />;
   const owner = session?.user?.id ?? null;
-  return <DiscoverBody key={owner ?? "guest"} owner={owner} />;
+  return <DiscoverBody key={discoveryStorageKey(owner)} owner={owner} />;
 }
 
 function DiscoverBody({ owner }: { owner: string | null }) {
@@ -25,10 +26,15 @@ function DiscoverBody({ owner }: { owner: string | null }) {
   const router = useRouter();
   const scroll = useRef<ScrollView>(null);
   const discoveryY = useRef(0);
+  const libraryY = useRef(0);
+  const journeyY = useRef(0);
   const [interests, setInterests] = useState<Interest[]>([]);
   const [draft, setDraft] = useState<Interest[]>([]);
   const [editing, setEditing] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [interestsReady,setInterestsReady] = useState(false);
+  const [interestRetry,setInterestRetry] = useState(0);
+  const [journeyRetry,setJourneyRetry] = useState(0);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState("");
   const [day, setDay] = useState(localDay);
@@ -43,28 +49,28 @@ function DiscoverBody({ owner }: { owner: string | null }) {
   const journeyQueue = useRef<Promise<void>>(Promise.resolve());
   const personalKey = journeyKey(owner);
   const [savedOnly,setSavedOnly] = useState(false);
+  const [query,setQuery] = useState("");
+  const [subject,setSubject] = useState<Interest | "all">("all");
   const key = discoveryStorageKey(owner);
   useEffect(() => {
     let live = true;
     AsyncStorage.getItem(key).then(raw => {
       if (!live) return;
-      let parsed: unknown = [];
-      try { parsed = raw ? JSON.parse(raw) : []; } catch { /* recover defaults */ }
-      const next = normalizeInterests(parsed);
-      setInterests(next); setDraft(next);
-    }).catch(() => { if (live) setStatus("Could not load your interests. You can still explore."); })
+      const next = normalizeInterests(raw ? JSON.parse(raw) : []);
+      setInterests(next); setDraft(next); setInterestsReady(true); setStatus("");
+    }).catch(() => { if (live) { setInterestsReady(false); setStatus("Could not load your interests. You can still explore; existing preferences have not been overwritten."); } })
       .finally(() => { if (live) setLoaded(true); });
     return () => { live = false; };
-  }, [key]);
+  }, [key,interestRetry]);
   useEffect(() => {
     let live = true;
     AsyncStorage.getItem(personalKey).then(raw => {
       if (!live) return;
       const next = normalizeJourney(raw ? JSON.parse(raw) : null);
-      journeyRef.current = next; setJourney(next); setJourneyReady(true);
-    }).catch(() => { if (live) setJourneyStatus("Your saved journey could not be loaded. Reopen the app to retry; existing data has not been overwritten."); });
+      journeyRef.current = next; setJourney(next); setJourneyReady(true); setJourneyStatus("");
+    }).catch(() => { if (live) setJourneyStatus("Your saved journey could not be loaded. Use Retry loading below; existing data has not been overwritten."); });
     return () => { live = false; };
-  }, [personalKey]);
+  }, [personalKey,journeyRetry]);
   function updateJourney(change: (old: Journey) => Journey) {
     if (!journeyReady) { setJourneyStatus("Your journey is not available yet. You can still explore."); return; }
     setJourneyBusy(true);
@@ -83,7 +89,7 @@ function DiscoverBody({ owner }: { owner: string | null }) {
     return () => sub.remove();
   }, []);
   async function save() {
-    if (saving) return;
+    if (saving || !interestsReady) return;
     setSaving(true); setStatus("");
     try {
       await AsyncStorage.setItem(key, JSON.stringify(draft));
@@ -93,7 +99,7 @@ function DiscoverBody({ owner }: { owner: string | null }) {
   }
   const daily = dailyDiscovery(interests, day);
   const current = chosen ?? daily;
-  const ordered = [...DISCOVERIES.filter(d => interests.includes(d.interest)), ...DISCOVERIES.filter(d => !interests.includes(d.interest))];
+  const ordered = browseDiscoveries(DISCOVERIES,{query,subject,savedOnly,saved:journey.saved,interests});
   const openDiscovery = (d: Discovery) => { setChosen(d); scroll.current?.scrollTo({ y: discoveryY.current, animated: true }); };
   const label = (interest: Interest) => INTERESTS.find(([id]) => id === interest)?.[1] ?? interest;
   const card = { backgroundColor: tokens.card, borderColor: tokens.border };
@@ -106,14 +112,29 @@ function DiscoverBody({ owner }: { owner: string | null }) {
   );
   const go = (pathname: string) => router.push(pathname as any);
   if (!loaded) return <ActivityIndicator color={tokens.accent} />;
-  return <ScrollView ref={scroll} style={{ flex: 1, backgroundColor: tokens.bg }} contentContainerStyle={s.page}>
+  return <ScrollView ref={scroll} style={{ flex: 1, backgroundColor: tokens.bg }} contentContainerStyle={s.page} keyboardShouldPersistTaps="handled">
     <Text style={[s.eyebrow, ink]}>NOVA DISCOVER</Text>
     <Text accessibilityRole="header" style={[s.title, ink]}>What are you curious about?</Text>
     <Text style={[s.body, ink]}>Explore something unexpected, follow your interests, or get straight to your schoolwork.</Text>
+    <View style={[s.card,card]}>
+      <Text accessibilityRole="header" style={[s.heading,ink]}>What would you like to do?</Text>
+      <View style={s.wrap}>
+        {button("Today's discovery",()=>{setChosen(null);scroll.current?.scrollTo({y:discoveryY.current,animated:true});})}
+        {button("Learning adventures",()=>scroll.current?.scrollTo({y:adventureY.current,animated:true}))}
+        {button("Browse topics",()=>scroll.current?.scrollTo({y:libraryY.current,animated:true}))}
+        {button("My learning journey",()=>scroll.current?.scrollTo({y:journeyY.current,animated:true}))}
+      </View>
+      <Text style={[s.heading,ink]}>School & study tools</Text>
+      <View style={s.wrap}>
+        {button("Ask Nova",()=>go("/ask"))}{button("Flashcards",()=>go("/flashcards"))}
+        {button("Quizzes",()=>go("/quiz"))}{button("Brainteasers",()=>go("/brainteasers"))}
+        {button("My Journal",()=>go("/journal"))}{button("My Island",()=>go("/island"))}
+      </View>
+    </View>
     <View style={[s.card, card]}>
       <Text accessibilityRole="header" style={[s.heading, ink]}>Your interests</Text>
       <Text style={[s.body, ink]}>{interests.length ? interests.map(label).join(" · ") : "Explore everything or pick the subjects you love. You can change these whenever you like."}</Text>
-      {!editing ? button(interests.length ? "Edit interests" : "Choose interests", () => { setDraft(interests); setEditing(true); }) : <>
+      {!interestsReady ? button("Retry loading interests",()=>setInterestRetry(n=>n+1)) : !editing ? button(interests.length ? "Edit interests" : "Choose interests", () => { setDraft(interests); setEditing(true); }) : <>
         <View style={s.wrap}>
           {INTERESTS.map(([id, name]) => {
             const selected = draft.includes(id);
@@ -149,11 +170,12 @@ function DiscoverBody({ owner }: { owner: string | null }) {
       <Text style={[s.heading,ink]}>Connect the dots</Text>
       {relatedDiscoveries(current.id).map(d => <Pressable key={d.id} accessibilityRole="button" onPress={() => openDiscovery(d)} style={[s.button,card]}><Text style={[s.eyebrow,ink]}>{label(d.interest)}</Text><Text style={[s.buttonText,ink]}>{d.title}</Text></Pressable>)}
     </View>
-    <View style={[s.card,card]}>
+    <View style={[s.card,card]} onLayout={e=>{journeyY.current=e.nativeEvent.layout.y;}}>
       <Text accessibilityRole="header" style={[s.heading,ink]}>My learning journey</Text>
       <Text style={[s.body,ink]}>{journey.saved.length} saved discoveries · {journey.completed.length} adventures explored</Text>
       <Text style={[s.small,ink]}>A private collection of things you chose to explore, stored on this device. No streaks or rankings.</Text>
       {!!journeyStatus && <Text accessibilityLiveRegion="polite" style={ink}>{journeyStatus}</Text>}
+      {!journeyReady && !!journeyStatus && button("Retry loading journey",()=>setJourneyRetry(n=>n+1))}
       {journey.saved.map(id => DISCOVERIES.find(d=>d.id===id)).filter((d):d is Discovery=>!!d).map(d => <Pressable key={d.id} accessibilityRole="button" onPress={()=>openDiscovery(d)} style={[s.button,card]}><Text style={[s.buttonText,ink]}>{d.title}</Text></Pressable>)}
       {journey.completed.length > 0 && <Text style={[s.small,ink]}>Completed adventures are available to replay below.</Text>}
     </View>
@@ -169,20 +191,21 @@ function DiscoverBody({ owner }: { owner: string | null }) {
         </Pressable>
       ))}
     </View>
-    <View style={[s.card, card]}>
-      <Text accessibilityRole="header" style={[s.heading, ink]}>Need to study?</Text>
-      <Text style={[s.body, ink]}>Your usual learning tools are always available.</Text>
+    <View style={[s.card,card]} onLayout={e=>{libraryY.current=e.nativeEvent.layout.y;}}>
+      <Text accessibilityRole="header" style={[s.heading,ink]}>Follow another rabbit hole</Text>
+      <Text style={[s.small,ink]}>Explore any subject, even outside your interests. No missed-day penalties.</Text>
+      <TextInput accessibilityLabel="Search discovery topics" placeholder="Search discoveries…" placeholderTextColor={tokens.text} value={query} onChangeText={setQuery} maxLength={100} returnKeyType="search" style={[s.search,ink,{borderColor:tokens.border,backgroundColor:tokens.bg}]} />
       <View style={s.wrap}>
-        {button("Ask Nova", () => go("/ask"))}{button("Flashcards", () => go("/flashcards"))}
-        {button("Quizzes", () => go("/quiz"))}{button("Brainteasers", () => go("/brainteasers"))}
-        {button("My Journal", () => go("/journal"))}{button("My Island", () => go("/island"))}
+        {([["all","All topics"],...INTERESTS] as const).map(([id,name])=><Pressable key={id} accessibilityRole="button" accessibilityState={{selected:subject===id}} onPress={()=>setSubject(id)} style={[s.chip,card,subject===id&&{borderColor:tokens.accent,borderWidth:2}]}><Text style={[ink,{fontWeight:subject===id?"700":"400"}]}>{subject===id?"✓ ":""}{name}</Text></Pressable>)}
       </View>
+      <View style={s.wrap}>
+        {button(savedOnly?"Show all discoveries":"Show saved only",()=>setSavedOnly(x=>!x),!journeyReady)}
+        {button("Clear filters",()=>{setQuery("");setSubject("all");setSavedOnly(false);})}
+      </View>
+      <Text accessibilityLiveRegion="polite" style={[s.small,ink]}>{ordered.length} {ordered.length===1?"discovery":"discoveries"} found</Text>
+      {!ordered.length&&<Text style={[s.body,ink]}>No discoveries match these filters. Try another topic or clear the filters.</Text>}
     </View>
-    <Text accessibilityRole="header" style={[s.heading, ink]}>Follow another rabbit hole</Text>
-    <Text style={[s.small, ink]}>All discoveries remain available. No missed-day penalties or extra rewards required.</Text>
-    {button(savedOnly ? "Show all discoveries" : "Show saved only",()=>setSavedOnly(x=>!x))}
-    {savedOnly && !journey.saved.length && <Text style={[s.body,ink]}>No saved discoveries yet. Save something you want to revisit.</Text>}
-    {ordered.filter(d=>!savedOnly || journey.saved.includes(d.id)).map(d => <Pressable key={d.id} accessibilityRole="button" onPress={() => openDiscovery(d)}
+    {ordered.map(d => <Pressable key={d.id} accessibilityRole="button" onPress={() => openDiscovery(d)}
       style={[s.card, card, { gap: 4 }, current.id === d.id && { borderColor: tokens.accent }]}>
       <Text style={[s.eyebrow, ink]}>{label(d.interest)}</Text>
       <Text style={[s.heading, ink]}>{d.title}</Text>
@@ -268,4 +291,5 @@ const s = StyleSheet.create({
   chip:{ borderWidth:1, borderRadius:18, paddingHorizontal:12, paddingVertical:10, minHeight:44, justifyContent:"center" },
   button:{ borderWidth:1, borderRadius:10, padding:12, minHeight:44, justifyContent:"center" },
   buttonText:{ fontWeight:"700" },
+  search:{borderWidth:1,borderRadius:10,padding:12,minHeight:44,fontSize:16},
 });
