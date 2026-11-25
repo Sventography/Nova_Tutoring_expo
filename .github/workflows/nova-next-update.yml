@@ -56,5 +56,10 @@ jobs:
           node scripts/test-collector-ownership.cjs
       - name: Validate one-currency shop wording
         run: node scripts/test-shop-currency-copy.cjs
+      - name: Validate staging Island and verified purchase ownership
+        run: |
+          node scripts/test-island-progress-authority.cjs
+          node scripts/test-verified-purchases-provider.cjs
+          node scripts/test-verified-purchase-pagination.cjs
       - name: Validate browser auth storage
         run: node scripts/test-supabase-storage.cjs

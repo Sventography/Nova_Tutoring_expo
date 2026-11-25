@@ -11,7 +11,10 @@ const section = (a,b) => {
 const read=section("const readVerifiedOwnership =", "/* --------------------- hydrate");
 assert.ok(read.includes('.select("item_id,source")'));
 assert.ok(read.includes('.eq("user_id", supabaseUserId)'));
-assert.ok(read.includes('["coins", "verified_iap", "verified_reward"]'));
+assert.ok(read.includes("readAllVerifiedPurchases"));
+assert.ok(read.includes('.order("item_id", { ascending: true })'));
+assert.ok(read.includes('.gt("item_id", after)'));
+assert.ok(read.includes(".limit(limit)"));
 assert.ok(!read.includes("AsyncStorage") && !read.includes('.from("profiles")'));
 const hydrate=section("/* --------------------- hydrate", "/* ---------------------- persist");
 assert.ok(hydrate.indexOf("if (authoritative)") < hydrate.indexOf("loadLocalPurchases("));

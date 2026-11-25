@@ -12,6 +12,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { DeviceEventEmitter } from "react-native";
 import { supabase, SUPABASE_URL } from "../lib/supabase";
 import { usesAuthoritativeIslandProgress, isCurrentIslandLoad } from "../_lib/islandProgressAuthority";
+import { readAllVerifiedPurchases } from "../_lib/verifiedPurchasePagination";
 import { useUser } from "./UserContext";
 
 type PurchaseMap = Record<string, true>;
@@ -403,18 +404,21 @@ export function PurchasesProvider({
 
   // The isolated staging schema grants owners read access only. Preserve
   // historical local caches for reconciliation; never promote them to grants.
-  const readVerifiedOwnership = useCallback(async () => {
+  const readVerifiedOwnership = useCallback(async (current: () => boolean) => {
     if (!supabaseUserId) throw new Error("Account required");
-    const { data, error } = await supabase
-      .from("purchases")
-      .select("item_id,source")
-      .eq("user_id", supabaseUserId);
-    if (error) throw error;
-    if (!Array.isArray(data) || data.some(row =>
-      typeof row.item_id !== "string" || !row.item_id.trim() ||
-      !["coins", "verified_iap", "verified_reward"].includes(row.source)
-    )) throw new Error("Invalid verified ownership");
-    return normalizeRowsToMap(data);
+    const rows = await readAllVerifiedPurchases(async (after, limit) => {
+      let query = supabase
+        .from("purchases")
+        .select("item_id,source")
+        .eq("user_id", supabaseUserId)
+        .order("item_id", { ascending: true })
+        .limit(limit);
+      if (after !== null) query = query.gt("item_id", after);
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
+    }, current);
+    return normalizeRowsToMap(rows);
   }, [supabaseUserId]);
 
   /* --------------------- hydrate whenever the user changes --------------------- */
@@ -437,7 +441,7 @@ export function PurchasesProvider({
 
       try {
         if (authoritative) {
-          const next = await readVerifiedOwnership();
+          const next = await readVerifiedOwnership(current);
           if (!current()) return;
           purchasesRef.current = next;
           setPurchases(next);
@@ -913,7 +917,7 @@ export function PurchasesProvider({
       if (authoritative) {
         setHydrated(false);
         try {
-          const next = await readVerifiedOwnership();
+          const next = await readVerifiedOwnership(current);
           if (!current()) return;
           purchasesRef.current = next;
           setPurchases(next);
