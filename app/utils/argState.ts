@@ -546,6 +546,8 @@ export async function markArgAct1Complete(): Promise<boolean> {
   return true;
 }
 const ARCHIVE_KEYS = {
+  pencilTraceRead: "@nova/arg/pencil-trace-read.v1",
+  lanternTraceRead: "@nova/arg/lantern-trace-read.v1",
   introduced: "@nova/arg/intro.v1",
   copyUnlocked: "@nova/arg/lantern-copy.v1",
   copyRead: "@nova/arg/lantern-copy-read.v1",
@@ -553,11 +555,13 @@ const ARCHIVE_KEYS = {
   completed: "@nova/arg/session-017-closed.v1",
 } as const;
 type ArchiveFlag = keyof typeof ARCHIVE_KEYS;
-export type ArchiveFlags = Record<ArchiveFlag, boolean>;
+export type ArchiveFlags = Record<Exclude<ArchiveFlag, "pencilTraceRead" | "lanternTraceRead">, boolean> & Partial<Record<"pencilTraceRead" | "lanternTraceRead", boolean>>;
 
 export async function getArchiveFlags(): Promise<ArchiveFlags> {
   const pairs = new Map(await AsyncStorage.multiGet(Object.values(ARCHIVE_KEYS)));
   return {
+    pencilTraceRead: pairs.get(ARCHIVE_KEYS.pencilTraceRead) === "1",
+    lanternTraceRead: pairs.get(ARCHIVE_KEYS.lanternTraceRead) === "1",
     introduced: pairs.get(ARCHIVE_KEYS.introduced) === "1",
     copyUnlocked: pairs.get(ARCHIVE_KEYS.copyUnlocked) === "1",
     copyRead: pairs.get(ARCHIVE_KEYS.copyRead) === "1",
