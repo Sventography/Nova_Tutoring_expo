@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, AppState, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -16,6 +16,8 @@ export default function DiscoverScreen() {
 function DiscoverBody({ owner }: { owner: string | null }) {
   const { tokens } = useTheme();
   const router = useRouter();
+  const scroll = useRef<ScrollView>(null);
+  const discoveryY = useRef(0);
   const [interests, setInterests] = useState<Interest[]>([]);
   const [draft, setDraft] = useState<Interest[]>([]);
   const [editing, setEditing] = useState(false);
@@ -65,7 +67,7 @@ function DiscoverBody({ owner }: { owner: string | null }) {
   );
   const go = (pathname: string) => router.push(pathname as any);
   if (!loaded) return <ActivityIndicator color={tokens.accent} />;
-  return <ScrollView style={{ flex: 1, backgroundColor: tokens.bg }} contentContainerStyle={s.page}>
+  return <ScrollView ref={scroll} style={{ flex: 1, backgroundColor: tokens.bg }} contentContainerStyle={s.page}>
     <Text style={[s.eyebrow, ink]}>NOVA DISCOVER</Text>
     <Text accessibilityRole="header" style={[s.title, ink]}>What are you curious about?</Text>
     <Text style={[s.body, ink]}>Explore something unexpected, follow your interests, or get straight to your schoolwork.</Text>
@@ -88,7 +90,7 @@ function DiscoverBody({ owner }: { owner: string | null }) {
       </>}
       {!!status && <Text accessibilityLiveRegion="polite" style={ink}>{status}</Text>}
     </View>
-    <View style={[s.card, card]}>
+    <View style={[s.card, card]} onLayout={e => { discoveryY.current = e.nativeEvent.layout.y; }}>
       <Text style={[s.eyebrow, ink]}>{chosen ? "EXPLORE" : "TODAY’S DISCOVERY"} · {label(current.interest)}</Text>
       <Text accessibilityRole="header" style={[s.title, ink]}>{current.title}</Text>
       <Text style={[s.body, ink]}>{current.hook}</Text>
@@ -113,12 +115,12 @@ function DiscoverBody({ owner }: { owner: string | null }) {
     </View>
     <Text accessibilityRole="header" style={[s.heading, ink]}>Follow another rabbit hole</Text>
     <Text style={[s.small, ink]}>All discoveries remain available. No missed-day penalties or extra rewards required.</Text>
-    {ordered.map(d => <Pressable key={d.id} accessibilityRole="button" onPress={() => setChosen(d)}
+    {ordered.map(d => <Pressable key={d.id} accessibilityRole="button" onPress={() => { setChosen(d); scroll.current?.scrollTo({ y: discoveryY.current, animated: true }); }}
       style={[s.card, card, { gap: 4 }, current.id === d.id && { borderColor: tokens.accent }]}>
       <Text style={[s.eyebrow, ink]}>{label(d.interest)}</Text>
       <Text style={[s.heading, ink]}>{d.title}</Text>
       <Text style={[s.body, ink]}>{d.hook}</Text>
-      <Text style={[s.small, ink]}>{current.id === d.id ? "Currently exploring above" : "Open discovery above"}</Text>
+      <Text style={[s.small, ink]}>{current.id === d.id ? "Currently exploring above" : "Open discovery"}</Text>
     </Pressable>)}
   </ScrollView>;
 }
