@@ -16,6 +16,7 @@ type Props = {
 };
 
 const ALLOWED = new Set([
+  "discover",
   "ask",
   "flashcards",
   "journal",
