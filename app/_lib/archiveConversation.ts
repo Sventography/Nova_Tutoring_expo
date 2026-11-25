@@ -4,7 +4,7 @@ import {
   markFocusPracticeUnlocked, markLanternCopyDiscovered, markLanternFolderDiscovered,
   markLibraryNotebookDiscovered, markLibraryNotebookUnlocked, markNvDiscovered,
   markSeventeenthStarDiscovered, markTelescopeClueUnlocked, markWhiteRabbitClueUnlocked,
-  type ArgDiscoveryState, type ArchiveFlags,
+  type ArgDiscoveryState, type ArchiveFlags, type ArgOwner,
 } from "../utils/argState";
 import { CHAPTER_PROMPT, FOCUS_MARGIN, GARDEN_NOTE, NORA_NOTEBOOK, SESSION_REVEAL, TELESCOPE } from "./archiveArtifacts";
 
@@ -33,10 +33,10 @@ const lanternHint = "The original was filed under Lantern, the light from the te
 const fieldNotes: ArchiveReply = { text: lanternHint, framed: true, artifact: true };
 const restored: ArchiveReply = { text: ARG_ACT1_FINALE_REPLY + "\n\n" + CHAPTER_PROMPT, framed: true };
 
-export async function openLanternFieldNotes(): Promise<ArchiveReply> {
-  await markLanternCopyDiscovered();
-  await markLanternFolderDiscovered();
-  await markArchiveFlag("copyUnlocked");
+export async function openLanternFieldNotes(owner: ArgOwner = null): Promise<ArchiveReply> {
+  await markLanternCopyDiscovered(owner);
+  await markLanternFolderDiscovered(owner);
+  await markArchiveFlag("copyUnlocked", owner);
   return fieldNotes;
 }
 
@@ -107,21 +107,21 @@ export function isLegacyArchiveQuestion(input: string, followingArchive: boolean
   return /^(?:what (?:were|are) the (?:initials|letters)|which initials|who (?:drew|added) the star|what about the (?:extra|missing|seventeenth) star|where (?:is|can i find) the white (?:rabbit|bunny)|what was her project|what did the notebook mean|why (?:keep |did she keep )?both(?: answers| versions| pages)?|where (?:did she (?:put|keep|save)|was) the copy|what was in the (?:first )?file|(?:tell me about|where is) the lantern folder)$/.test(q);
 }
 
-export async function resolveArchiveReply(input: string, inSessionContext = false, followingArchive = inSessionContext): Promise<ArchiveReply | null> {
+export async function resolveArchiveReply(input: string, inSessionContext = false, followingArchive = inSessionContext, owner: ArgOwner = null): Promise<ArchiveReply | null> {
   const q = normalizeArchivePrompt(input);
   const memoryDeduction = isMemoryDeduction(q);
   // Evidence can be expressed as an observation, not only a password.
   // Restrict the alternative to archive context and require both identifiers.
   const evidenceSolution = followingArchive && /^(?:(?:the )?(?:unindexed )?(?:frame|stamp)(?: 17)? (?:is|says|was|reads) )?unerased (?:and|with) (?:the )?(?:(?:relay|answer|page|label|draft) (?:is|says|was|reads) )?first draft$/.test(q);
   if (!memoryDeduction && !evidenceSolution && !storyForms.some(form => form.test(q)) && !(/\bnv\b/.test(q) && classifyNvEntryPrompt(input))) return null;
-  const [flags, state] = await Promise.all([getArchiveFlags(), getArgDiscoveryState()]);
+  const [flags, state] = await Promise.all([getArchiveFlags(owner), getArgDiscoveryState(owner)]);
 
   if (questions.entry.test(q)) {
-    await markArchiveFlag("introduced");
+    await markArchiveFlag("introduced", owner);
     return textReply(gardenHint);
   }
   if (questions.garden.test(q) && (flags.introduced || state.entryNoteDiscovered)) {
-    await markEntryNoteDiscovered();
+    await markEntryNoteDiscovered(owner);
     return textReply(GARDEN_NOTE);
   }
   if (!state.entryNoteDiscovered && !flags.introduced) return null;
@@ -129,44 +129,44 @@ export async function resolveArchiveReply(input: string, inSessionContext = fals
   if (!state.entryNoteDiscovered) return null;
 
   if (questions.count.test(q)) {
-    await markTelescopeClueUnlocked();
+    await markTelescopeClueUnlocked(owner);
     return textReply(telescopeHint);
   }
   if (questions.telescope.test(q) && state.telescopeClueUnlocked) {
-    await markSeventeenthStarDiscovered();
+    await markSeventeenthStarDiscovered(owner);
     return textReply([TELESCOPE.count, TELESCOPE.chart, TELESCOPE.note, starHandoff].join("\n\n"));
   }
   if (state.seventeenthStarDiscovered && questions.signature.test(q)) {
-    await markNvDiscovered();
+    await markNvDiscovered(owner);
     return textReply(initialsReply);
   }
   if (state.nvDiscovered && /\bnv\b/.test(q) && classifyNvEntryPrompt(input)) {
     return textReply("I recognize N.V.’s correction. If you want to know who left it, ask me who N.V. was.");
   }
   if (state.nvDiscovered && questions.initials.test(q)) {
-    await markWhiteRabbitClueUnlocked();
+    await markWhiteRabbitClueUnlocked(owner);
     return textReply(rabbitHint);
   }
   if (state.whiteRabbitDiscovered && questions.rabbit.test(q)) {
-    await markFocusPracticeUnlocked();
+    await markFocusPracticeUnlocked(owner);
     return textReply(focusHint);
   }
   if (state.focusPracticeUnlocked && questions.margin.test(q)) {
-    await markFocusPracticeNoteDiscovered();
+    await markFocusPracticeNoteDiscovered(owner);
     return textReply(FOCUS_MARGIN);
   }
   if (state.focusPracticeNoteDiscovered && questions.mistakes.test(q)) {
-    await markLibraryNotebookUnlocked();
+    await markLibraryNotebookUnlocked(owner);
     return textReply(notebookHint);
   }
   if (state.libraryNotebookUnlocked && questions.notebook.test(q)) {
-    await markLibraryNotebookDiscovered();
+    await markLibraryNotebookDiscovered(owner);
     return textReply(NORA_NOTEBOOK);
   }
-  if (state.libraryNotebookDiscovered && questions.copy.test(q)) return openLanternFieldNotes();
+  if (state.libraryNotebookDiscovered && questions.copy.test(q)) return openLanternFieldNotes(owner);
   if (flags.copyUnlocked && flags.copyRead) {
     if (questions.solution.test(q) || evidenceSolution) {
-      await markArchiveFlag("draftRestored");
+      await markArchiveFlag("draftRestored", owner);
       return restored;
     }
     if (questions.reversed.test(q)) return { ...fieldNotes, text: "Both words are on the right scraps. Look at the recovery order. Which field comes first?" };
@@ -174,8 +174,8 @@ export async function resolveArchiveReply(input: string, inSessionContext = fals
     if (questions.labelOnly.test(q)) return { ...fieldNotes, text: "That’s the relay label. Which stamp is on the contact sheet’s one unindexed frame? Put it first." };
   }
   if (flags.draftRestored && (questions.ending.test(q) || memoryDeduction || (inSessionContext && questions.plainEnding.test(q)))) {
-    await markArgAct1Complete();
-    await markArchiveFlag("completed");
+    await markArgAct1Complete(owner);
+    await markArchiveFlag("completed", owner);
     return { text: SESSION_REVEAL, framed: true, finished: true };
   }
   if (flags.copyUnlocked && (questions.invite.test(q) || questions.solution.test(q))) return fieldNotes;
