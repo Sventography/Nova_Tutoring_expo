@@ -1,12 +1,51 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { View, Text, Image, FlatList, StyleSheet, RefreshControl } from "react-native";
 import { lbTop } from "../services/leaderboard";
+import { useUser } from "../context/UserContext";
 
 export default function Leaderboard() {
-  const [rows, setRows] = useState<any[]>([]);
+  const { ready, session } = useUser();
+  const ownerId = session?.user?.id ?? null;
+  const [result, setResult] = useState<{ ownerId: string; rows: any[] } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  async function load(){ setRefreshing(true); const { data } = await lbTop(50); setRows(data||[]); setRefreshing(false); }
-  useEffect(() => { load(); }, []);
+  const [failedOwner, setFailedOwner] = useState<string | null>(null);
+  const requestVersion = useRef(0);
+
+  const load = useCallback(async () => {
+    if (!ready || !ownerId) return;
+    const version = ++requestVersion.current;
+    setRefreshing(true);
+    setFailedOwner(null);
+    try {
+      const { data, error } = await lbTop(50);
+      if (error) throw error;
+      if (version === requestVersion.current) {
+        setResult({ ownerId, rows: data ?? [] });
+      }
+    } catch {
+      if (version === requestVersion.current) setFailedOwner(ownerId);
+    } finally {
+      if (version === requestVersion.current) setRefreshing(false);
+    }
+  }, [ready, ownerId]);
+
+  useEffect(() => {
+    setResult(null);
+    setRefreshing(false);
+    setFailedOwner(null);
+    void load();
+    return () => { requestVersion.current += 1; };
+  }, [load]);
+
+  if (!ready || !ownerId) {
+    return (
+      <View style={S.screen}>
+        <Text style={S.title}>Top Coins</Text>
+        <Text style={S.name}>{ready ? "Sign in to view the leaderboard." : "Loading your account…"}</Text>
+      </View>
+    );
+  }
+  const rows = result?.ownerId === ownerId ? result.rows : [];
   return (
     <View style={S.screen}>
       <Text style={S.title}>Top Coins</Text>
@@ -14,6 +53,8 @@ export default function Leaderboard() {
         data={rows}
         keyExtractor={(x) => String(x.user_id)}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={load} />}
+        ListHeaderComponent={failedOwner === ownerId ? <Text accessibilityRole="alert" style={S.name}>Could not load rankings. Pull down to retry.</Text> : null}
+        ListEmptyComponent={!refreshing && failedOwner !== ownerId && result?.ownerId === ownerId ? <Text style={S.name}>No rankings yet.</Text> : null}
         renderItem={({ item, index }) => (
           <View style={S.row}>
             <Text style={S.rank}>{index+1}</Text>
