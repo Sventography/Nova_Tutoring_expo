@@ -43,6 +43,10 @@ jobs:
         run: node scripts/test-arg-dialogue-journey.cjs
       - name: Play the saved Chapter One conversation through Session 017
         run: node scripts/test-archive-conversation.cjs
+      - name: Verify archive claim endpoint fails closed without server proof
+        run: |
+          python3 -m pip install "Flask>=3,<4" "requests>=2,<3"
+          PYTHONPATH=server python3 -m unittest discover -s server/tests -p test_archive_completion.py
       - name: Verify account awards in disposable Postgres
         run: |
           npm install --prefix "$RUNNER_TEMP/archive-db" --no-save --ignore-scripts @electric-sql/pglite@0.5.16

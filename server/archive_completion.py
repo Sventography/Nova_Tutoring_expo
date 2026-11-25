@@ -12,7 +12,7 @@ def _normalize(value):
     return re.sub(r"[^a-z0-9]+", " ", value.lower()).strip()
 
 
-def register_archive_routes(app, *, extract_bearer_token, verify_access_token, headers_for_service, rpc_url):
+def register_archive_routes(app, *, extract_bearer_token, verify_access_token, headers_for_service, rpc_url, verify_completion_evidence=None):
     def result(status, http_status=200):
         response = jsonify(status=status)
         response.headers["Cache-Control"] = "no-store, private"
@@ -27,7 +27,9 @@ def register_archive_routes(app, *, extract_bearer_token, verify_access_token, h
 
     @app.post("/api/archive/complete")
     def archive_complete():
-        if os.getenv("NOVA_ARCHIVE_REWARDS_ENABLED", "").lower() != "true":
+        # Fixed client phrases are not proof of completion. Fail closed until a
+        # trusted, account-bound server verifier is wired into this route.
+        if verify_completion_evidence is None or os.getenv("NOVA_ARCHIVE_REWARDS_ENABLED", "").lower() != "true":
             return result("closed", 503)
         if not request.is_json or (request.content_length or 0) > 1024:
             return result("invalid_evidence", 400)
@@ -42,6 +44,8 @@ def register_archive_routes(app, *, extract_bearer_token, verify_access_token, h
             user_id = account_id()
             if not user_id:
                 return result("unauthorized", 401)
+            if verify_completion_evidence(user_id) is not True:
+                return result("invalid_evidence", 403)
             headers = headers_for_service({"Content-Type": "application/json"})
             if not headers:
                 return result("unavailable", 503)

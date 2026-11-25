@@ -7,7 +7,8 @@ import * as Clipboard from "expo-clipboard";
 import * as Sharing from "expo-sharing";
 import { useTheme } from "../context/ThemeContext";
 import { useUser } from "../context/UserContext";
-import { getArchiveFlags, getArgDiscoveryState } from "../utils/argState";
+import { supabase } from "../lib/supabase";
+import { canImportGuestDiscoveries, importGuestDiscoveries, getArchiveFlags, getArgDiscoveryState } from "../utils/argState";
 import { makeJournalNote, matchingNotes, noteHtml, noteText, recoveredHeading, recoveredNotes, type JournalNote, type JournalScope, type RecoveredNote } from "../_lib/journalModel";
 import { deleteJournalNote, loadJournalLocal, readJournalDraft, saveJournalNote, syncJournal, writeJournalDraft, type JournalResult } from "../_lib/journalStorage";
 
@@ -27,6 +28,8 @@ function JournalBody({ owner }: { owner: JournalScope }) {
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState("");
   const [saving, setSaving] = useState(false);
+  const [guestImportAvailable, setGuestImportAvailable] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [copyText, setCopyText] = useState<string | null>(null);
   const active = useRef(true);
   const refreshVersion = useRef(0);
@@ -56,6 +59,9 @@ function JournalBody({ owner }: { owner: JournalScope }) {
     void Promise.all([getArgDiscoveryState(owner), getArchiveFlags(owner)]).then(([state, flags]) => {
       if (live) setRecovered(recoveredNotes(state, flags));
     }).catch(() => { /* Leave ordinary notes usable; retry on next focus. */ });
+    if (owner) void canImportGuestDiscoveries(owner).then(available => {
+      if (live) setGuestImportAvailable(available);
+    }).catch(() => undefined);
     if (owner) void syncJournal(owner).then(r => {
       if (live && version === refreshVersion.current) showResult(r);
     }).catch(() => { if (live) setStatus("Account sync is unavailable. Try again later."); });
@@ -68,6 +74,32 @@ function JournalBody({ owner }: { owner: JournalScope }) {
       <Text style={{ color: tokens.text, fontWeight: "700" }}>{title}</Text>
     </Pressable>
   );
+  function offerGuestImport() {
+    if (!owner || importing || !active.current) return;
+    const run = async () => {
+      if (!active.current) return;
+      setImporting(true);
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (error || data.session?.user.id !== owner || !active.current) return;
+        const imported = await importGuestDiscoveries(owner);
+        const [state, flags] = await Promise.all([getArgDiscoveryState(owner), getArchiveFlags(owner)]);
+        if (active.current) {
+          setRecovered(recoveredNotes(state, flags));
+          setGuestImportAvailable(await canImportGuestDiscoveries(owner));
+          setStatus(imported ? "Your retained discoveries have been copied to this account on this device. No rewards were issued." : "No guest discoveries are available to import.");
+        }
+      } catch {
+        if (active.current) setStatus("Could not finish importing. You can retry on this account.");
+      } finally { if (active.current) setImporting(false); }
+    };
+    const explanation = "Only continue if the guest discoveries on this device are yours. This copies retained discoveries into this account without changing personal notes or granting rewards. Guest discoveries can be imported once on this device.";
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      if (window.confirm(explanation)) void run();
+    } else Alert.alert("Import your guest discoveries?", explanation, [
+      { text: "Cancel", style: "cancel" }, { text: "Import", onPress: () => void run() },
+    ]);
+  }
   function change(next: JournalNote | null) {
     editing.current = true;
     setDraft(next);
@@ -171,6 +203,7 @@ function JournalBody({ owner }: { owner: JournalScope }) {
       <View style={s.actions}>
         {action("New note", () => change(makeJournalNote()), !!draft)}
         {owner ? action("Sync", () => void refreshCloud(), saving) : null}
+        {owner && guestImportAvailable ? action(importing ? "Importing…" : "Import my guest discoveries", offerGuestImport, importing) : null}
       </View>
       {status ? <Text accessibilityLiveRegion="polite" style={{ color: tokens.text }}>{status}</Text> : null}
       {copyText !== null ? <View style={[s.card, palette]}>

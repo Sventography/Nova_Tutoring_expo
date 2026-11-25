@@ -2128,7 +2128,7 @@ function AskBody({ archiveOwner }: { archiveOwner: string | null }) {
               }
             } else {
               setMessages((m) => m.map((message) => message.id === answer.id
-                ? { ...message, text: message.text + "\n\nSign in and complete the Archive on your account to check First Twenty eligibility." }
+                ? { ...message, text: message.text + "\n\nSign in and open My Journal to import your own guest discoveries. Importing does not grant a First Twenty reward." }
                 : message));
             }
           }

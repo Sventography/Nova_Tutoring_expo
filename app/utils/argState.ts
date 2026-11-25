@@ -614,4 +614,67 @@ export async function clearArgOwner(owner: string): Promise<void> {
     ...Object.values(ARCHIVE_KEYS),
   ];
   await AsyncStorage.multiRemove(keys.map(key => argScopeKey(key, owner)));
+  if (await AsyncStorage.getItem(GUEST_IMPORT_KEY) === "pending/" + owner) {
+    await AsyncStorage.setItem(GUEST_IMPORT_KEY, "done");
+  }
+}
+
+/** Local, explicit import of discoveries only. This is never a reward credential. */
+const GUEST_IMPORT_KEY = "@nova/arg-scoped/v2/guest-import.v1";
+let importQueue: Promise<unknown> = Promise.resolve();
+
+export async function canImportGuestDiscoveries(owner: string): Promise<boolean> {
+  if (!owner) return false;
+  const marker = await AsyncStorage.getItem(GUEST_IMPORT_KEY);
+  if (marker && marker !== "pending/" + owner) return false;
+  const [state, flags] = await Promise.all([getArgDiscoveryState(null), getArchiveFlags(null)]);
+  return !!(state.entryNoteDiscovered || flags.introduced || flags.glowDescriptionRead ||
+    flags.orbDescriptionRead || flags.starDescriptionRead || flags.pencilTraceRead || flags.lanternTraceRead);
+}
+
+export function importGuestDiscoveries(owner: string): Promise<boolean> {
+  const next = importQueue.catch(() => undefined).then(async () => {
+    if (!await canImportGuestDiscoveries(owner)) return false;
+    // Bind the operation before copying, so an interrupted import can only resume
+    // for its original destination. Old unowned v1 keys are never consulted.
+    await AsyncStorage.setItem(GUEST_IMPORT_KEY, "pending/" + owner);
+    const [s, f] = await Promise.all([getArgDiscoveryState(null), getArchiveFlags(null)]);
+    const now = String(Date.now());
+    const flag = (key: ArchiveFlag, enabled: boolean | undefined): [string, string | null] =>
+      [ARCHIVE_KEYS[key], enabled ? "1" : null];
+    const found = (key: string, enabled: boolean | undefined, value = "1"): [string, string | null] =>
+      [key, enabled ? value : null];
+    const folder = !!s.lanternFolderDiscovered;
+    const copyUnlocked = folder && f.copyUnlocked;
+    const copyRead = copyUnlocked && f.copyRead;
+    const draftRestored = copyRead && f.draftRestored;
+    const completed = draftRestored && f.completed && !!s.argAct1Complete;
+    const entries: [string, string | null][] = [
+      flag("glowDescriptionRead", f.glowDescriptionRead), flag("orbDescriptionRead", f.orbDescriptionRead),
+      flag("starDescriptionRead", f.starDescriptionRead), flag("pencilTraceRead", f.pencilTraceRead),
+      flag("lanternTraceRead", f.lanternTraceRead), flag("introduced", f.introduced),
+      found(ARG_ENTRY_NOTE_DISCOVERED_KEY, s.entryNoteDiscovered),
+      found(ARG_TELESCOPE_CLUE_UNLOCKED_KEY, s.telescopeClueUnlocked),
+      found(ARG_SEVENTEENTH_STAR_DISCOVERED_KEY, s.seventeenthStarDiscovered),
+      found(ARG_NV_DISCOVERED_KEY, s.nvDiscovered),
+      found(ARG_WHITE_RABBIT_CLUE_UNLOCKED_KEY, s.whiteRabbitClueUnlocked),
+      found(ARG_WHITE_RABBIT_DISCOVERED_KEY, s.whiteRabbitDiscovered),
+      found(ARG_FOCUS_PRACTICE_UNLOCKED_KEY, s.focusPracticeUnlocked),
+      found(ARG_FOCUS_NOTE_DISCOVERED_KEY, s.focusPracticeNoteDiscovered, String(s.focusPracticeNoteSeenAt ?? Number(now))),
+      found(ARG_LIBRARY_NOTEBOOK_UNLOCKED_KEY, s.libraryNotebookUnlocked),
+      found(ARG_LIBRARY_NOTEBOOK_DISCOVERED_KEY, s.libraryNotebookDiscovered, String(s.libraryNotebookSeenAt ?? Number(now))),
+      found(ARG_LANTERN_COPY_KEY, s.lanternCopyDiscovered, now),
+      found(ARG_LANTERN_FOLDER_KEY, folder, now),
+      flag("copyUnlocked", copyUnlocked), flag("copyRead", copyRead), flag("draftRestored", draftRestored),
+      found(ARG_ACT1_COMPLETE_KEY, completed, now), flag("completed", completed),
+    ];
+    const existing = new Map(await readScoped(entries.map(([key]) => key), owner));
+    for (const [key, value] of entries) {
+      if (value !== null && existing.get(key) == null) await writeScoped(owner, key, value);
+    }
+    await AsyncStorage.setItem(GUEST_IMPORT_KEY, "done");
+    return true;
+  });
+  importQueue = next;
+  return next;
 }

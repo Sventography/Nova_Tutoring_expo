@@ -120,6 +120,19 @@ const args=load(path.join(root,'app/utils/argState.ts'));
   assert.deepEqual(model.recoveredNotes(await args.getArgDiscoveryState('a'),await args.getArchiveFlags('a')),[]);
   assert.equal(model.recoveredHeading(await found()),'Nora’s Notes');
 
+  // Explicit local import: no transfer to another account, no duplicate credit or note upload.
+  assert.equal(await args.canImportGuestDiscoveries('b'),true);
+  const callsBeforeImport=calls;
+  assert.equal(await args.importGuestDiscoveries('b'),true);
+  const imported=model.recoveredNotes(await args.getArgDiscoveryState('b'),await args.getArchiveFlags('b'));
+  assert.deepEqual(imported.map(n=>n.id),(await found()).map(n=>n.id));
+  assert.equal(model.recoveredHeading(imported),'Nora’s Notes');
+  assert.equal(await args.importGuestDiscoveries('b'),false);
+  assert.equal(await args.importGuestDiscoveries('a'),false);
+  assert.equal(calls,callsBeforeImport,'import cannot call database reward RPC or upload notes');
+  assert.deepEqual(model.recoveredNotes(await args.getArgDiscoveryState('a'),await args.getArchiveFlags('a')),[]);
+  assert.equal(model.recoveredHeading(await found()),'Nora’s Notes','guest record remains intact');
+
   const note={...model.makeJournalNote('Biology','<script>bad</script>','science'),id:'same-id'};
   const guest={...note,title:'Guest'};
   await store.saveJournalNote(null,guest);
