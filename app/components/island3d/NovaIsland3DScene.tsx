@@ -23,6 +23,10 @@ import {
   useFrame,
   useThree,
 } from "../../../components/islandFiber";
+import ShoreClearance from "../../../features/adaptiveIsland/ShoreClearance";
+import DistrictShore from "../../../features/adaptiveIsland/DistrictShore";
+import {districts,DISTRICT_SHORE_X,stageAt,stageNames} from "../../../features/adaptiveIsland/districts";
+import type {Interest} from "../../_lib/discoveryModel";
 import * as THREE from "three";
 
 import {
@@ -73,6 +77,8 @@ export type Island3DDiscovery = {
 };
 
 type Props = {
+  onDistrictPress?:(id:Interest)=>void;
+  districtIds?: Interest[]; visitingShore?:boolean; residentMotion?:boolean; construction?:boolean;
   level: number;
   height?: number;
   learningPulseToken?: number;
@@ -14859,6 +14865,7 @@ function IslandWorld({
 
 // NOVA_ISLAND_EXPANSION_PACK_1
 export default function NovaIsland3DScene({
+  onDistrictPress, districtIds=[], visitingShore=false,residentMotion=false,construction=false,
   level,
   height = 450,
   learningPulseToken = 0,
@@ -14899,6 +14906,7 @@ export default function NovaIsland3DScene({
   } = useIslandDecorations();
 
   const {
+    placedKeepsakes,
     moveKeepsake,
     selectKeepsake,
     getArmedKeepsakeDrag,
@@ -15022,25 +15030,23 @@ export default function NovaIsland3DScene({
           NOVA_SPRITE_BASE_HEIGHT *
           projection.scale;
 
-        novaOverlayRef.current?.setNativeProps(
-          {
-            style: {
-              left:
-                projection.x -
-                width / 2,
-              top:
-                projection.y -
-                height +
-                4,
-              width,
-              height,
-              opacity:
-                projection.visible
-                  ? 1
-                  : 0,
-            },
-          }
-        );
+        const overlay = novaOverlayRef.current;
+        if (!overlay) return;
+        const left = projection.x - width / 2;
+        const top = projection.y - height + 4;
+        const opacity = projection.visible ? 1 : 0;
+
+        if (Platform.OS === "web") {
+          // React Native Web forwards its View ref to the backing DOM node.
+          const element = overlay as unknown as {style:Record<string,string>};
+          element.style.left = left + "px";
+          element.style.top = top + "px";
+          element.style.width = width + "px";
+          element.style.height = height + "px";
+          element.style.opacity = String(opacity);
+        } else {
+          overlay.setNativeProps({ style: { left, top, width, height, opacity } });
+        }
       },
       []
     );
@@ -15181,6 +15187,14 @@ export default function NovaIsland3DScene({
         polar: 0,
       };
     }, [builderEditing, fullViewDistance]);
+
+  const [shoreClear,setShoreClear]=useState(false);
+  const wasAtShore=useRef(false);
+  useEffect(()=>{
+    if(visitingShore && shoreClear){focusPosition([DISTRICT_SHORE_X,0,0],18);}
+    else if(wasAtShore.current){resetView();}
+    wasAtShore.current=visitingShore && shoreClear;
+  },[visitingShore,shoreClear,focusPosition,resetView]);
 
   const selectMilestone =
     useCallback(
@@ -15933,6 +15947,7 @@ const selectLegendary =
         }}
       >
         <IslandFrameDriver />
+        {districtIds.length>0 && <ShoreClearance revision={[level,builderPlacements,decorationPlacements,placedKeepsakes,districtIds,legendaryCompanionIds,builderEditing]} onResult={setShoreClear}><DistrictShore ids={districtIds} level={level} activity={visitingShore&&residentMotion} celebrate={visitingShore&&construction} onExplore={visitingShore?onDistrictPress:undefined}/></ShoreClearance>}
         <IslandWorld
           level={level}
           palette={palette}
@@ -16105,7 +16120,7 @@ const selectLegendary =
         </View>
 
         <Pressable
-          onPress={resetView}
+          onPress={visitingShore&&shoreClear?()=>focusPosition([DISTRICT_SHORE_X,0,0],18):resetView}
           style={({ pressed }) => [
             styles.resetButton,
             {
@@ -16146,7 +16161,7 @@ const selectLegendary =
                 styles.selectedTitle
               }
             >
-              {selectedTitle}
+              {visitingShore?(shoreClear?"District shore":"District growth deferred"):selectedTitle}
             </Text>
 
             <View
@@ -16167,7 +16182,7 @@ const selectLegendary =
                   },
                 ]}
               >
-                {selectedStatusLabel}
+                {visitingShore?stageNames[stageAt(level)-1]:selectedStatusLabel}
               </Text>
             </View>
           </View>
@@ -16178,7 +16193,7 @@ const selectLegendary =
               styles.selectedLore
             }
           >
-            {selectedLore}
+            {visitingShore?(shoreClear?districtIds.map(id=>districts[id].name).join(" · "):"This space is occupied. Your Island layout has been preserved."):selectedLore}
           </Text>
         </View>
 

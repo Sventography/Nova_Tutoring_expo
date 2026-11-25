@@ -25,6 +25,8 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+import {useDistrictView} from "../../features/adaptiveIsland/useDistrictView";
+import {districts} from "../../features/adaptiveIsland/districts";
 import { GARDEN_NOTE, NORA_NOTEBOOK, TELESCOPE } from "../_lib/archiveArtifacts";
 import NovaIsland3DScene, {
   type Island3DDiscovery,
@@ -885,6 +887,7 @@ function IslandScreenBody({ owner }: { owner: string | null }) {
     refreshIsland,
   } = useIsland();
 
+  const shore=useDistrictView(owner,islandLevel);
   const islandBuilder = useIslandBuilder();
   const islandDecorations =
     useIslandDecorations();
@@ -2012,6 +2015,15 @@ function IslandScreenBody({ owner }: { owner: string | null }) {
           <Text style={styles.nextText}>Visit my Island interest garden</Text>
         </Pressable>
 
+        {shore.ids.length>0 && !islandBuilder.isEditing && <View>
+          <Pressable accessibilityRole="button" onPress={()=>shore.setVisit(!shore.visiting)} style={styles.nextRow}>
+            <Text style={styles.nextText}>{shore.visiting?"Return to Island center":"Visit district shore"}</Text>
+          </Pressable>
+          {shore.visiting && <Text style={styles.nextText}>{shore.ids.map(id=>districts[id].name).join(" · ")}</Text>}
+          {shore.visiting && !shore.reduced && <Pressable accessibilityRole="button" onPress={shore.motion||shore.celebrating?shore.stop:shore.play} style={styles.nextRow}>
+            <Text style={styles.nextText}>{shore.motion||shore.celebrating?"Skip animation":"Watch the district residents"}</Text>
+          </Pressable>}
+        </View>}
         {archiveAvailable ? (
           <Pressable
             accessibilityRole="button"
@@ -2042,6 +2054,11 @@ function IslandScreenBody({ owner }: { owner: string | null }) {
         <View style={styles.sceneCard}>
           <IslandSceneBoundary onError={() => setSceneInteracting(false)}>
           <NovaIsland3DScene
+            onDistrictPress={id=>router.push({pathname:"/discover",params:{districtLesson:districts[id].lessons[0]}} as never)}
+            districtIds={shore.ids}
+            visitingShore={shore.visiting && !islandBuilder.isEditing}
+            residentMotion={!shore.reduced && shore.motion}
+            construction={!shore.reduced && shore.celebrating}
             height={
               islandBuilder.isEditing
                 ? contentWidth >= 560

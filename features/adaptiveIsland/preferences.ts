@@ -32,8 +32,9 @@ export function parse(raw: string | null): Preferences {
 export function themes(p: Preferences): Interest[] {
   if (!p.enabled) return [];
   if (!p.automatic) return p.picks;
-  const pool = [...new Set([...p.picks, ...INTERESTS.map(([id]) => id).filter(id => p.counts[id])])];
-  return pool.sort((a,b) => (p.counts[b] || 0) - (p.counts[a] || 0)).slice(0,3);
+  const suggested=INTERESTS.map(([id])=>id).filter(id=>!p.picks.includes(id)&&p.counts[id]);
+  suggested.sort((a,b)=>(p.counts[b]||0)-(p.counts[a]||0));
+  return [...p.picks,...suggested].slice(0,3);
 }
 export function voluntary(p: Preferences, interest: Interest): Preferences {
   if (!p.enabled || !p.automatic) return p;
