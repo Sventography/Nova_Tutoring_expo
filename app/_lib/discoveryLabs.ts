@@ -13,3 +13,12 @@ export function mountainPalette(level: number) {
   const mix=(rgb:readonly number[],haze:readonly number[],amount:number)=>"rgb("+rgb.map((x,i)=>blend(x,haze[i],amount)).join(",")+")";
   return {far:mix([45,89,95],[186,205,222],t*.85),middle:mix([39,106,91],[186,205,222],t*.4),near:mix([30,104,66],[186,205,222],t*.08)};
 }
+
+export const EDIT_CONTEXTS = [
+  {id:"gift",label:"A wrapped gift",symbol:"gift",interpretation:"Anticipation or delight",explanation:"A gift after a neutral face can suggest that the person is expecting a surprise."},
+  {id:"bench",label:"An empty bench",symbol:"bench",interpretation:"Loneliness or reflection",explanation:"An empty place after the same face can suggest absence, memory or someone who has not arrived."},
+  {id:"door",label:"A partly open door",symbol:"door",interpretation:"Curiosity or uncertainty",explanation:"An unexplained doorway can make the expression seem attentive or uncertain."},
+] as const;
+export function editContext(id: string) {
+  return EDIT_CONTEXTS.find(context=>context.id===id);
+}
