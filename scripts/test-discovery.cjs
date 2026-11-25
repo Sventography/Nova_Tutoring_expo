@@ -8,7 +8,17 @@ const { outputText } = ts.transpileModule(source, { compilerOptions: { module: t
 const mod = { exports: {} };
 new Function('module', 'exports', outputText)(mod, mod.exports);
 const { DISCOVERIES, INTERESTS, dailyDiscovery, normalizeInterests, localDay, discoveryForId, discoveryStorageKey, jumpModel } = mod.exports;
-assert.equal(DISCOVERIES.length, 20);
+assert.equal(DISCOVERIES.length, 100);
+for(const [interest] of INTERESTS){
+ assert.equal(DISCOVERIES.filter(d=>d.interest===interest).length,10);
+ const seen=new Set(Array.from({length:10},(_,day)=>dailyDiscovery([interest],day).id));
+ assert.equal(seen.size,10);
+}
+for(const d of DISCOVERIES){
+ assert.match(d.id,/^[a-z][a-z0-9-]+$/);
+ assert.ok(d.title&&d.hook&&d.insight&&d.activity&&d.prompt);
+ assert.equal(discoveryForId(d.id),d);
+}
 assert.equal(new Set(DISCOVERIES.map(d => d.id)).size, DISCOVERIES.length);
 for (const [interest] of INTERESTS) {
   const a = dailyDiscovery([interest], 100);
