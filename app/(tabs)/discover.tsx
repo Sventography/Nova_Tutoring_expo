@@ -3,14 +3,15 @@ import { ActivityIndicator, AppState, Pressable, ScrollView, StyleSheet, Text, T
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Clipboard from "expo-clipboard";
 import { discoveryNote } from "../_lib/discoveryReflection";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useFocusEffect, useRouter, useLocalSearchParams } from "expo-router";
 import { useTheme } from "../context/ThemeContext";
 import { useUser } from "../context/UserContext";
 import LearningAdventure from "../components/LearningAdventure";
 import DiscoveryPractice from "../components/DiscoveryPractice";
 import DiscoveryLabs from "../components/DiscoveryLabs";
 import { browseDiscoveries } from "../_lib/discoveryBrowse";
-import { orderedAdventures, type Adventure } from "../_lib/adventureModel";
+import { districts } from "../../features/adaptiveIsland/districts";
+import { ADVENTURES, orderedAdventures, type Adventure } from "../_lib/adventureModel";
 import { emptyJourney, journeyKey, normalizeJourney, toggleSaved, markCompleted, relatedDiscoveries, dailyDetour, type Journey } from "../_lib/journeyModel";
 import { INTERESTS, DISCOVERIES, dailyDiscovery, localDay, normalizeInterests, discoveryStorageKey, jumpModel, type Interest, type Discovery } from "../_lib/discoveryModel";
 
@@ -22,6 +23,13 @@ export default function DiscoverScreen() {
 }
 
 function DiscoverBody({ owner }: { owner: string | null }) {
+  const {districtLesson,districtAdventure,fromShore}=useLocalSearchParams<{districtLesson?:string;districtAdventure?:string;fromShore?:string}>();
+  const arrival=useRef(false);
+  useEffect(()=>{
+    arrival.current=false;
+    if(districtLesson && Object.values(districts).some(d=>d.lessons.includes(districtLesson)))setChosen(DISCOVERIES.find(d=>d.id===districtLesson)??null);
+    if(districtAdventure && Object.values(districts).some(d=>d.adventure===districtAdventure))setAdventure(ADVENTURES.find(a=>a.id===districtAdventure)??null);
+  },[districtLesson,districtAdventure]);
   const { tokens } = useTheme();
   const router = useRouter();
   const scroll = useRef<ScrollView>(null);
@@ -115,6 +123,7 @@ function DiscoverBody({ owner }: { owner: string | null }) {
   const go = (pathname: string) => router.push(pathname as any);
   if (!loaded) return <ActivityIndicator color={tokens.accent} />;
   return <ScrollView ref={scroll} style={{ flex: 1, backgroundColor: tokens.bg }} contentContainerStyle={s.page} keyboardShouldPersistTaps="handled">
+    {fromShore==="1" && button("Return to my district view",()=>router.navigate("/island" as never))}
     <Text style={[s.eyebrow, ink]}>NOVA DISCOVER</Text>
     <Text accessibilityRole="header" style={[s.title, ink]}>What are you curious about?</Text>
     <Text style={[s.body, ink]}>Explore something unexpected, follow your interests, or get straight to your schoolwork.</Text>
@@ -153,7 +162,7 @@ function DiscoverBody({ owner }: { owner: string | null }) {
       </>}
       {!!status && <Text accessibilityLiveRegion="polite" style={ink}>{status}</Text>}
     </View>
-    <View style={[s.card, card]} onLayout={e => { discoveryY.current = e.nativeEvent.layout.y; }}>
+    <View style={[s.card, card]} onLayout={e => { discoveryY.current = e.nativeEvent.layout.y; if(districtLesson&&!arrival.current){arrival.current=true;scroll.current?.scrollTo({y:discoveryY.current,animated:false});} }}>
       <Text style={[s.eyebrow, ink]}>{chosen ? "EXPLORE" : "TODAY’S DISCOVERY"} · {label(current.interest)}</Text>
       <Text accessibilityRole="header" style={[s.title, ink]}>{current.title}</Text>
       <Text style={[s.body, ink]}>{current.hook}</Text>
@@ -193,7 +202,7 @@ function DiscoverBody({ owner }: { owner: string | null }) {
       {journey.saved.map(id => DISCOVERIES.find(d=>d.id===id)).filter((d):d is Discovery=>!!d).map(d => <Pressable key={d.id} accessibilityRole="button" onPress={()=>openDiscovery(d)} style={[s.button,card]}><Text style={[s.buttonText,ink]}>{d.title}</Text></Pressable>)}
       {journey.completed.length > 0 && <Text style={[s.small,ink]}>Completed adventures are available to replay below.</Text>}
     </View>
-    <View onLayout={e => { adventureY.current = e.nativeEvent.layout.y; }} style={{ gap: 10 }}>
+    <View onLayout={e => { adventureY.current = e.nativeEvent.layout.y; if(districtAdventure&&!arrival.current){arrival.current=true;scroll.current?.scrollTo({y:adventureY.current,animated:false});} }} style={{ gap: 10 }}>
       <Text accessibilityRole="header" style={[s.heading, ink]}>Choose your own learning adventure</Text>
       <Text style={[s.body, ink]}>Step into a story, make decisions, and see what your choices teach you.</Text>
       {adventure ? <LearningAdventure key={adventure.id} adventure={adventure} onExit={() => setAdventure(null)} completed={journey.completed.includes(adventure.id)} onComplete={() => updateJourney(old => markCompleted(old,adventure.id))} /> : orderedAdventures(interests).map(item => (

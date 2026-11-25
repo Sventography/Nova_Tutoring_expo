@@ -8,6 +8,8 @@ import { useUser } from "./context/UserContext";
 import { useIsland } from "./context/IslandContext";
 import Garden from "../features/adaptiveIsland/Garden";
 import { fresh, parse, profileKey, themes, voluntary, type Preferences } from "../features/adaptiveIsland/preferences";
+import {districts,stageAt,stageNames} from "../features/adaptiveIsland/districts";
+import HarmonyPlayback from "./components/HarmonyPlayback";
 import MasteryCheck from "../features/adaptiveIsland/MasteryCheck";
 
 const writes = new Map<string, Promise<void>>();
@@ -24,6 +26,7 @@ export default function InterestGarden() {
   return <Settings key={profileKey(owner)} owner={owner} lesson={lesson}/>;
 }
 function Settings({owner, lesson}: {owner:string|null; lesson?:string}) {
+  const [sound,setSound]=useState(false);
   const key = profileKey(owner);
   const { level } = useIsland();
   const { tokens } = useTheme();
@@ -66,7 +69,7 @@ function Settings({owner, lesson}: {owner:string|null; lesson?:string}) {
   return <ScrollView style={{backgroundColor:tokens.bg}} contentContainerStyle={{padding:18,gap:12}}>
     {button("Return",()=>router.canGoBack()?router.back():router.replace("/island" as never))}
     <Text accessibilityRole="header" style={{...ink,fontSize:24,fontWeight:"700"}}>Island interest garden</Text>
-    <Text style={ink}>Your private space on this device. Music, painting and astronomy have scenery to explore. Your Island level adds details at levels 3 and 6.</Text>
+    <Text style={ink}>Your private space on this device. Choose interests here, then visit their districts on My Island. New exhibits appear at Island levels 3, 6 and 10.</Text>
     {topic && owner && <MasteryCheck key={topic.id} lesson={topic.id}/>}
     {!prefs && status!=="" && button("Retry settings",()=>setRetry(n=>n+1))}
     {prefs && <>
@@ -78,11 +81,20 @@ function Settings({owner, lesson}: {owner:string|null; lesson?:string}) {
           return button(name,()=>save(p=>({...p,picks:p.picks.includes(id)?p.picks.filter(x=>x!==id):[...p.picks,id].slice(0,3)}),"Interests saved."),busy||(!picked&&prefs.picks.length>=3),picked);
         })}</View>
         {button(prefs.automatic?"Use my choices only":"Adapt to my voluntary discoveries",()=>save(p=>({...p,automatic:!p.automatic,counts:{}}),"Learning preference saved."),busy)}
-        {prefs.automatic && <Text style={ink}>Only discoveries you mark as your own interest count. Activity counts rank subjects, with your choices breaking ties. Turning this off clears the counts.</Text>}
+        {prefs.automatic && <Text style={ink}>Only discoveries you mark as your own interest count. Your choices come first. Voluntary activity fills any remaining spaces. Turning this off clears the counts.</Text>}
         {topic && prefs.automatic && button(marked?"Interest recorded":"I explored this for myself: "+topic.title,()=>save(p=>voluntary(p,topic.interest),"Recorded for your garden.",()=>setMarked(true)),busy||marked)}
         {prefs.automatic && Object.entries(prefs.counts).map(([id,count])=><Text key={id} style={ink}>{names([id as Interest])} · {count}</Text>)}
         <Text style={ink}>{selected.length?"Garden spaces: "+names(selected):"Choose an interest to grow your first space."}</Text>
-        {selected.length>0 && <SceneBoundary color={tokens.text}><Garden interests={selected} level={level}/></SceneBoundary>}
+        {selected.length>0 && button("Explore districts on My Island",()=>router.push("/island" as never))}
+        {selected.map(id=><View key={id} style={{gap:6}}>
+          <Text accessibilityRole="header" style={ink}>{districts[id].name} · {stageNames[stageAt(level)-1]}</Text>
+          <Text style={ink}>{districts[id].exhibits[stageAt(level)-1]}</Text>
+          {districts[id].lessons.map(lesson=>button(DISCOVERIES.find(d=>d.id===lesson)!.title,()=>router.push({pathname:"/discover",params:{districtLesson:lesson}} as never)))}
+          {districts[id].adventure && button("Enter "+districts[id].name+" adventure",()=>router.push({pathname:"/discover",params:{districtAdventure:districts[id].adventure}} as never))}
+          {id==="music" && button(sound?"Close sound bench":"Open sound bench",()=>setSound(v=>!v))}
+          {id==="music" && sound && <HarmonyPlayback notes={[0,4,7]}/>}
+        </View>)}
+        {selected.some(id=>["music","art","space"].includes(id)) && <SceneBoundary color={tokens.text}><Garden interests={selected} level={level}/></SceneBoundary>}
       </>}
       {button("Reset garden preferences",()=>save(fresh,"Preferences and voluntary counts cleared."),busy)}
     </>}

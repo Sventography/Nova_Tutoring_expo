@@ -1,3 +1,4 @@
+import RobotWorkshop from "../../features/adaptiveIsland/RobotWorkshop";
 import React,{useState} from "react";
 import {Pressable,StyleSheet,Text,View} from "react-native";
 import Svg,{Rect,Polygon,Line,Circle,Path} from "react-native-svg";
@@ -211,6 +212,7 @@ function PayoffLab(){
  </View>;
 }
 export default function DiscoveryLabs({discoveryId}:{discoveryId:string}){
+ if(discoveryId==="tech-algorithm")return <RobotWorkshop/>;
  if(discoveryId==="music-mood")return <HarmonyLab/>;
  if(discoveryId==="writing-pov")return <ViewpointLab/>;
  if(discoveryId==="writing-payoff")return <PayoffLab/>;
