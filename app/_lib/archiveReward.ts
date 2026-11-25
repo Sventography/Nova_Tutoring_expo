@@ -16,7 +16,11 @@ type ArchiveReward = {
   status: "awarded" | "already_awarded" | "completed" | "closed" | "retry";
 };
 
+// Release gate: older deployed backends may still accept client-only evidence.
+// Do not call them until the server-side verifier has been implemented, deployed and tested.
+const ARCHIVE_CLAIMS_READY: boolean = false;
 export async function completeArchive(base: string, token: string): Promise<ArchiveReward> {
+  if (!ARCHIVE_CLAIMS_READY) return { status: "closed" };
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 8000);
   try {

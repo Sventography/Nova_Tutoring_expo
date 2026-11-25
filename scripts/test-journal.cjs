@@ -122,6 +122,8 @@ const args=load(path.join(root,'app/utils/argState.ts'));
 
   // Explicit local import: no transfer to another account, no duplicate credit or note upload.
   assert.equal(await args.canImportGuestDiscoveries('b'),true);
+  const rewards=load(path.join(root,'app/_lib/archiveReward.ts'));
+  assert.deepEqual(await rewards.completeArchive('https://example.invalid','fixture-token'),{status:'closed'});
   const callsBeforeImport=calls;
   assert.equal(await args.importGuestDiscoveries('b'),true);
   const imported=model.recoveredNotes(await args.getArgDiscoveryState('b'),await args.getArchiveFlags('b'));
