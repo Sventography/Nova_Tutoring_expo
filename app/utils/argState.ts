@@ -546,6 +546,9 @@ export async function markArgAct1Complete(): Promise<boolean> {
   return true;
 }
 const ARCHIVE_KEYS = {
+  glowDescriptionRead: "@nova/arg/glow-description-read.v1",
+  orbDescriptionRead: "@nova/arg/orb-description-read.v1",
+  starDescriptionRead: "@nova/arg/star-description-read.v1",
   pencilTraceRead: "@nova/arg/pencil-trace-read.v1",
   lanternTraceRead: "@nova/arg/lantern-trace-read.v1",
   introduced: "@nova/arg/intro.v1",
@@ -555,11 +558,15 @@ const ARCHIVE_KEYS = {
   completed: "@nova/arg/session-017-closed.v1",
 } as const;
 type ArchiveFlag = keyof typeof ARCHIVE_KEYS;
-export type ArchiveFlags = Record<Exclude<ArchiveFlag, "pencilTraceRead" | "lanternTraceRead">, boolean> & Partial<Record<"pencilTraceRead" | "lanternTraceRead", boolean>>;
+type OptionalTraceFlag = "pencilTraceRead" | "lanternTraceRead" | "glowDescriptionRead" | "orbDescriptionRead" | "starDescriptionRead";
+export type ArchiveFlags = Record<Exclude<ArchiveFlag, OptionalTraceFlag>, boolean> & Partial<Record<OptionalTraceFlag, boolean>>;
 
 export async function getArchiveFlags(): Promise<ArchiveFlags> {
   const pairs = new Map(await AsyncStorage.multiGet(Object.values(ARCHIVE_KEYS)));
   return {
+    glowDescriptionRead: pairs.get(ARCHIVE_KEYS.glowDescriptionRead) === "1",
+    orbDescriptionRead: pairs.get(ARCHIVE_KEYS.orbDescriptionRead) === "1",
+    starDescriptionRead: pairs.get(ARCHIVE_KEYS.starDescriptionRead) === "1",
     pencilTraceRead: pairs.get(ARCHIVE_KEYS.pencilTraceRead) === "1",
     lanternTraceRead: pairs.get(ARCHIVE_KEYS.lanternTraceRead) === "1",
     introduced: pairs.get(ARCHIVE_KEYS.introduced) === "1",
