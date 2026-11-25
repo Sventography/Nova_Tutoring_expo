@@ -3,6 +3,7 @@ import {Pressable,StyleSheet,Text,View} from "react-native";
 import Svg,{Rect,Polygon,Line,Circle,Path} from "react-native-svg";
 import {useTheme} from "../context/ThemeContext";
 import HarmonyPlayback from "./HarmonyPlayback";
+import OrbitLab from "./OrbitLab";
 import {SCALE_FACTORS,DEPTH_LEVELS,squareScale,mountainPalette,EDIT_CONTEXTS,editContext,COIN_BATCHES,simulateCoins,PIXEL_RESOLUTIONS,PIXEL_SHAPES,PIXEL_COLORS,pixelMask,KEY_NOTES,CHORD_ROOTS,triad,noteFrequency,STORY_SHOTS,shotReading,moveShot,VIEWPOINTS,viewpoint,SETUPS,storyPayoff} from "../_lib/discoveryLabs";
 
 function Choices({values,selected,onChange,labels}:{values:readonly number[];selected:number;onChange:(n:number)=>void;labels:readonly string[]}){
@@ -211,6 +212,7 @@ function PayoffLab(){
  </View>;
 }
 export default function DiscoveryLabs({discoveryId}:{discoveryId:string}){
+ if(discoveryId==="space-orbit")return <OrbitLab/>;
  if(discoveryId==="music-mood")return <HarmonyLab/>;
  if(discoveryId==="writing-pov")return <ViewpointLab/>;
  if(discoveryId==="writing-payoff")return <PayoffLab/>;
