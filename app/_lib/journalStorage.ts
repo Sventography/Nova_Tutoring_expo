@@ -89,12 +89,19 @@ export function deleteJournalNote(owner: JournalScope, id: string): Promise<Jour
     return result(next);
   });
 }
-export const readJournalDraft = async (owner: JournalScope): Promise<JournalNote | null> => {
+export const readJournalDraft = (owner: JournalScope): Promise<JournalNote | null> => serial(journalDraftKey(owner), async () => {
   const raw = await AsyncStorage.getItem(journalDraftKey(owner));
   return raw ? JSON.parse(raw) : null;
-};
+});
 export function writeJournalDraft(owner: JournalScope, note: JournalNote | null): Promise<void> {
   return serial(journalDraftKey(owner), () => note
     ? AsyncStorage.setItem(journalDraftKey(owner), JSON.stringify(note))
     : AsyncStorage.removeItem(journalDraftKey(owner)));
+}
+
+export async function clearJournalOwner(owner: string): Promise<void> {
+  await Promise.all([
+    serial(journalStorageKey(owner), () => AsyncStorage.removeItem(journalStorageKey(owner))),
+    writeJournalDraft(owner, null),
+  ]);
 }
