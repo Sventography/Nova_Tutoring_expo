@@ -8,7 +8,7 @@ const {outputText,diagnostics}=ts.transpileModule(source,{compilerOptions:{modul
 assert.equal(diagnostics.filter(d=>d.category===ts.DiagnosticCategory.Error).length,0);
 const mod={exports:{}};
 new Function('module','exports',outputText)(mod,mod.exports);
-const {squareScale,mountainPalette,SCALE_FACTORS,DEPTH_LEVELS}=mod.exports;
+const {squareScale,mountainPalette,SCALE_FACTORS,DEPTH_LEVELS,EDIT_CONTEXTS,editContext}=mod.exports;
 for(const n of SCALE_FACTORS)assert.deepEqual(squareScale(n),{length:2*n,area:4*n*n,areaFactor:n*n,volumeFactor:n*n*n});
 for(const x of [0,-1,1.5,5,NaN,Infinity])assert.throws(()=>squareScale(x));
 for(const x of [0,-1,NaN,Infinity])assert.throws(()=>squareScale(1,x));
@@ -24,4 +24,11 @@ for(const n of DEPTH_LEVELS){
  }
 }
 for(const x of [-1,4,1.5,NaN])assert.throws(()=>mountainPalette(x));
+assert.equal(EDIT_CONTEXTS.length,3);
+assert.equal(new Set(EDIT_CONTEXTS.map(x=>x.id)).size,3);
+for(const context of EDIT_CONTEXTS){
+ assert.deepEqual(editContext(context.id),context);
+ assert.ok(context.label && context.interpretation && context.explanation);
+}
+for(const invalid of ['','unknown','__proto__','constructor'])assert.equal(editContext(invalid),undefined);
 console.log('Discovery lab model checks passed');
