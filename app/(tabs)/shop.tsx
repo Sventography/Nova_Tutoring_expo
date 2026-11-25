@@ -1291,6 +1291,7 @@ function OrderSuccessModal({
   );
 }
 function ItemDetailModal({
+  owner,
   visible,
   item,
   owned = false,
@@ -1299,6 +1300,7 @@ function ItemDetailModal({
   onPrimaryAction,
   primaryLabel,
 }: {
+  owner: string | null;
   visible: boolean;
   item: any | null;
   owned?: boolean;
@@ -1313,12 +1315,12 @@ function ItemDetailModal({
   const [cursorTrace, setCursorTrace] = useState<string | null>(null);
   const revealCursorTrace = (id: string) => {
     setCursorTrace(id);
-    void markArchiveFlag(id === "cursor_star_trail" ? "pencilTraceRead" : "lanternTraceRead").catch(() => undefined);
+    void markArchiveFlag(id === "cursor_star_trail" ? "pencilTraceRead" : "lanternTraceRead", owner).catch(() => undefined);
   };
   const [rabbitHintReady, setRabbitHintReady] = useState(false);
 
   const readRabbitLabel = async () => {
-    if (await markWhiteRabbitDiscovered()) setShowWhiteRabbitTrace(true);
+    if (await markWhiteRabbitDiscovered(owner)) setShowWhiteRabbitTrace(true);
   };
 
   useEffect(() => {
@@ -1326,16 +1328,16 @@ function ItemDetailModal({
     setShowWhiteRabbitTrace(false);
     setCursorTrace(null);
     setRabbitHintReady(false);
-    if (visible && item?.id === "cursor_glow") void markArchiveFlag("glowDescriptionRead").catch(() => undefined);
-    if (visible && item?.id === "cursor_orb") void markArchiveFlag("orbDescriptionRead").catch(() => undefined);
-    if (visible && item?.id === "cursor_star_trail") void markArchiveFlag("starDescriptionRead").catch(() => undefined);
+    if (visible && item?.id === "cursor_glow") void markArchiveFlag("glowDescriptionRead", owner).catch(() => undefined);
+    if (visible && item?.id === "cursor_orb") void markArchiveFlag("orbDescriptionRead", owner).catch(() => undefined);
+    if (visible && item?.id === "cursor_star_trail") void markArchiveFlag("starDescriptionRead", owner).catch(() => undefined);
     if (!visible || item?.id !== "plushie_bunny_white") return;
     let alive = true;
-    void getArgDiscoveryState().then(state => {
+    void getArgDiscoveryState(owner).then(state => {
       if (alive) setRabbitHintReady(state.whiteRabbitClueUnlocked);
     }).catch(() => {});
     return () => { alive = false; };
-  }, [visible, item?.id]);
+  }, [visible, item?.id, owner]);
 
   if (!item) return null;
 
@@ -6999,6 +7001,8 @@ export default function Shop() {
       </ScrollView>
 
       <ItemDetailModal
+        key={session?.user?.id ?? "guest"}
+        owner={session?.user?.id ?? null}
         visible={!!detailItem}
         item={detailItem}
         owned={
