@@ -10,6 +10,7 @@ const storage = {
   multiGet: async keys => keys.map(k => [k, values.get(k) ?? null]),
   setItem: async (k,v) => { values.set(k,v); },
   removeItem: async k => { values.delete(k); },
+  multiRemove: async keys => { keys.forEach(k => values.delete(k)); },
 };
 let owner = 'a', offline = false, calls = 0;
 const remote = new Map();
@@ -115,6 +116,9 @@ const args=load(path.join(root,'app/utils/argState.ts'));
   assert.equal(await conversation.resolveArchiveReply('Read the telescope observation',false,false,'b'),null);
   assert.match((await conversation.resolveArchiveReply('Who signed the chart?',false,false,'a'))?.text??'',/^N\.V\./);
   assert.equal((await args.getArgDiscoveryState('b')).nvDiscovered,false);
+  await args.clearArgOwner('a');
+  assert.deepEqual(model.recoveredNotes(await args.getArgDiscoveryState('a'),await args.getArchiveFlags('a')),[]);
+  assert.equal(model.recoveredHeading(await found()),'Nora’s Notes');
 
   const note={...model.makeJournalNote('Biology','<script>bad</script>','science'),id:'same-id'};
   const guest={...note,title:'Guest'};
