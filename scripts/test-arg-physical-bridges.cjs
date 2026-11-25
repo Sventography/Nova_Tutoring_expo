@@ -8,7 +8,7 @@ const shop = fs.readFileSync(path.join(root, "app/(tabs)/shop.tsx"), "utf8");
 const focus = fs.readFileSync(path.join(root, "app/focus-practice.tsx"), "utf8");
 const ask = fs.readFileSync(path.join(root, "app/(tabs)/ask.tsx"), "utf8");
 const artifacts = fs.readFileSync(path.join(root, "app/_lib/archiveArtifacts.ts"), "utf8");
-assert.ok(island.includes("{GARDEN_NOTE}") && artifacts.includes("I drew another star on a copy"));
+assert.ok(island.includes("{GARDEN_NOTE}") && artifacts.includes("I drew the extra star on a copy") && artifacts.includes("Both sheets are still there"));
 assert.ok(island.includes("{TELESCOPE.chart}") && artifacts.includes("TWO INITIALS BENEATH IT"));
 assert.ok(island.includes("onPress={() => router.push(\"/archive\""));
 assert.ok(island.includes("{NORA_NOTEBOOK}") && artifacts.includes("feel the letters with my thumb"));
