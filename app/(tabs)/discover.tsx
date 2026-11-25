@@ -4,6 +4,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useTheme } from "../context/ThemeContext";
 import { useUser } from "../context/UserContext";
+import LearningAdventure from "../components/LearningAdventure";
+import { orderedAdventures, type Adventure } from "../_lib/adventureModel";
 import { INTERESTS, DISCOVERIES, dailyDiscovery, localDay, normalizeInterests, discoveryStorageKey, jumpModel, type Interest, type Discovery } from "../_lib/discoveryModel";
 
 export default function DiscoverScreen() {
@@ -26,6 +28,8 @@ function DiscoverBody({ owner }: { owner: string | null }) {
   const [status, setStatus] = useState("");
   const [day, setDay] = useState(localDay);
   const [chosen, setChosen] = useState<Discovery | null>(null);
+  const [adventure, setAdventure] = useState<Adventure | null>(null);
+  const adventureY = useRef(0);
   const key = discoveryStorageKey(owner);
   useEffect(() => {
     let live = true;
@@ -103,6 +107,18 @@ function DiscoverBody({ owner }: { owner: string | null }) {
       {button("Explore further with Ask Nova", () => router.push({ pathname: "/ask", params: { discovery: current.id } } as any))}
       <Text style={[s.small, ink]}>This discovery is free to explore. Follow-up AI questions use your existing Ask plan.</Text>
       {chosen && button("Back to today's discovery", () => setChosen(null))}
+    </View>
+    <View onLayout={e => { adventureY.current = e.nativeEvent.layout.y; }} style={{ gap: 10 }}>
+      <Text accessibilityRole="header" style={[s.heading, ink]}>Choose your own learning adventure</Text>
+      <Text style={[s.body, ink]}>Step into a story, make decisions, and see what your choices teach you.</Text>
+      {adventure ? <LearningAdventure key={adventure.id} adventure={adventure} onExit={() => setAdventure(null)} /> : orderedAdventures(interests).map(item => (
+        <Pressable key={item.id} accessibilityRole="button" onPress={() => { setAdventure(item); scroll.current?.scrollTo({ y: adventureY.current, animated: true }); }} style={[s.card,card]}>
+          <Text style={[s.eyebrow,ink]}>{label(item.interest)}</Text>
+          <Text style={[s.heading,ink]}>{item.title}</Text>
+          <Text style={[s.body,ink]}>{item.description}</Text>
+          <Text style={[s.small,ink]}>Begin adventure · free</Text>
+        </Pressable>
+      ))}
     </View>
     <View style={[s.card, card]}>
       <Text accessibilityRole="header" style={[s.heading, ink]}>Need to study?</Text>
