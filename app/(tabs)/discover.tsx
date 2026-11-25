@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, AppState, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Clipboard from "expo-clipboard";
+import { reflectionFor, discoveryNote } from "../_lib/discoveryReflection";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useTheme } from "../context/ThemeContext";
 import { useUser } from "../context/UserContext";
@@ -135,6 +137,7 @@ function DiscoverBody({ owner }: { owner: string | null }) {
       <Text style={[s.body, ink]}>{current.activity}</Text>
       {current.id === "space-gravity" && <GravityLab />}
       {current.id === "art-color" && <ColorLab />}
+      <DiscoveryReflection key={current.id} discoveryId={current.id} onOpenJournal={() => go("/journal")} />
       {button(journey.saved.includes(current.id) ? "Remove from my saved discoveries" : "Save to my discoveries", () => updateJourney(old => toggleSaved(old,current.id)), !journeyReady || journeyBusy)}
       {button("Explore further with Ask Nova", () => router.push({ pathname: "/ask", params: { discovery: current.id } } as any))}
       <Text style={[s.small, ink]}>This discovery is free to explore. Follow-up AI questions use your existing Ask plan.</Text>
@@ -183,6 +186,47 @@ function DiscoverBody({ owner }: { owner: string | null }) {
       <Text style={[s.small, ink]}>{current.id === d.id ? "Currently exploring above" : "Open discovery"}</Text>
     </Pressable>)}
   </ScrollView>;
+}
+
+function DiscoveryReflection({ discoveryId, onOpenJournal }: { discoveryId: string; onOpenJournal: () => void }) {
+  const { tokens } = useTheme();
+  const [revealed,setRevealed] = useState(false);
+  const [copyStatus,setCopyStatus] = useState("");
+  const [showNote,setShowNote] = useState(false);
+  const reflection = reflectionFor(discoveryId);
+  const note = discoveryNote(discoveryId);
+  const ink = { color: tokens.text };
+  const action = (title: string, run: () => void) => <Pressable accessibilityRole="button"
+    onPress={run} style={[s.button,{borderColor:tokens.border,backgroundColor:tokens.bg}]}>
+    <Text style={[s.buttonText,ink]}>{title}</Text>
+  </Pressable>;
+  async function copy() {
+    if (!note) return;
+    try {
+      if (await Clipboard.setStringAsync(note)) {
+        setCopyStatus("Copied. Open your Journal and paste into a note you choose.");
+        return;
+      }
+    } catch { /* Use the selectable template below. */ }
+    setShowNote(true); setCopyStatus("Clipboard unavailable. Select and copy the template manually.");
+  }
+  return <View style={{gap:10,borderTopWidth:1,borderColor:tokens.border,paddingTop:12}}>
+    {reflection && <>
+      <Text style={[s.heading,ink]}>Think it through</Text>
+      <Text style={[s.body,ink]}>{reflection.question}</Text>
+      {action(revealed ? "Hide explanation" : "Reveal explanation",()=>setRevealed(x=>!x))}
+      {revealed && <Text accessibilityLiveRegion="polite" style={[s.body,ink]}>{reflection.explanation}</Text>}
+      <Text style={[s.small,ink]}>Optional reflection. No grade or reward.</Text>
+    </>}
+    <Text style={[s.heading,ink]}>Make it your own</Text>
+    <Text style={[s.body,ink]}>Keep the discovery in your Journal, add your own thoughts, or write a question for later.</Text>
+    {action("Copy discovery note template",()=>void copy())}
+    {action(showNote ? "Hide note template" : "Preview note template",()=>setShowNote(x=>!x))}
+    {showNote && <Text selectable style={[s.body,ink]}>{note}</Text>}
+    {!!copyStatus && <Text accessibilityLiveRegion="polite" style={[s.small,ink]}>{copyStatus}</Text>}
+    {action("Open My Journal",onOpenJournal)}
+    <Text style={[s.small,ink]}>Nothing is added to your Journal automatically. Copying includes only the public lesson, not your private notes.</Text>
+  </View>;
 }
 
 function GravityLab() {
