@@ -14,6 +14,7 @@ import Constants from "expo-constants";
 import type { Session, User as SupabaseUser } from "@supabase/supabase-js";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { clearJournalOwner } from "../_lib/journalStorage";
 import { supabase } from "../lib/supabase";
 import { passwordRecoveryRedirect } from "../_lib/passwordRecovery";
 
@@ -1834,6 +1835,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
     await Promise.allSettled([
       clearSupabaseAuthStorage("permanent account deletion"),
+      clearJournalOwner(currentUser.id),
       AsyncStorage.multiRemove([
         "@nova/journal/v1/user/" + encodeURIComponent(currentUser.id),
         "@nova/journal/v1/user/" + encodeURIComponent(currentUser.id) + "/draft",
