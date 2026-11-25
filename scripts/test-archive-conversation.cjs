@@ -136,7 +136,7 @@ async function run() {
   assert.equal((await state.getArchiveFlags()).completed, false);
   const deduction = await reply('You confused Nora’s memories with your own.', /Nora was the one who lived them/);
   assert.equal(deduction.finished, true);
-  assert.match(deduction.text, /without her wrong answer[\\s\\S]+extra star/);
+  assert.match(deduction.text, /without her wrong answer[\s\S]+extra star/);
 
   console.log('PASS: guest clue chain, original Island/Shop gates, social recovery order, Session 017 closure, replay, and tutoring isolation.');
 }
