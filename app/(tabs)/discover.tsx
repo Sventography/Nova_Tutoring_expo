@@ -11,7 +11,7 @@ import DiscoveryPractice from "../components/DiscoveryPractice";
 import DiscoveryLabs from "../components/DiscoveryLabs";
 import { browseDiscoveries } from "../_lib/discoveryBrowse";
 import { orderedAdventures, type Adventure } from "../_lib/adventureModel";
-import { emptyJourney, journeyKey, normalizeJourney, toggleSaved, markCompleted, relatedDiscoveries, type Journey } from "../_lib/journeyModel";
+import { emptyJourney, journeyKey, normalizeJourney, toggleSaved, markCompleted, relatedDiscoveries, dailyDetour, type Journey } from "../_lib/journeyModel";
 import { INTERESTS, DISCOVERIES, dailyDiscovery, localDay, normalizeInterests, discoveryStorageKey, jumpModel, type Interest, type Discovery } from "../_lib/discoveryModel";
 
 export default function DiscoverScreen() {
@@ -28,6 +28,7 @@ function DiscoverBody({ owner }: { owner: string | null }) {
   const discoveryY = useRef(0);
   const libraryY = useRef(0);
   const journeyY = useRef(0);
+  const detourY = useRef(0);
   const [interests, setInterests] = useState<Interest[]>([]);
   const [draft, setDraft] = useState<Interest[]>([]);
   const [editing, setEditing] = useState(false);
@@ -99,6 +100,7 @@ function DiscoverBody({ owner }: { owner: string | null }) {
   }
   const daily = dailyDiscovery(interests, day);
   const current = chosen ?? daily;
+  const detour = interestsReady ? dailyDetour(interests, day) : undefined;
   const ordered = browseDiscoveries(DISCOVERIES,{query,subject,savedOnly,saved:journey.saved,interests});
   const openDiscovery = (d: Discovery) => { setChosen(d); scroll.current?.scrollTo({ y: discoveryY.current, animated: true }); };
   const label = (interest: Interest) => INTERESTS.find(([id]) => id === interest)?.[1] ?? interest;
@@ -120,6 +122,7 @@ function DiscoverBody({ owner }: { owner: string | null }) {
       <Text accessibilityRole="header" style={[s.heading,ink]}>What would you like to do?</Text>
       <View style={s.wrap}>
         {button("Today's discovery",()=>{setChosen(null);scroll.current?.scrollTo({y:discoveryY.current,animated:true});})}
+        {detour && button("A Little Further Afield",()=>scroll.current?.scrollTo({y:detourY.current,animated:true}))}
         {button("Learning adventures",()=>scroll.current?.scrollTo({y:adventureY.current,animated:true}))}
         {button("Browse topics",()=>scroll.current?.scrollTo({y:libraryY.current,animated:true}))}
         {button("My learning journey",()=>scroll.current?.scrollTo({y:journeyY.current,animated:true}))}
@@ -170,6 +173,16 @@ function DiscoverBody({ owner }: { owner: string | null }) {
       <Text style={[s.heading,ink]}>Connect the dots</Text>
       {relatedDiscoveries(current.id).map(d => <Pressable key={d.id} accessibilityRole="button" onPress={() => openDiscovery(d)} style={[s.button,card]}><Text style={[s.eyebrow,ink]}>{label(d.interest)}</Text><Text style={[s.buttonText,ink]}>{d.title}</Text></Pressable>)}
     </View>
+    {detour && <View style={[s.card,card]} onLayout={e=>{detourY.current=e.nativeEvent.layout.y;}}>
+      <Text accessibilityRole="header" style={[s.heading,ink]}>A Little Further Afield</Text>
+      <Text style={[s.small,ink]}>Afield means away from familiar places or subjects. Follow your curiosity somewhere new.</Text>
+      <Text style={[s.eyebrow,ink]}>{label(detour.discovery.interest)} · Connected to {label(detour.connectedFrom.interest)}</Text>
+      <Text style={[s.heading,ink]}>{detour.discovery.title}</Text>
+      <Text style={[s.body,ink]}>{detour.discovery.hook}</Text>
+      <Text style={[s.small,ink]}>Related discovery in your interests: {detour.connectedFrom.title}</Text>
+      {button("Explore this connection",()=>openDiscovery(detour.discovery))}
+      <Text style={[s.small,ink]}>Optional and free. Your daily discovery stays available.</Text>
+    </View>}
     <View style={[s.card,card]} onLayout={e=>{journeyY.current=e.nativeEvent.layout.y;}}>
       <Text accessibilityRole="header" style={[s.heading,ink]}>My learning journey</Text>
       <Text style={[s.body,ink]}>{journey.saved.length} saved discoveries · {journey.completed.length} adventures explored</Text>

@@ -1,4 +1,4 @@
-import { DISCOVERIES, discoveryForId, type Discovery } from "./discoveryModel";
+import { DISCOVERIES, discoveryForId, type Discovery, type Interest } from "./discoveryModel";
 import { ADVENTURES } from "./adventureModel";
 
 export type Journey = { saved: string[]; completed: string[] };
@@ -54,4 +54,24 @@ export function relatedDiscoveries(id: string): Discovery[] {
   if (!current) return [];
   const candidates = [...(bridges[id] ?? []), ...DISCOVERIES.filter(d => d.interest === current.interest).map(d => d.id)];
   return [...new Set(candidates)].filter(x => x !== id).map(discoveryForId).filter((d): d is Discovery => !!d).slice(0,3);
+}
+
+export type DailyDetour = { discovery: Discovery; connectedFrom: Discovery };
+
+// An optional editorial connection, not a replacement for the daily discovery.
+// Rotate deterministically through unique outside-interest lessons, without tracking.
+export function dailyDetour(interests: readonly Interest[], day: number): DailyDetour | undefined {
+  if (!Number.isSafeInteger(day)) return undefined;
+  const preferred = new Set(interests);
+  const selected = DISCOVERIES.filter(d => preferred.has(d.interest));
+  const unique = new Map<string, DailyDetour>();
+  for (const source of selected) {
+    for (const discovery of relatedDiscoveries(source.id)) {
+      if (preferred.has(discovery.interest) || unique.has(discovery.id)) continue;
+      unique.set(discovery.id, { discovery, connectedFrom: source });
+    }
+  }
+  const pool = [...unique.values()];
+  if (!pool.length) return undefined;
+  return pool[((day % pool.length) + pool.length) % pool.length];
 }

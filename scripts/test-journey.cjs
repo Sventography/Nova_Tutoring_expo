@@ -13,9 +13,9 @@ function load(name) {
   new Function('module','exports','require',outputText)(mod,mod.exports,(request)=>load(request.replace(/^\.\//,'')));
   return mod.exports;
 }
-const {DISCOVERIES}=load('discoveryModel');
+const {DISCOVERIES,INTERESTS,dailyDiscovery}=load('discoveryModel');
 const {ADVENTURES}=load('adventureModel');
-const {emptyJourney,journeyKey,normalizeJourney,toggleSaved,markCompleted,relatedDiscoveries}=load('journeyModel');
+const {emptyJourney,journeyKey,normalizeJourney,toggleSaved,markCompleted,relatedDiscoveries,dailyDetour}=load('journeyModel');
 const empty=emptyJourney();
 assert.deepEqual(normalizeJourney(null),empty);
 assert.deepEqual(normalizeJourney({saved:['film-cut','film-cut','unknown',42],completed:['silent-film','silent-film','bad']}),{saved:['film-cut'],completed:['silent-film']});
@@ -39,4 +39,28 @@ for(const d of DISCOVERIES){
 }
 assert.deepEqual(relatedDiscoveries('unknown'),[]);
 assert.equal(normalizeJourney({completed:ADVENTURES.map(a=>a.id)}).completed.length,ADVENTURES.length);
+// Every possible selected-interest subset, including none and all.
+const subjects=INTERESTS.map(([id])=>id);
+for(let mask=0;mask<(1<<subjects.length);mask++){
+ const preferred=subjects.filter((_,i)=>mask&(1<<i));
+ const expected=new Set(DISCOVERIES.filter(d=>preferred.includes(d.interest)).flatMap(d=>relatedDiscoveries(d.id)).filter(d=>!preferred.includes(d.interest)).map(d=>d.id));
+ const seen=new Set();
+ for(let day=-2;day<Math.max(2,expected.size);day++){
+  const before=dailyDiscovery(preferred,day);
+  const detour=dailyDetour(preferred,day);
+  assert.equal(Boolean(detour),Boolean(expected.size));
+  assert.equal(dailyDiscovery(preferred,day).id,before.id);
+  if(!detour)continue;
+  assert.ok(expected.has(detour.discovery.id));
+  assert.ok(preferred.includes(detour.connectedFrom.interest));
+  assert.ok(!preferred.includes(detour.discovery.interest));
+  assert.ok(relatedDiscoveries(detour.connectedFrom.id).some(d=>d.id===detour.discovery.id));
+  assert.equal(dailyDetour([...preferred].reverse(),day).discovery.id,detour.discovery.id);
+  assert.deepEqual(dailyDetour(preferred,day),detour);
+  if(day>=0)seen.add(detour.discovery.id);
+ }
+ assert.deepEqual(seen,expected);
+}
+for(const day of [NaN,Infinity,-Infinity,1.5])assert.equal(dailyDetour(['music'],day),undefined);
+assert.equal(dailyDetour(['unknown'],0),undefined);
 console.log('Journey model checks passed');
