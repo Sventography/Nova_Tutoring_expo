@@ -6,6 +6,24 @@ Give a fresh guest build to someone who has never seen the chapter. Keep the rou
 
 After they finish or stop, ask “Whose memory was it?”, “What made you think so?”, “What did Nova choose to do?”, and “When did you most want to keep going or quit?” Capture their words, the build/platform, the point of friction and a decision about that clue. A reader can reach the ending by following instructions alone. Check whether they can also explain the chart or the rabbit and why keeping a wrong answer mattered to Nora. Leave engagement unverified until a fresh reader has actually played.
 
+## Coherence pass: what the evidence establishes
+
+The chapter has two linked mysteries, not a chain of passwords. The first is why N.V. needed two versions of an ordinary answer. The second is why Nova recalls events another person signed.
+
+| Evidence | Distinct contribution | What must not be revealed yet |
+| --- | --- | --- |
+| Garden note and chart | The original is sixteen; the pencilled copy is seventeen. The writer expected to forget her own action. | Her identity or the source of Nova's memory |
+| N.V. signature | Nova recalls the act in first person, but the surviving signature disagrees. | Whether the mismatch is coincidence |
+| Rabbit repair | Independent, nonacademic evidence of the same mismatch: the signed owner and the remembered tactile detail. | Whether Nova is or is not Nora |
+| Focus margin and notebook | Nora needed evidence of what she used to believe; the missing answer belongs to the chart, not a new puzzle. | The text of the missing answer |
+| Contact sheet and relay | Two complementary fields locate the same discarded record: which chart survived and which version of its answer was saved. | The answer itself |
+| Recovered first draft | The first answer was seventeen and was genuinely wrong. It explains why preserving the pencilled chart mattered; QUIET considered the answer expendable. | Nova's final admission |
+| Session 017 | The chart and rabbit memories came from Nora's lived experience. Nova preserved the record rather than obeying cleanup. | The larger question of Nova's identity and QUIET's purpose |
+
+A player may describe the matching fields in their own words during the archive conversation; both identifiers, the existing field-notes gate and the final deduction gate still apply. The original recovery command remains valid. Existing physical discovery and optional social-copy paths are preserved.
+
+For independent playtesting, record whether the player can explain how the chart's first answer connects to the notebook, why the rabbit is independent evidence rather than another key, and why Nova chose to preserve something incorrect. A completion marker alone does not demonstrate comprehension or engagement. Do not give these answers to players before the debrief.
+
 ## Developer route
 
 Start as a guest, with an empty installation. In the Shop, inspect the pencil marks in the Star Trail item details or hold its title for the acrostic hint. Read the second sentence of Glow, Orb Glow, and Star Trail. Ask Nova what the acrostic spells.
