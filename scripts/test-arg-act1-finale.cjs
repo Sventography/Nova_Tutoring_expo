@@ -46,7 +46,7 @@ const ask = (question, previous = "", discovered = true, copy = false, folder = 
     a.ARG_FOCUS_NOTE_DISCOVERED_KEY,
     a.ARG_LIBRARY_NOTEBOOK_UNLOCKED_KEY,
     a.ARG_LIBRARY_NOTEBOOK_DISCOVERED_KEY
-  ]) store.set(key, "1");
+  ]) store.set(a.argScopeKey(key), "1");
   assert.equal(await a.markLanternFolderDiscovered(), false, "copy is required first");
   assert.equal(await a.markLanternCopyDiscovered(), true);
   assert.equal(await a.markLanternCopyDiscovered(), false);
