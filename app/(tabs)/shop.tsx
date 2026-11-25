@@ -34,6 +34,8 @@ import { useAiPlan } from "../context/AiPlanContext";
 
 import {
   catalog,
+  RETIRED_NEON_BUNDLE,
+  isRetiredNeonBundle,
   CATEGORY_BORDER,
   dollarsToCoins,
   altImages,
@@ -2769,6 +2771,10 @@ export default function Shop() {
     const pid = String(rawProductId || "").trim();
     if (!pid) return null;
 
+    // Retain fulfillment for legitimate historical StoreKit transactions,
+    // without advertising or requesting the retired product for new sales.
+    if (isRetiredNeonBundle(pid)) return RETIRED_NEON_BUNDLE;
+
     const exact = iapByProductId[pid];
     if (exact) return exact;
 
@@ -4009,6 +4015,7 @@ export default function Shop() {
   };
 
   const buyWithIap = async (it: any) => {
+    if (isRetiredNeonBundle(it?.id) || isRetiredNeonBundle(resolveStoreProductId(it))) return;
     if (!isAuthenticated) {
       Alert.alert(
         "Sign in required",
@@ -4664,6 +4671,7 @@ export default function Shop() {
     it: any,
     meta?: { size?: string; dailyDeal?: boolean }
   ) {
+    if (isRetiredNeonBundle(it?.id)) return;
     if (isPhysicalMerchItem(it)) {
       Alert.alert(
         "Physical merchandise",

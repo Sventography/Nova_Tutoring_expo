@@ -98,7 +98,6 @@ const img = {
   theme_neon_purple: require("../assets/shop/theme_neon_purple.png"),
   theme_silver_frost: require("../assets/shop/theme_silver_frost.png"),
 
-  bundle_neon: require("../assets/shop/bundle_neon.png"),
   coins_1000: require("../assets/shop/coins_1000.png"),
   coins_5000: require("../assets/shop/coins_5000.png"),
 
@@ -499,22 +498,6 @@ export const catalog: CatalogItem[] = [
     },
   },
 
-  // Bundle (IAP)
-  {
-    id: "bundle_neon",
-    title: "Neon Starter Bundle",
-    category: "bundle",
-    priceUSD: 12,
-    priceCoins: dollarsToCoins(12),
-    image: img.bundle_neon,
-    desc: "Neon theme + Orb cursor combo.",
-    meta: {
-      iapProductId: "bundle_neon",
-      bundleGrants: ["theme_neon", "cursor_orb"],
-      grantId: "bundle_neon",
-    },
-  },
-
   // Ask Memory (IAP)
   {
     id: "ask_memory_tier1",
@@ -719,6 +702,24 @@ export const catalog: CatalogItem[] = [
     },
   },
 ];
+
+// Retired SKU: historical Apple fulfillment only. Never include in the
+// sellable catalog, product fetch, daily deals or new checkout.
+export const RETIRED_NEON_BUNDLE: CatalogItem = {
+  id: "bundle_neon",
+  title: "Neon Starter Bundle (retired)",
+  category: "bundle",
+  meta: {
+    iapProductId: "bundle_neon",
+    bundleGrants: ["theme_neon", "cursor_orb"],
+    grantId: "bundle_neon",
+  },
+};
+
+export function isRetiredNeonBundle(id: unknown): boolean {
+  return typeof id === "string" &&
+    id.trim().toLowerCase().replace(/[-:]/g, "_") === "bundle_neon";
+}
 
 export const altImages: Record<string, any> = {
   plushie_nova_back: img.plushie_nova_back,
