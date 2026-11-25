@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useTheme } from "../context/ThemeContext";
 import { choosePath, type Adventure, type Choice } from "../_lib/adventureModel";
 
-export default function LearningAdventure({ adventure, onExit }: { adventure: Adventure; onExit: () => void }) {
+export default function LearningAdventure({ adventure, onExit, onComplete }: { adventure: Adventure; onExit: () => void; onComplete: () => void }) {
   const { tokens } = useTheme();
   const [sceneId,setSceneId] = useState(adventure.start);
   const [response,setResponse] = useState<Choice | null>(null);
@@ -24,7 +24,7 @@ export default function LearningAdventure({ adventure, onExit }: { adventure: Ad
       <Text style={[s.kicker,ink]}>YOUR CHOICE</Text>
       <Text style={[s.label,ink]}>{response.label}</Text>
       <Text accessibilityLiveRegion="polite" style={[s.body,ink]}>{response.feedback}</Text>
-      {action("Continue the story",()=>{setSceneId(response.next);setResponse(null);})}
+      {action("Continue the story",()=>{setSceneId(response.next);setResponse(null);if (!adventure.scenes[response.next].choices.length) onComplete();})}
       {action("Try another choice",()=>setResponse(null))}
     </View> : scene.choices.length ? scene.choices.map((choice,index)=>
       <Pressable key={index} accessibilityRole="button" onPress={()=>setResponse(choosePath(adventure,sceneId,index) ?? null)}
