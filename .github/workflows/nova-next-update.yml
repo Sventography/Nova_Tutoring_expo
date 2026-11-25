@@ -49,6 +49,10 @@ jobs:
           PYTHONPATH=server python3 -m unittest discover -s server/tests -p test_archive_completion.py
       - name: Verify staging wallet API authentication and fail-closed behavior
         run: PYTHONPATH=server python3 -m unittest discover -s server/tests -p test_wallet_routes.py
+      - name: Verify sandbox Apple purchase policy and closed checkout
+        run: |
+          PYTHONPATH=server python3 -m unittest discover -s server/tests -p test_apple_purchase_policy.py
+          node scripts/test-staging-checkout-closed.cjs
       - name: Verify account awards in disposable Postgres
         run: |
           npm install --prefix "$RUNNER_TEMP/archive-db" --no-save --ignore-scripts @electric-sql/pglite@0.5.16

@@ -68,7 +68,7 @@ import { showToast } from "../utils/toast";
 import { getArgDiscoveryState, markWhiteRabbitDiscovered, markArchiveFlag } from "../utils/argState";
 
 import AddressSheet, { AddressPayload } from "../components/AddressSheet";
-import { supabase } from "../lib/supabase";
+import { supabase, SUPABASE_URL } from "../lib/supabase";
 
 import NovaAiPlansSection from "../components/NovaAiPlansSection";
 import {
@@ -84,6 +84,11 @@ import {
 
 const InAppPurchases: any = ExpoIAP;
 
+// Staging must not initiate payments or finish unverified Apple transactions.
+const STAGING_CHECKOUT_CLOSED = SUPABASE_URL.replace(/\/+$/, "") === "https://gouhhltupxaycuysdtrw.supabase.co";
+function showStagingCheckoutClosed() {
+  Alert.alert("Purchases unavailable in this preview", "This test build does not process payments. Your existing purchases are unchanged.");
+}
 function showIapDebug(step: string, extra?: any) {
   const detail =
     typeof extra === "string"
@@ -3199,6 +3204,7 @@ export default function Shop() {
         restored?: boolean;
       }
     ) => {
+      if (STAGING_CHECKOUT_CLOSED) return false;
       const restored =
         options?.restored === true;
 
@@ -3407,6 +3413,7 @@ export default function Shop() {
     fallbackItem?: any,
     options?: { restored?: boolean }
   ) => {
+    if (STAGING_CHECKOUT_CLOSED) return false;
     const restored = options?.restored === true;
     const expectedOwnerId =
       iapPurchaseOwnerIdRef.current ||
@@ -3563,6 +3570,7 @@ export default function Shop() {
   };
 
   const restoreAvailableIapPurchases = async (silent = true) => {
+    if (STAGING_CHECKOUT_CLOSED) { if (!silent) showStagingCheckoutClosed(); return 0; }
     if (!isAuthenticated) {
       if (!silent) {
         Alert.alert(
@@ -3705,6 +3713,7 @@ export default function Shop() {
   const buyAiSubscription = async (
     plan: any
   ) => {
+    if (STAGING_CHECKOUT_CLOSED) { showStagingCheckoutClosed(); return; }
     if (!isAuthenticated) {
       Alert.alert(
         "Sign in required",
@@ -4015,6 +4024,7 @@ export default function Shop() {
   };
 
   const buyWithIap = async (it: any) => {
+    if (STAGING_CHECKOUT_CLOSED) { showStagingCheckoutClosed(); return; }
     if (isRetiredNeonBundle(it?.id) || isRetiredNeonBundle(resolveStoreProductId(it))) return;
     if (!isAuthenticated) {
       Alert.alert(
@@ -4206,6 +4216,7 @@ export default function Shop() {
     let mounted = true;
 
     const startIap = async () => {
+      if (STAGING_CHECKOUT_CLOSED) return;
       if (!(await isIapAvailable())) return;
 
       // Register listeners before starting any purchase request.
@@ -4313,6 +4324,7 @@ export default function Shop() {
 
   useEffect(() => {
     const onUrl = async (event: { url: string }) => {
+      if (STAGING_CHECKOUT_CLOSED) return;
       const { queryParams, path } = Linking.parse(event.url);
       const sku = (queryParams?.sku as string) || "";
       track("shop_return_deeplink", { url: event.url, path, sku });
@@ -4671,6 +4683,7 @@ export default function Shop() {
     it: any,
     meta?: { size?: string; dailyDeal?: boolean }
   ) {
+    if (STAGING_CHECKOUT_CLOSED && supabaseUserId) { showStagingCheckoutClosed(); return; }
     if (isRetiredNeonBundle(it?.id)) return;
     if (isPhysicalMerchItem(it)) {
       Alert.alert(
@@ -4859,6 +4872,7 @@ export default function Shop() {
   }
 
   async function handleAddressConfirm(addr: AddressPayload) {
+    if (STAGING_CHECKOUT_CLOSED) { showStagingCheckoutClosed(); return; }
     const it = pendingItem;
     if (!it) return;
 
@@ -5055,6 +5069,7 @@ export default function Shop() {
   }
 
   async function moneyBuy(it: any, meta?: { size?: string }) {
+    if (STAGING_CHECKOUT_CLOSED) { showStagingCheckoutClosed(); return; }
     try {
       if (isComingSoon(it)) {
         Alert.alert("Coming soon", COMING_SOON_TEXT);
