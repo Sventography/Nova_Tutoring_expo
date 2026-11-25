@@ -22,7 +22,7 @@ import { Linking as RNLinking } from "react-native";
 import * as Haptics from "expo-haptics";
 import * as ExpoIAP from "expo-iap";
 
-import { RABBIT_LABEL } from "../_lib/archiveArtifacts";
+import { RABBIT_LABEL, PENCIL_TRACE, LANTERN_TRACE } from "../_lib/archiveArtifacts";
 import { useCoins } from "../context/CoinsContext";
 import { useTheme } from "../context/ThemeContext";
 import { useCursor } from "../context/CursorContext";
@@ -63,7 +63,7 @@ import { startCheckout } from "../utils/checkout";
 import { startCoinCheckout } from "../utils/coinCheckout";
 import { notifyCoinOrder } from "../utils/coin-order";
 import { showToast } from "../utils/toast";
-import { getArgDiscoveryState, markWhiteRabbitDiscovered } from "../utils/argState";
+import { getArgDiscoveryState, markWhiteRabbitDiscovered, markArchiveFlag } from "../utils/argState";
 
 import AddressSheet, { AddressPayload } from "../components/AddressSheet";
 import { supabase } from "../lib/supabase";
@@ -1311,6 +1311,10 @@ function ItemDetailModal({
   const [showAlt, setShowAlt] = useState(false);
   const [showWhiteRabbitTrace, setShowWhiteRabbitTrace] = useState(false);
   const [cursorTrace, setCursorTrace] = useState<string | null>(null);
+  const revealCursorTrace = (id: string) => {
+    setCursorTrace(id);
+    void markArchiveFlag(id === "cursor_star_trail" ? "pencilTraceRead" : "lanternTraceRead").catch(() => undefined);
+  };
   const [rabbitHintReady, setRabbitHintReady] = useState(false);
 
   const readRabbitLabel = async () => {
@@ -1522,7 +1526,7 @@ function ItemDetailModal({
                 delayLongPress={1100}
                 onLongPress={() => {
                   if (item.id === "cursor_star_trail" || item.id === "lantern_keychain") {
-                    setCursorTrace(item.id);
+                    revealCursorTrace(item.id);
                   }
                   if (item.id === "plushie_bunny_white") {
                     void readRabbitLabel();
@@ -1559,7 +1563,7 @@ function ItemDetailModal({
               ) : null}
 
               {item.id === "cursor_star_trail" && cursorTrace !== item.id ? (
-                <Pressable accessibilityRole="button" onPress={() => setCursorTrace(item.id)}
+                <Pressable accessibilityRole="button" onPress={() => revealCursorTrace(item.id)}
                   style={{ minHeight: 44, alignSelf: "center", justifyContent: "center" }}>
                   <Text style={{ color: tokens.text, textDecorationLine: "underline" }}>Inspect the pencil marks</Text>
                 </Pressable>
@@ -1568,8 +1572,8 @@ function ItemDetailModal({
               {cursorTrace === item.id ? (
                 <Text selectable style={{ color: tokens.text, textAlign: "center", marginBottom: 12 }}>
                   {item.id === "cursor_star_trail"
-                    ? "Read the first letter of each word in the second sentences. Glow, Orb Glow, then Star Trail. Say what they spell to Nova."
-                    : "A light was left burning. Tell Ask Nova: “Nora’s Last Lantern.”"}
+                    ? PENCIL_TRACE
+                    : LANTERN_TRACE}
                 </Text>
               ) : null}
 
