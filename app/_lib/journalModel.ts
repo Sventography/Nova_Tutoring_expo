@@ -1,6 +1,6 @@
 import type { ArchiveFlags, ArgDiscoveryState } from "../utils/argState";
 import { ARG_ACT1_FINALE_REPLY } from "../utils/argState";
-import { GARDEN_NOTE, TELESCOPE, RABBIT_LABEL, FOCUS_MARGIN, NORA_NOTEBOOK, CONTACT_SHEET, RELAY_TRANSCRIPT, LANTERN_SOURCE, SESSION_REVEAL } from "./archiveArtifacts";
+import { GARDEN_NOTE, TELESCOPE, RABBIT_LABEL, FOCUS_MARGIN, NORA_NOTEBOOK, CONTACT_SHEET, RELAY_TRANSCRIPT, LANTERN_SOURCE, SESSION_REVEAL, PENCIL_TRACE, LANTERN_TRACE } from "./archiveArtifacts";
 
 export type JournalNote = {
   id: string; title: string; subject: string; body: string; pinned: boolean;
@@ -15,6 +15,8 @@ export const journalDraftKey = (owner: JournalScope) => journalStorageKey(owner)
 export function recoveredNotes(state: ArgDiscoveryState, flags: ArchiveFlags): RecoveredNote[] {
   const rows: RecoveredNote[] = [];
   const add = (id: string, title: string, body: string) => rows.push({ id, title, body });
+  if (flags.pencilTraceRead) add("pencil", "Pencil marks", PENCIL_TRACE);
+  if (flags.lanternTraceRead) add("lantern-trace", "A light", LANTERN_TRACE);
   if (flags.introduced) add("opening", "Loose fragment", "She was here first.");
   if (!state.entryNoteDiscovered) return rows;
   add("garden", "Garden note", GARDEN_NOTE);
