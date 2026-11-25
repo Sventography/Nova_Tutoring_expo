@@ -25,6 +25,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+import ShoreAmbience from "../../features/adaptiveIsland/ShoreAmbience";
 import {useDistrictView} from "../../features/adaptiveIsland/useDistrictView";
 import {districts} from "../../features/adaptiveIsland/districts";
 import { GARDEN_NOTE, NORA_NOTEBOOK, TELESCOPE } from "../_lib/archiveArtifacts";
@@ -2027,6 +2028,7 @@ function IslandScreenBody({ owner }: { owner: string | null }) {
               <Text style={styles.nextText}>Look closer at {districts[id].name}</Text></Pressable>)}
             {focused && <Pressable accessibilityRole="button" onPress={()=>router.push({pathname:"/discover",params:{districtLesson:districts[focused].lessons[0],fromShore:"1"}} as never)} style={[styles.nextRow,{minHeight:44}]}><Text style={styles.nextText}>Enter {districts[focused].name} attraction</Text></Pressable>}
           </View>}
+          {shore.visiting && <ShoreAmbience key={owner ?? "guest"}/>}
           {shore.visiting && !shore.reduced && <Pressable accessibilityRole="button" onPress={shore.motion||shore.celebrating?shore.stop:shore.play} style={styles.nextRow}>
             <Text style={styles.nextText}>{shore.motion||shore.celebrating?"Skip animation":"Watch the district residents"}</Text>
           </Pressable>}

@@ -20,6 +20,9 @@ with sync_playwright() as w:
   c=br.new_context(viewport={'width':390 if phone else 1280,'height':844},has_touch=phone,is_mobile=phone,reduced_motion='reduce' if phone else 'no-preference',service_workers='block')
   c.route('**/*',lambda r:r.continue_() if r.request.url.startswith(origin+'/') and r.request.method in ('GET','HEAD') else r.abort())
   c.add_init_script("""localStorage.setItem('@nova/islandGuide.v2:guest','seen');localStorage.setItem('@nova/dailyGreeting.v1:guest',new Date().toLocaleDateString('sv-SE'));window.draws=0;const m=WebGL2RenderingContext.prototype.drawElements;WebGL2RenderingContext.prototype.drawElements=function(...a){window.draws++;return m.apply(this,a)};""")
+  c.add_init_script("""window.qaAudio=[];window.Audio=class extends Audio {
+    constructor(...args){super(...args);window.qaAudio.push(this)}
+  };""")
   p=c.new_page();errs=[];p.on('pageerror',lambda e:errs.append(str(e)));p.set_default_timeout(12000)
   def button(t):return p.get_by_role('button',name=t,exact=True).first
   def click(t):
@@ -69,7 +72,17 @@ with sync_playwright() as w:
    print('PASS two-finger gesture retained district focus and did not enter an attraction',flush=True)
   else:
    click('Watch the district residents');print('activity',sample(),flush=True)
+  assert not p.evaluate('window.qaAudio.some(a => !a.paused)')
+  click('Listen to shore waves')
+  button('Mute shore waves').wait_for()
+  assert p.evaluate('window.qaAudio.some(a => !a.paused && a.loop && a.volume < 0.3)')
+  click('Mute shore waves')
+  p.wait_for_function('window.qaAudio.every(a => a.paused)')
+  click('Listen to shore waves')
+  button('Mute shore waves').wait_for()
   click('Enter Circuit Commons attraction')
+  p.wait_for_function('window.qaAudio.every(a => a.paused)')
+  print('PASS opt-in local wave playback, mute and silence on leaving the Island',flush=True)
   p.get_by_text('Circuit Commons robot workshop',exact=True).wait_for()
   for command in ['Left','Forward','Forward','Forward','Right','Forward','Forward']:click(command)
   for step in range(7):click('Step robot')
