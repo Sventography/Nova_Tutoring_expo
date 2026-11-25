@@ -1,5 +1,17 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+export type ArgOwner = string | null;
+// Never infer ownership of the old device-wide keys. Keep them untouched for recovery,
+// but do not expose them in a different account or the new guest scope.
+export function argScopeKey(key: string, owner: ArgOwner = null): string {
+  return "@nova/arg-scoped/v2/" + (owner ? "user/" + encodeURIComponent(owner) : "guest") + "/" + key;
+}
+async function readScoped(keys: string[], owner: ArgOwner): Promise<[string, string | null][]> {
+  const pairs = await AsyncStorage.multiGet(keys.map(key => argScopeKey(key, owner)));
+  return pairs.map(([key, value], i) => [keys[i], value]);
+}
+const writeScoped = (owner: ArgOwner, key: string, value: string) => AsyncStorage.setItem(argScopeKey(key, owner), value);
+
 export const ARG_NV_DISCOVERED_KEY =
   "@nova/arg/act1/nv-discovered.v1";
 export const ARG_WHITE_RABBIT_DISCOVERED_KEY =
@@ -271,8 +283,8 @@ export function getLibraryNotebookFollowUp(
   return null;
 }
 
-export async function getArgDiscoveryState(): Promise<ArgDiscoveryState> {
-  const pairs = await AsyncStorage.multiGet([
+export async function getArgDiscoveryState(owner: ArgOwner = null): Promise<ArgDiscoveryState> {
+  const pairs = await readScoped([
     ARG_NV_DISCOVERED_KEY,
     ARG_WHITE_RABBIT_DISCOVERED_KEY,
     ARG_SEVENTEENTH_STAR_DISCOVERED_KEY,
@@ -286,7 +298,7 @@ export async function getArgDiscoveryState(): Promise<ArgDiscoveryState> {
     ARG_ACT1_COMPLETE_KEY,
     ARG_LANTERN_COPY_KEY,
     ARG_LANTERN_FOLDER_KEY,
-  ]);
+  ], owner);
 
   const values = new Map(pairs);
 
@@ -393,156 +405,156 @@ export async function getArgDiscoveryState(): Promise<ArgDiscoveryState> {
   };
 }
 
-export async function markNvDiscovered(): Promise<boolean> {
+export async function markNvDiscovered(owner: ArgOwner = null): Promise<boolean> {
   const state =
-    await getArgDiscoveryState();
+    await getArgDiscoveryState(owner);
 
   if (!state.seventeenthStarDiscovered) {
     return false;
   }
 
-  await AsyncStorage.setItem(
+  await writeScoped(owner, 
     ARG_NV_DISCOVERED_KEY,
     "1"
   );
   return true;
 }
 
-export async function markWhiteRabbitDiscovered(): Promise<boolean> {
+export async function markWhiteRabbitDiscovered(owner: ArgOwner = null): Promise<boolean> {
   const state =
-    await getArgDiscoveryState();
+    await getArgDiscoveryState(owner);
 
   if (!state.whiteRabbitClueUnlocked) {
     return false;
   }
 
-  await AsyncStorage.setItem(
+  await writeScoped(owner, 
     ARG_WHITE_RABBIT_DISCOVERED_KEY,
     "1"
   );
   return true;
 }
 
-export async function markSeventeenthStarDiscovered(): Promise<boolean> {
+export async function markSeventeenthStarDiscovered(owner: ArgOwner = null): Promise<boolean> {
   const state =
-    await getArgDiscoveryState();
+    await getArgDiscoveryState(owner);
 
   if (!state.telescopeClueUnlocked) {
     return false;
   }
 
-  await AsyncStorage.setItem(
+  await writeScoped(owner, 
     ARG_SEVENTEENTH_STAR_DISCOVERED_KEY,
     "1"
   );
   return true;
 }
 
-export async function markEntryNoteDiscovered(): Promise<void> {
-  await AsyncStorage.setItem(
+export async function markEntryNoteDiscovered(owner: ArgOwner = null): Promise<void> {
+  await writeScoped(owner, 
     ARG_ENTRY_NOTE_DISCOVERED_KEY,
     "1"
   );
 }
 
-export async function markTelescopeClueUnlocked(): Promise<boolean> {
+export async function markTelescopeClueUnlocked(owner: ArgOwner = null): Promise<boolean> {
   const state =
-    await getArgDiscoveryState();
+    await getArgDiscoveryState(owner);
 
   if (!state.entryNoteDiscovered) {
     return false;
   }
 
-  await AsyncStorage.setItem(
+  await writeScoped(owner, 
     ARG_TELESCOPE_CLUE_UNLOCKED_KEY,
     "1"
   );
   return true;
 }
 
-export async function markWhiteRabbitClueUnlocked(): Promise<boolean> {
+export async function markWhiteRabbitClueUnlocked(owner: ArgOwner = null): Promise<boolean> {
   const state =
-    await getArgDiscoveryState();
+    await getArgDiscoveryState(owner);
 
   if (!state.nvDiscovered) {
     return false;
   }
 
-  await AsyncStorage.setItem(
+  await writeScoped(owner, 
     ARG_WHITE_RABBIT_CLUE_UNLOCKED_KEY,
     "1"
   );
   return true;
 }
 
-export async function markFocusPracticeUnlocked(): Promise<boolean> {
+export async function markFocusPracticeUnlocked(owner: ArgOwner = null): Promise<boolean> {
   const state =
-    await getArgDiscoveryState();
+    await getArgDiscoveryState(owner);
 
   if (!state.whiteRabbitDiscovered) {
     return false;
   }
 
-  await AsyncStorage.setItem(
+  await writeScoped(owner, 
     ARG_FOCUS_PRACTICE_UNLOCKED_KEY,
     "1"
   );
   return true;
 }
 
-export async function markFocusPracticeNoteDiscovered(): Promise<boolean> {
+export async function markFocusPracticeNoteDiscovered(owner: ArgOwner = null): Promise<boolean> {
   const state =
-    await getArgDiscoveryState();
+    await getArgDiscoveryState(owner);
 
   if (!state.focusPracticeUnlocked) {
     return false;
   }
 
-  await AsyncStorage.setItem(
+  await writeScoped(owner, 
     ARG_FOCUS_NOTE_DISCOVERED_KEY,
     String(Date.now())
   );
   return true;
 }
 
-export async function markLibraryNotebookUnlocked(): Promise<boolean> {
-  const state = await getArgDiscoveryState();
+export async function markLibraryNotebookUnlocked(owner: ArgOwner = null): Promise<boolean> {
+  const state = await getArgDiscoveryState(owner);
   if (!state.focusPracticeNoteDiscovered) return false;
 
-  await AsyncStorage.setItem(ARG_LIBRARY_NOTEBOOK_UNLOCKED_KEY, "1");
+  await writeScoped(owner, ARG_LIBRARY_NOTEBOOK_UNLOCKED_KEY, "1");
   return true;
 }
 
-export async function markLibraryNotebookDiscovered(): Promise<boolean> {
-  const state = await getArgDiscoveryState();
+export async function markLibraryNotebookDiscovered(owner: ArgOwner = null): Promise<boolean> {
+  const state = await getArgDiscoveryState(owner);
   if (!state.libraryNotebookUnlocked) return false;
 
-  await AsyncStorage.setItem(
+  await writeScoped(owner, 
     ARG_LIBRARY_NOTEBOOK_DISCOVERED_KEY,
     String(Date.now())
   );
   return true;
 }
 
-export async function markLanternCopyDiscovered(): Promise<boolean> {
-  const state = await getArgDiscoveryState();
+export async function markLanternCopyDiscovered(owner: ArgOwner = null): Promise<boolean> {
+  const state = await getArgDiscoveryState(owner);
   if (!state.libraryNotebookDiscovered || state.lanternCopyDiscovered) return false;
-  await AsyncStorage.setItem(ARG_LANTERN_COPY_KEY, String(Date.now()));
+  await writeScoped(owner, ARG_LANTERN_COPY_KEY, String(Date.now()));
   return true;
 }
 
-export async function markLanternFolderDiscovered(): Promise<boolean> {
-  const state = await getArgDiscoveryState();
+export async function markLanternFolderDiscovered(owner: ArgOwner = null): Promise<boolean> {
+  const state = await getArgDiscoveryState(owner);
   if (!state.lanternCopyDiscovered || state.lanternFolderDiscovered) return false;
-  await AsyncStorage.setItem(ARG_LANTERN_FOLDER_KEY, String(Date.now()));
+  await writeScoped(owner, ARG_LANTERN_FOLDER_KEY, String(Date.now()));
   return true;
 }
 
 /** One-time story checkpoint. No coins or ownership entitlements are issued here. */
-export async function markArgAct1Complete(): Promise<boolean> {
-  const state = await getArgDiscoveryState();
+export async function markArgAct1Complete(owner: ArgOwner = null): Promise<boolean> {
+  const state = await getArgDiscoveryState(owner);
   if (!state.lanternFolderDiscovered || state.argAct1Complete) return false;
-  await AsyncStorage.setItem(ARG_ACT1_COMPLETE_KEY, String(Date.now()));
+  await writeScoped(owner, ARG_ACT1_COMPLETE_KEY, String(Date.now()));
   return true;
 }
 const ARCHIVE_KEYS = {
@@ -561,8 +573,8 @@ type ArchiveFlag = keyof typeof ARCHIVE_KEYS;
 type OptionalTraceFlag = "pencilTraceRead" | "lanternTraceRead" | "glowDescriptionRead" | "orbDescriptionRead" | "starDescriptionRead";
 export type ArchiveFlags = Record<Exclude<ArchiveFlag, OptionalTraceFlag>, boolean> & Partial<Record<OptionalTraceFlag, boolean>>;
 
-export async function getArchiveFlags(): Promise<ArchiveFlags> {
-  const pairs = new Map(await AsyncStorage.multiGet(Object.values(ARCHIVE_KEYS)));
+export async function getArchiveFlags(owner: ArgOwner = null): Promise<ArchiveFlags> {
+  const pairs = new Map(await readScoped(Object.values(ARCHIVE_KEYS), owner));
   return {
     glowDescriptionRead: pairs.get(ARCHIVE_KEYS.glowDescriptionRead) === "1",
     orbDescriptionRead: pairs.get(ARCHIVE_KEYS.orbDescriptionRead) === "1",
@@ -577,6 +589,6 @@ export async function getArchiveFlags(): Promise<ArchiveFlags> {
   };
 }
 
-export async function markArchiveFlag(flag: ArchiveFlag): Promise<void> {
-  await AsyncStorage.setItem(ARCHIVE_KEYS[flag], "1");
+export async function markArchiveFlag(flag: ArchiveFlag, owner: ArgOwner = null): Promise<void> {
+  await writeScoped(owner, ARCHIVE_KEYS[flag], "1");
 }
