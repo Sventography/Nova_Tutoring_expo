@@ -4,7 +4,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const source = fs.readFileSync(path.join(__dirname, "..", "app/(tabs)/ask.tsx"), "utf8");
 const sendBody = source.split("  const send = useCallback(")[1].split("  const renderItem =")[0];
-assert.ok(sendBody.includes("localReply = await resolveLocalArgReply(trimmed, messages);"));
+assert.ok(sendBody.includes("localReply = await resolveLocalArgReply(trimmed, messages, archiveOwner);"));
 assert.ok(sendBody.indexOf("if (localReply)") < sendBody.indexOf("if (aiLimitReached)"));
 assert.ok(sendBody.indexOf("if (aiLimitReached)") < sendBody.indexOf("const apiRes = await callAskApi("));
 const local = sendBody.slice(sendBody.indexOf("if (archive)"), sendBody.indexOf("if (aiLimitReached)"));

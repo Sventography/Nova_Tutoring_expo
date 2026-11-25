@@ -37,6 +37,7 @@ from apple_subscriptions import (
   register_apple_subscription_routes,
 )
 from archive_completion import register_archive_routes
+from wallet_routes import register_wallet_routes
 from collector_redemption import register_collector_routes
 from merch_checkout import (
   merch_checkout_configuration_status,
@@ -657,6 +658,15 @@ register_archive_routes(
   verify_access_token=_verify_supabase_access_token,
   headers_for_service=supabase_headers,
   rpc_url=supabase_rest_url("rpc/nova_complete_archive"),
+  verification_rpc_url=supabase_rest_url("rpc/nova_verify_archive"),
+)
+
+register_wallet_routes(
+  app,
+  supabase_url=SUPABASE_URL,
+  extract_bearer_token=_extract_bearer_token,
+  verify_access_token=_verify_supabase_access_token,
+  headers_for_service=supabase_headers,
 )
 
 register_collector_routes(

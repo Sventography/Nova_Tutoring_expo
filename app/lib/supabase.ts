@@ -19,7 +19,7 @@ const extra =
     | undefined) ??
   {};
 
-const SUPABASE_URL = String(
+export const SUPABASE_URL = String(
   process.env.EXPO_PUBLIC_SUPABASE_URL ||
     extra.EXPO_PUBLIC_SUPABASE_URL ||
     ""

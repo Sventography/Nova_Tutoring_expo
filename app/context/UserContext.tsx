@@ -14,6 +14,8 @@ import Constants from "expo-constants";
 import type { Session, User as SupabaseUser } from "@supabase/supabase-js";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { clearJournalOwner } from "../_lib/journalStorage";
+import { clearArgOwner } from "../utils/argState";
 import { supabase } from "../lib/supabase";
 import { passwordRecoveryRedirect } from "../_lib/passwordRecovery";
 
@@ -577,8 +579,7 @@ async function seedProfileIfNeeded(
       contact_email: email,
       avatar_url: null,
       ask_personality: "encouraging",
-      ask_memory_tier: "free",
-      ask_memory_limit: 0,
+      // Protected entitlement defaults are supplied by the database.
       updated_at: new Date().toISOString(),
     };
 
@@ -993,7 +994,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
       );
 
     const row: any = {
-      id: supabaseUserId,
       updated_at: new Date().toISOString(),
     };
 
@@ -1086,23 +1086,17 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const { error } =
-        await supabase
-          .from("profiles")
-          .upsert(
-            row,
-            {
-              onConflict: "id",
-            }
-          );
+      const { data: saved, error } = await supabase
+        .from("profiles").update(row).eq("id", supabaseUserId)
+        .select("id").maybeSingle();
 
-      if (error) {
+      if (error || !saved?.id) {
         console.warn(
-          "[UserContext] updateProfile upsert error:",
+          "[UserContext] updateProfile error:",
           error
         );
 
-        throw error;
+        throw error ?? new Error("Profile not ready");
       }
 
       // Keep local storage aligned with the completed server write.
@@ -1834,6 +1828,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
     await Promise.allSettled([
       clearSupabaseAuthStorage("permanent account deletion"),
+      clearJournalOwner(currentUser.id),
+      clearArgOwner(currentUser.id),
+      AsyncStorage.multiRemove([
+        "@nova/journal/v1/user/" + encodeURIComponent(currentUser.id),
+        "@nova/journal/v1/user/" + encodeURIComponent(currentUser.id) + "/draft",
+      ]),
       AsyncStorage.removeItem(PROFILE_KEY),
       AsyncStorage.removeItem(
         "nova.auth.pending-confirmation-email.v1"

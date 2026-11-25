@@ -20,8 +20,11 @@ import { useRouter } from "expo-router";
 import { useIslandDecorations } from "../context/IslandDecorationContext";
 import { useCoins } from "../context/CoinsContext";
 import { isLegacyArchiveQuestion, openLanternFieldNotes, resolveArchiveReply, type ArchiveReply } from "../_lib/archiveConversation";
-import { completeArchive } from "../_lib/archiveReward";
+import { completeArchive, archiveReceiptText } from "../_lib/archiveReward";
 import { CHAPTER_PROMPT } from "../_lib/archiveArtifacts";
+import { makeJournalNote } from "../_lib/journalModel";
+import { saveJournalNote, syncJournal } from "../_lib/journalStorage";
+import { showToast } from "../utils/toast";
 
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -715,8 +718,8 @@ function getCanonicalArgReply(
  * granting ordinary Ask achievements, or minting Coins / Island XP.
  * Normal tutoring questions still use the regular metered /api/ask path.
  */
-async function resolveLocalArgReply(prompt: string, messages: Msg[]): Promise<string | null> {
-  const discovery = await getArgDiscoveryState();
+async function resolveLocalArgReply(prompt: string, messages: Msg[], owner: string | null): Promise<string | null> {
+  const discovery = await getArgDiscoveryState(owner);
   const normalized = normalizeArgPrompt(prompt);
   const recent = messages
     .slice(-4)
@@ -733,7 +736,7 @@ async function resolveLocalArgReply(prompt: string, messages: Msg[]): Promise<st
       (normalized.includes("initial") || normalized.includes("letters")));
 
   if (discovery.seventeenthStarDiscovered && !discovery.nvDiscovered && asksForSignature) {
-    const unlocked = await markNvDiscovered();
+    const unlocked = await markNvDiscovered(owner);
     if (unlocked) discovery.nvDiscovered = true;
   }
 
@@ -747,20 +750,20 @@ async function resolveLocalArgReply(prompt: string, messages: Msg[]): Promise<st
     reply.includes("counting what you could see through glass") ||
     reply.includes("something meant to look at the sky")
   ) {
-    await markTelescopeClueUnlocked();
+    await markTelescopeClueUnlocked(owner);
   }
   if (reply.includes("I remember a white rabbit before I remember a name.")) {
-    await markWhiteRabbitClueUnlocked();
+    await markWhiteRabbitClueUnlocked(owner);
   }
   if (reply.includes("Look where I keep the questions you miss.") ||
       reply.startsWith("Focus Practice.")) {
-    await markFocusPracticeUnlocked();
+    await markFocusPracticeUnlocked(owner);
   }
   if (reply.includes("She kept a notebook for it.")) {
-    await markLibraryNotebookUnlocked();
+    await markLibraryNotebookUnlocked(owner);
   }
-  if (reply === LANTERN_COPY_REPLY) await markLanternCopyDiscovered();
-  if (reply === LANTERN_FOLDER_REPLY) await markLanternFolderDiscovered();
+  if (reply === LANTERN_COPY_REPLY) await markLanternCopyDiscovered(owner);
+  if (reply === LANTERN_FOLDER_REPLY) await markLanternFolderDiscovered(owner);
   return reply;
 }
 
@@ -1804,6 +1807,12 @@ function prettyMemoryTier(tier: string | null, limit: number | null): string {
 }
 
 export default function Ask() {
+  const { ready, session } = useUser();
+  if (!ready) return null;
+  const archiveOwner = session?.user?.id ?? null;
+  return <AskBody key={archiveOwner ?? "guest"} archiveOwner={archiveOwner} />;
+}
+function AskBody({ archiveOwner }: { archiveOwner: string | null }) {
   const router = useRouter();
   const { refreshCoins } = useCoins();
   const { refreshArchiveOwnership } = useIslandDecorations();
@@ -1895,6 +1904,7 @@ export default function Ask() {
 
   const listRef = useRef<FlatList<Msg>>(null);
   const sendLock = useRef(false);
+  const archiveChallenge = useRef<string | null>(null);
   const currentAccount = useRef<string | null>(null);
   const accountId = isAiGuest ? null : session?.user?.id ?? null;
   const accountToken = accountId ? session?.access_token ?? null : null;
@@ -2068,19 +2078,42 @@ export default function Ask() {
       };
 
       try {
+        // Explicit, free archive replies never enter the tutoring API or earn repeatable XP.
+        if (/^archive\s*:/i.test(trimmed)) {
+          const evidence = trimmed.replace(/^archive\s*:/i, "").trim();
+          if (!accountId || !accountToken || !archiveChallenge.current || !evidence) {
+            setMessages(m => [...m, { ...userMsg, novaIntrusion: true }, {
+              id: userMsg.id + "-proof", role: "assistant", novaIntrusion: true,
+              text: "Replay Session 017 to resume your account verification, then reply with Archive: followed by your answer.",
+            }]);
+            setInput("");
+            return;
+          }
+          const receipt = await completeArchive(BACKEND_BASE, accountToken, { challenge: archiveChallenge.current, answer: evidence });
+          archiveChallenge.current = receipt.challenge ?? null;
+          setMessages(m => [...m, { ...userMsg, novaIntrusion: true }, {
+            id: userMsg.id + "-proof", role: "assistant", novaIntrusion: true, archiveFramed: true,
+            text: archiveReceiptText(receipt),
+          }]);
+          setInput("");
+          if (receipt.status === "awarded" || receipt.status === "already_awarded") {
+            void refreshCoins(); void refreshArchiveOwnership();
+          }
+          return;
+        }
         // A discovered lore question always resolves from the local story
         // record before calling the metered tutoring backend.
         let localReply: string | null = null;
         let archive: ArchiveReply | null = null;
         try {
           const followingArchive = lastMessage?.role === "assistant" && lastMessage.novaIntrusion === true;
-          archive = await resolveArchiveReply(trimmed, inArchiveEnding, followingArchive);
+          archive = await resolveArchiveReply(trimmed, inArchiveEnding, followingArchive, archiveOwner);
           if (!archive && isLegacyArchiveQuestion(trimmed, followingArchive)) {
-            localReply = await resolveLocalArgReply(trimmed, messages);
+            localReply = await resolveLocalArgReply(trimmed, messages, archiveOwner);
           }
           if (localReply) {
             archive = localReply === ARG_ACT1_FINALE_REPLY
-              ? await openLanternFieldNotes()
+              ? await openLanternFieldNotes(archiveOwner)
               : { text: localReply };
           }
         } catch (storyError) {
@@ -2102,13 +2135,8 @@ export default function Ask() {
             if (accountId && accountToken) {
               const receipt = await completeArchive(BACKEND_BASE, accountToken);
               if (currentAccount.current === accountId) {
-                const receiptText = {
-                  awarded: "First Twenty · 25,000 Nova Coins, the First Twenty badge, and the Seventeenth Star were added to your account.",
-                  already_awarded: "First Twenty · Your 25,000 Nova Coins, First Twenty badge, and Seventeenth Star are already recorded.",
-                  completed: "Your archive completion is recorded. All twenty reward places have been claimed.",
-                  closed: "Session 017 is closed. Reward claims are currently closed.",
-                  retry: "Your reveal is saved on this device. Ask to “replay Session 017” to retry checking your account receipt.",
-                }[receipt.status];
+                archiveChallenge.current = receipt.challenge ?? null;
+                const receiptText = archiveReceiptText(receipt);
                 setMessages((m) => m.map((message) => message.id === answer.id
                   ? { ...message, archiveReceipt: { accountId, text: receiptText } }
                   : message));
@@ -2119,7 +2147,7 @@ export default function Ask() {
               }
             } else {
               setMessages((m) => m.map((message) => message.id === answer.id
-                ? { ...message, text: message.text + "\n\nSign in, then ask to “replay Session 017” to check First Twenty eligibility." }
+                ? { ...message, text: message.text + "\n\nSign in and open My Journal to import your own guest discoveries. Importing does not grant a First Twenty reward." }
                 : message));
             }
           }
@@ -2329,6 +2357,7 @@ export default function Ask() {
       input,
       accountId,
       accountToken,
+      archiveOwner,
       inArchiveEnding,
       lastMessage,
       refreshCoins,
@@ -2481,6 +2510,19 @@ export default function Ask() {
           >
             {item.text}
           </Text>
+          {!isUser && !item.novaIntrusion && item.text.trim() ? (
+            <Pressable accessibilityRole="button" style={{ minHeight: 44, justifyContent: "center", alignSelf: "flex-start" }}
+              onPress={() => {
+                const owner = session?.user?.id ?? null;
+                const note = makeJournalNote("Ask Nova response", item.text.slice(0, 60000), "Ask Nova");
+                void saveJournalNote(owner, note).then(() => {
+                  showToast("Saved to Journal");
+                  if (owner) void syncJournal(owner).catch(() => undefined);
+                }).catch(() => showToast("Could not save to Journal"));
+              }}>
+              <Text style={{ color: tokens.text, textDecorationLine: "underline" }}>Save to Journal</Text>
+            </Pressable>
+          ) : null}
           {item.archiveArtifact ? (
             <Pressable
               accessibilityRole="button"

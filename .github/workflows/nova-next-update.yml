@@ -3,10 +3,15 @@ on:
   push:
     branches:
       - work/nova-next-update-20261113
+      - feature/journal-retained-notes
   pull_request:
     branches:
       - release/web-ios-working-20260115
       - work/nova-next-update-20261113
+      - fix/archive-chapter-one-coherence
+concurrency:
+  group: nova-next-update-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   learning-and-archive:
     runs-on: ubuntu-latest
@@ -18,6 +23,10 @@ jobs:
           cache: npm
       - name: Install packages
         run: npm ci --ignore-scripts
+      - name: Validate Journal storage, clue recovery and note exports
+        run: |
+          node scripts/test-journal-model.cjs
+          node scripts/test-journal.cjs
       - name: Validate Study Expeditions
         run: node scripts/test-study-expeditions.cjs
       - name: Validate Smart Review
@@ -34,6 +43,16 @@ jobs:
         run: node scripts/test-arg-dialogue-journey.cjs
       - name: Play the saved Chapter One conversation through Session 017
         run: node scripts/test-archive-conversation.cjs
+      - name: Verify archive claim endpoint fails closed without server proof
+        run: |
+          python3 -m pip install "Flask>=3,<4" "requests>=2,<3"
+          PYTHONPATH=server python3 -m unittest discover -s server/tests -p test_archive_completion.py
+      - name: Verify staging wallet API authentication and fail-closed behavior
+        run: PYTHONPATH=server python3 -m unittest discover -s server/tests -p test_wallet_routes.py
+      - name: Verify sandbox Apple purchase policy and closed checkout
+        run: |
+          PYTHONPATH=server python3 -m unittest discover -s server/tests -p test_apple_purchase_policy.py
+          node scripts/test-staging-checkout-closed.cjs
       - name: Verify account awards in disposable Postgres
         run: |
           npm install --prefix "$RUNNER_TEMP/archive-db" --no-save --ignore-scripts @electric-sql/pglite@0.5.16
@@ -41,5 +60,10 @@ jobs:
           node scripts/test-collector-ownership.cjs
       - name: Validate one-currency shop wording
         run: node scripts/test-shop-currency-copy.cjs
+      - name: Validate staging Island and verified purchase ownership
+        run: |
+          node scripts/test-island-progress-authority.cjs
+          node scripts/test-verified-purchases-provider.cjs
+          node scripts/test-verified-purchase-pagination.cjs
       - name: Validate browser auth storage
         run: node scripts/test-supabase-storage.cjs

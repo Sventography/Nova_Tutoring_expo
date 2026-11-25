@@ -3,16 +3,20 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { DeviceEventEmitter } from "react-native";
-import { supabase } from "../lib/supabase";
+import { supabase, SUPABASE_URL } from "../lib/supabase";
+import { usesAuthoritativeIslandProgress, isCurrentIslandLoad } from "../_lib/islandProgressAuthority";
+import { readAllVerifiedPurchases } from "../_lib/verifiedPurchasePagination";
 import { useUser } from "./UserContext";
 
 type PurchaseMap = Record<string, true>;
+const EMPTY_PURCHASES: PurchaseMap = Object.freeze({});
 
 export type AskPersonalityKey =
   | "encouraging"
@@ -388,20 +392,43 @@ export function PurchasesProvider({
     askPersonality,
     setAskPersonality,
   } = useUser();
-  const [purchases, setPurchases] = useState<PurchaseMap>({});
+  const authoritative = usesAuthoritativeIslandProgress(SUPABASE_URL, supabaseUserId);
+  const ownerRef = useRef<string | null>(supabaseUserId);
+  const loadEpochRef = useRef(0);
+  const [stateOwner, setStateOwner] = useState<string | null>(supabaseUserId);
+  const [rawPurchases, setPurchases] = useState<PurchaseMap>({});
   const purchasesRef = useRef<PurchaseMap>({});
-  const [hydrated, setHydrated] = useState(false);
+  const [rawHydrated, setHydrated] = useState(false);
+  const purchases = stateOwner === supabaseUserId ? rawPurchases : EMPTY_PURCHASES;
+  const hydrated = stateOwner === supabaseUserId && rawHydrated;
 
-  useEffect(() => {
-    purchasesRef.current = purchases;
-  }, [purchases]);
-
-  console.log("[PurchasesContext DEBUG] supabaseUserId =", supabaseUserId);
-  console.log("[PurchasesContext DEBUG] purchases =", purchases);
+  // The isolated staging schema grants owners read access only. Preserve
+  // historical local caches for reconciliation; never promote them to grants.
+  const readVerifiedOwnership = useCallback(async (current: () => boolean) => {
+    if (!supabaseUserId) throw new Error("Account required");
+    const rows = await readAllVerifiedPurchases(async (after, limit) => {
+      let query = supabase
+        .from("purchases")
+        .select("item_id,source")
+        .eq("user_id", supabaseUserId)
+        .order("item_id", { ascending: true })
+        .limit(limit);
+      if (after !== null) query = query.gt("item_id", after);
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
+    }, current);
+    return normalizeRowsToMap(rows);
+  }, [supabaseUserId]);
 
   /* --------------------- hydrate whenever the user changes --------------------- */
-  useEffect(() => {
+  useLayoutEffect(() => {
     let alive = true;
+    ownerRef.current = supabaseUserId;
+    const epoch = ++loadEpochRef.current;
+    const current = () => alive && isCurrentIslandLoad(supabaseUserId, epoch, ownerRef.current, loadEpochRef.current);
+    let verified = false;
+    setStateOwner(supabaseUserId);
 
     // Clear both state and the ref immediately so the previous identity can't flash or receive a late grant after an account switch.
     purchasesRef.current = {};
@@ -413,6 +440,14 @@ export function PurchasesProvider({
       console.log("[PurchasesContext] init for key =", key);
 
       try {
+        if (authoritative) {
+          const next = await readVerifiedOwnership(current);
+          if (!current()) return;
+          purchasesRef.current = next;
+          setPurchases(next);
+          verified = true;
+          return;
+        }
         // --------------------- GUEST MODE ---------------------
         if (!supabaseUserId) {
           console.log(
@@ -424,7 +459,8 @@ export function PurchasesProvider({
             "[PurchasesContext] loaded guest purchases (normalized):",
             guestPurchases
           );
-          if (alive) {
+          if (current()) {
+            purchasesRef.current = guestPurchases;
             setPurchases(guestPurchases);
             await AsyncStorage.setItem(key, JSON.stringify(guestPurchases));
           }
@@ -514,28 +550,32 @@ export function PurchasesProvider({
 
         console.log("[PurchasesContext] merged ownership:", next);
 
-        if (alive) {
+        if (current()) {
           purchasesRef.current = next;
           setPurchases(next);
           await AsyncStorage.setItem(key, JSON.stringify(next));
         }
       } catch (e) {
         console.warn("[PurchasesContext] init purchases error:", e);
-        if (alive) setPurchases({});
+        if (current()) {
+          purchasesRef.current = {};
+          setPurchases({});
+        }
       } finally {
-        if (alive) setHydrated(true);
+        if (current()) setHydrated(!authoritative || verified);
       }
     })();
 
     return () => {
       alive = false;
+      loadEpochRef.current += 1;
     };
-  }, [supabaseUserId]);
+  }, [supabaseUserId, authoritative, readVerifiedOwnership]);
 
   /* ---------------------- persist when purchases change ---------------------- */
   useEffect(() => {
     // Don’t sync to Supabase until we’ve done the initial hydrate
-    if (!hydrated) {
+    if (!hydrated || authoritative || ownerRef.current !== supabaseUserId) {
       return;
     }
 
@@ -656,7 +696,7 @@ export function PurchasesProvider({
         console.warn("[PurchasesContext] sync purchases threw:", e);
       }
     })();
-  }, [purchases, supabaseUserId, hydrated]);
+  }, [purchases, supabaseUserId, hydrated, authoritative]);
 
   /* ---------------- achievement purchase inventory baseline ---------------- */
 
@@ -689,7 +729,7 @@ export function PurchasesProvider({
   /* ------------------ sync Ask memory tier on purchases change --------------- */
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || authoritative || ownerRef.current !== supabaseUserId) return;
     if (!supabaseUserId) return;
 
     const highestTier = computeHighestMemoryTier(purchases);
@@ -729,12 +769,12 @@ export function PurchasesProvider({
         );
       }
     })();
-  }, [purchases, supabaseUserId, hydrated]);
+  }, [purchases, supabaseUserId, hydrated, authoritative]);
 
   /* ------------- keep the selected teaching style valid after restore -------- */
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || authoritative || ownerRef.current !== supabaseUserId) return;
 
     const selected = normalizeAskPersonalityKey(askPersonality);
 
@@ -754,6 +794,8 @@ export function PurchasesProvider({
     hydrated,
     purchases,
     setAskPersonality,
+    authoritative,
+    supabaseUserId,
   ]);
 
   /* ------------------------------ public helpers ----------------------------- */
@@ -762,7 +804,7 @@ export function PurchasesProvider({
     (id: string | null | undefined) => {
       const cid = canonId(id);
       if (!cid) return false;
-      return !!purchases[cid];
+      return Object.prototype.hasOwnProperty.call(purchases, cid) && purchases[cid] === true;
     },
     [purchases]
   );
@@ -781,6 +823,8 @@ export function PurchasesProvider({
 
   const grant = useCallback(
     async (id: string | string[]) => {
+      if (ownerRef.current !== supabaseUserId) throw new Error("Purchase account changed");
+      if (authoritative) throw new Error("Registered ownership requires a verified server operation");
       console.log("[PurchasesContext] grant called with", id);
 
       const next: PurchaseMap = {
@@ -822,11 +866,13 @@ export function PurchasesProvider({
         }
       }
     },
-    [supabaseUserId]
+    [supabaseUserId, authoritative]
   );
 
   const revoke = useCallback(
     async (id: string) => {
+      if (ownerRef.current !== supabaseUserId) throw new Error("Purchase account changed");
+      if (authoritative) throw new Error("Registered ownership requires a verified server operation");
       console.log("[PurchasesContext] revoke called with", id);
 
       const cid = canonId(id);
@@ -860,11 +906,32 @@ export function PurchasesProvider({
         }
       }
     },
-    [supabaseUserId]
+    [supabaseUserId, authoritative]
   );
 
   const reload = useCallback(
     async () => {
+      if (ownerRef.current !== supabaseUserId) return;
+      const epoch = ++loadEpochRef.current;
+      const current = () => isCurrentIslandLoad(supabaseUserId, epoch, ownerRef.current, loadEpochRef.current);
+      if (authoritative) {
+        setHydrated(false);
+        try {
+          const next = await readVerifiedOwnership(current);
+          if (!current()) return;
+          purchasesRef.current = next;
+          setPurchases(next);
+          setHydrated(true);
+        } catch (error) {
+          if (current()) {
+            purchasesRef.current = {};
+            setPurchases({});
+            setHydrated(false);
+          }
+          throw error;
+        }
+        return;
+      }
       const key = storageKey(supabaseUserId);
       console.log("[PurchasesContext] reload called for key", key);
 
@@ -941,8 +1008,10 @@ export function PurchasesProvider({
             tablePurchases
           );
 
+          if (!current()) return;
           purchasesRef.current = merged;
           setPurchases(merged);
+          setHydrated(true);
           await AsyncStorage.setItem(key, JSON.stringify(merged));
           console.log("[PurchasesContext] reload merged ownership:", merged);
           return;
@@ -950,6 +1019,9 @@ export function PurchasesProvider({
 
         // Guest reload: isolated guest key only.
         const local = await loadLocalPurchases(key, false);
+        if (!current()) return;
+        purchasesRef.current = local;
+        setHydrated(true);
         if (Object.keys(local).length > 0) {
           console.log(
             "[PurchasesContext] reload got guest purchases from AsyncStorage:",
@@ -968,11 +1040,13 @@ export function PurchasesProvider({
         console.warn("[PurchasesContext] reload error:", e);
       }
     },
-    [supabaseUserId]
+    [supabaseUserId, authoritative, readVerifiedOwnership]
   );
 
   const clearAll = useCallback(
     async () => {
+      if (ownerRef.current !== supabaseUserId) throw new Error("Purchase account changed");
+      if (authoritative) throw new Error("Registered ownership requires a verified server operation");
       const key = storageKey(supabaseUserId);
       console.log("[PurchasesContext] clearAll called for", key);
       const empty: PurchaseMap = {};
@@ -1018,7 +1092,7 @@ export function PurchasesProvider({
         }
       }
     },
-    [supabaseUserId]
+    [supabaseUserId, authoritative]
   );
 
   const value = useMemo(

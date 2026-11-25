@@ -4,6 +4,7 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -12,7 +13,8 @@ import React, {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { DeviceEventEmitter } from "react-native";
 
-import { supabase } from "../lib/supabase";
+import { supabase, SUPABASE_URL } from "../lib/supabase";
+import { usesAuthoritativeIslandProgress, readAuthoritativeIslandProgress, isCurrentIslandLoad } from "../_lib/islandProgressAuthority";
 import { useUser } from "./UserContext";
 import type { CompanionActivityKey } from "../_lib/commonCompanionFriendship";
 
@@ -361,6 +363,10 @@ function storedState(
 export function IslandProvider({ children }: { children: ReactNode }) {
   const { supabaseUserId } = (useUser() || {}) as any;
   const userId = supabaseUserId ? String(supabaseUserId) : null;
+  const authoritative = usesAuthoritativeIslandProgress(SUPABASE_URL, userId);
+  const ownerRef = useRef<string | null>(userId);
+  const loadEpochRef = useRef(0);
+  const ownerEpochRef = useRef(0);
 
   const [xp, setXp] = useState(0);
   const [level, setLevel] = useState(1);
@@ -396,6 +402,29 @@ export function IslandProvider({ children }: { children: ReactNode }) {
   const dailyLoginGrantRef =
     useRef<Promise<boolean> | null>(null);
 
+  useLayoutEffect(() => {
+    if (ownerRef.current !== userId) {
+      ownerRef.current = userId;
+      ownerEpochRef.current += 1;
+      loadEpochRef.current += 1;
+      dailyLoginGrantRef.current = null;
+      const snapshot = { xp: 0, level: 1, today: emptyToday() };
+      const gain = { amount: 0, reason: "", at: null };
+      progressRef.current = snapshot;
+      gainRef.current = gain;
+      setXp(0);
+      setLevel(1);
+      setToday(snapshot.today);
+      setLastGain(0);
+      setLastGainReason("");
+      setLastGainAt(null);
+      setLastGainToken(0);
+      setReady(false);
+      setLoading(true);
+    }
+    return () => { loadEpochRef.current += 1; ownerEpochRef.current += 1; };
+  }, [userId]);
+
   const xpToNext = xpForNextLevel(level);
   const progress = Math.max(0, Math.min(1, xp / xpToNext));
   const islandStage = stageForLevel(level);
@@ -430,6 +459,7 @@ export function IslandProvider({ children }: { children: ReactNode }) {
       snapshot: ProgressSnapshot,
       gain = gainRef.current
     ) => {
+      if (authoritative || ownerRef.current !== userId) return;
       try {
         await AsyncStorage.setItem(
           storageKey(userId),
@@ -439,12 +469,12 @@ export function IslandProvider({ children }: { children: ReactNode }) {
         console.warn("[IslandContext] local save error", error);
       }
     },
-    [userId]
+    [userId, authoritative]
   );
 
   const persistRemote = useCallback(
     async (nextXp: number, nextLevel: number) => {
-      if (!userId) return;
+      if (!userId || authoritative || ownerRef.current !== userId) return;
 
       try {
         const { error } = await supabase
@@ -462,14 +492,44 @@ export function IslandProvider({ children }: { children: ReactNode }) {
         console.warn("[IslandContext] Supabase save exception", error);
       }
     },
-    [userId]
+    [userId, authoritative]
   );
 
   const refreshIsland = useCallback(async () => {
+    if (ownerRef.current !== userId) return;
+    const epoch = ++loadEpochRef.current;
+    const current = () => isCurrentIslandLoad(userId, epoch, ownerRef.current, loadEpochRef.current);
+    let verified = false;
     setLoading(true);
     setReady(false);
 
     try {
+      if (authoritative) {
+        // No account cache reads or writes: old snapshots remain available for
+        // reconciliation, never for unlocking or promoting server progress.
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("island_xp,island_level")
+          .eq("id", userId)
+          .maybeSingle();
+        if (!current()) return;
+        if (error) throw error;
+        const remote = readAuthoritativeIslandProgress(data);
+        if (!remote) throw new Error("Island progress not verified");
+        const snapshot = { ...remote, today: emptyToday() };
+        const gain = { amount: 0, reason: "", at: null };
+        progressRef.current = snapshot;
+        gainRef.current = gain;
+        setXp(snapshot.xp);
+        setLevel(snapshot.level);
+        setToday(snapshot.today);
+        setLastGain(0);
+        setLastGainReason("");
+        setLastGainAt(null);
+        verified = true;
+        return;
+      }
+
       let local: StoredState | null = null;
       const raw = await AsyncStorage.getItem(storageKey(userId));
 
@@ -566,6 +626,7 @@ export function IslandProvider({ children }: { children: ReactNode }) {
         at: local.lastGainAt,
       };
 
+      if (!current()) return;
       progressRef.current = snapshot;
       gainRef.current = gain;
 
@@ -578,7 +639,7 @@ export function IslandProvider({ children }: { children: ReactNode }) {
 
       await persistLocal(snapshot, gain);
 
-      if (shouldSyncLocalProgressToRemote) {
+      if (current() && shouldSyncLocalProgressToRemote) {
         await persistRemote(
           snapshot.xp,
           snapshot.level
@@ -587,13 +648,16 @@ export function IslandProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.warn("[IslandContext] refresh error", error);
     } finally {
-      setLoading(false);
-      setReady(true);
+      if (current()) {
+        setLoading(false);
+        setReady(!authoritative || verified);
+      }
     }
   }, [
     persistLocal,
     persistRemote,
     userId,
+    authoritative,
   ]);
 
   useEffect(() => {
@@ -602,6 +666,8 @@ export function IslandProvider({ children }: { children: ReactNode }) {
 
   const addIslandXp = useCallback<IslandContextValue["addIslandXp"]>(
     async (delta, reason, _meta) => {
+      if (ownerRef.current !== userId) throw new Error("Island account changed");
+      if (authoritative) throw new Error("Registered Island XP requires a verified server operation");
       const amount = Math.floor(Number(delta));
       if (!Number.isFinite(amount) || amount <= 0) return;
 
@@ -693,7 +759,7 @@ export function IslandProvider({ children }: { children: ReactNode }) {
         aliveSignalPromise,
       ]);
     },
-    [persistLocal, persistRemote, userId]
+    [persistLocal, persistRemote, userId, authoritative]
   );
 
   const grantDailyLoginXpIfNeeded =
@@ -702,7 +768,7 @@ export function IslandProvider({ children }: { children: ReactNode }) {
        * Never award against the temporary pre-hydration snapshot. The caller
        * also waits for ready, but this guard protects every future call site.
        */
-      if (!ready) {
+      if (!ready || authoritative || ownerRef.current !== userId) {
         return false;
       }
 
@@ -715,6 +781,8 @@ export function IslandProvider({ children }: { children: ReactNode }) {
         return dailyLoginGrantRef.current;
       }
 
+      const ownerEpoch = ownerEpochRef.current;
+      const currentOwner = () => ownerRef.current === userId && ownerEpochRef.current === ownerEpoch;
       const task = (async (): Promise<boolean> => {
         try {
           const todayKey = dateKey();
@@ -722,6 +790,7 @@ export function IslandProvider({ children }: { children: ReactNode }) {
             `${DAILY_XP_KEY}:${userId || "guest"}`;
           const lastDate =
             await AsyncStorage.getItem(key);
+          if (!currentOwner()) return false;
 
           const currentToday =
             normalizeToday(
@@ -753,6 +822,7 @@ export function IslandProvider({ children }: { children: ReactNode }) {
             }
           );
 
+          if (!currentOwner()) return false;
           await AsyncStorage.setItem(
             key,
             todayKey
@@ -784,6 +854,7 @@ export function IslandProvider({ children }: { children: ReactNode }) {
       addIslandXp,
       ready,
       userId,
+      authoritative,
     ]);
 
   const setCollapsed = useCallback(async (next: boolean) => {

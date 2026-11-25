@@ -22,7 +22,7 @@ import { Linking as RNLinking } from "react-native";
 import * as Haptics from "expo-haptics";
 import * as ExpoIAP from "expo-iap";
 
-import { RABBIT_LABEL } from "../_lib/archiveArtifacts";
+import { RABBIT_LABEL, PENCIL_TRACE, LANTERN_TRACE } from "../_lib/archiveArtifacts";
 import { useCoins } from "../context/CoinsContext";
 import { useTheme } from "../context/ThemeContext";
 import { useCursor } from "../context/CursorContext";
@@ -34,6 +34,8 @@ import { useAiPlan } from "../context/AiPlanContext";
 
 import {
   catalog,
+  RETIRED_NEON_BUNDLE,
+  isRetiredNeonBundle,
   CATEGORY_BORDER,
   dollarsToCoins,
   altImages,
@@ -63,10 +65,10 @@ import { startCheckout } from "../utils/checkout";
 import { startCoinCheckout } from "../utils/coinCheckout";
 import { notifyCoinOrder } from "../utils/coin-order";
 import { showToast } from "../utils/toast";
-import { getArgDiscoveryState, markWhiteRabbitDiscovered } from "../utils/argState";
+import { getArgDiscoveryState, markWhiteRabbitDiscovered, markArchiveFlag } from "../utils/argState";
 
 import AddressSheet, { AddressPayload } from "../components/AddressSheet";
-import { supabase } from "../lib/supabase";
+import { supabase, SUPABASE_URL } from "../lib/supabase";
 
 import NovaAiPlansSection from "../components/NovaAiPlansSection";
 import {
@@ -82,6 +84,11 @@ import {
 
 const InAppPurchases: any = ExpoIAP;
 
+// Staging must not initiate payments or finish unverified Apple transactions.
+const STAGING_CHECKOUT_CLOSED = SUPABASE_URL.replace(/\/+$/, "") === "https://gouhhltupxaycuysdtrw.supabase.co";
+function showStagingCheckoutClosed() {
+  Alert.alert("Purchases unavailable in this preview", "This test build does not process payments. Your existing purchases are unchanged.");
+}
 function showIapDebug(step: string, extra?: any) {
   const detail =
     typeof extra === "string"
@@ -1291,6 +1298,7 @@ function OrderSuccessModal({
   );
 }
 function ItemDetailModal({
+  owner,
   visible,
   item,
   owned = false,
@@ -1299,6 +1307,7 @@ function ItemDetailModal({
   onPrimaryAction,
   primaryLabel,
 }: {
+  owner: string | null;
   visible: boolean;
   item: any | null;
   owned?: boolean;
@@ -1311,10 +1320,14 @@ function ItemDetailModal({
   const [showAlt, setShowAlt] = useState(false);
   const [showWhiteRabbitTrace, setShowWhiteRabbitTrace] = useState(false);
   const [cursorTrace, setCursorTrace] = useState<string | null>(null);
+  const revealCursorTrace = (id: string) => {
+    setCursorTrace(id);
+    void markArchiveFlag(id === "cursor_star_trail" ? "pencilTraceRead" : "lanternTraceRead", owner).catch(() => undefined);
+  };
   const [rabbitHintReady, setRabbitHintReady] = useState(false);
 
   const readRabbitLabel = async () => {
-    if (await markWhiteRabbitDiscovered()) setShowWhiteRabbitTrace(true);
+    if (await markWhiteRabbitDiscovered(owner)) setShowWhiteRabbitTrace(true);
   };
 
   useEffect(() => {
@@ -1322,13 +1335,16 @@ function ItemDetailModal({
     setShowWhiteRabbitTrace(false);
     setCursorTrace(null);
     setRabbitHintReady(false);
-    if (item?.id !== "plushie_bunny_white") return;
+    if (visible && item?.id === "cursor_glow") void markArchiveFlag("glowDescriptionRead", owner).catch(() => undefined);
+    if (visible && item?.id === "cursor_orb") void markArchiveFlag("orbDescriptionRead", owner).catch(() => undefined);
+    if (visible && item?.id === "cursor_star_trail") void markArchiveFlag("starDescriptionRead", owner).catch(() => undefined);
+    if (!visible || item?.id !== "plushie_bunny_white") return;
     let alive = true;
-    void getArgDiscoveryState().then(state => {
+    void getArgDiscoveryState(owner).then(state => {
       if (alive) setRabbitHintReady(state.whiteRabbitClueUnlocked);
     }).catch(() => {});
     return () => { alive = false; };
-  }, [item?.id]);
+  }, [visible, item?.id, owner]);
 
   if (!item) return null;
 
@@ -1522,7 +1538,7 @@ function ItemDetailModal({
                 delayLongPress={1100}
                 onLongPress={() => {
                   if (item.id === "cursor_star_trail" || item.id === "lantern_keychain") {
-                    setCursorTrace(item.id);
+                    revealCursorTrace(item.id);
                   }
                   if (item.id === "plushie_bunny_white") {
                     void readRabbitLabel();
@@ -1559,7 +1575,7 @@ function ItemDetailModal({
               ) : null}
 
               {item.id === "cursor_star_trail" && cursorTrace !== item.id ? (
-                <Pressable accessibilityRole="button" onPress={() => setCursorTrace(item.id)}
+                <Pressable accessibilityRole="button" onPress={() => revealCursorTrace(item.id)}
                   style={{ minHeight: 44, alignSelf: "center", justifyContent: "center" }}>
                   <Text style={{ color: tokens.text, textDecorationLine: "underline" }}>Inspect the pencil marks</Text>
                 </Pressable>
@@ -1568,8 +1584,8 @@ function ItemDetailModal({
               {cursorTrace === item.id ? (
                 <Text selectable style={{ color: tokens.text, textAlign: "center", marginBottom: 12 }}>
                   {item.id === "cursor_star_trail"
-                    ? "Read the first letter of each word in the second sentences. Glow, Orb Glow, then Star Trail. Say what they spell to Nova."
-                    : "A light was left burning. Tell Ask Nova: “Nora’s Last Lantern.”"}
+                    ? PENCIL_TRACE
+                    : LANTERN_TRACE}
                 </Text>
               ) : null}
 
@@ -2760,6 +2776,10 @@ export default function Shop() {
     const pid = String(rawProductId || "").trim();
     if (!pid) return null;
 
+    // Retain fulfillment for legitimate historical StoreKit transactions,
+    // without advertising or requesting the retired product for new sales.
+    if (isRetiredNeonBundle(pid)) return RETIRED_NEON_BUNDLE;
+
     const exact = iapByProductId[pid];
     if (exact) return exact;
 
@@ -3184,6 +3204,7 @@ export default function Shop() {
         restored?: boolean;
       }
     ) => {
+      if (STAGING_CHECKOUT_CLOSED) return false;
       const restored =
         options?.restored === true;
 
@@ -3392,6 +3413,7 @@ export default function Shop() {
     fallbackItem?: any,
     options?: { restored?: boolean }
   ) => {
+    if (STAGING_CHECKOUT_CLOSED) return false;
     const restored = options?.restored === true;
     const expectedOwnerId =
       iapPurchaseOwnerIdRef.current ||
@@ -3548,6 +3570,7 @@ export default function Shop() {
   };
 
   const restoreAvailableIapPurchases = async (silent = true) => {
+    if (STAGING_CHECKOUT_CLOSED) { if (!silent) showStagingCheckoutClosed(); return 0; }
     if (!isAuthenticated) {
       if (!silent) {
         Alert.alert(
@@ -3690,6 +3713,7 @@ export default function Shop() {
   const buyAiSubscription = async (
     plan: any
   ) => {
+    if (STAGING_CHECKOUT_CLOSED) { showStagingCheckoutClosed(); return; }
     if (!isAuthenticated) {
       Alert.alert(
         "Sign in required",
@@ -4000,6 +4024,8 @@ export default function Shop() {
   };
 
   const buyWithIap = async (it: any) => {
+    if (STAGING_CHECKOUT_CLOSED) { showStagingCheckoutClosed(); return; }
+    if (isRetiredNeonBundle(it?.id) || isRetiredNeonBundle(resolveStoreProductId(it))) return;
     if (!isAuthenticated) {
       Alert.alert(
         "Sign in required",
@@ -4190,6 +4216,7 @@ export default function Shop() {
     let mounted = true;
 
     const startIap = async () => {
+      if (STAGING_CHECKOUT_CLOSED) return;
       if (!(await isIapAvailable())) return;
 
       // Register listeners before starting any purchase request.
@@ -4297,6 +4324,7 @@ export default function Shop() {
 
   useEffect(() => {
     const onUrl = async (event: { url: string }) => {
+      if (STAGING_CHECKOUT_CLOSED) return;
       const { queryParams, path } = Linking.parse(event.url);
       const sku = (queryParams?.sku as string) || "";
       track("shop_return_deeplink", { url: event.url, path, sku });
@@ -4655,6 +4683,8 @@ export default function Shop() {
     it: any,
     meta?: { size?: string; dailyDeal?: boolean }
   ) {
+    if (STAGING_CHECKOUT_CLOSED && supabaseUserId) { showStagingCheckoutClosed(); return; }
+    if (isRetiredNeonBundle(it?.id)) return;
     if (isPhysicalMerchItem(it)) {
       Alert.alert(
         "Physical merchandise",
@@ -4842,6 +4872,7 @@ export default function Shop() {
   }
 
   async function handleAddressConfirm(addr: AddressPayload) {
+    if (STAGING_CHECKOUT_CLOSED) { showStagingCheckoutClosed(); return; }
     const it = pendingItem;
     if (!it) return;
 
@@ -5038,6 +5069,7 @@ export default function Shop() {
   }
 
   async function moneyBuy(it: any, meta?: { size?: string }) {
+    if (STAGING_CHECKOUT_CLOSED) { showStagingCheckoutClosed(); return; }
     try {
       if (isComingSoon(it)) {
         Alert.alert("Coming soon", COMING_SOON_TEXT);
@@ -6992,6 +7024,8 @@ export default function Shop() {
       </ScrollView>
 
       <ItemDetailModal
+        key={session?.user?.id ?? "guest"}
+        owner={session?.user?.id ?? null}
         visible={!!detailItem}
         item={detailItem}
         owned={

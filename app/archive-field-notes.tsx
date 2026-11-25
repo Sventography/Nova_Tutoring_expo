@@ -1,3 +1,4 @@
+import { useUser } from "./context/UserContext";
 import React, { useCallback, useState } from "react";
 import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -38,17 +39,23 @@ function ExternalCopy({ url, title }: { url: string | null; title: string }) {
 }
 
 export default function ArchiveFieldNotes() {
+  const { ready, session } = useUser();
+  if (!ready) return null;
+  const owner = session?.user?.id ?? null;
+  return <ArchiveFieldNotesBody key={owner ?? "guest"} owner={owner} />;
+}
+function ArchiveFieldNotesBody({ owner }: { owner: string | null }) {
   const router = useRouter();
   const [state, setState] = useState<"loading" | "open" | "sealed" | "error">("loading");
   useFocusEffect(useCallback(() => {
     let active = true;
-    void Promise.all([getArgDiscoveryState(), getArchiveFlags()]).then(async ([discovery, flags]) => {
+    void Promise.all([getArgDiscoveryState(owner), getArchiveFlags(owner)]).then(async ([discovery, flags]) => {
       if (!active) return;
       if (!discovery.libraryNotebookDiscovered || !flags.copyUnlocked) {
         setState("sealed");
         return;
       }
-      await markArchiveFlag("copyRead");
+      await markArchiveFlag("copyRead", owner);
       if (active) setState("open");
     }).catch(() => { if (active) setState("error"); });
     return () => { active = false; };

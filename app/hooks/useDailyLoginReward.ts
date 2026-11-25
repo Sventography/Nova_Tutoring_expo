@@ -1,91 +1,62 @@
 // app/hooks/useDailyLoginReward.ts
 import { useEffect, useRef } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
+import { supabase } from "../lib/supabase";
 import { useCoins } from "../context/CoinsContext";
 import { useUser } from "../context/UserContext";
 import { showToast } from "../utils/toast";
 
-const BASE_STORAGE_KEY = "@nova/dailyLoginReward.v1";
-
-type StoredState = {
-  lastAwardDate: string | null; // "YYYY-MM-DD"
-  count: number; // how many daily rewards this user has received
-};
-
+const GUEST_KEY = "@nova/dailyLoginReward.v1:guest";
+type StoredState = { lastAwardDate: string | null; count: number };
 function getTodayKey() {
   const now = new Date();
-  // Use local date; streak logic already anchors to ET elsewhere if needed
-  const year = now.getFullYear();
-  const month = `${now.getMonth() + 1}`.padStart(2, "0");
-  const day = `${now.getDate()}`.padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  return [now.getFullYear(), String(now.getMonth() + 1).padStart(2,"0"), String(now.getDate()).padStart(2,"0")].join("-");
 }
 
 export default function useDailyLoginReward() {
-  const { coins, setCoins } = useCoins();
+  const wallet = useCoins();
   const { ready, supabaseUserId } = useUser() as any;
-
-  const hasRunRef = useRef(false);
-
+  const walletRef = useRef(wallet);
+  walletRef.current = wallet;
+  const completedRef = useRef<string | null>(null);
   useEffect(() => {
-    // Wait until UserContext is hydrated so we can scope by user id
-    if (!ready) return;
-    if (hasRunRef.current) return;
-    hasRunRef.current = true;
-
-    const storageKey = supabaseUserId
-      ? `${BASE_STORAGE_KEY}:${supabaseUserId}`
-      : `${BASE_STORAGE_KEY}:guest`;
-
-    const today = getTodayKey();
-
-    (async () => {
+    if (!ready || !wallet.ready) return;
+    const owner = supabaseUserId ?? "guest";
+    if (completedRef.current === owner) return;
+    let cancelled = false;
+    const run = async () => {
       try {
-        const raw = (await AsyncStorage.getItem(storageKey)) || "{}";
-        let parsed: StoredState;
-        try {
-          parsed = JSON.parse(raw) as StoredState;
-        } catch {
-          parsed = { lastAwardDate: null, count: 0 };
-        }
-
-        const lastDate = parsed.lastAwardDate;
-        const prevCount = typeof parsed.count === "number" ? parsed.count : 0;
-
-        // Already awarded today → nothing to do
-        if (lastDate === today) {
+        if (supabaseUserId) {
+          const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+          if (sessionError || cancelled || sessionData.session?.user?.id !== supabaseUserId) return;
+          const { data, error } = await supabase.rpc("nova_claim_daily_login");
+          if (error) throw error;
+          if (cancelled) return;
+          completedRef.current = owner;
+          const amount = Number(data?.coins_awarded);
+          if (data?.awarded === true && (amount === 5 || amount === 20)) {
+            showToast(amount === 20 ? "Daily login bonus: +20 coins!" : "Thanks for checking in today: +5 coins!");
+          }
+          await walletRef.current.refreshCoins();
           return;
         }
-
-        const nextCount = prevCount + 1;
-
-        // Every 7th login day → 20 coins, otherwise 5
-        const isSeventhDay = nextCount % 7 === 0;
-        const reward = isSeventhDay ? 20 : 5;
-
-        const currentCoins = coins ?? 0;
-        const nextCoins = currentCoins + reward;
-
-        // Update local coins
-        await setCoins(nextCoins);
-
-        // Persist new daily-login state
-        const nextState: StoredState = {
-          lastAwardDate: today,
-          count: nextCount,
-        };
-        await AsyncStorage.setItem(storageKey, JSON.stringify(nextState));
-
-        // Little friendly toast
-        const msg = isSeventhDay
-          ? "Daily login bonus: +20 coins!"
-          : "Thanks for checking in today: +5 coins!";
-        showToast(msg);
-      } catch (err) {
-        console.log("[useDailyLoginReward] error", err);
-        // Failing silently is fine; we just skip the bonus if something breaks
-      }
-    })();
-  }, [ready, supabaseUserId, coins, setCoins]);
+        const raw = await AsyncStorage.getItem(GUEST_KEY);
+        let stored: StoredState = { lastAwardDate: null, count: 0 };
+        try { if (raw) stored = JSON.parse(raw) ?? stored; } catch {}
+        if (cancelled) return;
+        const today = getTodayKey();
+        if (stored.lastAwardDate === today) { completedRef.current = owner; return; }
+        const count = (Number.isSafeInteger(stored.count) && stored.count >= 0 ? stored.count : 0) + 1;
+        const reward = count % 7 === 0 ? 20 : 5;
+        await walletRef.current.setCoins(previous => previous + reward);
+        if (cancelled) return;
+        await AsyncStorage.setItem(GUEST_KEY, JSON.stringify({lastAwardDate:today,count}));
+        if (cancelled) return;
+        completedRef.current = owner;
+        showToast(reward === 20 ? "Daily login bonus: +20 coins!" : "Thanks for checking in today: +5 coins!");
+      } catch (error) { console.warn("[useDailyLoginReward] reward unavailable:", error); }
+    };
+    void run();
+    return () => { cancelled = true; };
+  }, [ready, supabaseUserId, wallet.ready]);
 }
