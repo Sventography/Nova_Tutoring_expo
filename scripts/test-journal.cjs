@@ -96,6 +96,26 @@ const args=load(path.join(root,'app/utils/argState.ts'));
   assert.equal(new Set((await found()).map(n=>n.id)).size,(await found()).length);
   assert.deepEqual(await found(),await found(),'reopening does not duplicate recovered records');
 
+  // Completing the story as a guest cannot expose clues in a new account.
+  assert.deepEqual(model.recoveredNotes(await args.getArgDiscoveryState('a'),await args.getArchiveFlags('a')),[]);
+  await args.markArchiveFlag('glowDescriptionRead','a');
+  await args.markEntryNoteDiscovered('a');
+  await args.markTelescopeClueUnlocked('a');
+  await args.markSeventeenthStarDiscovered('a');
+  const aClues=model.recoveredNotes(await args.getArgDiscoveryState('a'),await args.getArchiveFlags('a'));
+  assert.deepEqual(aClues.map(n=>n.id),['glow-description','garden','chart']);
+  assert.equal(model.recoveredHeading(aClues),'Retained Notes');
+  assert.deepEqual(model.recoveredNotes(await args.getArgDiscoveryState('b'),await args.getArchiveFlags('b')),[]);
+  assert.equal(await args.markNvDiscovered('b'),false);
+  // Old unowned progress must never be inherited by a new account.
+  values.set(args.ARG_ENTRY_NOTE_DISCOVERED_KEY,'1');
+  assert.equal((await args.getArgDiscoveryState('b')).entryNoteDiscovered,false);
+  assert.equal(model.recoveredHeading(await found()),'Nora’s Notes');
+  const conversation=load(path.join(root,'app/_lib/archiveConversation.ts'));
+  assert.equal(await conversation.resolveArchiveReply('Read the telescope observation',false,false,'b'),null);
+  assert.match((await conversation.resolveArchiveReply('Who signed the chart?',false,false,'a'))?.text??'',/^N\.V\./);
+  assert.equal((await args.getArgDiscoveryState('b')).nvDiscovered,false);
+
   const note={...model.makeJournalNote('Biology','<script>bad</script>','science'),id:'same-id'};
   const guest={...note,title:'Guest'};
   await store.saveJournalNote(null,guest);
