@@ -15,14 +15,22 @@ from flask import jsonify, request
 STAGING_URL = "https://gouhhltupxaycuysdtrw.supabase.co"
 MAX_BODY = 2048
 
-QUIZ_STATUSES = frozenset(("question", "complete", "expired", "unavailable",
-                          "invalid", "active_attempt", "attempt_limit",
-                          "answered", "duplicate", "stale"))
-BUY_STATUSES = frozenset(("applied", "owned", "insufficient", "unavailable"))
-QUIZ_FIELDS = ("status", "attempt_id", "topic_id", "question_id", "step",
-               "total", "prompt", "choices", "correct_count", "correct",
-               "coins_awarded", "perfect_bonus", "balance")
-BUY_FIELDS = ("status", "balance", "transaction_id", "item_id")
+# Each status has its own public contract. In particular, a question must
+# never carry correctness, reward or answer-key fields from a future RPC change.
+QUIZ_FIELDS = {
+    "question": ("attempt_id", "topic_id", "question_id", "step", "total", "prompt", "choices"),
+    "complete": ("attempt_id", "correct_count", "total"),
+    "active_attempt": ("attempt_id", "topic_id"),
+    "answered": ("correct", "coins_awarded", "perfect_bonus", "balance", "next"),
+    "duplicate": ("correct", "coins_awarded", "balance", "next"),
+    **{status: () for status in ("expired", "unavailable", "invalid", "attempt_limit", "stale")},
+}
+BUY_FIELDS = {
+    "applied": ("balance", "transaction_id", "item_id"),
+    "owned": ("balance",),
+    "insufficient": ("balance",),
+    "unavailable": ("balance",),
+}
 
 
 def uuid_string(value):
@@ -31,28 +39,71 @@ def uuid_string(value):
     return str(UUID(value))
 
 
+def _public_fields(value, contracts):
+    if not isinstance(value, dict):
+        raise ValueError("Unexpected RPC result")
+    status = value.get("status")
+    if not isinstance(status, str) or status not in contracts:
+        raise ValueError("Unexpected RPC status")
+    fields = contracts[status]
+    if not all(field in value for field in fields):
+        raise ValueError("Incomplete RPC result")
+    return {"status": status, **{field: value[field] for field in fields}}
+
+
+def _integer(value, low=0, high=None):
+    if type(value) is not int or value < low or (high is not None and value > high):
+        raise ValueError("Unexpected integer")
+    return value
+
+
 def quiz_public(value, nested=False):
-    if not isinstance(value, dict) or value.get("status") not in QUIZ_STATUSES:
-        raise ValueError("Unexpected quiz result")
-    out = {k: value[k] for k in QUIZ_FIELDS if k in value}
-    if "choices" in out:
+    out = _public_fields(value, QUIZ_FIELDS)
+    status = out["status"]
+    if nested and status not in ("question", "complete", "expired", "unavailable"):
+        raise ValueError("Unexpected next quiz status")
+    for field in ("attempt_id", "question_id"):
+        if field in out:
+            out[field] = uuid_string(out[field])
+    if "topic_id" in out and (not isinstance(out["topic_id"], str) or
+                              not re.fullmatch(r"[a-z0-9_-]{1,100}", out["topic_id"])):
+        raise ValueError("Unexpected topic")
+    if "total" in out:
+        _integer(out["total"], 20, 20)
+    if "step" in out:
+        _integer(out["step"], 1, out["total"])
+    if "correct_count" in out:
+        _integer(out["correct_count"], 0, out["total"])
+    if status == "question":
+        if not isinstance(out["prompt"], str) or not out["prompt"].strip():
+            raise ValueError("Unexpected prompt")
         choices = out["choices"]
-        if not isinstance(choices, list) or len(choices) != 4 or not all(isinstance(c, str) for c in choices):
+        if (not isinstance(choices, list) or len(choices) != 4 or
+                not all(isinstance(c, str) and c.strip() for c in choices) or
+                len(set(choices)) != 4):
             raise ValueError("Unexpected choices")
-    # Refuse arbitrary structured objects in scalar fields.
-    if any(isinstance(v, (list, dict)) for k, v in out.items() if k != "choices"):
-        raise ValueError("Unexpected quiz field")
-    if "next" in value and not nested:
-        out["next"] = quiz_public(value["next"], nested=True)
+    if status in ("answered", "duplicate"):
+        if type(out["correct"]) is not bool:
+            raise ValueError("Unexpected correctness")
+        _integer(out["coins_awarded"])
+        _integer(out["balance"])
+        if "perfect_bonus" in out:
+            _integer(out["perfect_bonus"])
+        if status == "duplicate" and out["coins_awarded"] != 0:
+            raise ValueError("Replay cannot award additional coins")
+        if not out["correct"] and (out["coins_awarded"] or out.get("perfect_bonus", 0)):
+            raise ValueError("Incorrect answer cannot award coins")
+        out["next"] = quiz_public(out["next"], nested=True)
     return out
 
 
 def buy_public(value):
-    if not isinstance(value, dict) or value.get("status") not in BUY_STATUSES:
-        raise ValueError("Unexpected purchase result")
-    out = {k: value[k] for k in BUY_FIELDS if k in value}
-    if any(isinstance(v, (list, dict)) for v in out.values()):
-        raise ValueError("Unexpected purchase field")
+    out = _public_fields(value, BUY_FIELDS)
+    _integer(out["balance"])
+    if out["status"] == "applied":
+        out["transaction_id"] = uuid_string(out["transaction_id"])
+        if not isinstance(out["item_id"], str) or not re.fullmatch(r"[a-zA-Z0-9_.:-]{1,160}", out["item_id"]):
+            raise ValueError("Unexpected purchase item")
     return out
 
 
@@ -65,7 +116,7 @@ def register_wallet_routes(app, *, supabase_url, extract_bearer_token,
 
     def run(flag, allowed_keys, required_keys, operation, params, sanitize):
         # Even an accidentally enabled production flag cannot activate these routes.
-        if (supabase_url.rstrip("/") != STAGING_URL or
+        if ((supabase_url or "").rstrip("/") != STAGING_URL or
                 os.getenv(flag, "").strip().lower() != "true"):
             return response({"status": "closed"}, 503)
         if not request.is_json:

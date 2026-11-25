@@ -4,13 +4,15 @@ import unittest
 from unittest.mock import Mock, patch
 import requests
 from flask import Flask
-from wallet_routes import STAGING_URL, register_wallet_routes
+from wallet_routes import STAGING_URL, register_wallet_routes, quiz_public, buy_public
 
 A = "00000000-0000-4000-8000-000000000001"
 B = "00000000-0000-4000-8000-000000000002"
 C = "00000000-0000-4000-8000-000000000003"
 START = {"topic_id":"math","request_id":B}
 ANSWER = {"attempt_id":B,"question_id":C,"choice":2}
+QUESTION = {"status":"question","attempt_id":B,"topic_id":"math","question_id":C,"step":1,"total":20,"prompt":"What is 2 + 2?","choices":["1","2","3","4"]}
+COMPLETE = {"status":"complete","attempt_id":B,"correct_count":20,"total":20}
 
 class WalletRoutesTests(unittest.TestCase):
     def setUp(self):
@@ -21,7 +23,7 @@ class WalletRoutesTests(unittest.TestCase):
         self.rpc = self.post.start()
         self.addCleanup(self.post.stop)
         self.rpc.return_value.status_code = 200
-        self.rpc.return_value.json.return_value = {"status":"question","attempt_id":B,"choices":["a","b","c","d"],"correct_index":2}
+        self.rpc.return_value.json.return_value = {**QUESTION,"correct_index":2,"correct":True,"balance":100,"coins_awarded":5}
         self.verify = Mock(return_value={"id":A,"is_anonymous":False})
 
     def client(self, url=STAGING_URL, token="fixture", headers=True):
@@ -48,6 +50,7 @@ class WalletRoutesTests(unittest.TestCase):
         r=self.client().post("/api/wallet/quiz/start",json=START)
         self.assertEqual(r.status_code,200)
         self.assertNotIn("correct_index",r.json)
+        self.assertEqual(r.json,QUESTION)
         self.assertEqual(r.headers["Cache-Control"],"no-store, private")
         self.assertEqual(self.rpc.call_args.kwargs["json"],{"p_user_id":A,"p_topic_id":"math","p_request_id":B})
         self.assertFalse(self.rpc.call_args.kwargs["allow_redirects"])
@@ -70,12 +73,13 @@ class WalletRoutesTests(unittest.TestCase):
         self.rpc.assert_not_called()
 
     def test_answer_passes_choice_not_correctness_and_filters_nested(self):
-        self.rpc.return_value.json.return_value={"status":"answered","correct":False,"coins_awarded":0,"next":{"status":"question","choices":["a","b","c","d"],"correct_index":1,"bank_id":"secret"}}
+        self.rpc.return_value.json.return_value={"status":"answered","correct":False,"coins_awarded":0,"perfect_bonus":0,"balance":10,"next":{**QUESTION,"step":2,"correct_index":1,"bank_id":"secret","correct":True,"coins_awarded":5}}
         r=self.client().post("/api/wallet/quiz/answer",json=ANSWER)
         self.assertEqual(r.status_code,200)
         self.assertEqual(r.json["coins_awarded"],0)
         self.assertNotIn("correct_index",r.json["next"])
         self.assertNotIn("bank_id",r.json["next"])
+        self.assertEqual(r.json["next"],{**QUESTION,"step":2})
         self.assertEqual(self.rpc.call_args.kwargs["json"],{"p_user_id":A,"p_attempt_id":B,"p_question_id":C,"p_choice":2})
 
     def test_current_resume(self):
@@ -109,6 +113,74 @@ class WalletRoutesTests(unittest.TestCase):
         self.rpc.assert_not_called()
         self.rpc.return_value.json.return_value={"status":"unexpected","secret":"private"}
         self.assertEqual(self.client().post("/api/wallet/quiz/start",json=START).json,{"status":"unavailable"})
+
+    def test_missing_url_is_closed(self):
+        self.assertEqual(self.client(None).post("/api/wallet/quiz/start",json=START).json,{"status":"closed"})
+        self.rpc.assert_not_called()
+
+    def test_sql_quiz_status_contracts(self):
+        fixtures = [
+            QUESTION, COMPLETE,
+            {"status":"active_attempt","attempt_id":B,"topic_id":"math"},
+            {"status":"answered","correct":True,"coins_awarded":5,"perfect_bonus":50,"balance":150,"next":COMPLETE},
+            {"status":"duplicate","correct":True,"coins_awarded":0,"balance":150,"next":COMPLETE},
+            *({"status":s} for s in ("expired","unavailable","invalid","attempt_limit","stale")),
+        ]
+        for fixture in fixtures:
+            with self.subTest(status=fixture["status"]):
+                self.assertEqual(quiz_public(fixture),fixture)
+
+    def test_sql_purchase_status_contracts(self):
+        fixtures = [
+            {"status":"applied","balance":70,"transaction_id":C,"item_id":"theme:neon"},
+            *({"status":s,"balance":10} for s in ("owned","insufficient","unavailable")),
+        ]
+        for fixture in fixtures:
+            with self.subTest(status=fixture["status"]):
+                self.assertEqual(buy_public(fixture),fixture)
+        # An inconsistent ledger replay without ownership must not be reported as a purchase.
+        with self.assertRaises(ValueError):
+            buy_public({"status":"duplicate","balance":70,"transaction_id":C})
+
+    def test_question_rejects_malformed_required_fields(self):
+        for fixture in [
+            {"status":"question"},
+            {**QUESTION,"attempt_id":"invalid"},
+            {**QUESTION,"step":True},
+            {**QUESTION,"step":21},
+            {**QUESTION,"total":19},
+            {**QUESTION,"prompt":""},
+            {**QUESTION,"choices":["1","1","2","3"]},
+            {**QUESTION,"choices":["1","2",None,"4"]},
+        ]:
+            with self.subTest(fixture=fixture):
+                with self.assertRaises(ValueError):
+                    quiz_public(fixture)
+
+    def test_bad_answer_receipts_fail_closed(self):
+        valid = {"status":"answered","correct":True,"coins_awarded":5,"perfect_bonus":0,"balance":15,"next":QUESTION}
+        for fixture in [
+            {**valid,"correct":1},
+            {**valid,"balance":-1},
+            {**valid,"coins_awarded":True},
+            {**valid,"correct":False},
+            {**valid,"status":"duplicate"},
+            {**valid,"next":{"status":"answered"}},
+            {**valid,"next":None},
+        ]:
+            with self.subTest(fixture=fixture):
+                with self.assertRaises(ValueError):
+                    quiz_public(fixture)
+        self.rpc.return_value.json.return_value={**valid,"next":None}
+        self.assertEqual(self.client().post("/api/wallet/quiz/answer",json=ANSWER).status_code,503)
+
+    def test_malformed_purchase_receipt_fails_closed(self):
+        self.rpc.return_value.json.return_value={"status":"applied","balance":0}
+        self.assertEqual(self.client().post("/api/wallet/purchase",json={"item_id":"lamp"}).status_code,503)
+        for fixture in [{"status":"owned","balance":True},{"status":"owned","balance":-1},
+                        {"status":"applied","balance":0,"transaction_id":"bad","item_id":"lamp"}]:
+            with self.assertRaises(ValueError):
+                buy_public(fixture)
 
 if __name__ == "__main__":
     unittest.main()
