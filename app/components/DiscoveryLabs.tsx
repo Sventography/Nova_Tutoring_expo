@@ -2,7 +2,7 @@ import React,{useState} from "react";
 import {Pressable,StyleSheet,Text,View} from "react-native";
 import Svg,{Rect,Polygon,Line,Circle,Path} from "react-native-svg";
 import {useTheme} from "../context/ThemeContext";
-import {SCALE_FACTORS,DEPTH_LEVELS,squareScale,mountainPalette,EDIT_CONTEXTS,editContext} from "../_lib/discoveryLabs";
+import {SCALE_FACTORS,DEPTH_LEVELS,squareScale,mountainPalette,EDIT_CONTEXTS,editContext,COIN_BATCHES,simulateCoins,PIXEL_RESOLUTIONS,PIXEL_SHAPES,PIXEL_COLORS,pixelMask} from "../_lib/discoveryLabs";
 
 function Choices({values,selected,onChange,labels}:{values:readonly number[];selected:number;onChange:(n:number)=>void;labels:readonly string[]}){
  const {tokens}=useTheme();
@@ -82,7 +82,58 @@ function EditingLab(){
    <Text style={{color:tokens.text}}>The expression never changes. Context can influence interpretation, but different viewers may read it differently. Try inventing your own next shot.</Text>
  </View>;
 }
+function ProbabilityLab(){
+ const {tokens}=useTheme();
+ const [batch,setBatch]=useState(10);
+ const [prediction,setPrediction]=useState<number|null>(null);
+ const [result,setResult]=useState<{heads:number;tails:number}|null>(null);
+ const selectBatch=(n:number)=>{setBatch(n);setPrediction(null);setResult(null);};
+ const run=()=>setResult(simulateCoins(batch));
+ const total=result?result.heads+result.tails:0;
+ const percent=result?Math.round(100*result.heads/total):0;
+ return <View style={s.panel}>
+  <Text style={[s.title,{color:tokens.text}]}>The probability lab</Text>
+  <Text style={{color:tokens.text}}>Predict the number of heads, then simulate independent fair coin flips. Try the same prediction more than once.</Text>
+  <Choices values={COIN_BATCHES} selected={batch} onChange={selectBatch} labels={["10 flips","50 flips","100 flips"]}/>
+  <Text style={{color:tokens.text}}>My prediction:</Text>
+  <Choices values={[0,1,2]} selected={prediction??-1} onChange={n=>{setPrediction(n);setResult(null);}} labels={["Fewer than half","Exactly half","More than half"]}/>
+  <Pressable accessibilityRole="button" accessibilityState={{disabled:prediction===null}} disabled={prediction===null} onPress={run} style={[s.button,{borderColor:tokens.border,backgroundColor:tokens.bg,opacity:prediction===null?0.5:1}]}><Text style={{color:tokens.text,fontWeight:"700"}}>{result?"Run another experiment":"Run experiment"}</Text></Pressable>
+  {result&&<>
+   <View style={{height:22,flexDirection:"row",borderRadius:6,overflow:"hidden",borderWidth:1,borderColor:tokens.border}}>
+    <View style={{flex:result.heads,backgroundColor:"#286ba7"}}/><View style={{flex:result.tails,backgroundColor:"#b67b2e"}}/>
+   </View>
+   <Text accessibilityLiveRegion="polite" style={[s.title,{color:tokens.text}]}>{result.heads} heads · {result.tails} tails ({percent}% heads)</Text>
+   <Text style={{color:tokens.text}}>{(result.heads<total/2?0:result.heads===total/2?1:2)===prediction?"Your prediction matched this run.":"This run differed from your prediction."} Every flip still had a 50% chance of heads.</Text>
+  </>}
+  <Text style={{color:tokens.text}}>Larger samples tend to have proportions closer to 50%, but no individual run is guaranteed to land exactly there. This is a simulation, not a physical coin.</Text>
+ </View>;
+}
+
+function PixelLab(){
+ const {tokens}=useTheme();
+ const [resolution,setResolution]=useState(8);
+ const [shape,setShape]=useState(0);
+ const [color,setColor]=useState(0);
+ const mask=pixelMask(resolution,PIXEL_SHAPES[shape]);
+ const cell=192/resolution;
+ return <View style={s.panel}>
+  <Text style={[s.title,{color:tokens.text}]}>The pixel art laboratory</Text>
+  <Text style={{color:tokens.text}}>Make a tiny digital picture. Change its shape, color and resolution. The displayed picture stays the same size, but its pixel grid changes.</Text>
+  <Choices values={PIXEL_RESOLUTIONS} selected={resolution} onChange={setResolution} labels={["8 × 8","16 × 16","32 × 32"]}/>
+  <Choices values={[0,1,2]} selected={shape} onChange={setShape} labels={["Circle","Diamond","Heart"]}/>
+  <Choices values={[0,1,2]} selected={color} onChange={setColor} labels={PIXEL_COLORS.map(c=>c.label)}/>
+  <Svg width="100%" height={204} viewBox="0 0 204 204" accessibilityLabel={resolution+" by "+resolution+" pixel "+PIXEL_COLORS[color].label+" "+PIXEL_SHAPES[shape]}>
+    <Rect x={6} y={6} width={192} height={192} fill="#f3f4f6"/>
+    {mask.map((filled,i)=>filled?<Rect key={i} x={6+(i%resolution)*cell} y={6+Math.floor(i/resolution)*cell} width={cell} height={cell} fill={PIXEL_COLORS[color].value}/>:null)}
+    {Array.from({length:resolution+1},(_,i)=><React.Fragment key={i}><Line x1={6+i*cell} x2={6+i*cell} y1={6} y2={198} stroke="#68717d" strokeOpacity={0.45} strokeWidth={0.5}/><Line x1={6} x2={198} y1={6+i*cell} y2={6+i*cell} stroke="#68717d" strokeOpacity={0.45} strokeWidth={0.5}/></React.Fragment>)}
+  </Svg>
+  <Text accessibilityLiveRegion="polite" style={[s.title,{color:tokens.text}]}>{resolution} × {resolution} = {resolution*resolution} pixels</Text>
+  <Text style={{color:tokens.text}}>Each square stores a color. Doubling both dimensions gives four times as many pixels. More pixels can represent finer edges, although image quality also depends on the original image and compression.</Text>
+ </View>;
+}
 export default function DiscoveryLabs({discoveryId}:{discoveryId:string}){
+ if(discoveryId==="math-chance")return <ProbabilityLab/>;
+ if(discoveryId==="tech-pixels")return <PixelLab/>;
  if(discoveryId==="film-cut")return <EditingLab/>;
  if(discoveryId==="math-scale")return <ScaleLab/>;
  if(discoveryId==="art-depth")return <PerspectiveLab/>;

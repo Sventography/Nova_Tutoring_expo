@@ -22,3 +22,37 @@ export const EDIT_CONTEXTS = [
 export function editContext(id: string) {
   return EDIT_CONTEXTS.find(context=>context.id===id);
 }
+
+export const COIN_BATCHES = [10,50,100] as const;
+export type CoinResults = { heads: number; tails: number };
+export function simulateCoins(count: number, random: () => number = Math.random): CoinResults {
+  if (!COIN_BATCHES.some(n=>n===count)) throw new Error("Invalid batch size");
+  let heads=0;
+  for(let i=0;i<count;i++){
+    const sample=random();
+    if(!Number.isFinite(sample)||sample<0||sample>=1) throw new Error("Invalid random sample");
+    if(sample<0.5)heads++;
+  }
+  return {heads,tails:count-heads};
+}
+export const PIXEL_RESOLUTIONS = [8,16,32] as const;
+export const PIXEL_SHAPES = ["circle","diamond","heart"] as const;
+export const PIXEL_COLORS = [
+  {label:"Blue",value:"#2468ad"},
+  {label:"Purple",value:"#8054ad"},
+  {label:"Green",value:"#237c57"},
+] as const;
+// Sample the same continuous shape at each pixel center, using normalized coordinates.
+export function pixelMask(resolution: number, shape: string): boolean[] {
+  if(!PIXEL_RESOLUTIONS.some(n=>n===resolution)||!PIXEL_SHAPES.some(s=>s===shape))throw new Error("Invalid pixel settings");
+  return Array.from({length:resolution*resolution},(_,i)=>{
+    const x=2*((i%resolution+0.5)/resolution)-1;
+    const y=1-2*((Math.floor(i/resolution)+0.5)/resolution);
+    if(shape==="diamond")return Math.abs(x)+Math.abs(y)<=0.86;
+    if(shape==="heart"){
+      const a=x*1.35,b=(y+0.12)*1.35;
+      return Math.pow(a*a+b*b-1,3)-a*a*b*b*b<=0;
+    }
+    return x*x+y*y<=0.72*0.72;
+  });
+}
