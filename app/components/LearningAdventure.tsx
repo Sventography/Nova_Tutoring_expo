@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useTheme } from "../context/ThemeContext";
 import { choosePath, type Adventure, type Choice } from "../_lib/adventureModel";
 
-export default function LearningAdventure({ adventure, onExit, onComplete }: { adventure: Adventure; onExit: () => void; onComplete: () => void }) {
+export default function LearningAdventure({ adventure, onExit, onComplete, completed }: { adventure: Adventure; onExit: () => void; onComplete: () => void; completed: boolean }) {
   const { tokens } = useTheme();
   const [sceneId,setSceneId] = useState(adventure.start);
   const [response,setResponse] = useState<Choice | null>(null);
@@ -32,6 +32,8 @@ export default function LearningAdventure({ adventure, onExit, onComplete }: { a
         <Text style={[s.label,ink]}>{choice.label}</Text>
       </Pressable>
     ) : <>
+      {!completed && action("Save this adventure to my journey",onComplete)}
+      {completed && <Text style={ink}>Saved to your learning journey.</Text>}
       {action("Replay and experiment",reset)}
       {action("Back to Discover",onExit)}
     </>}
