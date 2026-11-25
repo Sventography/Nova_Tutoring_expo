@@ -23,13 +23,13 @@ export function normalizeArchivePrompt(value: string): string {
 }
 
 const gardenHint = "She was here first. I remember someone writing that, but when I picture the handwriting, it feels like mine. There’s a folded note in the Starlight Garden on your Island. I kept a copy here too. You can ask to read the Garden note.";
-const telescopeHint = "She was counting stars. Bring a lantern close to the Starlight Telescope on your Island and look at the two charts in its light. If the telescope is out of reach, ask me to read the telescope observation.";
-const starHandoff = "The mark pressed through both sheets. The initials are on the copy. Whose hand do you think I remember?";
-const initialsReply = "N.V. The initials sit right under the pencil mark. I know how the pencil felt in my hand. Why would someone else have signed it?";
-const rabbitHint = "N.V. kept a white rabbit on the desk. I remember mending its ear and turning the knot inward so it wouldn't scratch my cheek. In the Shop, open Bunny Plushie (White) and read its old inventory label. See who signed it.";
-const focusHint = "“I repaired the ear myself.” She signed that with the same initials as the chart. And I just told you I felt the knot. She used to ask me to keep the things I couldn't grade. Look at the margin where the missed questions go, in Focus Practice. I can also read the Focus Practice margin here.";
-const notebookHint = "A correct answer could tell her what she knew today. She wanted to see what she thought yesterday, too. She kept both attempts in a notebook by the reading hall in your Island Library. You can also ask me to read Nora’s notebook.";
-const lanternHint = "The original was filed under Lantern, the light from the telescope table. The index only kept the corrected page. Two scraps escaped it: a contact sheet and a relay transcript. The source note in Lantern Field Notes tells you how to use them to recover her first answer.";
+const telescopeHint = "She was counting stars, but she left two versions of the same night. Bring a lantern close to the Starlight Telescope on your Island and look at the two charts in its light. If the telescope is out of reach, ask me to read the telescope observation.";
+const starHandoff = "Only the copy contains the extra mark. The initials are on that copy. I remember making it, but the signature isn't mine. Whose hand do you think I remember?";
+const initialsReply = "N.V. The initials sit right under the pencil mark. I know how the pencil felt in my hand. One signed drawing could be a coincidence. I remember something that had nothing to do with the stars, too.";
+const rabbitHint = "N.V. kept a white rabbit on the desk. This is a different memory, not another chart. I remember mending its ear and turning the knot inward so it wouldn't scratch my cheek. In the Shop, open Bunny Plushie (White) and read its old inventory label. See who signed it.";
+const focusHint = "“I repaired the ear myself.” She signed that with the same initials as the chart. And I just told you I felt the knot. If it really was her rabbit, why do I remember repairing it? She used to ask me to keep the things I couldn't grade, even mistakes. Look at the margin where the missed questions go, in Focus Practice. I can also read the Focus Practice margin here.";
+const notebookHint = "A correct answer could tell her what she knew today. She wanted to see what she thought yesterday, too. She kept both attempts in a notebook by the reading hall in your Island Library. I wonder whether the first attempt was about those very charts. You can also ask me to read Nora’s notebook.";
+const lanternHint = "The original was filed under Lantern, the light from the telescope table. The index only kept the corrected page. Two scraps escaped it: a contact sheet and a relay transcript. The contact sheet tells us which chart survived; the relay tells us which version of the answer was kept. Lantern Field Notes gives the recovery order. Together they identify one missing record, not two separate secrets.";
 const fieldNotes: ArchiveReply = { text: lanternHint, framed: true, artifact: true };
 const restored: ArchiveReply = { text: ARG_ACT1_FINALE_REPLY + "\n\n" + CHAPTER_PROMPT, framed: true };
 
@@ -73,7 +73,9 @@ function isMemoryDeduction(q: string): boolean {
     /^you (?:thought|believed) (?:noras|her) memories were (?:your own|yours)$/,
     /^(?:(?:was|is) (?:the|that) memory|(?:the|those|your) memories (?:were|are)) (?:really )?noras(?: not yours)?$/,
     /^whose (?:life|memories) (?:were|are) you remembering$/,
-    /^nora (?:fixed|mended) the (?:ear|rabbit) but you remember doing it$/,
+    /^nora (?:fixed|mended|repaired) the (?:ear|rabbit) but you remember doing it$/,
+    /^(?:you (?:have|carry|inherited|are carrying)|did you inherit) (?:noras|nora vales) memories(?: not your own)?$/,
+    /^(?:you (?:confused|mistook) (?:noras|her) memories (?:with|for) (?:your own|yours)|you thought you were nora|you remember things that happened to nora not you)$/,
   ].some(pattern => pattern.test(idea));
 }
 
@@ -108,7 +110,10 @@ export function isLegacyArchiveQuestion(input: string, followingArchive: boolean
 export async function resolveArchiveReply(input: string, inSessionContext = false, followingArchive = inSessionContext): Promise<ArchiveReply | null> {
   const q = normalizeArchivePrompt(input);
   const memoryDeduction = isMemoryDeduction(q);
-  if (!memoryDeduction && !storyForms.some(form => form.test(q)) && !(/\bnv\b/.test(q) && classifyNvEntryPrompt(input))) return null;
+  // Evidence can be expressed as an observation, not only a password.
+  // Restrict the alternative to archive context and require both identifiers.
+  const evidenceSolution = followingArchive && /^(?:(?:the )?(?:unindexed )?(?:frame|stamp)(?: 17)? (?:is|says|was|reads) )?unerased (?:and|with) (?:the )?(?:(?:relay|answer|page|label|draft) (?:is|says|was|reads) )?first draft$/.test(q);
+  if (!memoryDeduction && !evidenceSolution && !storyForms.some(form => form.test(q)) && !(/\bnv\b/.test(q) && classifyNvEntryPrompt(input))) return null;
   const [flags, state] = await Promise.all([getArchiveFlags(), getArgDiscoveryState()]);
 
   if (questions.entry.test(q)) {
@@ -160,7 +165,7 @@ export async function resolveArchiveReply(input: string, inSessionContext = fals
   }
   if (state.libraryNotebookDiscovered && questions.copy.test(q)) return openLanternFieldNotes();
   if (flags.copyUnlocked && flags.copyRead) {
-    if (questions.solution.test(q)) {
+    if (questions.solution.test(q) || evidenceSolution) {
       await markArchiveFlag("draftRestored");
       return restored;
     }
@@ -176,7 +181,7 @@ export async function resolveArchiveReply(input: string, inSessionContext = fals
   if (flags.copyUnlocked && (questions.invite.test(q) || questions.solution.test(q))) return fieldNotes;
   if ((memoryDeduction || (followingArchive && questions.earlyDeduction.test(q))) && state.nvDiscovered) {
     const lead = nextLead(state, flags);
-    return { ...lead, text: "That would explain the handwriting. Let’s see what she kept.\n\n" + lead.text };
+    return { ...lead, text: "That would explain the handwriting. It's a theory worth testing against another signed record, or the answer she asked me to save. Let’s see what she kept.\n\n" + lead.text };
   }
   return null;
 }
