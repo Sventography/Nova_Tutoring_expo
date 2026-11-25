@@ -34,7 +34,7 @@ export function recoveredNotes(state: ArgDiscoveryState, flags: ArchiveFlags): R
   if (!state.libraryNotebookDiscovered) return rows;
   add("notebook", "Notebook page", NORA_NOTEBOOK);
   if (!state.lanternFolderDiscovered || !flags.copyUnlocked) return rows;
-  add("folder", "Copy reference", "Lantern — the missing page was copied before the index updated.");
+  add("folder", "Copy reference", "Lantern — two scraps survived: a contact sheet and a relay transcript.");
   if (!flags.copyRead) return rows;
   add("contact", "Contact sheet", CONTACT_SHEET.map(row => [row.number, row.mark, row.lettering].join(" / ")).join("\n"));
   add("relay", "Relay transcript", RELAY_TRANSCRIPT.join("\n"));
