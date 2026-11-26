@@ -1,5 +1,5 @@
 import React, {useState} from "react";
-import {Pressable, StyleSheet, Text, View} from "react-native";
+import {Platform, Pressable, StyleSheet, Text, View} from "react-native";
 import Svg, {Circle, Line, Polygon, Rect} from "react-native-svg";
 import {useTheme} from "../context/ThemeContext";
 import {ORBIT_RADII, ORBIT_STEPS, orbitAt} from "../_lib/orbitLab";
@@ -20,14 +20,19 @@ export default function OrbitLab() {
     return <><Line x1={x} y1={y} x2={ex} y2={ey} stroke={color} strokeWidth={2.5}/><Polygon points={ex+","+ey+" "+(bx+dy*3.5)+","+(by+dx*3.5)+" "+(bx-dy*3.5)+","+(by-dx*3.5)} fill={color}/></>;
   }
   function control(label:string,onPress:()=>void,selected?:boolean,disabled=false) {
-    return <Pressable key={label} accessibilityRole="button" accessibilityState={{selected,disabled}} disabled={disabled} onPress={onPress} style={[s.button,{borderColor:selected?tokens.accent:tokens.border,backgroundColor:tokens.bg,opacity:disabled ? 0.5 : 1}]}><Text style={{color:tokens.text,fontWeight:selected?"700":"400"}}>{label}</Text></Pressable>;
+    // React Native Web does not expose accessibilityState.selected on buttons.
+    // Use toggle-button state on web; keep the native selection announcement.
+    const webChoiceState = Platform.OS === "web" && selected !== undefined
+      ? {"aria-pressed": selected}
+      : {};
+    return <Pressable key={label} {...webChoiceState} accessibilityRole="button" accessibilityState={{selected,disabled}} disabled={disabled} onPress={onPress} style={[s.button,{borderColor:selected?tokens.accent:tokens.border,backgroundColor:tokens.bg,opacity:disabled ? 0.5 : 1}]}><Text style={{color:tokens.text,fontWeight:selected?"700":"400"}}>{label}</Text></Pressable>;
   }
   return <View style={s.panel}>
     <Text accessibilityRole="header" style={[s.title,{color:tokens.text}]}>Build an orbit</Text>
     <Text style={{color:tokens.text}}>Choose a planet's distance from a star. Predict whether it will take less or more time to complete an orbit than the reference planet.</Text>
     <View style={s.row}>{ORBIT_RADII.map(r=>control(r+" AU",()=>{setRadius(r);setStep(0);setPrediction(null);},r===radius))}</View>
     <View style={s.row}>{(["faster","same","slower"] as const).map(p=>control(p==="faster"?"Less time":p==="same"?"Same time":"More time",()=>setPrediction(p),prediction===p))}</View>
-    <Svg width="100%" height={260} viewBox="0 0 320 260" accessibilityLabel={"Two circular orbits at "+radius+" and 1 astronomical unit. Time "+result.elapsed.toFixed(2)+" reference years."}>
+    <Svg width="100%" height={260} viewBox="0 0 320 260" accessible accessibilityRole="image" accessibilityLabel={"Two circular orbits at "+radius+" and 1 astronomical unit. Time "+result.elapsed.toFixed(2)+" reference years."}>
       <Rect width={320} height={260} rx={12} fill="#182638"/>
       <Circle cx={cx} cy={cy} r={unit} stroke="#8199b6" strokeWidth={1.5} strokeDasharray="5 4" fill="none"/>
       <Circle cx={cx} cy={cy} r={radius*unit} stroke="#77cbbd" strokeWidth={2} fill="none"/>

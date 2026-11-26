@@ -205,7 +205,7 @@ function DiscoverBody({ owner }: { owner: string | null }) {
     <View onLayout={e => { adventureY.current = e.nativeEvent.layout.y; if(districtAdventure&&!arrival.current){arrival.current=true;scroll.current?.scrollTo({y:adventureY.current,animated:false});} }} style={{ gap: 10 }}>
       <Text accessibilityRole="header" style={[s.heading, ink]}>Choose your own learning adventure</Text>
       <Text style={[s.body, ink]}>Step into a story, make decisions, and see what your choices teach you.</Text>
-      {adventure ? <LearningAdventure key={adventure.id} adventure={adventure} onExit={() => setAdventure(null)} completed={journey.completed.includes(adventure.id)} onComplete={() => updateJourney(old => markCompleted(old,adventure.id))} /> : orderedAdventures(interests).map(item => (
+      {adventure ? <LearningAdventure key={adventure.id} adventure={adventure} onExit={() => setAdventure(null)} completed={journey.completed.includes(adventure.id)} saving={journeyBusy} ready={journeyReady} saveStatus={journeyStatus} onRetryLoad={()=>setJourneyRetry(n=>n+1)} onComplete={() => updateJourney(old => markCompleted(old,adventure.id))} /> : orderedAdventures(interests).map(item => (
         <Pressable key={item.id} accessibilityRole="button" onPress={() => { setAdventure(item); scroll.current?.scrollTo({ y: adventureY.current, animated: true }); }} style={[s.card,card]}>
           <Text style={[s.eyebrow,ink]}>{label(item.interest)}</Text>
           <Text style={[s.heading,ink]}>{item.title}</Text>

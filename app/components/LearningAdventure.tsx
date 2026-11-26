@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useTheme } from "../context/ThemeContext";
 import { choosePath, startAdventure, advanceAdventure, type Adventure } from "../_lib/adventureModel";
 
-export default function LearningAdventure({ adventure, onExit, onComplete, completed }: { adventure: Adventure; onExit: () => void; onComplete: () => void; completed: boolean }) {
+export default function LearningAdventure({ adventure, onExit, onComplete, completed, saving, ready, saveStatus, onRetryLoad }: { adventure: Adventure; onExit: () => void; onComplete: () => void; completed: boolean; saving: boolean; ready: boolean; saveStatus: string; onRetryLoad: () => void }) {
   const { tokens } = useTheme();
   const [run,setRun] = useState(()=>startAdventure(adventure));
   const [selected,setSelected] = useState<number | null>(null);
@@ -11,8 +11,8 @@ export default function LearningAdventure({ adventure, onExit, onComplete, compl
   const scene = adventure.scenes[sceneId];
   const response=selected===null?undefined:choosePath(adventure,sceneId,selected);
   const ink = { color: tokens.text };
-  const action = (label: string, run: () => void) => (
-    <Pressable accessibilityRole="button" onPress={run} style={[s.button,{borderColor:tokens.border,backgroundColor:tokens.card}]}>
+  const action = (label: string, run: () => void, disabled = false) => (
+    <Pressable accessibilityRole="button" accessibilityState={{disabled}} disabled={disabled} onPress={run} style={[s.button,{borderColor:tokens.border,backgroundColor:tokens.card,opacity:disabled ? .5 : 1}]}>
       <Text style={[s.label,ink]}>{label}</Text>
     </Pressable>
   );
@@ -46,7 +46,10 @@ export default function LearningAdventure({ adventure, onExit, onComplete, compl
         <Text style={[s.kicker,ink]}>{i+1}. {adventure.scenes[step.sceneId].title}</Text>
         <Text style={[s.body,ink]}>{choosePath(adventure,step.sceneId,step.choiceIndex)?.label}</Text>
       </View>)}
-      {!completed && action("Save this adventure to my journey",onComplete)}
+      {!completed && <>
+        <Text accessibilityLiveRegion="polite" style={ink}>{!ready ? "Your journey is not loaded. Your ending is still here." : saving ? "Saving your journey…" : saveStatus || "This adventure is not saved yet."}</Text>
+        {!ready ? action("Retry loading journey",onRetryLoad) : action(saving ? "Saving…" : "Save this adventure to my journey",onComplete,saving)}
+      </>}
       {completed && <Text style={ink}>Saved to your learning journey.</Text>}
       {action("Replay and experiment",reset)}
       {action("Back to Discover",onExit)}
