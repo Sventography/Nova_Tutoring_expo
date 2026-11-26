@@ -22,6 +22,9 @@ import { useFx } from "../context/FxProvider";
 import { useDailyQuests } from "../context/DailyQuestsContext";
 import { useNovaEvents } from "../context/EventsContext";
 
+// This module also compiles against React Native types, without the DOM library.
+declare const window: { location: { origin: string } };
+
 const COIN_IMG = require("../assets/coin.png");
 const ACCOUNT_ROUTE = "/(tabs)/account";
 
