@@ -12,6 +12,21 @@ Use one reviewed Git SHA across the preview, QA record and candidate binaries. R
 - [ ] Check upgraded Collections on a shared device. The old global flashcard cache has no owner identity and stays intact, quarantined from guest and accounts. Any recovery needs independently established provenance and explicit permission; a later login alone cannot establish ownership.
 - [ ] Save a known-good web deployment and the previous shipped native versions. Verify existing clients remain supported. Record who can disable optional capabilities and how to restore the prior web deployment without reversing customer progress.
 
+## Discover focused verification for PR #16
+
+Application commit `90373758c560374a325b92517920ffd930a907d7` incorporates the prepared Orbit accessibility change `10e396e` and Adventure save/retry change `58691ff` on the frozen integration baseline `c27a753`. The Adventure regression patch has SHA-256 `249f3788d429e66254215c6c40c9898cc9e3e3c8bcf8995133a9b0990a256b89`. The original Orbit commit supplies its own browser test and narrow-screen evidence.
+
+Run the Adventure, Journey and Orbit model scripts under Node 22. Export the resulting checkout with `scripts/export-vercel.cjs` in isolated preview mode, with an offline build, dummy public key and a fresh output directory. Set `QA_EXPORT` to that directory and `QA_CHROMIUM` to the Chromium executable. Run both commands against the same export.
+
+```sh
+python scripts/test-orbit-lab-browser.py
+python scripts/test-adventure-save-browser.py
+```
+
+Orbit covers pressed controls, keyboard and touch interaction, and the diagram's accessible name at 1280, 390 and 320 pixels. Adventure covers an unsuccessful save followed by a successful retry, repeated clicks during a pending write, replay, reload, initial read recovery and a pending save across synthetic account changes. The account fixture rejects unsupported achievement and streak calls. Its expected errors are recorded by the test.
+
+Record the resulting SHA and run outcomes in [PR #16](https://github.com/Sventography/Nova_Tutoring_expo/pull/16) and [coordination issue #11](https://github.com/Sventography/Nova_Tutoring_expo/issues/11). Track the hosted preview build and route checks separately. Real-account authentication and RLS, purchases, rewards, physical iOS and Android, and VoiceOver and TalkBack require independent evidence.
+
 ## User journeys and preservation
 
 | Check | Where and evidence |
