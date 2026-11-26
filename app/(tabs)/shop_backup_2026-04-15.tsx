@@ -1,3 +1,4 @@
+import { legacyCheckoutRoute } from "../../features/commerce/legacyCheckoutRoute";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
@@ -1809,7 +1810,7 @@ function CompanionEffectOverlay({
 }
 
 /* --------------------------------- Screen -------------------------------- */
-export default function Shop() {
+function Shop() {
   const { coins, setCoins } = useCoins();
   const { tokens, setThemeById, themeId } = useTheme();
   const { cursorId, setCursorById } = useCursor();
@@ -5008,3 +5009,5 @@ Response code: ${String(
     </LinearGradient>
   );
 }
+
+export default legacyCheckoutRoute(Shop);

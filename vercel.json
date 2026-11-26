@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npx expo export -p web",
+  "buildCommand": "node scripts/export-vercel.cjs",
   "outputDirectory": "dist",
   "cleanUrls": true,
   "headers": [

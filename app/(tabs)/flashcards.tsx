@@ -91,15 +91,26 @@ function CardRow({
   };
 
   return (
-    <Pressable onPress={handleFlip} style={styles.cardRowOuter}>
+    <View style={styles.cardRowOuter}>
       <View style={styles.cardRowInner}>
-        <View style={{ flex: 1 }}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`${flip ? "Answer" : "Question"}: ${side}`}
+          accessibilityHint={flip ? "Show the question" : "Reveal the answer"}
+          onPress={handleFlip}
+          style={styles.flipBtn}
+        >
           <Text style={styles.cardSideLabel}>
             {flip ? "Answer" : "Question"}
           </Text>
           <Text style={styles.cardText}>{side}</Text>
-        </View>
-        <Pressable onPress={handleSavePress} style={styles.saveBtn}>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`${saved ? "Remove from" : "Save to"} Collections: ${c.front}`}
+          onPress={handleSavePress}
+          style={styles.saveBtn}
+        >
           <Ionicons
             name={saved ? "bookmark" : "bookmark-outline"}
             size={22}
@@ -107,7 +118,7 @@ function CardRow({
           />
         </Pressable>
       </View>
-    </Pressable>
+    </View>
   );
 }
 
@@ -555,7 +566,16 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     color: "#ffffff",
   },
+  flipBtn: {
+    flex: 1,
+    minHeight: 44,
+    justifyContent: "center",
+  },
   saveBtn: {
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: "center",
+    justifyContent: "center",
     marginLeft: 10,
     alignSelf: "center",
     padding: 4,

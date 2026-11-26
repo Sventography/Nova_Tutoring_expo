@@ -1,3 +1,4 @@
+import { legacyCheckoutRoute } from "../../features/commerce/legacyCheckoutRoute";
 console.log("SHOP PROBE: app/tabs/shop.tsx");
 // app/tabs/shop.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
@@ -118,7 +119,7 @@ function Card({ children, color }: { children: React.ReactNode; color: string })
 // ======================================================
 //                         Shop
 // ======================================================
-export default function Shop() {
+function Shop() {
   const { coins, add, spend, set } = useCoins(); // ✅ ONE source of truth for coins
   const { setThemeById } = useTheme();
 
@@ -507,3 +508,5 @@ export default function Shop() {
     </LinearGradient>
   );
 }
+
+export default legacyCheckoutRoute(Shop);

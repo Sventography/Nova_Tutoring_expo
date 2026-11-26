@@ -1,3 +1,4 @@
+import { STAGING_CHECKOUT_CLOSED } from "../../../features/commerce/staging";
 // app/components/island3d/IslandEventPanel.tsx
 import React, {
   useEffect,
@@ -69,6 +70,7 @@ function RewardCard({
     !premiumPassOwned;
 
   const canClaim =
+    !STAGING_CHECKOUT_CLOSED &&
     reached &&
     !claimed &&
     !premiumLocked &&
@@ -86,6 +88,8 @@ function RewardCard({
   const buttonText =
     claimed
       ? "CLAIMED"
+      : STAGING_CHECKOUT_CLOSED
+      ? "PREVIEW"
       : premiumLocked
       ? "PREMIUM"
       : reached
@@ -291,8 +295,7 @@ export default function IslandEventPanel() {
     useRef(false);
 
   const premiumProductId =
-    activeEvent?.premiumProductId ??
-    null;
+    STAGING_CHECKOUT_CLOSED ? null : activeEvent?.premiumProductId ?? null;
 
   useEffect(() => {
     let mounted = true;
@@ -1413,7 +1416,7 @@ export default function IslandEventPanel() {
                   </View>
                 </View>
 
-                {!premiumPassOwned ? (
+                {!STAGING_CHECKOUT_CLOSED && !premiumPassOwned ? (
                   <View
                     style={
                       styles.premiumPurchaseCard

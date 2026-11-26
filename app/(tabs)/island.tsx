@@ -25,6 +25,9 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+import ShoreAmbience from "../../features/adaptiveIsland/ShoreAmbience";
+import {useDistrictView} from "../../features/adaptiveIsland/useDistrictView";
+import {districts} from "../../features/adaptiveIsland/districts";
 import { GARDEN_NOTE, NORA_NOTEBOOK, TELESCOPE } from "../_lib/archiveArtifacts";
 import NovaIsland3DScene, {
   type Island3DDiscovery,
@@ -885,6 +888,9 @@ function IslandScreenBody({ owner }: { owner: string | null }) {
     refreshIsland,
   } = useIsland();
 
+  const shore=useDistrictView(owner,islandLevel);
+  const [focusedDistrict,setFocusedDistrict]=useState<keyof typeof districts|null>(null);
+  const focused=focusedDistrict && shore.ids.includes(focusedDistrict)?focusedDistrict:null;
   const islandBuilder = useIslandBuilder();
   const islandDecorations =
     useIslandDecorations();
@@ -2008,6 +2014,25 @@ function IslandScreenBody({ owner }: { owner: string | null }) {
           </View>
         </View>
 
+        <Pressable accessibilityRole="button" onPress={() => router.push("/interest-garden" as never)} style={styles.nextRow}>
+          <Text style={styles.nextText}>Visit my Island interest garden</Text>
+        </Pressable>
+
+        {shore.ids.length>0 && !islandBuilder.isEditing && <View>
+          <Pressable accessibilityRole="button" onPress={()=>{setFocusedDistrict(null);shore.setVisit(!shore.visiting);}} style={styles.nextRow}>
+            <Text style={styles.nextText}>{shore.visiting?"Return to Island center":"Visit district shore"}</Text>
+          </Pressable>
+          {shore.visiting && <Text style={styles.nextText}>{shore.ids.map(id=>districts[id].name).join(" · ")}</Text>}
+          {shore.visiting && <View style={{gap:4}}>
+            {shore.ids.map(id=><Pressable key={id} accessibilityRole="button" accessibilityState={{selected:focused===id}} onPress={()=>setFocusedDistrict(id)} style={[styles.nextRow,{minHeight:44}]}>
+              <Text style={styles.nextText}>Look closer at {districts[id].name}</Text></Pressable>)}
+            {focused && <Pressable accessibilityRole="button" onPress={()=>router.push({pathname:"/discover",params:{districtLesson:districts[focused].lessons[0],fromShore:"1"}} as never)} style={[styles.nextRow,{minHeight:44}]}><Text style={styles.nextText}>Enter {districts[focused].name} attraction</Text></Pressable>}
+          </View>}
+          {shore.visiting && <ShoreAmbience key={owner ?? "guest"}/>}
+          {shore.visiting && !shore.reduced && <Pressable accessibilityRole="button" onPress={shore.motion||shore.celebrating?shore.stop:shore.play} style={styles.nextRow}>
+            <Text style={styles.nextText}>{shore.motion||shore.celebrating?"Skip animation":"Watch the district residents"}</Text>
+          </Pressable>}
+        </View>}
         {archiveAvailable ? (
           <Pressable
             accessibilityRole="button"
@@ -2038,6 +2063,12 @@ function IslandScreenBody({ owner }: { owner: string | null }) {
         <View style={styles.sceneCard}>
           <IslandSceneBoundary onError={() => setSceneInteracting(false)}>
           <NovaIsland3DScene
+            onDistrictPress={setFocusedDistrict}
+            focusedDistrict={focused}
+            districtIds={shore.ids}
+            visitingShore={shore.visiting && !islandBuilder.isEditing}
+            residentMotion={!shore.reduced && shore.motion}
+            construction={!shore.reduced && shore.celebrating}
             height={
               islandBuilder.isEditing
                 ? contentWidth >= 560

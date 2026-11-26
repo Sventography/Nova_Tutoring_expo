@@ -23,6 +23,7 @@ export const PENDING_CONFIRMATION_EMAIL_KEY =
   "nova.auth.pending-confirmation-email.v1";
 
 const CONFIRMATION_REDIRECT_URL =
+  process.env.EXPO_PUBLIC_AUTH_CONFIRMATION_URL ||
   "https://confirm.sventographystudios.com/auth/confirmed";
 
 const RESEND_COOLDOWN_SECONDS = 60;

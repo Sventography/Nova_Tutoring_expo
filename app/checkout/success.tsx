@@ -1,3 +1,4 @@
+import { legacyCheckoutRoute } from "../../features/commerce/legacyCheckoutRoute";
 // app/success.tsx (or wherever this route lives)
 import { useEffect, useState } from "react";
 import { View, Text, ActivityIndicator } from "react-native";
@@ -14,7 +15,7 @@ const API_BASE =
 
 type Status = "working" | "done" | "error";
 
-export default function SuccessPage() {
+function SuccessPage() {
   const params = useLocalSearchParams<{
     sku?: string | string[];
     tx?: string | string[];
@@ -144,3 +145,5 @@ export default function SuccessPage() {
     </View>
   );
 }
+
+export default legacyCheckoutRoute(SuccessPage);

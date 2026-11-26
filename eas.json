@@ -4,18 +4,21 @@
   },
   "build": {
     "development": {
+      "node": "22.23.5",
       "developmentClient": true,
       "distribution": "internal",
-      "environment": "production",
+      "environment": "development",
       "ios": {
         "simulator": false
       }
     },
     "preview": {
-      "distribution": "internal"
+      "node": "22.23.5",
+      "distribution": "internal",
+      "environment": "preview"
     },
     "production": {
-      "node": "20.19.4",
+      "node": "22.23.5",
       "environment": "production",
       "env": {
         "EXPO_PUBLIC_COLLECTOR_REDEMPTION_ENABLED": "false",

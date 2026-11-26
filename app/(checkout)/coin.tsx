@@ -1,3 +1,4 @@
+import { legacyCheckoutRoute } from "../../features/commerce/legacyCheckoutRoute";
 // app/(checkout)/coin.tsx
 import React, { useMemo, useState } from "react";
 import {
@@ -39,7 +40,7 @@ type Order = {
   };
 };
 
-export default function CoinCheckout() {
+function CoinCheckout() {
   const router = useRouter();
   const params = useLocalSearchParams<{
     id?: string;
@@ -455,3 +456,5 @@ export default function CoinCheckout() {
     </SafeAreaView>
   );
 }
+
+export default legacyCheckoutRoute(CoinCheckout);

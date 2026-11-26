@@ -1,0 +1,28 @@
+// Run with node scripts/test-discovery-browse.cjs after npm ci.
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const ts=require('typescript');
+const src=fs.readFileSync(path.join(__dirname,'../app/_lib/discoveryBrowse.ts'),'utf8');
+const {outputText,diagnostics}=ts.transpileModule(src,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020},reportDiagnostics:true});
+assert.equal(diagnostics.filter(d=>d.category===ts.DiagnosticCategory.Error).length,0);
+const mod={exports:{}};
+new Function('module','exports',outputText)(mod,mod.exports);
+const {browseDiscoveries}=mod.exports;
+const item=(id,interest,title,hook)=>({id,interest,title,hook,insight:'',activity:'',prompt:''});
+const catalog=[item('a','film','Sound and silence','A scene in a hallway'),item('b','music','Harmony and rhythm','Explore musical sound'),item('c','film','Editing a scene','Change its meaning')];
+const defaults={query:'',subject:'all',savedOnly:false,saved:[],interests:[]};
+const ids=(overrides={})=>browseDiscoveries(catalog,{...defaults,...overrides}).map(d=>d.id);
+assert.deepEqual(ids(),['a','b','c']);
+assert.deepEqual(ids({interests:['music']}),['b','a','c']);
+assert.deepEqual(ids({subject:'film'}),['a','c']);
+assert.deepEqual(ids({query:'  SOUND  scene '}),['a']);
+assert.deepEqual(ids({query:'rhythm'}),['b']);
+assert.deepEqual(ids({query:'not present'}),[]);
+assert.deepEqual(ids({savedOnly:true,saved:['b','b','c','unknown']}),['b','c']);
+assert.deepEqual(ids({savedOnly:true,saved:['b'],subject:'film'}),[]);
+assert.deepEqual(ids({savedOnly:true}),[]);
+assert.deepEqual(ids({query:'   '}),['a','b','c']);
+assert.deepEqual(ids({query:'sound',interests:['music']}),['b','a']);
+assert.deepEqual(catalog.map(d=>d.id),['a','b','c']);
+console.log('Discovery browse checks passed');

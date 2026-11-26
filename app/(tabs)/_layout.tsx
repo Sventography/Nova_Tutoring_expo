@@ -3617,6 +3617,10 @@ function InnerTabsLayout() {
         tabBar={(props) => <ScrollableTabBar {...props} />}
       >
         <Tabs.Screen
+          name="discover"
+          options={{ title: "DISCOVER", tabBarIcon: ({ color, size }) => <Ionicons name="compass-outline" color={color} size={size} /> }}
+        />
+        <Tabs.Screen
           name="ask"
           options={{
             title: "ASK",
