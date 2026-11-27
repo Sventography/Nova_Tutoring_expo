@@ -68,7 +68,8 @@ import { showToast } from "../utils/toast";
 import { getArgDiscoveryState, markWhiteRabbitDiscovered, markArchiveFlag } from "../utils/argState";
 
 import AddressSheet, { AddressPayload } from "../components/AddressSheet";
-import { supabase, SUPABASE_URL } from "../lib/supabase";
+import { STAGING_CHECKOUT_CLOSED } from "../../features/commerce/staging";
+import { supabase } from "../lib/supabase";
 
 import NovaAiPlansSection from "../components/NovaAiPlansSection";
 import {
@@ -85,7 +86,6 @@ import {
 const InAppPurchases: any = ExpoIAP;
 
 // Staging must not initiate payments or finish unverified Apple transactions.
-const STAGING_CHECKOUT_CLOSED = SUPABASE_URL.replace(/\/+$/, "") === "https://gouhhltupxaycuysdtrw.supabase.co";
 function showStagingCheckoutClosed() {
   Alert.alert("Purchases unavailable in this preview", "This test build does not process payments. Your existing purchases are unchanged.");
 }

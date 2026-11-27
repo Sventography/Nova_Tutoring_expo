@@ -22,6 +22,9 @@ import { useFx } from "../context/FxProvider";
 import { useDailyQuests } from "../context/DailyQuestsContext";
 import { useNovaEvents } from "../context/EventsContext";
 
+// This module also compiles against React Native types, without the DOM library.
+declare const window: { location: { origin: string } };
+
 const COIN_IMG = require("../assets/coin.png");
 const ACCOUNT_ROUTE = "/(tabs)/account";
 
@@ -43,7 +46,7 @@ export default function HeaderBar() {
     (useStreak() || {}) as any;
 
   const userCtx = useUser() as any;
-  const { user, ready, supabaseUserId, session } = userCtx || {};
+  const { user, supabaseUserId, session } = userCtx || {};
 
   const isLoggedIn = !!supabaseUserId || !!session || !!user;
 
@@ -51,21 +54,6 @@ export default function HeaderBar() {
   // Guests can have coins too, and auth hydration should never force
   // a valid live balance back to zero in the header.
   const displayCoins = Number.isFinite(Number(coins)) ? Number(coins) : 0;
-
-  useEffect(() => {
-    try {
-      console.log(
-        "[HeaderBar] user from context:",
-        user,
-        "ready:",
-        ready,
-        "isLoggedIn:",
-        isLoggedIn,
-        "coins:",
-        coins
-      );
-    } catch {}
-  }, [user, ready, isLoggedIn, coins]);
 
   const pickString = (v: any) =>
     typeof v === "string" && v.trim().length > 0 ? v.trim() : null;
@@ -153,7 +141,9 @@ export default function HeaderBar() {
 
   const onShare = async () => {
     const url =
-      "https://novatutoring-eoq65leh2-contactnovatutoring-8350s-projects.vercel.app";
+      Platform.OS === "web" && typeof window !== "undefined"
+        ? window.location.origin
+        : "https://novatutoring-eoq65leh2-contactnovatutoring-8350s-projects.vercel.app";
 
     try {
       await Share.share({
@@ -179,14 +169,15 @@ export default function HeaderBar() {
 
   return (
     <View style={[S.wrap, { paddingTop: topPad, paddingBottom: 8 }]}>
+      <View style={S.left}>
       <Pressable
         onPress={goAccount}
         hitSlop={hit}
-        style={S.left}
+        style={S.account}
         accessibilityRole="button"
-        accessibilityLabel="Open Account"
+        accessibilityLabel={`${name} ${displayCoins.toLocaleString()} Nova Coins, open account`}
       >
-        <View style={S.avatarWrap}>
+        <View style={S.avatarWrap} accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" aria-hidden={true}>
           {avatar ? (
             <Image source={{ uri: avatar }} style={S.avatar} />
           ) : (
@@ -207,12 +198,15 @@ export default function HeaderBar() {
           </Text>
         </View>
 
+      </Pressable>
         {isLoggedIn && (
-          <Pressable onPress={markToday} hitSlop={hit} style={S.streakPill}>
+          <Pressable onPress={markToday} hitSlop={hit} style={S.streakPill}
+            accessibilityRole="button"
+            accessibilityLabel={`${safeStreakCount} day streak, check in today`}>
             <Text style={S.streakText}>{streakLabel}</Text>
           </Pressable>
         )}
-      </Pressable>
+      </View>
 
       <View style={S.right}>
         <Pressable
@@ -325,6 +319,12 @@ const S = StyleSheet.create({
     alignItems: "center",
     flexShrink: 1,
     flexGrow: 1,
+    gap: 6,
+  },
+  account: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexShrink: 1,
     gap: 6,
   },
   right: {

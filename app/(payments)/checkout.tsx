@@ -1,9 +1,10 @@
+import { legacyCheckoutRoute } from "../../features/commerce/legacyCheckoutRoute";
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import StripeWrapper from "../components/StripeWrapper";
 import PayButton from "../components/PayButton";
 
-export default function Checkout() {
+function Checkout() {
   return (
     <StripeWrapper>
       <View style={styles.container}>
@@ -28,3 +29,5 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
 });
+
+export default legacyCheckoutRoute(Checkout);

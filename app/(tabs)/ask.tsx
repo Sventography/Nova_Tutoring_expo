@@ -16,7 +16,8 @@ import {
   Modal,
   ActivityIndicator,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
+import { discoveryForId } from "../_lib/discoveryModel";
 import { useIslandDecorations } from "../context/IslandDecorationContext";
 import { useCoins } from "../context/CoinsContext";
 import { isLegacyArchiveQuestion, openLanternFieldNotes, resolveArchiveReply, type ArchiveReply } from "../_lib/archiveConversation";
@@ -1806,6 +1807,8 @@ function prettyMemoryTier(tier: string | null, limit: number | null): string {
   return label;
 }
 
+const isolatedPreview = process.env.EXPO_PUBLIC_ISOLATED_PREVIEW === "true";
+
 export default function Ask() {
   const { ready, session } = useUser();
   if (!ready) return null;
@@ -1814,6 +1817,8 @@ export default function Ask() {
 }
 function AskBody({ archiveOwner }: { archiveOwner: string | null }) {
   const router = useRouter();
+  const { discovery } = useLocalSearchParams<{ discovery?: string }>();
+  const discoveryPrompt = discoveryForId(discovery);
   const { refreshCoins } = useCoins();
   const { refreshArchiveOwnership } = useIslandDecorations();
   const { tokens } = useTheme() as any;
@@ -1923,7 +1928,7 @@ function AskBody({ archiveOwner }: { archiveOwner: string | null }) {
   }, [askMemoryTier, askMemoryLimit]);
 
   const refreshGuestAiUsage = useCallback(async () => {
-    if (!isAiGuest) {
+    if (!isAiGuest || isolatedPreview) {
       setGuestQuestionsUsed(0);
       setGuestQuestionsReserved(0);
       setGuestUsageLoading(false);
@@ -2151,6 +2156,11 @@ function AskBody({ archiveOwner }: { archiveOwner: string | null }) {
                 : message));
             }
           }
+          return;
+        }
+
+        if (isolatedPreview) {
+          setError("Live tutoring is unavailable in this preview. Your question is still here.");
           return;
         }
 
@@ -2709,9 +2719,9 @@ function AskBody({ archiveOwner }: { archiveOwner: string | null }) {
                         { color: tokens.text },
                       ]}
                     >
-                      Guest trial
+                      {isolatedPreview ? "Preview" : "Guest trial"}
                       {" • "}
-                      {guestUsageLoading
+                      {isolatedPreview ? "Live tutoring offline" : guestUsageLoading
                         ? "Updating…"
                         : `${guestQuestionsRemaining} of ${guestQuestionLimit} left`}
                     </Text>
@@ -2964,6 +2974,19 @@ function AskBody({ archiveOwner }: { archiveOwner: string | null }) {
             />
 
             <View style={{ padding: 10 }}>
+              {discoveryPrompt && (
+                <View style={{ borderWidth: 1, borderColor: tokens.border, borderRadius: 12, padding: 10, marginBottom: 8, gap: 6 }}>
+                  <Text style={{ color: tokens.text, fontWeight: "700" }}>Continue discovering: {discoveryPrompt.title}</Text>
+                  <Text style={{ color: tokens.text }}>{discoveryPrompt.prompt}</Text>
+                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 16 }}>
+                    <Pressable accessibilityRole="button" accessibilityState={{ disabled: loading || !!input.trim() }} disabled={loading || !!input.trim()} onPress={() => { setInput(discoveryPrompt.prompt); router.setParams({ discovery: "" }); }}>
+                      <Text style={{ color: tokens.text, fontWeight: "700", opacity: loading || input.trim() ? .5 : 1 }}>Use suggested question</Text>
+                    </Pressable>
+                    <Pressable accessibilityRole="button" onPress={() => router.setParams({ discovery: "" })}><Text style={{ color: tokens.text }}>Dismiss</Text></Pressable>
+                  </View>
+                  {!!input.trim() && <Text style={{ color: tokens.text }}>Finish or clear your current draft to use this suggestion.</Text>}
+                </View>
+              )}
               <View
                 style={{
                   flexDirection: "row",
@@ -2977,7 +3000,7 @@ function AskBody({ archiveOwner }: { archiveOwner: string | null }) {
               >
                 <TextInput
                   placeholder={
-                    isAiGuest &&
+                    isolatedPreview ? "Write a question or explore a clue" : isAiGuest &&
                     (
                       guestUsageLoading ||
                       !guestUsageReady
@@ -2997,6 +3020,8 @@ function AskBody({ archiveOwner }: { archiveOwner: string | null }) {
                   editable={!loading}
                 />
                 <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Send message"
                   onPress={send}
                   disabled={loading || !input.trim()}
                 >

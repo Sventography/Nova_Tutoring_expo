@@ -1,10 +1,11 @@
+import { legacyCheckoutRoute } from "../features/commerce/legacyCheckoutRoute";
 import React from "react";
 import { View, StyleSheet, Text } from "react-native";
 import StripeWrapper from "@/components/StripeWrapper";
 import StripePay from "@/components/StripePay";
 import PayButton from "@/components/PayButton";
 
-export default function Payments() {
+function Payments() {
   return (
     <StripeWrapper>
       <View style={styles.container}>
@@ -31,3 +32,5 @@ const styles = StyleSheet.create({
     color: "#00e5ff",
   },
 });
+
+export default legacyCheckoutRoute(Payments);

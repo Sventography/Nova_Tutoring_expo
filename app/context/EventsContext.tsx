@@ -1,4 +1,5 @@
 // app/context/EventsContext.tsx
+import { STAGING_CHECKOUT_CLOSED } from "../../features/commerce/staging";
 import React, {
   createContext,
   useCallback,
@@ -585,6 +586,7 @@ export function EventsProvider({
       async (
         rewardId: string
       ): Promise<number> => {
+        if (STAGING_CHECKOUT_CLOSED) return 0;
         if (!activeEvent) {
           return 0;
         }
@@ -729,6 +731,7 @@ export function EventsProvider({
       async (
         rewardId: string
       ): Promise<number> => {
+        if (STAGING_CHECKOUT_CLOSED) return 0;
         if (
           !activeEvent ||
           !premiumPassOwned

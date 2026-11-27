@@ -23,7 +23,12 @@ import {
   useFrame,
   useThree,
 } from "../../../components/islandFiber";
+import ShoreClearance from "../../../features/adaptiveIsland/ShoreClearance";
+import DistrictShore from "../../../features/adaptiveIsland/DistrictShore";
+import {districts,DISTRICT_SHORE_X,stageAt,stageNames} from "../../../features/adaptiveIsland/districts";
+import type {Interest} from "../../_lib/discoveryModel";
 import * as THREE from "three";
+import ChibiResidentBody from "../../../components/island3d/ChibiResidentBody";
 
 import {
   ISLAND_MILESTONES,
@@ -73,6 +78,10 @@ export type Island3DDiscovery = {
 };
 
 type Props = {
+  reduceResidentMotion?: boolean;
+  focusedDistrict?:Interest|null;
+  onDistrictPress?:(id:Interest)=>void;
+  districtIds?: Interest[]; visitingShore?:boolean; residentMotion?:boolean; construction?:boolean;
   level: number;
   height?: number;
   learningPulseToken?: number;
@@ -9769,9 +9778,11 @@ function companionActionDuration(
 }
 
 function FriendshipResidentVisual({
+  reduceMotion,
   visualKey,
   accent,
 }: {
+  reduceMotion: boolean;
   visualKey: FriendshipVisualKey | null;
   accent: string;
 }) {
@@ -9796,7 +9807,7 @@ function FriendshipResidentVisual({
     });
 
   useFrame(({ clock }, delta) => {
-    if (!root.current) {
+    if (!root.current || reduceMotion) {
       return;
     }
 
@@ -10987,274 +10998,7 @@ function FriendshipResidentVisual({
           ref={root}
           scale={0.72}
         >
-          {/* Legs */}
-          {[-0.13, 0.13].map(
-            (x) => (
-              <group key={x}>
-                <mesh
-                  position={[
-                    x,
-                    0.18,
-                    0,
-                  ]}
-                  scale={[
-                    0.085,
-                    0.26,
-                    0.08,
-                  ]}
-                >
-                  <capsuleGeometry
-                    args={[
-                      0.45,
-                      0.72,
-                      6,
-                      10,
-                    ]}
-                  />
-                  <meshStandardMaterial
-                    color="#f5d0c5"
-                    roughness={0.72}
-                  />
-                </mesh>
-
-                <mesh
-                  position={[
-                    x,
-                    -0.015,
-                    0.075,
-                  ]}
-                  scale={[
-                    0.11,
-                    0.075,
-                    0.17,
-                  ]}
-                >
-                  <sphereGeometry
-                    args={[
-                      1,
-                      12,
-                      10,
-                    ]}
-                  />
-                  <meshStandardMaterial
-                    color="#7f1d1d"
-                    roughness={0.56}
-                  />
-                </mesh>
-              </group>
-            )
-          )}
-
-          {/* Red dress */}
-          <mesh
-            position={[
-              0,
-              0.49,
-              0,
-            ]}
-            scale={[
-              0.39,
-              0.54,
-              0.31,
-            ]}
-          >
-            <coneGeometry
-              args={[
-                0.72,
-                1.02,
-                22,
-              ]}
-            />
-            <meshStandardMaterial
-              color="#dc2626"
-              emissive="#991b1b"
-              emissiveIntensity={0.13}
-              roughness={0.48}
-            />
-          </mesh>
-
-          {/* Gold dress trim */}
-          <mesh
-            position={[
-              0,
-              0.18,
-              0,
-            ]}
-            rotation={[
-              Math.PI / 2,
-              0,
-              0,
-            ]}
-          >
-            <torusGeometry
-              args={[
-                0.29,
-                0.03,
-                8,
-                28,
-              ]}
-            />
-            <meshBasicMaterial
-              color="#fde68a"
-            />
-          </mesh>
-
-          {/* Left arm */}
-          <mesh
-            position={[
-              -0.31,
-              0.63,
-              0.02,
-            ]}
-            rotation={[
-              0,
-              0,
-              0.52,
-            ]}
-            scale={[
-              0.073,
-              0.29,
-              0.073,
-            ]}
-          >
-            <capsuleGeometry
-              args={[
-                0.5,
-                0.68,
-                6,
-                10,
-              ]}
-            />
-            <meshStandardMaterial
-              color="#f5d0c5"
-              roughness={0.72}
-            />
-          </mesh>
-
-          {/* Throwing arm raised up */}
-          <mesh
-            position={[
-              0.3,
-              0.79,
-              0.02,
-            ]}
-            rotation={[
-              0,
-              0,
-              -0.72,
-            ]}
-            scale={[
-              0.073,
-              0.34,
-              0.073,
-            ]}
-          >
-            <capsuleGeometry
-              args={[
-                0.5,
-                0.72,
-                6,
-                10,
-              ]}
-            />
-            <meshStandardMaterial
-              color="#f5d0c5"
-              roughness={0.72}
-            />
-          </mesh>
-
-          {/* Hair mass behind head */}
-          <mesh
-            position={[
-              0,
-              1.04,
-              -0.08,
-            ]}
-            scale={[
-              0.43,
-              0.5,
-              0.33,
-            ]}
-          >
-            <sphereGeometry
-              args={[
-                0.62,
-                22,
-                18,
-              ]}
-            />
-            <meshStandardMaterial
-              color="#17131f"
-              roughness={0.66}
-            />
-          </mesh>
-
-          {/* Face */}
-          <mesh
-            position={[
-              0,
-              1.05,
-              0.105,
-            ]}
-            scale={[
-              0.32,
-              0.35,
-              0.28,
-            ]}
-          >
-            <sphereGeometry
-              args={[
-                0.62,
-                22,
-                18,
-              ]}
-            />
-            <meshStandardMaterial
-              color="#f5d0c5"
-              roughness={0.74}
-            />
-          </mesh>
-
-          {/* Long side hair */}
-          {[-0.25, 0.25].map(
-            (x) => (
-              <mesh
-                key={x}
-                position={[
-                  x,
-                  0.93,
-                  0.025,
-                ]}
-                scale={[
-                  0.13,
-                  0.42,
-                  0.13,
-                ]}
-                rotation={[
-                  0,
-                  0,
-                  x < 0
-                    ? 0.16
-                    : -0.16,
-                ]}
-              >
-                <capsuleGeometry
-                  args={[
-                    0.42,
-                    0.72,
-                    6,
-                    10,
-                  ]}
-                />
-                <meshStandardMaterial
-                  color="#17131f"
-                  roughness={0.64}
-                />
-              </mesh>
-            )
-          )}
-
-          {/* Intentionally faceless for a clean stylized chibi look. */}
+          <ChibiResidentBody variant="star_throw" />
 
           {/* Star hair accent */}
           <group
@@ -11338,11 +11082,6 @@ function FriendshipResidentVisual({
       const neon =
         visualKey === "party_3d_2";
 
-      const dressColor =
-        neon
-          ? "#7c3aed"
-          : "#dc2626";
-
       const trimColor =
         neon
           ? "#22d3ee"
@@ -11353,341 +11092,7 @@ function FriendshipResidentVisual({
           ref={root}
           scale={0.72}
         >
-          {[-0.13, 0.13].map(
-            (x) => (
-              <group key={x}>
-                <mesh
-                  position={[
-                    x,
-                    0.18,
-                    0,
-                  ]}
-                  scale={[
-                    0.085,
-                    0.27,
-                    0.08,
-                  ]}
-                >
-                  <capsuleGeometry
-                    args={[
-                      0.45,
-                      0.75,
-                      6,
-                      10,
-                    ]}
-                  />
-                  <meshStandardMaterial
-                    color="#f5d0c5"
-                    roughness={0.72}
-                  />
-                </mesh>
-
-                <mesh
-                  position={[
-                    x,
-                    -0.02,
-                    0.06,
-                  ]}
-                  scale={[
-                    0.11,
-                    0.08,
-                    0.17,
-                  ]}
-                >
-                  <sphereGeometry
-                    args={[
-                      1,
-                      12,
-                      10,
-                    ]}
-                  />
-                  <meshStandardMaterial
-                    color={
-                      neon
-                        ? "#1e1b4b"
-                        : "#7f1d1d"
-                    }
-                    roughness={0.55}
-                  />
-                </mesh>
-              </group>
-            )
-          )}
-
-          {/* Party dress */}
-          <mesh
-            position={[
-              0,
-              0.48,
-              0,
-            ]}
-            scale={[
-              0.4,
-              0.54,
-              0.32,
-            ]}
-          >
-            <coneGeometry
-              args={[
-                0.72,
-                1.0,
-                22,
-              ]}
-            />
-            <meshStandardMaterial
-              color={dressColor}
-              emissive={
-                neon
-                  ? "#4c1d95"
-                  : "#991b1b"
-              }
-              emissiveIntensity={
-                neon
-                  ? 0.38
-                  : 0.12
-              }
-              roughness={0.5}
-            />
-          </mesh>
-
-          <mesh
-            position={[
-              0,
-              0.18,
-              0,
-            ]}
-            rotation={[
-              Math.PI / 2,
-              0,
-              0,
-            ]}
-          >
-            <torusGeometry
-              args={[
-                0.3,
-                0.035,
-                8,
-                28,
-              ]}
-            />
-            <meshBasicMaterial
-              color={trimColor}
-            />
-          </mesh>
-
-          {/* Arms */}
-          {[-1, 1].map(
-            (side) => (
-              <mesh
-                key={side}
-                position={[
-                  side * 0.34,
-                  0.62,
-                  0.02,
-                ]}
-                rotation={[
-                  0,
-                  0,
-                  side * -0.58,
-                ]}
-                scale={[
-                  0.075,
-                  0.3,
-                  0.075,
-                ]}
-              >
-                <capsuleGeometry
-                  args={[
-                    0.5,
-                    0.7,
-                    6,
-                    10,
-                  ]}
-                />
-                <meshStandardMaterial
-                  color="#f5d0c5"
-                  roughness={0.72}
-                />
-              </mesh>
-            )
-          )}
-
-          {/* Hair behind the head */}
-          <mesh
-            position={[
-              0,
-              1.03,
-              -0.08,
-            ]}
-            scale={[
-              0.42,
-              0.5,
-              0.32,
-            ]}
-          >
-            <sphereGeometry
-              args={[
-                0.62,
-                22,
-                18,
-              ]}
-            />
-            <meshStandardMaterial
-              color="#17131f"
-              roughness={0.66}
-            />
-          </mesh>
-
-          {/* Face */}
-          <mesh
-            position={[
-              0,
-              1.05,
-              0.11,
-            ]}
-            scale={[
-              0.32,
-              0.35,
-              0.28,
-            ]}
-          >
-            <sphereGeometry
-              args={[
-                0.62,
-                22,
-                18,
-              ]}
-            />
-            <meshStandardMaterial
-              color="#f5d0c5"
-              roughness={0.74}
-            />
-          </mesh>
-
-          {/* Side hair */}
-          {[-0.25, 0.25].map(
-            (x) => (
-              <mesh
-                key={x}
-                position={[
-                  x,
-                  0.94,
-                  0.04,
-                ]}
-                scale={[
-                  0.13,
-                  0.4,
-                  0.13,
-                ]}
-                rotation={[
-                  0,
-                  0,
-                  x < 0
-                    ? 0.16
-                    : -0.16,
-                ]}
-              >
-                <capsuleGeometry
-                  args={[
-                    0.42,
-                    0.7,
-                    6,
-                    10,
-                  ]}
-                />
-                <meshStandardMaterial
-                  color="#17131f"
-                  roughness={0.64}
-                />
-              </mesh>
-            )
-          )}
-
-          {/* Eyes */}
-          {[-0.105, 0.105].map(
-            (x) => (
-              <group key={x}>
-                <mesh
-                  position={[
-                    x,
-                    1.08,
-                    0.285,
-                  ]}
-                  scale={[
-                    0.048,
-                    0.065,
-                    0.025,
-                  ]}
-                >
-                  <sphereGeometry
-                    args={[
-                      1,
-                      12,
-                      10,
-                    ]}
-                  />
-                  <meshBasicMaterial
-                    color="#261a2b"
-                  />
-                </mesh>
-
-                <mesh
-                  position={[
-                    x - 0.012,
-                    1.1,
-                    0.311,
-                  ]}
-                  scale={[
-                    0.012,
-                    0.018,
-                    0.009,
-                  ]}
-                >
-                  <sphereGeometry
-                    args={[
-                      1,
-                      8,
-                      8,
-                    ]}
-                  />
-                  <meshBasicMaterial
-                    color="#ffffff"
-                  />
-                </mesh>
-              </group>
-            )
-          )}
-
-          <mesh
-            position={[
-              0,
-              0.98,
-              0.306,
-            ]}
-            rotation={[
-              Math.PI / 2,
-              0,
-              0,
-            ]}
-            scale={[
-              1,
-              0.65,
-              1,
-            ]}
-          >
-            <torusGeometry
-              args={[
-                0.055,
-                0.012,
-                7,
-                16,
-                Math.PI,
-              ]}
-            />
-            <meshBasicMaterial
-              color="#9f1239"
-            />
-          </mesh>
+          <ChibiResidentBody variant={neon ? "party_3d_2" : "party_3d"} />
 
           <group
             position={[
@@ -11871,11 +11276,13 @@ function FriendshipResidentVisual({
 }
 
 function DiscoveryMarker({
+  reduceResidentMotion,
   discovery,
   index,
   selected,
   onSelect,
 }: {
+  reduceResidentMotion: boolean;
   discovery: Island3DDiscovery;
   index: number;
   selected: boolean;
@@ -12016,7 +11423,7 @@ function DiscoveryMarker({
 
   useFrame(
     ({ clock }, delta) => {
-      if (!marker.current) {
+      if (!marker.current || (reduceResidentMotion && discovery.kind === "resident")) {
         return;
       }
 
@@ -12330,6 +11737,8 @@ function DiscoveryMarker({
           }
         >
           <FriendshipResidentVisual
+            key={reduceResidentMotion ? "still" : "animated"}
+            reduceMotion={reduceResidentMotion}
             visualKey={
               visualKey
             }
@@ -14377,6 +13786,7 @@ function LibraryNotebook({
 }
 
 function IslandWorld({
+  reduceResidentMotion,
   level,
   palette,
   learningPulseToken,
@@ -14409,6 +13819,7 @@ function IslandWorld({
   velocityRef,
   onNovaProject,
 }: {
+  reduceResidentMotion: boolean;
   level: number;
   palette: TimePalette;
   learningPulseToken: number;
@@ -14825,6 +14236,7 @@ function IslandWorld({
         {discoveries.map(
           (discovery, index) => (
             <DiscoveryMarker
+              reduceResidentMotion={reduceResidentMotion}
               key={
                 discovery.key
               }
@@ -14859,6 +14271,7 @@ function IslandWorld({
 
 // NOVA_ISLAND_EXPANSION_PACK_1
 export default function NovaIsland3DScene({
+  reduceResidentMotion=false,focusedDistrict=null,onDistrictPress, districtIds=[], visitingShore=false,residentMotion=false,construction=false,
   level,
   height = 450,
   learningPulseToken = 0,
@@ -14899,6 +14312,7 @@ export default function NovaIsland3DScene({
   } = useIslandDecorations();
 
   const {
+    placedKeepsakes,
     moveKeepsake,
     selectKeepsake,
     getArmedKeepsakeDrag,
@@ -15022,25 +14436,23 @@ export default function NovaIsland3DScene({
           NOVA_SPRITE_BASE_HEIGHT *
           projection.scale;
 
-        novaOverlayRef.current?.setNativeProps(
-          {
-            style: {
-              left:
-                projection.x -
-                width / 2,
-              top:
-                projection.y -
-                height +
-                4,
-              width,
-              height,
-              opacity:
-                projection.visible
-                  ? 1
-                  : 0,
-            },
-          }
-        );
+        const overlay = novaOverlayRef.current;
+        if (!overlay) return;
+        const left = projection.x - width / 2;
+        const top = projection.y - height + 4;
+        const opacity = projection.visible ? 1 : 0;
+
+        if (Platform.OS === "web") {
+          // React Native Web forwards its View ref to the backing DOM node.
+          const element = overlay as unknown as {style:Record<string,string>};
+          element.style.left = left + "px";
+          element.style.top = top + "px";
+          element.style.width = width + "px";
+          element.style.height = height + "px";
+          element.style.opacity = String(opacity);
+        } else {
+          overlay.setNativeProps({ style: { left, top, width, height, opacity } });
+        }
       },
       []
     );
@@ -15181,6 +14593,21 @@ export default function NovaIsland3DScene({
         polar: 0,
       };
     }, [builderEditing, fullViewDistance]);
+
+  const [shoreClear,setShoreClear]=useState(false);
+  const wasAtShore=useRef(false);
+  const focusIndex=focusedDistrict?districtIds.indexOf(focusedDistrict):-1;
+  const shoreTarget=DISTRICT_SHORE_X+(focusIndex<0?(districtIds.length-1)/2-1:focusIndex-1)*4;
+  const [viewportWidth, setViewportWidth] = useState(0);
+  const overviewDistance = districtIds.length === 3 ? 16 : districtIds.length === 2 ? 12 : 7.8;
+  // Perspective cameras keep vertical FOV fixed. Leave room for the outer parcels in portrait.
+  const portraitFit = viewportWidth > 0 ? Math.max(1, height / viewportWidth) : 1;
+  const shoreDistance = focusIndex < 0 ? Math.min(28, overviewDistance * portraitFit) : 7.8;
+  useEffect(()=>{
+    if(visitingShore && shoreClear){focusPosition([shoreTarget,0,0],shoreDistance);}
+    else if(wasAtShore.current){resetView();}
+    wasAtShore.current=visitingShore && shoreClear;
+  },[visitingShore,shoreClear,shoreTarget,shoreDistance,focusPosition,resetView]);
 
   const selectMilestone =
     useCallback(
@@ -15688,14 +15115,14 @@ const selectLegendary =
               controlsRef.current.desiredTarget = [
                 clamp(
                   gestureStartRef.current.targetX - deltaX,
-                  -21,
-                  21
+                  visitingShore ? DISTRICT_SHORE_X-6 : -21,
+                  visitingShore ? DISTRICT_SHORE_X+6 : 21
                 ),
                 gestureStartRef.current.targetY,
                 clamp(
                   gestureStartRef.current.targetZ - deltaZ,
-                  -21,
-                  21
+                  visitingShore ? -2 : -21,
+                  visitingShore ? 2 : 21
                 ),
               ];
 
@@ -15743,7 +15170,7 @@ const selectLegendary =
           onShouldBlockNativeResponder:
             () => true,
         }),
-      [builderEditing, clearDecorationDrag, clearKeepsakeDrag, getArmedDecorationDrag, getArmedKeepsakeDrag, moveDecorationPlacement, moveKeepsake, queueBuilderMove, setInteractionActive]
+      [visitingShore, builderEditing, clearDecorationDrag, clearKeepsakeDrag, getArmedDecorationDrag, getArmedKeepsakeDrag, moveDecorationPlacement, moveKeepsake, queueBuilderMove, setInteractionActive]
     );
 
   const selectedMilestone =
@@ -15851,6 +15278,7 @@ const selectLegendary =
 
   return (
     <View
+      onLayout={event => setViewportWidth(event.nativeEvent.layout.width)}
       style={[
         styles.container,
         {
@@ -15933,7 +15361,9 @@ const selectLegendary =
         }}
       >
         <IslandFrameDriver />
+        {districtIds.length>0 && <ShoreClearance revision={[level,builderPlacements,decorationPlacements,placedKeepsakes,districtIds,legendaryCompanionIds,builderEditing]} onResult={setShoreClear}><DistrictShore ids={districtIds} level={level} activity={visitingShore&&residentMotion} celebrate={visitingShore&&construction} onExplore={visitingShore?onDistrictPress:undefined}/></ShoreClearance>}
         <IslandWorld
+          reduceResidentMotion={reduceResidentMotion}
           level={level}
           palette={palette}
           learningPulseToken={
@@ -16105,7 +15535,7 @@ const selectLegendary =
         </View>
 
         <Pressable
-          onPress={resetView}
+          onPress={visitingShore&&shoreClear?()=>focusPosition([shoreTarget,0,0],shoreDistance):resetView}
           style={({ pressed }) => [
             styles.resetButton,
             {
@@ -16129,6 +15559,16 @@ const selectLegendary =
           </Text>
         </Pressable>
 
+        {visitingShore && shoreClear && <View style={{position:"absolute",top:90,right:8,gap:3}}>
+          {(["Turn view","Zoom closer","Zoom out"] as const).map(label=><Pressable key={label}
+            accessibilityRole="button" onPress={()=>{
+              const camera=controlsRef.current;
+              if(label==="Turn view")camera.desiredAzimuth+=Math.PI/6;
+              else camera.desiredDistance=clamp(camera.desiredDistance*(label==="Zoom closer"?.8:1.25),5,28);
+            }} style={{minHeight:44,justifyContent:"center",paddingHorizontal:9,borderRadius:8,backgroundColor:"#172844"}}>
+            <Text style={{color:"#f2e8d3",fontWeight:"600"}}>{label}</Text>
+          </Pressable>)}
+        </View>}
         <View
           pointerEvents="none"
           style={
@@ -16146,7 +15586,7 @@ const selectLegendary =
                 styles.selectedTitle
               }
             >
-              {selectedTitle}
+              {visitingShore?(shoreClear?(focusedDistrict?districts[focusedDistrict].name:"District shore"):"District growth deferred"):selectedTitle}
             </Text>
 
             <View
@@ -16167,7 +15607,7 @@ const selectLegendary =
                   },
                 ]}
               >
-                {selectedStatusLabel}
+                {visitingShore?stageNames[stageAt(level)-1]:selectedStatusLabel}
               </Text>
             </View>
           </View>
@@ -16178,7 +15618,7 @@ const selectLegendary =
               styles.selectedLore
             }
           >
-            {selectedLore}
+            {visitingShore?(shoreClear?districtIds.map(id=>districts[id].name).join(" · "):"This space is occupied. Your Island layout has been preserved."):selectedLore}
           </Text>
         </View>
 
@@ -16198,8 +15638,7 @@ const selectLegendary =
               styles.hintText
             }
           >
-            Drag to rotate · Pinch to
-            zoom · Tap to explore
+            {visitingShore?"Drag to pan · Two fingers to rotate or zoom · Tap to focus":"Drag to pan · Pinch to zoom · Tap to explore"}
           </Text>
         </View>
       </View>

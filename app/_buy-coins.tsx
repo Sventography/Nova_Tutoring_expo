@@ -1,3 +1,4 @@
+import { legacyCheckoutRoute } from "../features/commerce/legacyCheckoutRoute";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
@@ -12,7 +13,7 @@ import { IAP_PRODUCT_IDS } from "./constants/payments";
 
 type Product = { productId: string; title: string; price?: string };
 
-export default function BuyCoins() {
+function BuyCoins() {
   const [loading, setLoading] = useState(true);
   const [available, setAvailable] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
@@ -109,3 +110,5 @@ const styles = StyleSheet.create({
   title: { fontSize: 18, fontWeight: "600" },
   price: { marginTop: 6, opacity: 0.8 },
 });
+
+export default legacyCheckoutRoute(BuyCoins);

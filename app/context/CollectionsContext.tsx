@@ -3,24 +3,20 @@ import React, {
   createContext,
   useCallback,
   useContext,
-  useEffect,
+  useLayoutEffect,
+  useMemo,
   useState,
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-export type CollectionCard = {
-  id: string;
-  front: string;
-  back: string;
-};
+import { useUser } from "./UserContext";
+import { collectionKey, createCollectionStore, type CollectionCard, type CollectionTopic } from "../../features/collections/store";
+export type { CollectionCard, CollectionTopic } from "../../features/collections/store";
 
-export type CollectionTopic = {
-  id: string;
-  title: string;
-  cards: CollectionCard[];
-};
+const storage = createCollectionStore(AsyncStorage);
 
 type CollectionsContextValue = {
+  ownerKey: string | null;
   topics: CollectionTopic[];
   addCard: (
     card: { front: string; back: string; id?: string },
@@ -41,40 +37,34 @@ const CollectionsContext = createContext<CollectionsContextValue | undefined>(
   undefined
 );
 
-const STORAGE_KEY = "@nova_collections_v1";
-
-async function loadFromStorage(): Promise<CollectionTopic[]> {
-  try {
-    const raw = await AsyncStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed;
-  } catch (e) {
-    console.warn("[Collections] load error", e);
-    return [];
-  }
-}
-
-async function saveToStorage(topics: CollectionTopic[]) {
-  try {
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(topics));
-  } catch (e) {
-    console.warn("[Collections] save error", e);
-  }
-}
-
 export function CollectionsProvider({ children }: { children: React.ReactNode }) {
-  const [topics, setTopics] = useState<CollectionTopic[]>([]);
+  const { ready, session, supabaseUserId } = useUser();
+  const ownerKey = collectionKey(ready, session?.user.id ?? null, supabaseUserId);
+  const scope = useMemo(() => ({ key: ownerKey, active: false }), [ownerKey]);
+  const [snapshot, setSnapshot] = useState<{ owner: typeof scope; topics: CollectionTopic[] } | null>(null);
+  const topics = snapshot?.owner === scope ? snapshot.topics : [];
 
-  useEffect(() => {
-    loadFromStorage().then(setTopics);
-  }, []);
+  useLayoutEffect(() => {
+    scope.active = true;
+    if (scope.key !== null) {
+      storage.read(scope.key).then(loaded => {
+        if (scope.active) setSnapshot({ owner: scope, topics: loaded });
+      }).catch(() => console.warn("[Collections] Could not load saved cards"));
+    }
+    return () => { scope.active = false; };
+  }, [scope]);
+
+  const update = useCallback(async (mutate: (prev: CollectionTopic[]) => CollectionTopic[]) => {
+    if (!scope.active || scope.key === null) throw new Error("Account is changing");
+    const saved = await storage.update(scope.key, mutate);
+    if (!scope.active) throw new Error("Account changed while saving");
+    setSnapshot({ owner: scope, topics: saved });
+  }, [scope]);
 
   const addCard = useCallback<
     CollectionsContextValue["addCard"]
   >(async (card, topicId, title) => {
-    setTopics((prev) => {
+    await update((prev) => {
       const tid = topicId || "saved-flashcards";
       const tTitle = title || "Saved Flashcards";
 
@@ -111,15 +101,14 @@ export function CollectionsProvider({ children }: { children: React.ReactNode })
         );
       }
 
-      saveToStorage(next);
       return next;
     });
-  }, []);
+  }, [update]);
 
   const removeCard = useCallback<
     CollectionsContextValue["removeCard"]
   >(async (topicId, cardId) => {
-    setTopics((prev) => {
+    await update((prev) => {
       const next = prev
         .map((t) =>
           t.id === topicId
@@ -131,17 +120,16 @@ export function CollectionsProvider({ children }: { children: React.ReactNode })
         )
         .filter((t) => t.cards.length > 0);
 
-      saveToStorage(next);
       return next;
     });
-  }, []);
+  }, [update]);
 
   const removeCardByContent = useCallback<
     CollectionsContextValue["removeCardByContent"]
   >(async (topicId, front, back) => {
     const norm = (s: string) => s.trim().toLowerCase();
 
-    setTopics((prev) => {
+    await update((prev) => {
       const next = prev
         .map((t) => {
           if (t.id !== topicId) return t;
@@ -156,21 +144,16 @@ export function CollectionsProvider({ children }: { children: React.ReactNode })
         })
         .filter((t) => (t.cards?.length ?? 0) > 0);
 
-      saveToStorage(next);
       return next;
     });
-  }, []);
+  }, [update]);
 
   const clearAll = useCallback(async () => {
-    setTopics([]);
-    try {
-      await AsyncStorage.removeItem(STORAGE_KEY);
-    } catch (e) {
-      console.warn("[Collections] clear error", e);
-    }
-  }, []);
+    await update(() => []);
+  }, [update]);
 
   const value: CollectionsContextValue = {
+    ownerKey,
     topics,
     addCard,
     removeCard,

@@ -249,6 +249,11 @@ function normalizeTestAnswer(value: string) {
 }
 
 export default function CollectionsTab() {
+  const { ownerKey } = useCollections();
+  return ownerKey === null ? null : <OwnedCollectionsTab key={ownerKey} />;
+}
+
+function OwnedCollectionsTab() {
   const coll = useCollections();
   const { tokens } = useTheme();
 
@@ -336,18 +341,19 @@ export default function CollectionsTab() {
     [topics]
   );
 
-  function addCard() {
+  async function addCard() {
     const f = front.trim(),
       b = back.trim();
     if (!f || !b) return;
     const targetId = active?.id || "user-my-flashcards";
     const targetTitle = active?.title || "My Flashcards";
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    coll.addCard(
-      { front: f, back: b } as any,
-      targetId,
-      targetTitle
-    );
+    try {
+      await coll.addCard({ front: f, back: b }, targetId, targetTitle);
+    } catch {
+      show("Could not save this card. Your draft is still here.");
+      return;
+    }
     setFront("");
     setBack("");
     show("Saved to Collections");
@@ -1013,7 +1019,7 @@ export default function CollectionsTab() {
                 coll.removeCard(
                   String(active.id),
                   String(item.id)
-                )
+                ).catch(() => show("Could not remove this card."))
               }
               tokens={tokens}
             />
