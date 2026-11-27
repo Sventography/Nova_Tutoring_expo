@@ -1,6 +1,8 @@
 import React,{useEffect,useLayoutEffect,useMemo,useRef} from "react";
-import {Group,InstancedMesh,Color,Object3D} from "three";
+import {Group,InstancedMesh,Color,Object3D,SphereGeometry,CapsuleGeometry} from "three";
 import { useFrame,useThree } from "../../components/islandFiber";
+import ChibiHead from "../../components/island3d/ChibiHead";
+import {mergePaintedParts,type PaintedPart} from "../../components/island3d/chibiGeometry";
 import type { Interest } from "../../app/_lib/discoveryModel";
 import { districts,stageAt } from "./districts";
 
@@ -73,21 +75,42 @@ function Resident({id,arm}:{id:Interest;arm:React.RefObject<Group|null>}){
  const painting=id==="art"||id==="writing";
  const y=observing?.69:.5;
  const skin="#c98f65",coat=districts[id].color;
+ const body=useMemo(()=>{
+  const ball=(color:string,position:Vec,scale:Vec):PaintedPart=>({
+   geometry:new SphereGeometry(1,14,10),color,position,scale
+  });
+  const parts:PaintedPart[]=[
+   ball(coat,[0,.43,0],[.17,.146,.125]),
+   ball(skin,[0,.54,0],[.062,.065,.06]),
+   ball("#f5e7c8",[-.044,.538,.102],[.045,.027,.022]),
+   ball("#f5e7c8",[.044,.538,.102],[.045,.027,.022]),
+   ball("#f5e7c8",[0,.435,.125],[.012,.012,.009]),
+   ball(coat,[.14,.47,.084],[.06,.068,.109]),
+   ball(skin,[.14,.47,.188],[.052,.055,.055]),
+  ];
+  for(const x of [-.09,.09])parts.push(
+   {geometry:new CapsuleGeometry(.058,.13,5,10),color:"#566372",position:[x,.23,0]},
+   ball("#53433e",[x,.095,.035],[.08,.064,.125]),
+   ball("#a48c76",[x,.051,.035],[.077,.017,.121])
+  );
+  return mergePaintedParts(parts);
+ },[skin,coat]);
+ const armGeometry=useMemo(()=>mergePaintedParts([
+  {geometry:new SphereGeometry(1,14,10),color:coat,
+   position:[0,(y-.52)*.45,.091],scale:[.055,.06,.123]},
+  {geometry:new SphereGeometry(1,14,10),color:skin,
+   position:[0,y-.52,.21],scale:[.052,.055,.06]},
+ ]),[skin,coat,y]);
+ useEffect(()=>()=>{body.dispose();armGeometry.dispose();},[body,armGeometry]);
  return <group position={[-.32,0,.30]} rotation={[0,1.95,0]}>
-  {[-.09,.09].map(x=><group key={x}>
-   <Model part={["box",[x,.095,.035],[.135,.13,.22]]} tint="#53433e"/>
-   <Model part={["box",[x,.23,0],[.118,.25,.13]]} tint="#566372"/>
-  </group>)}
-  <Model part={["drum",[0,.43,0],[.31,.26,.23]]} tint={coat}/>
-  <Model part={["ball",[0,.66,observing?.06:0],[.27,.29,.26]]} tint={skin}/>
-  <Model part={["ball",[0,.756,observing?.045:-.015],[.28,.16,.265]]} tint="#55413e"/>
+  <mesh geometry={body}><meshStandardMaterial vertexColors roughness={.72}/></mesh>
+  <group position={[0,.66,observing?.06:0]} scale={.52}>
+   <ChibiHead skin={skin} hair="#55413e" iris="#6b4d33" hairStyle="crop"/>
+  </group>
   <group ref={arm} position={[-.14,.52,.025]}>
-   <Model tint={coat} part={["box",[0,(y-.52)*.45,.091],[.085,.10,.22]]}/>
-   <Model tint={skin} part={["ball",[0,y-.52,.21],[.094,.1,.11]]}/>
+   <mesh geometry={armGeometry}><meshStandardMaterial vertexColors roughness={.72}/></mesh>
    {painting && <Model tint="#855942" part={["box",[0,y-.49,.26],[.026,.15,.027],undefined,-.3]}/>}
   </group>
-  <Model tint={coat} part={["box",[.14,.47,.084],[.09,.12,.19]]}/>
-  <Model tint={skin} part={["ball",[.14,.47,.188],[.09,.1,.095]]}/>
  </group>;
 }
 function Landscape({id}:{id:Interest}){
