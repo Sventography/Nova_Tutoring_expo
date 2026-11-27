@@ -2067,6 +2067,7 @@ function IslandScreenBody({ owner }: { owner: string | null }) {
             focusedDistrict={focused}
             districtIds={shore.ids}
             visitingShore={shore.visiting && !islandBuilder.isEditing}
+            reduceResidentMotion={shore.reduced}
             residentMotion={!shore.reduced && shore.motion}
             construction={!shore.reduced && shore.celebrating}
             height={

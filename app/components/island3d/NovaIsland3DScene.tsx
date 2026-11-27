@@ -78,6 +78,7 @@ export type Island3DDiscovery = {
 };
 
 type Props = {
+  reduceResidentMotion?: boolean;
   focusedDistrict?:Interest|null;
   onDistrictPress?:(id:Interest)=>void;
   districtIds?: Interest[]; visitingShore?:boolean; residentMotion?:boolean; construction?:boolean;
@@ -9777,9 +9778,11 @@ function companionActionDuration(
 }
 
 function FriendshipResidentVisual({
+  reduceMotion,
   visualKey,
   accent,
 }: {
+  reduceMotion: boolean;
   visualKey: FriendshipVisualKey | null;
   accent: string;
 }) {
@@ -9804,7 +9807,7 @@ function FriendshipResidentVisual({
     });
 
   useFrame(({ clock }, delta) => {
-    if (!root.current) {
+    if (!root.current || reduceMotion) {
       return;
     }
 
@@ -11273,11 +11276,13 @@ function FriendshipResidentVisual({
 }
 
 function DiscoveryMarker({
+  reduceResidentMotion,
   discovery,
   index,
   selected,
   onSelect,
 }: {
+  reduceResidentMotion: boolean;
   discovery: Island3DDiscovery;
   index: number;
   selected: boolean;
@@ -11418,7 +11423,7 @@ function DiscoveryMarker({
 
   useFrame(
     ({ clock }, delta) => {
-      if (!marker.current) {
+      if (!marker.current || (reduceResidentMotion && discovery.kind === "resident")) {
         return;
       }
 
@@ -11732,6 +11737,8 @@ function DiscoveryMarker({
           }
         >
           <FriendshipResidentVisual
+            key={reduceResidentMotion ? "still" : "animated"}
+            reduceMotion={reduceResidentMotion}
             visualKey={
               visualKey
             }
@@ -13779,6 +13786,7 @@ function LibraryNotebook({
 }
 
 function IslandWorld({
+  reduceResidentMotion,
   level,
   palette,
   learningPulseToken,
@@ -13811,6 +13819,7 @@ function IslandWorld({
   velocityRef,
   onNovaProject,
 }: {
+  reduceResidentMotion: boolean;
   level: number;
   palette: TimePalette;
   learningPulseToken: number;
@@ -14227,6 +14236,7 @@ function IslandWorld({
         {discoveries.map(
           (discovery, index) => (
             <DiscoveryMarker
+              reduceResidentMotion={reduceResidentMotion}
               key={
                 discovery.key
               }
@@ -14261,7 +14271,7 @@ function IslandWorld({
 
 // NOVA_ISLAND_EXPANSION_PACK_1
 export default function NovaIsland3DScene({
-  focusedDistrict=null,onDistrictPress, districtIds=[], visitingShore=false,residentMotion=false,construction=false,
+  reduceResidentMotion=false,focusedDistrict=null,onDistrictPress, districtIds=[], visitingShore=false,residentMotion=false,construction=false,
   level,
   height = 450,
   learningPulseToken = 0,
@@ -15353,6 +15363,7 @@ const selectLegendary =
         <IslandFrameDriver />
         {districtIds.length>0 && <ShoreClearance revision={[level,builderPlacements,decorationPlacements,placedKeepsakes,districtIds,legendaryCompanionIds,builderEditing]} onResult={setShoreClear}><DistrictShore ids={districtIds} level={level} activity={visitingShore&&residentMotion} celebrate={visitingShore&&construction} onExplore={visitingShore?onDistrictPress:undefined}/></ShoreClearance>}
         <IslandWorld
+          reduceResidentMotion={reduceResidentMotion}
           level={level}
           palette={palette}
           learningPulseToken={
